@@ -10,10 +10,10 @@ import Register from '../pages/Register';
 import OTPVerification from '../pages/OTPVerification';
 
 const DASHBOARD_ROUTES = [
-  { role: 'customer', path: ROLE_ROUTES.customer, component: CustomerDashboard },
-  { role: 'staff', path: ROLE_ROUTES.staff, component: ReceptionistDashboard },
-  { role: 'trainer', path: ROLE_ROUTES.trainer, component: CoachDashboard },
-  { role: 'admin', path: ROLE_ROUTES.admin, component: ManagerDashboard },
+  { role: 'Member', path: ROLE_ROUTES.customer, component: CustomerDashboard },
+  { role: 'Receptionist', path: ROLE_ROUTES.staff, component: ReceptionistDashboard },
+  { role: 'Coach', path: ROLE_ROUTES.trainer, component: CoachDashboard },
+  { role: 'Admin', path: ROLE_ROUTES.admin, component: ManagerDashboard },
 ];
 
 function AppRoutes() {
