@@ -1,30 +1,48 @@
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ArrowRight,
-  BriefcaseBusiness,
-  Dumbbell,
-  LockKeyhole,
-  ShieldCheck,
-  UserRound,
-} from 'lucide-react';
+import { Dumbbell, LockKeyhole } from 'lucide-react';
+import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-import { ROLE_ROUTES } from '../config/roles';
 
-const DEMO_ROLES = [
-  { id: 'customer', label: 'Customer', description: 'Book & manage activities', icon: UserRound },
-  { id: 'staff', label: 'Staff', description: 'Operate the sports center', icon: BriefcaseBusiness },
-  { id: 'trainer', label: 'Trainer', description: 'Coach & track members', icon: Dumbbell },
-  { id: 'admin', label: 'Admin', description: 'Manage the entire system', icon: ShieldCheck },
-];
+const ROLE_ROUTES = {
+  Member: '/customer/dashboard',
+  Receptionist: '/staff/dashboard',
+  Coach: '/trainer/dashboard',
+  Admin: '/admin/dashboard',
+};
 
 function LoginPage() {
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
-  const handleRoleLogin = (role) => {
-    login(role);
-    navigate(ROLE_ROUTES[role]);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await axios.post('http://localhost:8080/api/v1/auth/login', {
+        email,
+        password,
+      });
+
+      const { token, role, email: userEmail, fullName } = response.data;
+
+      login({ token, role, email: userEmail, fullName });
+
+      const route = ROLE_ROUTES[role] || '/customer/dashboard';
+      navigate(route);
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Email hoặc mật khẩu không đúng!';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -55,26 +73,56 @@ function LoginPage() {
         <div className="login-card">
           <div className="login-heading">
             <h1 id="login-title">Welcome back</h1>
-            <p>Choose a portal below to explore the Nexus demo.</p>
+            <p>Sign in to your account to continue.</p>
           </div>
 
-          <form className="login-form" onSubmit={(event) => event.preventDefault()}>
+          <form className="login-form" onSubmit={handleSubmit}>
             <div className="field-group">
-              <label htmlFor="username">Username</label>
-              <input id="username" type="text" placeholder="Enter your username" />
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
             <div className="field-group">
               <div className="field-label-row">
                 <label htmlFor="password">Password</label>
                 <button type="button" className="text-link">Forgot password?</button>
               </div>
-              <input id="password" type="password" placeholder="Enter your password" />
+              <input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
-            <div className="api-note">
-              <LockKeyhole size={14} />
-              <span>Real sign-in will be available when the API is connected.</span>
-            </div>
-            <button type="submit" className="sign-in-button">Sign in</button>
+
+            {error && (
+              <div style={{
+                background: 'rgba(239,68,68,0.1)',
+                border: '1px solid rgba(239,68,68,0.4)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                color: '#f87171',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <LockKeyhole size={14} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button type="submit" className="sign-in-button" disabled={loading}>
+              {loading ? 'Đang đăng nhập...' : 'Sign in'}
+            </button>
           </form>
 
           <div className="auth-links">
@@ -83,28 +131,30 @@ function LoginPage() {
           </div>
 
           <div className="or-divider"><span>or</span></div>
-          <button type="button" className="google-button">
-            <span className="google-mark">G</span>
-            <span>Sign in with Google</span>
-          </button>
 
           <div className="section-divider"><span>Continue demo as</span></div>
 
           <div className="role-grid">
-            {DEMO_ROLES.map(({ id, label, description, icon: Icon }) => (
+            {[
+              { id: 'customer', label: 'Customer', description: 'Book & manage activities', route: '/customer/dashboard' },
+              { id: 'staff', label: 'Staff', description: 'Operate the sports center', route: '/staff/dashboard' },
+              { id: 'trainer', label: 'Trainer', description: 'Coach & track members', route: '/trainer/dashboard' },
+              { id: 'admin', label: 'Admin', description: 'Manage the entire system', route: '/admin/dashboard' },
+            ].map(({ id, label, description, route }) => (
               <button
                 key={id}
                 type="button"
                 className={`role-button role-${id}`}
-                onClick={() => handleRoleLogin(id)}
+                onClick={() => {
+                  login({ token: 'demo', role: id, email: 'demo@nexus.com', fullName: `Demo ${label}` });
+                  navigate(route);
+                }}
                 aria-label={`Continue as ${label}`}
               >
-                <span className="role-icon"><Icon size={22} /></span>
                 <span className="role-copy">
                   <strong>{label}</strong>
                   <small>{description}</small>
                 </span>
-                <ArrowRight className="role-arrow" size={18} />
               </button>
             ))}
           </div>
