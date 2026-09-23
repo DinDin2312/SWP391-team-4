@@ -71,27 +71,27 @@ INSERT INTO PACKAGES VALUES
 (5, 'Thẻ Tập Thử VIP (1 Ngày)', 'GYM_ACCESS', 1, 0);
 
 -- Tài khoản Người dùng (20 Người: 2 Quản lý/Lễ tân, 3 HLV, 15 Hội viên)
-INSERT INTO USERS (user_id, role_id, full_name, email, password_hash, status) VALUES 
-(1, 1, 'Quản Lý Trung Tâm', 'admin@sport.com', '123456', 'ACTIVE'),
-(2, 2, 'Lễ Tân Thúy Kiều', 'letan@sport.com', '123456', 'ACTIVE'),
-(3, 3, 'HLV Nguyễn Văn Tuấn', 'tuanpt@sport.com', '123456', 'ACTIVE'),
-(4, 3, 'HLV Trần Mai Anh', 'maianh@sport.com', '123456', 'ACTIVE'),
-(5, 3, 'HLV Phạm Minh Hoàng', 'hoangpt@sport.com', '123456', 'ACTIVE'),
-(6, 4, 'Trần Bùi Thái', 'thai@gmail.com', '123456', 'ACTIVE'),
-(7, 4, 'Nguyễn Kiều Oanh', 'oanh@gmail.com', '123456', 'ACTIVE'),
-(8, 4, 'Lê Hoàng Long', 'long@gmail.com', '123456', 'ACTIVE'),
-(9, 4, 'Vũ Đức Mạnh', 'manh@gmail.com', '123456', 'ACTIVE'),
-(10, 4, 'Đinh Thị Thu', 'thu@gmail.com', '123456', 'ACTIVE'),
-(11, 4, 'Phạm Tuấn Ngọc', 'ngoc@gmail.com', '123456', 'ACTIVE'),
-(12, 4, 'Bùi Tấn Trường', 'truong@gmail.com', '123456', 'ACTIVE'),
-(13, 4, 'Hoàng Văn Thụ', 'thuhoang@gmail.com', '123456', 'ACTIVE'),
-(14, 4, 'Đặng Thái Sơn', 'son@gmail.com', '123456', 'ACTIVE'),
-(15, 4, 'Ngô Thanh Vân', 'van@gmail.com', '123456', 'ACTIVE'),
-(16, 4, 'Lý Nhã Kỳ', 'ky@gmail.com', '123456', 'ACTIVE'),
-(17, 4, 'Trương Thế Vinh', 'vinh@gmail.com', '123456', 'ACTIVE'),
-(18, 4, 'Hồ Ngọc Hà', 'ha@gmail.com', '123456', 'INACTIVE'),
-(19, 4, 'Mai Tiến Dũng', 'dung@gmail.com', '123456', 'ACTIVE'),
-(20, 4, 'Nguyễn Tóc Tiên', 'tien@gmail.com', '123456', 'ACTIVE');
+INSERT INTO USERS (user_id, role_id, full_name, email, phone, password_hash, status, bio) VALUES 
+(1, 1, 'Quản Lý Trung Tâm', 'admin@sport.com', '0901234567', '123456', 'ACTIVE', NULL),
+(2, 2, 'Lễ Tân Thúy Kiều', 'letan@sport.com', '0912345678', '123456', 'ACTIVE', NULL),
+(3, 3, 'HLV Nguyễn Văn Tuấn', 'tuanpt@sport.com', '0987654321', '123456', 'ACTIVE', 'Cử nhân Đại học TDTT, 5 năm kinh nghiệm mảng Bodybuilding.'),
+(4, 3, 'HLV Trần Mai Anh', 'maianh@sport.com', '0976543210', '123456', 'ACTIVE', 'Chuyên gia Yoga quốc tế với 3 năm kinh nghiệm giảng dạy.'),
+(5, 3, 'HLV Phạm Minh Hoàng', 'hoangpt@sport.com', '0965432109', '123456', 'ACTIVE', 'Vận động viên bơi lội cấp quốc gia, chuyên gia giảm mỡ Cardio.'),
+(6, 4, 'Trần Bùi Thái', 'thai@gmail.com', '0911111111', '123456', 'ACTIVE', NULL),
+(7, 4, 'Nguyễn Kiều Oanh', 'oanh@gmail.com', '0922222222', '123456', 'ACTIVE', NULL),
+(8, 4, 'Lê Hoàng Long', 'long@gmail.com', '0933333333', '123456', 'ACTIVE', NULL),
+(9, 4, 'Vũ Đức Mạnh', 'manh@gmail.com', '0944444444', '123456', 'ACTIVE', NULL),
+(10, 4, 'Đinh Thị Thu', 'thu@gmail.com', '0955555555', '123456', 'ACTIVE', NULL),
+(11, 4, 'Phạm Tuấn Ngọc', 'ngoc@gmail.com', '0966666666', '123456', 'ACTIVE', NULL),
+(12, 4, 'Bùi Tấn Trường', 'truong@gmail.com', '0977777777', '123456', 'ACTIVE', NULL),
+(13, 4, 'Hoàng Văn Thụ', 'thuhoang@gmail.com', '0988888888', '123456', 'ACTIVE', NULL),
+(14, 4, 'Đặng Thái Sơn', 'son@gmail.com', '0999999999', '123456', 'ACTIVE', NULL),
+(15, 4, 'Ngô Thanh Vân', 'van@gmail.com', '0811111111', '123456', 'ACTIVE', NULL),
+(16, 4, 'Lý Nhã Kỳ', 'ky@gmail.com', '0822222222', '123456', 'ACTIVE', NULL),
+(17, 4, 'Trương Thế Vinh', 'vinh@gmail.com', '0833333333', '123456', 'ACTIVE', NULL),
+(18, 4, 'Hồ Ngọc Hà', 'ha@gmail.com', '0844444444', '123456', 'INACTIVE', NULL),
+(19, 4, 'Mai Tiến Dũng', 'dung@gmail.com', '0855555555', '123456', 'ACTIVE', NULL),
+(20, 4, 'Nguyễn Tóc Tiên', 'tien@gmail.com', '0866666666', '123456', 'ACTIVE', NULL);
 
 -- Kỹ năng của HLV (HLV Tuấn dạy Gym, Mai Anh dạy Yoga, Hoàng dạy Bơi và Zumba)
 INSERT INTO USER_SUBJECTS VALUES (3, 1), (4, 2), (5, 3), (5, 4);
