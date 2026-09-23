@@ -47,3 +47,78 @@ Mục tiêu là phải làm cho 4 luồng này chạy mượt mà, không xảy 
 Database đã được thiết kế chuẩn hóa cực độ (BCNF) bao gồm hệ thống Payment. Yêu cầu các thành viên bám sát bảng này để tạo Entity.
 <img width="2828" height="1100" alt="ERD_Version_4" src="https://github.com/user-attachments/assets/1347c566-ad5b-4755-b3ab-5f1faf01f667" />
 
+---
+
+## 4. Hướng dẫn cài đặt và chạy dự án
+
+### Yêu cầu cài đặt
+- [JDK 17+](https://www.oracle.com/java/technologies/downloads/)
+- [Node.js 18+](https://nodejs.org/)
+- [MySQL 8+](https://dev.mysql.com/downloads/)
+- [IntelliJ IDEA](https://www.jetbrains.com/idea/)
+
+### Bước 1: Clone dự án
+```bash
+git clone https://github.com/SWP391-team-4/SWP391.git
+```
+
+### Bước 2: Tạo Database
+Mở **MySQL Workbench**, chạy file SQL trong thư mục `database/` để khởi tạo dữ liệu mẫu.
+
+### Bước 3: Cấu hình biến môi trường Backend
+
+> ⚠️ Dự án dùng biến môi trường để bảo vệ thông tin nhạy cảm. **Tuyệt đối không hardcode email/password vào code.**
+
+1. Mở IntelliJ IDEA → **Run → Edit Configurations** → Chọn `SportscenterApplication`
+2. Bấm **Modify options → Environment variables**
+3. Điền vào ô Environment variables:
+
+```
+MAIL_USERNAME=your_gmail@gmail.com;MAIL_PASSWORD=your_16_char_app_password
+```
+
+#### Cách tạo App Password Gmail (MAIL_PASSWORD):
+1. Vào [myaccount.google.com](https://myaccount.google.com) → **Bảo mật**
+2. Bật **Xác minh 2 bước** nếu chưa bật
+3. Tìm kiếm **"App passwords"** → Tạo mới → Đặt tên "NEXUS"
+4. Copy **16 chữ cái** (xóa hết dấu cách) → dán vào `MAIL_PASSWORD`
+
+> 💡 Email OTP có thể vào **thư mục Spam** lần đầu. Bấm "Không phải thư rác" để lần sau vào Inbox.
+
+### Bước 4: Chạy Backend
+```bash
+cd Backend
+./mvnw spring-boot:run
+```
+Backend chạy tại: `http://localhost:8080`
+
+### Bước 5: Chạy Frontend
+```bash
+cd Frontend
+npm install
+npm run dev
+```
+Frontend chạy tại: `http://localhost:5173`
+
+---
+
+## 5. Tài khoản demo
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@sport.com | 123456 |
+| Coach | coach1@sport.com | 123456 |
+| Receptionist | recep1@sport.com | 123456 |
+| Member | member1@sport.com | 123456 |
+
+---
+
+## 6. API Endpoints hiện có
+
+| Method | Endpoint | Mô tả | Auth |
+|--------|----------|-------|------|
+| POST | `/api/v1/auth/register` | Đăng ký tài khoản Member | Public |
+| POST | `/api/v1/auth/verify-otp` | Xác thực OTP qua Email | Public |
+| POST | `/api/v1/auth/login` | Đăng nhập, nhận JWT Token | Public |
+
+> Tất cả các API khác yêu cầu header: `Authorization: Bearer <token>`
