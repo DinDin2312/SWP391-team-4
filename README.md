@@ -1,5 +1,7 @@
 # TÀI LIỆU HƯỚNG DẪN DỰ ÁN SPORTS CENTER (SWP391)
 
+[![CI](https://github.com/DinDin2312/SWP391-team-4/actions/workflows/ci.yml/badge.svg)](https://github.com/DinDin2312/SWP391-team-4/actions/workflows/ci.yml)
+
 Tài liệu này được lập ra nhằm giúp tất cả các thành viên trong nhóm nắm bắt chính xác mục tiêu (Goal), phạm vi chức năng (Scope) và hướng phát triển hiện tại của dự án. Yêu cầu các thành viên đọc kỹ để thống nhất luồng logic trước khi bắt tay vào viết code.
 
 ## 1. Mục tiêu hiện tại (Giai đoạn 1 - Core MVP)
