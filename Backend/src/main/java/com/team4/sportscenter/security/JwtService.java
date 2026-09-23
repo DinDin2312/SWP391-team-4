@@ -21,13 +21,10 @@ public class JwtService {
     private static final long JWT_EXPIRATION = 1000 * 60 * 60 * 24;
 
     public String generateToken(User user) {
-        Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("role", user.getRole().getRoleName());
-        extraClaims.put("fullName", user.getFullName());
-        extraClaims.put("userId", user.getUserId());
-
         return Jwts.builder()
-                .claims(extraClaims)
+                .claim("role", user.getRole().getRoleName())
+                .claim("fullName", user.getFullName())
+                .claim("userId", user.getUserId())
                 .subject(user.getEmail())
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + JWT_EXPIRATION))
