@@ -6,6 +6,8 @@ import CustomerDashboard from '../pages/CustomerDashboard';
 import LoginPage from '../pages/LoginPage';
 import ManagerDashboard from '../pages/ManagerDashboard';
 import ReceptionistDashboard from '../pages/ReceptionistDashboard';
+import Register from '../pages/Register';
+import OTPVerification from '../pages/OTPVerification';
 
 const DASHBOARD_ROUTES = [
   { role: 'customer', path: ROLE_ROUTES.customer, component: CustomerDashboard },
@@ -18,6 +20,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LoginPage />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/verify-otp" element={<OTPVerification />} />
       {DASHBOARD_ROUTES.map(({ role, path, component: Dashboard }) => (
         <Route
           key={role}

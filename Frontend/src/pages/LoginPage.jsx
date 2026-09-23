@@ -79,7 +79,7 @@ function LoginPage() {
 
           <div className="auth-links">
             <span>New to Nexus?</span>
-            <button type="button" className="text-link">Sign up</button>
+            <button type="button" className="text-link" onClick={() => navigate('/register')}>Sign up</button>
           </div>
 
           <div className="or-divider"><span>or</span></div>
