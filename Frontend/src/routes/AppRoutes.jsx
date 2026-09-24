@@ -1,13 +1,18 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { ROLE_ROUTES } from '../config/roles';
+
+// Auth Pages
+import LoginPage from '../features/auth/pages/LoginPage';
+import Register from '../features/auth/pages/Register';
+import OTPVerification from '../features/auth/pages/OTPVerification';
+import ForgotPassword from '../features/auth/pages/ForgotPassword';
+
+// Dashboard Pages
 import CoachDashboard from '../pages/CoachDashboard';
 import CustomerDashboard from '../pages/CustomerDashboard';
-import LoginPage from '../pages/LoginPage';
 import ManagerDashboard from '../pages/ManagerDashboard';
 import ReceptionistDashboard from '../pages/ReceptionistDashboard';
-import Register from '../pages/Register';
-import OTPVerification from '../pages/OTPVerification';
 
 const DASHBOARD_ROUTES = [
   { role: 'Member', path: ROLE_ROUTES.customer, component: CustomerDashboard },
@@ -22,6 +27,7 @@ function AppRoutes() {
       <Route path="/" element={<LoginPage />} />
       <Route path="/register" element={<Register />} />
       <Route path="/verify-otp" element={<OTPVerification />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       {DASHBOARD_ROUTES.map(({ role, path, component: Dashboard }) => (
         <Route
           key={role}
