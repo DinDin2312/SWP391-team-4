@@ -3,6 +3,7 @@ package com.team4.sportscenter.modules.member.entities;
 import com.team4.sportscenter.modules.auth.entities.User;
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "BOOKINGS")
@@ -30,4 +31,7 @@ public class Booking {
 
     @Column(name = "attendance_status")
     private String attendanceStatus;
+
+    @Column(name = "booking_time")
+    private LocalDateTime bookingTime;
 }
