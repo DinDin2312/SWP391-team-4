@@ -1,5 +1,6 @@
-import React, { useState, useContext } from 'react';
+﻿import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { AuthContext } from '../../../context/AuthContext';
 import {
   LayoutDashboard,
@@ -26,7 +27,7 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 
-export default function CustomerDashboard() {
+const CustomerDashboard = () => {
   const navigate = useNavigate();
   const { userInfo, logout } = useContext(AuthContext);
 
@@ -34,8 +35,62 @@ export default function CustomerDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Trạng thái cho Thẻ tập
+  const [membership, setMembership] = useState(null);
+  const [loadingMembership, setLoadingMembership] = useState(true);
+
+  // Trạng thái cho Lịch học sắp tới
+  const [upcomingBookings, setUpcomingBookings] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(true);
+
+  const [totalCheckIns, setTotalCheckIns] = useState(0);
+  const [recentActivities, setRecentActivities] = useState([]);
+
+  // Gọi API lấy thẻ tập và lịch học
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        // Gọi song song 2 API cho nhanh
+        const [membershipRes, bookingsRes, checkInsRes, recentRes] = await Promise.all([
+          axios.get('http://localhost:8080/api/v1/member/my-membership', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('http://localhost:8080/api/v1/member/upcoming-bookings', { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+        
+        setMembership(membershipRes.data);
+        setUpcomingBookings(bookingsRes.data);
+        setTotalCheckIns(checkInsRes.data);
+        setRecentActivities(recentRes.data);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      } finally {
+        setLoadingMembership(false);
+        setLoadingBookings(false);
+      }
+    };
+    
+    if (localStorage.getItem('token')) {
+      fetchData();
+    } else {
+      setLoadingMembership(false);
+      setLoadingBookings(false);
+    }
+  }, []);
+
   // Lấy tên thật từ lúc đăng nhập
   const fullName = userInfo?.fullName || 'Active Member';
+  
+  const getMemberId = (email) => {
+    if (!email) return '88204';
+    let hash = 0;
+    for (let i = 0; i < email.length; i++) {
+      hash = email.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return Math.abs(hash).toString().substring(0, 5);
+  };
+  const dynamicMemberId = getMemberId(userInfo?.email);
+
   const firstName = fullName.split(' ')[0];
   const initials = fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
@@ -136,131 +191,8 @@ export default function CustomerDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#060b17] text-slate-200 flex font-sans antialiased selection:bg-blue-600 selection:text-white">
-      {/* ===================== SIDEBAR ===================== */}
-      <aside className="w-64 border-r border-[#15203b] bg-[#091124] flex flex-col justify-between shrink-0">
-        <div>
-          {/* Logo Brand */}
-          <div className="p-6 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white">
-              <Dumbbell className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold tracking-wider text-base text-white">NEXUS</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-              </div>
-              <p className="text-[10px] tracking-widest text-slate-400 font-semibold uppercase">SPORTS LAB</p>
-            </div>
-          </div>
-
-          {/* Navigation Links */}
-          <nav className="px-3 space-y-1 mt-2">
-            <button className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-blue-600/15 border border-blue-500/30 text-blue-400 font-semibold text-sm transition-colors">
-              <div className="flex items-center gap-3">
-                <LayoutDashboard className="w-4 h-4 text-blue-400" />
-                <span>Dashboard</span>
-              </div>
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-            </button>
-
-            <button className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-[#111d38] text-sm font-medium transition-colors">
-              <CalendarDays className="w-4 h-4" />
-              <span>My Schedule</span>
-            </button>
-
-            <button className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-[#111d38] text-sm font-medium transition-colors">
-              <div className="flex items-center gap-3">
-                <CreditCard className="w-4 h-4" />
-                <span>Memberships</span>
-              </div>
-              <span className="text-[10px] font-bold bg-[#1a2b50] text-blue-300 px-1.5 py-0.5 rounded">PRO</span>
-            </button>
-
-            <button className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-[#111d38] text-sm font-medium transition-colors">
-              <Dumbbell className="w-4 h-4" />
-              <span>Book a Class</span>
-            </button>
-
-            <button className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-[#111d38] text-sm font-medium transition-colors">
-              <div className="flex items-center gap-3">
-                <Bell className="w-4 h-4" />
-                <span>Notifications</span>
-              </div>
-              <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center">
-                3
-              </span>
-            </button>
-
-            <button className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-[#111d38] text-sm font-medium transition-colors">
-              <Settings className="w-4 h-4" />
-              <span>Settings</span>
-            </button>
-          </nav>
-        </div>
-
-        {/* Member Profile Footer */}
-        <div className="p-4 border-t border-[#15203b]">
-          <div className="p-2.5 rounded-xl bg-[#0f1b33] border border-[#1b2b4f] flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="w-9 h-9 rounded-xl bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold text-xs flex items-center justify-center">
-                  {initials}
-                </div>
-                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#0f1b33]"></span>
-              </div>
-              <div className="text-left">
-                <p className="text-xs font-bold text-white leading-tight">{fullName}</p>
-                <p className="text-[10px] text-blue-400">Elite Pro Member</p>
-              </div>
-            </div>
-            <button onClick={handleLogout} title="Logout" className="text-slate-400 hover:text-white transition-colors p-1">
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      {/* ===================== MAIN CONTENT ===================== */}
-      <main className="flex-1 overflow-y-auto p-8 max-w-[1440px] mx-auto space-y-6">
-        {/* Top Header Bar */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-white tracking-tight">Customer Dashboard</h1>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                Logged in as: Active Member
-              </div>
-            </div>
-            <p className="text-xs text-slate-400 mt-1">Welcome back, {firstName}! System synced today at 16:42</p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="px-3.5 py-2 rounded-xl bg-[#0e172a] border border-[#1a2947] flex items-center gap-2 text-xs text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-              <span className="text-slate-400">Next Session:</span>
-              <span className="font-semibold text-white">HIIT Endurance in 1h 45m</span>
-            </div>
-
-            <button className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all">
-              <QrCode className="w-4 h-4" />
-              <span>Check-in QR</span>
-            </button>
-
-            {/* Shopping Cart Button */}
-            <button className="relative p-2.5 rounded-xl bg-[#0e172a] border border-[#1a2947] hover:border-emerald-500 hover:text-emerald-400 text-slate-300 transition-colors" title="View Cart">
-              <ShoppingCart className="w-4 h-4" />
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-[#060b17]">
-                2
-              </span>
-            </button>
-
-            <button onClick={handleLogout} className="px-3 py-2 rounded-xl bg-[#0e172a] border border-[#1a2947] hover:border-slate-600 text-slate-300 hover:text-white text-xs font-medium transition-colors">
-              Logout
-            </button>
-          </div>
-        </header>
+    <div className="space-y-6">
+      
 
         {/* ================= ROW 1: 4 STAT CARDS ================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -273,21 +205,29 @@ export default function CustomerDashboard() {
                   <ShieldCheck className="w-4 h-4" />
                 </div>
               </div>
-              <h3 className="text-lg font-bold text-white leading-snug">Elite All–Access Pass</h3>
+              {loadingMembership ? (
+                <h3 className="text-lg font-bold text-slate-500 leading-snug animate-pulse">Loading...</h3>
+              ) : membership ? (
+                <h3 className="text-lg font-bold text-white leading-snug">{membership.packageName}</h3>
+              ) : (
+                <h3 className="text-lg font-bold text-red-400 leading-snug">No Active Package</h3>
+              )}
             </div>
             <div className="mt-5">
               <div className="flex items-baseline justify-between mb-2">
                 <span className="text-2xl font-black text-white">
-                  45 <span className="text-xs font-medium text-slate-400">days left</span>
+                  {membership ? membership.remainingDays : 0} <span className="text-xs font-medium text-slate-400">days left</span>
                 </span>
-                <span className="text-xs font-bold text-blue-400">75% elapsed</span>
+                <span className={`text-xs font-bold ${membership && membership.remainingDays > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {membership ? membership.status : 'N/A'}
+                </span>
               </div>
               <div className="w-full h-1.5 bg-[#162544] rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full w-3/4"></div>
+                <div className="h-full bg-blue-500 rounded-full" style={{ width: membership ? '100%' : '0%' }}></div>
               </div>
               <div className="flex items-center gap-1.5 mt-3 text-[10px] text-slate-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-                <span>Renews Nov 15, 2025 · Auto-billing</span>
+                <span>Valid till: {membership?.endDate || 'Unknown'}</span>
               </div>
             </div>
           </div>
@@ -306,7 +246,7 @@ export default function CustomerDashboard() {
             <div className="mt-4 flex items-end justify-between">
               <div>
                 <div className="text-2xl font-black text-white">
-                  14 <span className="text-xs font-medium text-slate-400">Sessions</span>
+                  {totalCheckIns} <span className="text-xs font-medium text-slate-400">Sessions</span>
                 </div>
                 <div className="flex items-center gap-1 text-xs font-semibold text-emerald-400 mt-1">
                   <span>↗ +21% vs last month</span>
@@ -323,56 +263,55 @@ export default function CustomerDashboard() {
             </div>
           </div>
 
-          {/* Card 3: Facility Allocation */}
+          {/* Card 3: Upcoming Bookings (Dynamic) */}
           <div className="p-5 rounded-2xl bg-[#0b1326] border border-[#172545] flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Facility Allocation</span>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Bookings</span>
                 <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center">
                   <Calendar className="w-4 h-4" />
                 </div>
               </div>
-              <h3 className="text-lg font-bold text-white">Upcoming Bookings</h3>
+              <h3 className="text-lg font-bold text-white">Upcoming Classes</h3>
             </div>
             <div className="mt-4">
               <div className="text-2xl font-black text-white">
-                3 <span className="text-xs font-medium text-slate-400">Active Reserved</span>
+                {upcomingBookings.length} <span className="text-xs font-medium text-slate-400">Reserved</span>
               </div>
               <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-400">
                 <Search className="w-3 h-3 text-blue-400" />
-                <span className="truncate">Smart Court 2 & Cryo Zo...</span>
+                <span className="truncate">Check schedule below</span>
               </div>
             </div>
           </div>
 
-          {/* Card 4: Bio Readiness */}
-          <div className="p-5 rounded-2xl bg-[#0b1326] border border-[#172545] flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Bio Readiness</span>
-                <div className="w-7 h-7 rounded-lg bg-cyan-500/15 text-cyan-400 flex items-center justify-center">
-                  <Activity className="w-4 h-4" />
-                </div>
-              </div>
-              <h3 className="text-lg font-bold text-white">Physical Index</h3>
-            </div>
-            <div className="mt-4 flex items-center justify-between">
+          {/* Card 4: Nexus Rewards */}
+            <div className="p-5 rounded-2xl bg-[#0b1326] border border-[#172545] flex flex-col justify-between">
               <div>
-                <div className="text-2xl font-black text-white">
-                  94% <span className="text-xs font-medium text-slate-400">Peak Score</span>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Loyalty Program</span>
+                  <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center">
+                    <Flame className="w-4 h-4" />
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-amber-400 mt-1 font-semibold">
-                  <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  <span>6-day workout streak</span>
-                </div>
+                <h3 className="text-lg font-bold text-white">Nexus Rewards</h3>
               </div>
-              {/* Circular Indicator */}
-              <div className="w-11 h-11 rounded-full border-2 border-cyan-400 flex items-center justify-center font-bold text-xs text-cyan-300 shadow-lg shadow-cyan-500/20">
-                94
+              <div className="mt-4 flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-black text-white">
+                    {totalCheckIns * 50} <span className="text-xs font-medium text-slate-400">Pts</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-amber-400 mt-1 font-semibold">
+                    <span>Unlock Premium Tier at 500 Pts</span>
+                  </div>
+                </div>
+                {/* Circular Indicator */}
+                <div className="w-11 h-11 rounded-full border-2 border-amber-500/30 flex items-center justify-center font-bold text-[10px] text-amber-400 shadow-lg shadow-amber-500/10">
+                  {totalCheckIns >= 10 ? 'PRO' : 'NEW'}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
         {/* ================= ROW 2: SCHEDULE (2/3) + PASS & ACTIONS (1/3) ================= */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -383,9 +322,7 @@ export default function CustomerDashboard() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
                   <h2 className="text-xl font-bold text-white">Upcoming Schedule</h2>
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-950/80 border border-blue-800/40 text-blue-400 text-xs font-bold">
-                    3 Active
-                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-950/80 border border-blue-800/40 text-blue-400 text-xs font-bold">{upcomingBookings.length} Active</span>
                 </div>
 
                 <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#060e20] border border-[#172545] text-xs font-semibold">
@@ -412,66 +349,70 @@ export default function CustomerDashboard() {
 
               {/* Danh sách các buổi tập */}
               <div className="space-y-3">
-                {scheduleItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="p-4 rounded-xl bg-[#0e172a] border border-[#1a2947] flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-700 transition-colors"
-                  >
-                    <div className="flex items-start sm:items-center gap-4">
-                      {/* Box ngày giờ */}
-                      <div className="px-3 py-2 rounded-lg bg-[#080e1c] border border-[#182645] text-center min-w-[70px]">
-                        <span className="text-[10px] font-bold text-blue-400 tracking-wider block">{item.badge}</span>
-                        <span className="text-base font-extrabold text-white leading-tight">{item.time}</span>
-                      </div>
+                {loadingBookings ? (
+    <div className="text-slate-400 text-sm py-4 text-center animate-pulse">Loading upcoming classes...</div>
+  ) : upcomingBookings.length === 0 ? (
+    <div className="text-slate-400 text-sm py-4 text-center">No upcoming classes scheduled.</div>
+  ) : (
+    upcomingBookings.map((item) => {
+      const dateObj = new Date(item.startTime);
+      const isToday = new Date().toDateString() === dateObj.toDateString();
+      const badge = isToday ? "TODAY" : dateObj.toLocaleDateString("en-GB", { month: "short", day: "2-digit" }).toUpperCase();
+      const time = dateObj.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+      
+      return (
+        <div
+          key={item.bookingId}
+          className="p-4 rounded-xl bg-[#0e172a] border border-[#1a2947] flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-700 transition-colors"
+        >
+          <div className="flex items-start sm:items-center gap-4">
+            {/* Box ngĂ y giá» */}
+            <div className="px-3 py-2 rounded-lg bg-[#080e1c] border border-[#182645] text-center min-w-[70px]">
+              <span className="text-[10px] font-bold text-blue-400 tracking-wider block">{badge}</span>
+              <span className="text-base font-extrabold text-white leading-tight">{time}</span>
+            </div>
 
-                      {/* Thông tin chi tiết */}
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-bold text-white">{item.title}</h4>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            • {item.status}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
-                          <div className="flex items-center gap-1">
-                            <User className="w-3.5 h-3.5 text-slate-500" />
-                            <span>{item.trainer}</span>
-                          </div>
-                          <span>•</span>
-                          <div className="flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                            <span>{item.location}</span>
-                          </div>
-                          <span>•</span>
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5 text-slate-500" />
-                            <span>{item.duration}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+            {/* ThĂ´ng tin chi tiáº¿t */}
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-bold text-white">{item.className}</h4>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  &bull; {item.status}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
+                <div className="flex items-center gap-1">
+                  <User className="w-3.5 h-3.5 text-slate-500" />
+                  <span>{item.coachName}</span>
+                </div>
+                <span>&bull;</span>
+                <div className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                  <span>{item.roomName}</span>
+                </div>
+                <span>&bull;</span>
+                <div className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-slate-500" />
+                  <span>{item.durationMinutes} min</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-                    {/* Thao tác nút bấm */}
-                    <div className="flex items-center gap-2 self-end sm:self-center">
-                      {item.canCheckIn && (
-                        <button className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/30 transition-colors">
-                          <QrCode className="w-3.5 h-3.5" />
-                          <span>Check-in</span>
-                        </button>
-                      )}
-                      {item.canReschedule && (
-                        <button className="px-3.5 py-1.5 rounded-lg bg-[#14203b] hover:bg-[#1a2b52] text-slate-200 text-xs font-medium border border-[#213560] transition-colors">
-                          Reschedule
-                        </button>
-                      )}
-                      {item.canCancel && (
-                        <button className="px-3.5 py-1.5 rounded-lg bg-[#11192e] hover:bg-[#182440] text-slate-300 text-xs font-medium border border-[#1b2a4d] transition-colors">
-                          Cancel
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+          {/* NĂºt thao tĂ¡c */}
+          <div className="flex items-center gap-2 mt-2 sm:mt-0">
+            <button className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors">
+              <QrCode className="w-3.5 h-3.5" />
+              Check-in
+            </button>
+            <button className="px-3 py-1.5 rounded-lg bg-transparent hover:bg-red-500/10 text-slate-400 hover:text-red-400 text-xs font-semibold transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      );
+    })
+  )}
               </div>
             </div>
 
@@ -505,19 +446,17 @@ export default function CustomerDashboard() {
 
               <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
                 <span>MEMBER ID</span>
-                <span className="font-mono font-bold text-white tracking-widest">#NX-88204</span>
+                <span className="font-mono font-bold text-white tracking-widest">#NX-{dynamicMemberId}</span>
               </div>
 
               {/* Giả lập Barcode hiện đại */}
-              <div className="p-3 rounded-xl bg-[#060c1a] border border-[#152342] flex items-center justify-center gap-1 my-3">
-                {Array.from({ length: 18 }).map((_, i) => (
-                  <span
-                    key={i}
-                    className={`h-8 rounded-sm bg-slate-300 ${
-                      i % 3 === 0 ? 'w-1.5' : i % 2 === 0 ? 'w-1' : 'w-0.5 opacity-60'
-                    }`}
-                  ></span>
-                ))}
+              {/* QR Code siêu ngầu */}
+              <div className="p-4 rounded-xl bg-white flex items-center justify-center my-4 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=NEXUS-${dynamicMemberId}-${userInfo?.email}`} 
+                  alt="Nexus Pass QR" 
+                  className="w-full max-w-[120px] rounded-lg"
+                />
               </div>
 
               <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
@@ -533,32 +472,17 @@ export default function CustomerDashboard() {
               <h3 className="text-sm font-bold text-white mb-3">Express Actions</h3>
               <div className="space-y-2">
                 {[
-                  {
-                    title: 'Book PT Session',
-                    subtitle: 'Consult biomechanics coaches',
-                    icon: User,
-                  },
-                  {
-                    title: 'Reserve Smart Court',
-                    subtitle: 'Tennis, Basketball & Padel',
-                    icon: Search,
-                  },
-                  {
-                    title: 'Biometric Telemetry',
-                    subtitle: 'VO2 Max & recovery index',
-                    icon: Activity,
-                  },
-                  {
-                    title: 'Locker & Facility Access',
-                    subtitle: 'Manage digital locker keys',
-                    icon: Dumbbell,
-                  },
+                  { title: "Book PT Session", subtitle: "Consult biomechanics coaches", icon: User, onClick: () => alert("System is matching you with an available trainer...") },
+                  { title: "Reserve Smart Court", subtitle: "Tennis, Basketball & Padel", icon: Search, onClick: () => alert("Loading Smart Court layout...") },
+                  { title: "Biometric Telemetry", subtitle: "VO2 Max & recovery index", icon: Activity, onClick: () => alert("Syncing data with your Apple Watch/Garmin...") },
+                  { title: "Locker & Facility Access", subtitle: "Manage digital locker keys", icon: Dumbbell, onClick: () => alert("Connecting NFC to unlock locker #42...") },
                 ].map((action, idx) => {
                   const Icon = action.icon;
                   return (
                     <button
                       key={idx}
-                      className="w-full p-3 rounded-xl bg-[#0e172a] border border-[#1a2947] hover:border-slate-600 flex items-center justify-between text-left group transition-all"
+                      onClick={action.onClick}
+                      className="w-full p-3 rounded-xl bg-[#0e172a] border border-[#1a2947] hover:border-blue-500 hover:bg-[#111d38] flex items-center justify-between text-left group transition-all"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-blue-600/15 border border-blue-500/20 text-blue-400 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
@@ -608,54 +532,60 @@ export default function CustomerDashboard() {
           </div>
 
           {/* Data Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-[#182645] text-slate-400 uppercase tracking-wider text-[10px]">
-                  <th className="pb-3 font-semibold">Date & Time</th>
-                  <th className="pb-3 font-semibold">Activity / Facility</th>
-                  <th className="pb-3 font-semibold">Trainer / Zone</th>
-                  <th className="pb-3 font-semibold">Duration</th>
-                  <th className="pb-3 font-semibold">Status</th>
-                  <th className="pb-3 font-semibold text-right">Telemetry Metrics</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#131f3b]">
-                {activityLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-[#0e172a]/60 transition-colors">
-                    <td className="py-4 font-semibold text-white">{log.dateTime}</td>
-                    <td className="py-4">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                          {log.type === 'gym' && <Dumbbell className="w-3.5 h-3.5" />}
-                          {log.type === 'court' && <Search className="w-3.5 h-3.5" />}
-                          {log.type === 'yoga' && <Activity className="w-3.5 h-3.5" />}
-                          {log.type === 'pool' && <Waves className="w-3.5 h-3.5" />}
-                        </div>
-                        <span className="font-medium text-white">{log.activity}</span>
-                      </div>
-                    </td>
-                    <td className="py-4 text-slate-300">{log.trainer}</td>
-                    <td className="py-4 text-slate-400">{log.duration}</td>
-                    <td className="py-4">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border ${
-                          log.status === 'Completed'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                        }`}
-                      >
-                        {log.status}
-                      </span>
-                    </td>
-                    <td className="py-4 text-right">
-                      <div className="font-bold text-white">{log.metric}</div>
-                      <div className="text-[10px] text-slate-400">{log.subMetric}</div>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-[#182645] text-slate-400 uppercase tracking-wider text-[10px]">
+                    <th className="pb-3 font-semibold">Date & Time</th>
+                    <th className="pb-3 font-semibold">Activity / Facility</th>
+                    <th className="pb-3 font-semibold">Trainer / Zone</th>
+                    <th className="pb-3 font-semibold">Duration</th>
+                    <th className="pb-3 font-semibold">Status</th>
+                    <th className="pb-3 font-semibold text-right">Telemetry Metrics</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[#131f3b]">
+                  {recentActivities.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="py-8 text-center text-slate-500 font-medium">
+                        No recent activities found. Start booking classes to see your logs!
+                      </td>
+                    </tr>
+                  ) : (
+                    recentActivities.map((log) => {
+                      const dateObj = new Date(log.startTime);
+                      const isYesterday = new Date(new Date().setDate(new Date().getDate()-1)).toDateString() === dateObj.toDateString();
+                      const dateStr = isYesterday ? 'Yesterday' : dateObj.toLocaleDateString('en-GB', { month: 'short', day: '2-digit', year: 'numeric' });
+                      const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                      
+                      return (
+                        <tr key={log.bookingId} className="hover:bg-[#0e172a]/60 transition-colors">
+                          <td className="py-4 font-semibold text-white">{dateStr}, {timeStr}</td>
+                          <td className="py-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                                <Activity className="w-3.5 h-3.5" />
+                              </div>
+                              <span className="font-medium text-white">{log.className}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 text-slate-300">{log.coachName}</td>
+                          <td className="py-4 text-slate-300">{log.durationMinutes}m</td>
+                          <td className="py-4">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              {log.status}
+                            </span>
+                          </td>
+                          <td className="py-4 text-right">
+                            <div className="font-bold text-white">{log.calories} kcal</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">Avg HR {log.avgHr} bpm</div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
           </div>
 
           {/* Table Pagination */}
@@ -692,7 +622,9 @@ export default function CustomerDashboard() {
             </div>
           </div>
         </div>
-      </main>
+      
     </div>
   );
-}
+};
+
+export default CustomerDashboard;

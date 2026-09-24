@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import DashboardLayout from '../../../layouts/DashboardLayout';
 
 const ReceptionistDashboard = () => (
@@ -9,3 +9,4 @@ const ReceptionistDashboard = () => (
 );
 
 export default ReceptionistDashboard;
+
