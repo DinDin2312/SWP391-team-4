@@ -2,6 +2,10 @@ package com.team4.sportscenter.modules.member.controllers;
 
 import com.team4.sportscenter.modules.member.dtos.response.MemberMembershipResponse;
 import com.team4.sportscenter.modules.member.dtos.response.UpcomingBookingResponse;
+import com.team4.sportscenter.modules.member.dtos.response.CalendarBookingResponse;
+import com.team4.sportscenter.modules.member.dtos.response.AvailableClassResponse;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import com.team4.sportscenter.modules.member.dtos.response.RecentActivityResponse;
 import com.team4.sportscenter.modules.member.services.MemberService;
 import lombok.RequiredArgsConstructor;
@@ -54,5 +58,24 @@ public class MemberController {
         return ResponseEntity.ok(response);
     }
 
-}
 
+    @GetMapping("/calendar-bookings")
+    public ResponseEntity<List<CalendarBookingResponse>> getCalendarBookings(Authentication authentication) {
+        return ResponseEntity.ok(memberService.getAllCalendarBookings(authentication.getName()));
+    }
+
+    @GetMapping("/available-classes")
+    public ResponseEntity<List<AvailableClassResponse>> getAvailableClasses() {
+        return ResponseEntity.ok(memberService.getAvailableClasses());
+    }
+
+    @PostMapping("/book-class/{classId}")
+    public ResponseEntity<String> bookClass(@PathVariable Integer classId, Authentication authentication) {
+        try {
+            memberService.bookClass(authentication.getName(), classId);
+            return ResponseEntity.ok("Booked course successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+}
