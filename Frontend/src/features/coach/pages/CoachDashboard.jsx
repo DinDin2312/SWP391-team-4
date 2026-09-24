@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import DashboardLayout from '../../../layouts/DashboardLayout';
 
 const CoachDashboard = () => (
@@ -9,3 +9,4 @@ const CoachDashboard = () => (
 );
 
 export default CoachDashboard;
+

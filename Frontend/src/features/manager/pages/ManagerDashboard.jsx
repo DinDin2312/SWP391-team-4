@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import DashboardLayout from '../../../layouts/DashboardLayout';
 
 const ManagerDashboard = () => (
@@ -9,3 +9,4 @@ const ManagerDashboard = () => (
 );
 
 export default ManagerDashboard;
+
