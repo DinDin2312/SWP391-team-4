@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEXUS Sports Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              surface: "#0f172a",
+              "surface-container-lowest": "#020617",
+              "surface-container-low": "#0b1326",
+              "surface-container": "#0e172a",
+              "surface-container-high": "#1e293b",
+              "surface-container-highest": "#334155",
+              "on-surface": "#f8fafc",
+              "on-surface-variant": "#94a3b8",
+              primary: "#3b82f6",
+              "on-primary": "#ffffff",
+              "primary-container": "#1d4ed8",
+              "on-primary-container": "#eff6ff",
+              secondary: "#10b981",
+              "on-secondary": "#ffffff",
+              "secondary-container": "#047857",
+              "on-secondary-container": "#ecfdf5",
+              tertiary: "#f59e0b",
+              "on-tertiary": "#ffffff",
+              error: "#ef4444",
+              "on-error": "#ffffff",
+              "inverse-primary": "#60a5fa"
+            },
+            spacing: {
+              "space-xs": "4px",
+              "space-sm": "8px",
+              "space-md": "16px",
+              "space-lg": "24px",
+              "space-xl": "32px",
+            }
+          }
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
