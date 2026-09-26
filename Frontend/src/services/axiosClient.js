@@ -7,9 +7,20 @@ const axiosClient = axios.create({
   },
 });
 
+axiosClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 axiosClient.interceptors.response.use(
   (response) => {
-    if (response && response.data) {
+    if (response && response.data !== undefined) {
       return response.data;
     }
     return response;
@@ -20,3 +31,4 @@ axiosClient.interceptors.response.use(
 );
 
 export default axiosClient;
+
