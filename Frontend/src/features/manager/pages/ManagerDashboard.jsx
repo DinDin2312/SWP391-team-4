@@ -6,6 +6,8 @@ import {
   Menu, Package, Pencil, Plus, RefreshCw, Search, ShieldCheck, Users, X,
 } from 'lucide-react';
 import { AuthContext } from '../../../context/AuthContext';
+import RoleThemeToggle from '../../../components/RoleThemeToggle';
+import { useRoleTheme } from '../../../hooks/useRoleTheme';
 import managerService from '../services/managerService';
 import './manager.css';
 
@@ -45,6 +47,7 @@ function PageHeader({ eyebrow, title, actions }) {
 function ManagerDashboard() {
   const { userInfo, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useRoleTheme();
   const [active, setActive] = useState('dashboard');
   const [mobileNav, setMobileNav] = useState(false);
   const [data, setData] = useState(null);
@@ -97,7 +100,7 @@ function ManagerDashboard() {
   const pageTitle = navItems.find((item) => item.id === active)?.label;
 
   return (
-    <div className="manager-app">
+    <div className={`manager-app ${theme === 'light' ? 'is-light' : 'is-dark'}`}>
       <aside className={`manager-sidebar ${mobileNav ? 'is-open' : ''}`}>
         <div className="manager-brand"><span><Dumbbell size={22} /></span><div><strong>NEXUS</strong><small>CENTER CONTROL</small></div><button className="manager-mobile-close" onClick={() => setMobileNav(false)} aria-label="Đóng menu"><X size={20} /></button></div>
         <div className="manager-role"><ShieldCheck size={16} /><span>Center Manager</span></div>
@@ -115,7 +118,8 @@ function ManagerDashboard() {
         <header className="manager-topbar">
           <button className="manager-menu-button" onClick={() => setMobileNav(true)} aria-label="Mở menu"><Menu size={20} /></button>
           <div><span>Trung tâm NEXUS</span><h1>{pageTitle}</h1></div>
-          <button className="manager-icon-button" onClick={load} title="Làm mới"><RefreshCw size={18} /></button>
+          <RoleThemeToggle theme={theme} onToggle={toggleTheme} />
+          <button className="manager-icon-button" onClick={load} title="Làm mới" aria-label="Làm mới dữ liệu"><RefreshCw size={18} /></button>
         </header>
 
         <section className="manager-content">
