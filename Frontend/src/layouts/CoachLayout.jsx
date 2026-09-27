@@ -1,6 +1,8 @@
 import React, { useContext } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import RoleThemeToggle from '../components/RoleThemeToggle';
+import { useRoleTheme } from '../hooks/useRoleTheme';
 import {
   LayoutDashboard, CalendarDays, Users, Dumbbell,
   Settings, LogOut, Award
@@ -10,6 +12,7 @@ const CoachLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userInfo, logout } = useContext(AuthContext);
+  const { theme, toggleTheme } = useRoleTheme();
 
   const fullName = userInfo?.fullName || 'Coach Trainer';
   const firstName = fullName.split(' ')[0];
@@ -33,7 +36,7 @@ const CoachLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#060b17] text-slate-200 flex font-sans antialiased selection:bg-blue-600 selection:text-white">
+    <div className={`role-shell is-${theme} min-h-screen bg-[#060b17] text-slate-200 flex font-sans antialiased selection:bg-blue-600 selection:text-white`}>
       {/* ===================== SIDEBAR ===================== */}
       <aside className="w-64 border-r border-[#15203b] bg-[#091124] flex flex-col justify-between shrink-0">
         <div>
@@ -143,6 +146,7 @@ const CoachLayout = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <RoleThemeToggle theme={theme} onToggle={toggleTheme} />
             <button onClick={handleLogout} className="px-3.5 py-2 rounded-xl bg-[#0e172a] border border-[#1a2947] hover:border-slate-600 text-slate-300 hover:text-white text-xs font-medium transition-colors flex items-center gap-2">
               <LogOut className="w-3.5 h-3.5" />
               <span>Logout</span>
