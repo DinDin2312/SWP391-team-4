@@ -60,6 +60,7 @@
 .manager-topbar h1 { margin: 2px 0 0; font-size: 20px; line-height: 1.2; }
 .manager-icon-button { color: #94a3b8; border-color: var(--manager-line); background: #0e172a; }
 .manager-icon-button:hover { color: #60a5fa; border-color: #3b82f6; }
+.manager-topbar .role-theme-toggle { width: 34px; height: 34px; flex-basis: 34px; border-radius: 6px; }
 .manager-menu-button { display: none; width: 36px; height: 36px; place-items: center; color: #cbd5e1; border: 1px solid var(--manager-line); border-radius: 6px; background: #0e172a; }
 .manager-content { width: min(1500px, 100%); margin: 0 auto; padding: 32px clamp(20px, 4vw, 48px) 56px; }
 

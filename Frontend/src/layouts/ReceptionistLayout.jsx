@@ -1,6 +1,8 @@
 import React, { useContext } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import RoleThemeToggle from '../components/RoleThemeToggle';
+import { useRoleTheme } from '../hooks/useRoleTheme';
 import {
   Users,
   UserPlus,
@@ -11,13 +13,12 @@ import {
   Headphones,
   LogOut,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 
 const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSelectFeature }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { userInfo, logout } = useContext(AuthContext);
+  const { theme, toggleTheme } = useRoleTheme();
 
   const fullName = userInfo?.fullName || 'Lễ Tân Thúy Kiều';
   const email = userInfo?.email || 'letan@sport.com';
@@ -87,7 +88,7 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
   ];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#060b17', color: '#f1f5f9', display: 'flex', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div className={`role-shell is-${theme}`} style={{ minHeight: '100vh', backgroundColor: theme === 'light' ? '#f4f6f8' : '#060b17', color: theme === 'light' ? '#17202a' : '#f1f5f9', display: 'flex', fontFamily: 'Inter, system-ui, sans-serif' }}>
       {/* ===================== SIDEBAR ===================== */}
       <aside
         style={{
@@ -288,6 +289,7 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
 
       {/* ===================== MAIN CONTENT WRAPPER ===================== */}
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+        <RoleThemeToggle theme={theme} onToggle={toggleTheme} floating />
         {children}
       </main>
     </div>
