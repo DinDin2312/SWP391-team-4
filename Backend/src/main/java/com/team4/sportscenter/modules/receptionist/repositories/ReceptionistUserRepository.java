@@ -24,4 +24,6 @@ public interface ReceptionistUserRepository extends JpaRepository<User, Integer>
 
     @Query("SELECT u FROM User u WHERE u.role.roleId = 4 ORDER BY u.userId DESC")
     List<User> findAllMembers();
-}
+
+    boolean existsByEmail(String email);
+}
