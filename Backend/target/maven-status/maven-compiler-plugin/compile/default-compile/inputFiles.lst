@@ -17,6 +17,7 @@ D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\aut
 D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\auth\services\UserService.java
 D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\coach\controllers\CoachController.java
 D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\coach\dtos\response\CoachScheduleResponse.java
+D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\coach\dtos\response\CoachStudentResponse.java
 D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\coach\dtos\response\EnrolledStudentResponse.java
 D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\coach\repositories\CoachScheduleRepository.java
 D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\coach\services\CoachScheduleService.java
@@ -42,6 +43,18 @@ D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\mem
 D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\member\services\MemberService.java
 D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\payment\controllers\PaymentController.java
 D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\payment\services\PaymentService.java
+D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\receptionist\controllers\ReceptionistController.java
+D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\receptionist\dtos\request\MemberRegisterRequest.java
+D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\receptionist\dtos\response\MemberBookingDetail.java
+D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\receptionist\dtos\response\MemberDetailResponse.java
+D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\receptionist\dtos\response\MemberMembershipDetail.java
+D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\receptionist\dtos\response\MemberSummaryResponse.java
+D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\receptionist\repositories\ReceptionistBookingRepository.java
+D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\receptionist\repositories\ReceptionistPackageRepository.java
+D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\receptionist\repositories\ReceptionistUserMembershipRepository.java
+D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\receptionist\repositories\ReceptionistUserRepository.java
+D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\receptionist\services\impl\ReceptionistMemberServiceImpl.java
+D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\modules\receptionist\services\ReceptionistMemberService.java
 D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\security\auth\UserDetailsServiceImpl.java
 D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\security\jwt\JwtAuthenticationFilter.java
 D:\SWP391\SWP391-team-4\Backend\src\main\java\com\team4\sportscenter\security\jwt\JwtService.java
