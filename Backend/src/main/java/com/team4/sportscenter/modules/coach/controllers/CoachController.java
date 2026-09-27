@@ -1,6 +1,8 @@
 package com.team4.sportscenter.modules.coach.controllers;
 
 import com.team4.sportscenter.modules.coach.dtos.response.CoachScheduleResponse;
+import com.team4.sportscenter.modules.coach.dtos.response.CoachStudentResponse;
+import com.team4.sportscenter.modules.coach.dtos.response.EnrolledStudentResponse;
 import com.team4.sportscenter.modules.coach.services.CoachScheduleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,5 +24,21 @@ public class CoachController {
         String coachEmail = authentication.getName();
         List<CoachScheduleResponse> schedules = coachScheduleService.getCoachSchedules(coachEmail);
         return ResponseEntity.ok(schedules);
+    }
+
+    @GetMapping("/schedules/{scheduleId}/students")
+    public ResponseEntity<List<EnrolledStudentResponse>> getScheduleStudents(
+            @PathVariable Integer scheduleId,
+            Authentication authentication) {
+        String coachEmail = authentication.getName();
+        List<EnrolledStudentResponse> students = coachScheduleService.getScheduleStudents(scheduleId, coachEmail);
+        return ResponseEntity.ok(students);
+    }
+
+    @GetMapping("/students")
+    public ResponseEntity<List<CoachStudentResponse>> getCoachStudents(Authentication authentication) {
+        String coachEmail = authentication.getName();
+        List<CoachStudentResponse> students = coachScheduleService.getCoachStudents(coachEmail);
+        return ResponseEntity.ok(students);
     }
 }
