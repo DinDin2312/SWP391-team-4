@@ -1,5 +1,6 @@
 package com.team4.sportscenter.modules.receptionist.controllers;
 
+import com.team4.sportscenter.modules.receptionist.dtos.request.MemberRegisterRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.response.MemberDetailResponse;
 import com.team4.sportscenter.modules.receptionist.dtos.response.MemberMembershipDetail;
 import com.team4.sportscenter.modules.receptionist.dtos.response.MemberSummaryResponse;
@@ -11,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/receptionist")
+@RequestMapping("/api/receptionist")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class ReceptionistController {
@@ -37,5 +38,17 @@ public class ReceptionistController {
     @GetMapping("/members/{userId}/memberships")
     public ResponseEntity<List<MemberMembershipDetail>> getMemberMemberships(@PathVariable Integer userId) {
         return ResponseEntity.ok(memberService.getMemberMemberships(userId));
+    }
+
+    @PostMapping("/members/register")
+    public ResponseEntity<?> registerMember(@RequestBody MemberRegisterRequest request) {
+        try {
+            memberService.registerMember(request);
+            return ResponseEntity.ok("Member registered successfully!");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("An error occurred while creating member account.");
+        }
     }
 }

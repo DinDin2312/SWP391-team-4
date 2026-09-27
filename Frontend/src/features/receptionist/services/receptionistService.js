@@ -28,15 +28,17 @@ export const receptionistService = {
    */
   getMemberMemberships: async (userId) => {
     return await axiosClient.get(`/receptionist/members/${userId}/memberships`);
+  },
+
+  /**
+   * Đăng ký thành viên mới tại quầy
+   * @param {Object} memberData - { fullName, email, phone, defaultPassword }
+   */
+  registerMember: async (memberData) => {
+    return await axiosClient.post('/receptionist/members/register', memberData);
   }
 };
 
 export default receptionistService;
 
-/**
- * Đăng ký thành viên mới tại quầy
- * @param {Object} memberData - { fullName, email, phone, defaultPassword }
- */
-registerMember: async (memberData) => {
-  return await axiosClient.post('/receptionist/members/register', memberData);
-}
+
