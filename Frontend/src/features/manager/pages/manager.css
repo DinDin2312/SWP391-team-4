@@ -16,6 +16,7 @@
 
 .manager-app button, .manager-app input, .manager-app select, .manager-app textarea { font: inherit; }
 .manager-app button { letter-spacing: 0; }
+.manager-app, .manager-app * { transition-property: color, background-color, border-color, box-shadow; transition-duration: .18s; }
 
 .manager-sidebar {
   position: fixed;
@@ -181,6 +182,69 @@
 .manager-modal footer { display: flex; justify-content: flex-end; gap: 9px; margin-top: 22px; padding-top: 18px; border-top: 1px solid #1a2947; }
 .manager-form-error { margin-bottom: 15px; padding: 10px 12px; color: #fca5a5; font-size: 11px; border: 1px solid rgba(248, 113, 113, .3); border-radius: 5px; background: rgba(127, 29, 29, .2); }
 .manager-overlay { display: none; }
+
+.manager-app.is-light {
+  --manager-bg: #f4f6f8;
+  --manager-ink: #17202a;
+  --manager-muted: #66727f;
+  --manager-line: #dfe4e8;
+  color-scheme: light;
+}
+
+.manager-app.is-light .manager-topbar { background: #ffffff; }
+.manager-app.is-light .manager-icon-button,
+.manager-app.is-light .manager-menu-button,
+.manager-app.is-light .manager-secondary,
+.manager-app.is-light .manager-row-actions button,
+.manager-app.is-light .manager-edit,
+.manager-app.is-light .manager-package-top button { color: #52606c; border-color: #d6dde2; background: #ffffff; }
+.manager-app.is-light .manager-icon-button:hover,
+.manager-app.is-light .manager-secondary:hover,
+.manager-app.is-light .manager-row-actions button:hover,
+.manager-app.is-light .manager-edit:hover { color: #1d4ed8; border-color: #60a5fa; }
+.manager-app.is-light .manager-stat,
+.manager-app.is-light .manager-panel,
+.manager-app.is-light .manager-filterbar,
+.manager-app.is-light .manager-date-filter,
+.manager-app.is-light .manager-table-wrap,
+.manager-app.is-light .manager-package-grid article,
+.manager-app.is-light .manager-report-stats,
+.manager-app.is-light .manager-modal { background: #ffffff; }
+.manager-app.is-light .manager-search,
+.manager-app.is-light .manager-filterbar select,
+.manager-app.is-light .manager-date-filter input,
+.manager-app.is-light .manager-report-range input,
+.manager-app.is-light .manager-form-grid input,
+.manager-app.is-light .manager-form-grid select,
+.manager-app.is-light .manager-form-grid textarea,
+.manager-app.is-light .manager-modal header button { color: #26323b; border-color: #d5dce0; background: #ffffff; color-scheme: light; }
+.manager-app.is-light .manager-table-wrap th { color: #6b7780; background: #f8f9fa; }
+.manager-app.is-light .manager-table-wrap td { color: #3e4b55; border-bottom-color: #edf0f2; }
+.manager-app.is-light .manager-table-wrap td > strong,
+.manager-app.is-light .manager-panel-heading strong { color: #25313a; }
+.manager-app.is-light .manager-table-wrap tbody tr:hover { background: #f8fafb; }
+.manager-app.is-light .manager-person > span { color: #1d4ed8; background: #e9f1ff; }
+.manager-app.is-light .manager-tabs { background: #e8ecef; border-color: #d9e0e4; }
+.manager-app.is-light .manager-tabs button.active { color: #1d4ed8; background: #ffffff; box-shadow: 0 1px 5px rgba(30, 44, 53, .12); }
+.manager-app.is-light .manager-tabs span,
+.manager-app.is-light .manager-bars i,
+.manager-app.is-light .manager-occupancy i { color: #65727c; background: #e8ecef; }
+.manager-app.is-light .manager-metric-row,
+.manager-app.is-light .manager-timeline > div,
+.manager-app.is-light .manager-package-grid article > div:last-child,
+.manager-app.is-light .manager-modal header,
+.manager-app.is-light .manager-modal footer { border-color: #e4e9ec; }
+.manager-app.is-light .manager-modal-backdrop { background: rgba(14, 22, 27, .56); }
+.manager-app.is-light .manager-form-grid label { color: #4c5963; }
+.manager-app.is-light .manager-occupancy strong { color: #4f5b64; }
+.manager-app.is-light .manager-status,
+.manager-app.is-light .manager-action-tag { color: #59656e; border-color: #d7dde1; background: #f2f4f5; }
+.manager-app.is-light .manager-status.is-active,
+.manager-app.is-light .manager-status.is-scheduled,
+.manager-app.is-light .manager-status.is-completed { color: #13705a; border-color: #b8ded3; background: #e8f5f1; }
+.manager-app.is-light .manager-status.is-inactive,
+.manager-app.is-light .manager-status.is-cancelled { color: #a34848; border-color: #ebcaca; background: #fbefef; }
+.manager-app.is-light .manager-status.is-pending { color: #926413; border-color: #ebd5a8; background: #fcf4e4; }
 
 @keyframes manager-spin { to { transform: rotate(360deg); } }
 
