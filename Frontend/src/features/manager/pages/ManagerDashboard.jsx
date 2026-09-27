@@ -80,7 +80,10 @@ function ManagerDashboard() {
     }
   }, [active, filters]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const refreshTimer = window.setTimeout(load, 0);
+    return () => window.clearTimeout(refreshTimer);
+  }, [load]);
 
   const selectPage = (id) => {
     setActive(id);
