@@ -1,9 +1,12 @@
 package com.team4.sportscenter.modules.receptionist.services.impl;
 
+import com.team4.sportscenter.modules.auth.entities.Role;
 import com.team4.sportscenter.modules.auth.entities.User;
+import com.team4.sportscenter.modules.auth.repositories.RoleRepository;
 import com.team4.sportscenter.modules.member.entities.Booking;
 import com.team4.sportscenter.modules.member.entities.Schedule;
 import com.team4.sportscenter.modules.member.entities.UserMembership;
+import com.team4.sportscenter.modules.receptionist.dtos.request.MemberRegisterRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.response.MemberBookingDetail;
 import com.team4.sportscenter.modules.receptionist.dtos.response.MemberDetailResponse;
 import com.team4.sportscenter.modules.receptionist.dtos.response.MemberMembershipDetail;
@@ -27,7 +30,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ReceptionistMemberServiceImpl implements ReceptionistMemberService {
-
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final RoleRepository roleRepository;
     private final ReceptionistUserRepository userRepository;
     private final ReceptionistUserMembershipRepository userMembershipRepository;
     private final ReceptionistBookingRepository bookingRepository;
@@ -269,5 +273,29 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                     .active(isActive)
                     .build();
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void registerMember(MemberRegisterRequest request) {
+        if (userRepository.existsByEmail(request.getEmail().trim())) {
+            throw new IllegalArgumentException("This email address is already registered in the system.");
+        }
+
+        Role memberRole = roleRepository.findById(4)
+                .orElseGet(() -> roleRepository.findByRoleName("Member")
+                        .orElseThrow(() -> new RuntimeException("Role 'Member' not found.")));
+
+        User newUser = User.builder()
+                .fullName(request.getFullName().trim())
+                .email(request.getEmail().trim())
+                .phone(request.getPhone() != null ? request.getPhone().trim() : null)
+                .passwordHash(passwordEncoder.encode(request.getDefaultPassword()))
+                .bio(request.getBio())
+                .role(memberRole)
+                .status("ACTIVE")
+                .build();
+
+        userRepository.save(newUser);
     }
 }
