@@ -56,7 +56,7 @@ jobs:
       mysql:
         image: mysql:8.4
         env:
-          MYSQL_DATABASE: sportscenter
+          MYSQL_DATABASE: SportCenter
           MYSQL_ROOT_PASSWORD: root
         ports:
           - 3306:3306
@@ -85,10 +85,18 @@ jobs:
       - name: Make Maven wrapper executable
         run: chmod +x mvnw
 
+      - name: Initialize MySQL schema and fixtures
+        run: |
+          mysql --protocol=TCP -h 127.0.0.1 -uroot -proot -e "DROP DATABASE IF EXISTS SportCenter; CREATE DATABASE SportCenter CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+          tail -n +4 database_init.sql | mysql --protocol=TCP -h 127.0.0.1 -uroot -proot SportCenter
+
+      - name: Ensure required role fixtures
+        run: mysql --protocol=TCP -h 127.0.0.1 -uroot -proot SportCenter -e "INSERT IGNORE INTO ROLES (role_id, role_name) VALUES (1, 'Center Manager'), (2, 'Receptionist'), (3, 'Coach'), (4, 'Member'); SELECT COUNT(*) AS role_count FROM ROLES;"
+
       - name: Test and package
         run: ./mvnw --batch-mode --no-transfer-progress clean verify
         env:
-          SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/sportscenter?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+          SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/SportCenter?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
           SPRING_DATASOURCE_USERNAME: root
           SPRING_DATASOURCE_PASSWORD: root
 
@@ -99,3 +107,4 @@ jobs:
           path: Backend/target/*.jar
           if-no-files-found: error
           retention-days: 7
+
