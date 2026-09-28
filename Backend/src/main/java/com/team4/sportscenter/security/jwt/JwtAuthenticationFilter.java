@@ -58,7 +58,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            // Token hết hạn hoặc không hợp lệ -> bỏ qua
+            // Token expired or invalid -> skip filter
         }
         
         filterChain.doFilter(request, response);

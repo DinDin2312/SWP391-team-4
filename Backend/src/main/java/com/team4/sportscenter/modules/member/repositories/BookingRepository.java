@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Modifying;
 import java.time.LocalDateTime;
-import java.time.LocalDateTime;
 import java.util.List;
 
 public interface BookingRepository extends JpaRepository<Booking, Integer> {
@@ -23,7 +22,7 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
     @Query("SELECT b FROM Booking b JOIN FETCH b.schedule s JOIN FETCH s.gymClass c JOIN FETCH c.coach u JOIN FETCH c.room r WHERE b.user.email = :email ORDER BY s.startTime ASC")
     List<Booking> findAllBookingsByEmail(@Param("email") String email);
 
-    @Query("SELECT COUNT(b) FROM Booking b WHERE b.schedule.scheduleId = :scheduleId AND b.status IN ('CONFIRMED', 'PENDING')")
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.schedule.scheduleId = :scheduleId AND b.status = 'CONFIRMED'")
     Integer countBookedSlots(@Param("scheduleId") Integer scheduleId);
 
     @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.email = :email AND b.schedule.scheduleId = :scheduleId AND b.status != 'CANCELLED'")

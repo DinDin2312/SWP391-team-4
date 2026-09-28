@@ -1,0 +1,93 @@
+package com.team4.sportscenter.modules.auth.services.impl;
+
+import com.team4.sportscenter.modules.auth.dtos.request.RegisterRequest;
+import com.team4.sportscenter.modules.auth.dtos.response.RegisterResponse;
+import com.team4.sportscenter.modules.auth.entities.Role;
+import com.team4.sportscenter.modules.auth.entities.User;
+import com.team4.sportscenter.modules.auth.repositories.RoleRepository;
+import com.team4.sportscenter.modules.auth.repositories.UserRepository;
+import com.team4.sportscenter.modules.auth.services.EmailService;
+import com.team4.sportscenter.modules.auth.services.UserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
+
+@Service
+@RequiredArgsConstructor
+public class UserServiceImpl implements UserService {
+
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
+    private final Map<String, String> otpStorage = new ConcurrentHashMap<>();
+
+    @Override
+    public RegisterResponse registerMember(RegisterRequest request) {
+        Optional<User> existingUserOpt = userRepository.findByEmail(request.getEmail());
+        
+        User user;
+        if (existingUserOpt.isPresent()) {
+            user = existingUserOpt.get();
+            if ("ACTIVE".equals(user.getStatus())) {
+                throw new RuntimeException("Email is already in use!");
+            }
+            // If PENDING, update the details and resend OTP
+            user.setFullName(request.getFullName());
+            user.setPhone(request.getPhone());
+            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        } else {
+            Role memberRole = roleRepository.findById(4).orElseGet(() -> {
+                Role newRole = new Role();
+                newRole.setRoleId(4);
+                newRole.setRoleName("Member");
+                return roleRepository.save(newRole);
+            });
+            user = User.builder()
+                    .fullName(request.getFullName())
+                    .email(request.getEmail())
+                    .phone(request.getPhone())
+                    .passwordHash(passwordEncoder.encode(request.getPassword())) 
+                    .role(memberRole)
+                    .status("PENDING")
+                    .build();
+        }
+
+        user = userRepository.save(user);
+
+        // Generate 6-digit OTP
+        String otpCode = String.format("%06d", new Random().nextInt(999999));
+        otpStorage.put(request.getEmail(), otpCode);
+
+        // Send OTP via email
+        emailService.sendOtpEmail(request.getEmail(), otpCode, request.getFullName());
+
+        return RegisterResponse.builder()
+                .userId(user.getUserId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .message("Please check your email to verify your account.")
+                .build();
+    }
+
+    @Override
+    public void verifyOtp(String email, String otp) {
+        String storedOtp = otpStorage.get(email);
+        if (storedOtp == null || !storedOtp.equals(otp)) {
+            throw new RuntimeException("Invalid or expired OTP code!");
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found!"));
+
+        user.setStatus("ACTIVE");
+        userRepository.save(user);
+
+        // Remove OTP after verification
+        otpStorage.remove(email);
+    }

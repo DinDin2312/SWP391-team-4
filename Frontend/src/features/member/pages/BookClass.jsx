@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat } from 'lucide-react';
+import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar } from 'lucide-react';
 
 const BookClass = () => {
   const [courses, setCourses] = useState([]);
@@ -10,10 +10,10 @@ const BookClass = () => {
   const [toast, setToast] = useState({ visible: false, type: 'success', title: '', message: '' });
 
   useEffect(() => {
-    fetchCourses();
+    fetchCourses(true);
   }, []);
 
-  const fetchCourses = async () => {
+  const fetchCourses = async (isInitialLoad = false) => {
     try {
       const token = localStorage.getItem('token');
       const res = await axios.get('http://localhost:8080/api/v1/member/available-classes', {
@@ -23,7 +23,10 @@ const BookClass = () => {
       
       if (res.data.length > 0) {
         const uniqueDates = [...new Set(res.data.map(s => new Date(s.nextSessionTime).toDateString()))].sort((a, b) => new Date(a) - new Date(b));
-        setSelectedDate(uniqueDates[0]);
+        setSelectedDate(prev => {
+          if (isInitialLoad || !prev) return uniqueDates[0];
+          return uniqueDates.includes(prev) ? prev : uniqueDates[0];
+        });
       } else {
         setSelectedDate(new Date().toDateString());
       }
@@ -44,6 +47,7 @@ const BookClass = () => {
       setToast({ visible: true, type: 'success', title: 'Course Enrolled', message: 'All sessions synced to your schedule.' });
       setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 4000);
       fetchCourses();
+      window.dispatchEvent(new Event('cartUpdated')); // Notify layout to update cart badge
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.response?.data || error.message || "Failed to enroll. Please try again."; setToast({ visible: true, type: 'error', title: 'Enrollment Failed', message: typeof errorMsg === 'string' ? errorMsg : 'Please try again.' }); setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 5000);
     }
@@ -106,22 +110,31 @@ const BookClass = () => {
           />
         </div>
 
-        <div className="flex items-center gap-6 overflow-x-auto pb-2 scrollbar-none border-t border-surface-container-highest pt-4">
-          <span className="text-sm font-semibold text-on-surface-variant shrink-0">Start Date:</span>
-          {availableDates.map(dateStr => {
-            const isActive = selectedDate === dateStr;
-            return (
-              <button 
-                key={dateStr}
-                onClick={() => setSelectedDate(dateStr)}
-                className={`text-sm font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5
-                  ${isActive ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
-              >
-                {formatDateLabel(dateStr)}
-                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-3 overflow-x-auto pb-4 scrollbar-none pt-5 border-t border-[#1e293b]/70">
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-sm font-medium text-slate-400 shrink-0 mr-3 flex items-center gap-2">
+              <Calendar className="w-4 h-4" /> Start Date
+            </span>
+            {availableDates.map(dateStr => {
+              const isActive = selectedDate === dateStr;
+              return (
+                <button 
+                  key={dateStr}
+                  onClick={() => setSelectedDate(dateStr)}
+                  className={`relative px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-300 flex items-center gap-2
+                    ${isActive 
+                      ? 'bg-blue-500/10 text-blue-400 border border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.15)] scale-105' 
+                      : 'bg-[#131B2E] text-slate-400 border border-[#1e293b] hover:bg-[#1a2642] hover:text-slate-200'}`}
+                >
+                  {formatDateLabel(dateStr)}
+                  {isActive && <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                  </span>}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 

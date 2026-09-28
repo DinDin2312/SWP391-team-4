@@ -6,13 +6,13 @@ export default function OTPVerification() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(300); // 5 phút = 300 giây
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes = 300 seconds
   
   const inputRefs = useRef([]);
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Lấy email truyền từ trang Đăng ký sang (hoặc dùng email mặc định nếu truy cập trực tiếp)
+  // Get email passed from registration page (or use default if accessed directly)
   const email = location.state?.email || 'alex@nexus.com';
 
   useEffect(() => {
@@ -29,19 +29,61 @@ export default function OTPVerification() {
     return `${m}:${s}`;
   };
 
-  const handleChange = (element, index) => {
-    if (isNaN(element.value)) return false;
+  
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pastedData) {
+      const newOtp = [...otp];
+      pastedData.split('').forEach((char, i) => {
+        newOtp[i] = char;
+      });
+      setOtp(newOtp);
+      const targetInput = e.target.parentNode.children[Math.min(pastedData.length, 5)];
+      if (targetInput) targetInput.focus();
+    }
+  };
 
-    setOtp([...otp.map((d, idx) => (idx === index ? element.value : d))]);
 
-    // Tự động nhảy sang ô tiếp theo
-    if (element.nextSibling && element.value !== '') {
-      element.nextSibling.focus();
+  const handleResend = async () => {
+    if (timeLeft > 0) return; // Prevent resend if timer hasn't expired (5 minutes)
+    try {
+      setLoading(true);
+      await axios.post(`http://localhost:8080/api/v1/auth/resend-otp?email=${encodeURIComponent(email)}`);
+      setTimeLeft(300); // Reset timer to 5 minutes
+      setOtp(['', '', '', '', '', '']); // Clear input boxes
+      setErrorMsg('');
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'Failed to resend code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e, index) => {
+    let val = e.target.value.replace(/\D/g, '');
+    if (!val) {
+      const newOtp = [...otp];
+      newOtp[index] = '';
+      setOtp(newOtp);
+      return;
+    }
+    
+    // Get the last typed digit to override telex composition
+    val = val.slice(-1);
+    
+    const newOtp = [...otp];
+    newOtp[index] = val;
+    setOtp(newOtp);
+
+    // Focus next
+    if (val !== '' && e.target.nextElementSibling) {
+      e.target.nextElementSibling.focus();
     }
   };
 
   const handleKeyDown = (e, index) => {
-    // Nhấn Backspace để quay lại ô trước
+    // Press Backspace to go to the previous input
     if (e.key === 'Backspace') {
       if (otp[index] === '' && e.target.previousSibling) {
         e.target.previousSibling.focus();
@@ -57,24 +99,24 @@ export default function OTPVerification() {
     e.preventDefault();
     const otpCode = otp.join('');
     if (otpCode.length < 6) {
-      setToastMessage({ type: 'error', text: 'Vui lòng nhập đủ 6 số OTP!' });
+      setToastMessage({ type: 'error', text: 'Please enter all 6 digits of the OTP code!' });
       setTimeout(() => setToastMessage(null), 3000);
       return;
     }
 
     setLoading(true);
     try {
-      // Gọi API Verify OTP
-      const response = await axios.post('http://localhost:8080/api/v1/auth/verify-otp', { email, otp: otpCode });
+      // Call Verify OTP API
+      const response = await axios.post(`http://localhost:8080/api/v1/auth/verify-otp?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otpCode)}`);
       
-      setToastMessage({ type: 'success', text: response.data.message || 'Xác thực thành công! Tài khoản đã được kích hoạt.' });
+      setToastMessage({ type: 'success', text: response.data.message || 'Verification successful! Your account has been activated.' });
       setLoading(false);
       setTimeout(() => {
         navigate('/login');
       }, 2000);
 
     } catch (error) {
-      setToastMessage({ type: 'error', text: error.response?.data?.message || 'Mã OTP không hợp lệ!' });
+      setToastMessage({ type: 'error', text: error.response?.data?.message || 'Invalid OTP code!' });
       setLoading(false);
       setTimeout(() => setToastMessage(null), 3000);
     }
@@ -187,10 +229,11 @@ export default function OTPVerification() {
                   {otp.map((data, index) => (
                     <input
                       key={index}
-                      type="text"
-                      maxLength="1"
+                      type="tel"
+                      autoComplete="off"
                       value={data}
-                      onChange={(e) => handleChange(e.target, index)}
+                      onChange={(e) => handleChange(e, index)}
+                      onPaste={handlePaste}
                       onKeyDown={(e) => handleKeyDown(e, index)}
                       onFocus={(e) => e.target.select()}
                       className="w-full h-13 sm:h-14 bg-[#131b2e] border border-[#31394d] text-white text-center text-xl sm:text-2xl font-mono font-bold rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 focus:outline-none transition-all shadow-inner"
@@ -249,7 +292,7 @@ export default function OTPVerification() {
           </div>
 
           <footer className="pt-8 border-t border-[#222f4c]/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-            <div>© 2026 NEXUS Sports Technology Inc.</div>
+            <div>Â© 2026 NEXUS Sports Technology Inc.</div>
             <div className="flex items-center gap-4">
               <button className="hover:text-slate-300 transition-colors">Privacy Policy</button>
               <button className="hover:text-slate-300 transition-colors">Safety Code</button>
@@ -265,7 +308,7 @@ export default function OTPVerification() {
             <span className="material-symbols-outlined text-[20px]">{toastMessage.type === 'error' ? 'close' : 'check'}</span>
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-semibold text-white">{toastMessage.type === 'error' ? 'Lỗi!' : 'Thành công!'}</span>
+            <span className="text-sm font-semibold text-white">{toastMessage.type === 'error' ? 'Error!' : 'Success!'}</span>
             <span className="text-xs text-[#C2C6D6]">{toastMessage.text}</span>
           </div>
         </div>

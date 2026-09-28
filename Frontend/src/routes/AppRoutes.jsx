@@ -16,6 +16,8 @@ import Memberships from '../features/member/pages/Memberships';
 import BookClass from '../features/member/pages/BookClass';
 import Notifications from '../features/member/pages/Notifications';
 import Settings from '../features/member/pages/Settings';
+import PaymentCart from '../features/member/pages/PaymentCart';
+import PaymentResult from '../features/member/pages/PaymentResult';
 
 import CoachDashboard from '../features/coach/pages/CoachDashboard';
 import ManagerDashboard from '../features/manager/pages/ManagerDashboard';
@@ -41,6 +43,8 @@ function AppRoutes() {
         <Route path="book-class" element={<BookClass />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="cart" element={<PaymentCart />} />
+        <Route path="payment-result" element={<PaymentResult />} />
       </Route>
 
       {/* Legacy role path mappings */}
