@@ -1,4 +1,4 @@
-﻿import React, { useState, useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../../../context/AuthContext';
@@ -35,24 +35,24 @@ const CustomerDashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Trạng thái cho Thẻ tập
+// Status for Membership Card
   const [membership, setMembership] = useState(null);
   const [loadingMembership, setLoadingMembership] = useState(true);
 
-  // Trạng thái cho Lịch học sắp tới
+// Status for Upcoming Schedule
   const [upcomingBookings, setUpcomingBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
 
   const [totalCheckIns, setTotalCheckIns] = useState(0);
   const [recentActivities, setRecentActivities] = useState([]);
 
-  // Gọi API lấy thẻ tập và lịch học
+// Fetch membership card and schedule data
   React.useEffect(() => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('token');
         
-        // Gọi song song 2 API cho nhanh
+// Call 2 APIs in parallel for speed
         const [membershipRes, bookingsRes, checkInsRes, recentRes] = await Promise.all([
           axios.get('http://localhost:8080/api/v1/member/my-membership', { headers: { Authorization: `Bearer ${token}` } }),
           axios.get('http://localhost:8080/api/v1/member/upcoming-bookings', { headers: { Authorization: `Bearer ${token}` } })
@@ -78,7 +78,7 @@ const CustomerDashboard = () => {
     }
   }, []);
 
-  // Lấy tên thật từ lúc đăng nhập
+// Get full name from login session
   const fullName = userInfo?.fullName || 'Active Member';
   
   const getMemberId = (email) => {
@@ -99,7 +99,7 @@ const CustomerDashboard = () => {
     navigate('/');
   };
 
-  // Dữ liệu mẫu lịch sắp tới
+// Sample upcoming schedule data
   const scheduleItems = [
     {
       id: 1,
@@ -138,7 +138,7 @@ const CustomerDashboard = () => {
     },
   ];
 
-  // Dữ liệu bảng Recent Activity
+// Sample recent activity data
   const activityLogs = [
     {
       id: 1,
@@ -249,7 +249,7 @@ const CustomerDashboard = () => {
                   {totalCheckIns} <span className="text-xs font-medium text-slate-400">Sessions</span>
                 </div>
                 <div className="flex items-center gap-1 text-xs font-semibold text-emerald-400 mt-1">
-                  <span>↗ +21% vs last month</span>
+              <span>↑ +21% vs last month</span>
                 </div>
               </div>
               {/* Mini Spark Bar Graph */}
@@ -315,10 +315,10 @@ const CustomerDashboard = () => {
 
         {/* ================= ROW 2: SCHEDULE (2/3) + PASS & ACTIONS (1/3) ================= */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Upcoming Schedule (2 Cột bên trái) */}
+            {/* Upcoming Schedule (Left 2 Columns) */}
           <div className="lg:col-span-2 p-6 rounded-2xl bg-[#0b1326] border border-[#172545] flex flex-col justify-between">
             <div>
-              {/* Tiêu đề & Bộ lọc Tabs */}
+              {/* Header & Filter Tabs */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
                   <h2 className="text-xl font-bold text-white">Upcoming Schedule</h2>
@@ -347,7 +347,7 @@ const CustomerDashboard = () => {
                 </div>
               </div>
 
-              {/* Danh sách các buổi tập */}
+                {/* List of training sessions */}
               <div className="space-y-3">
                 {loadingBookings ? (
     <div className="text-slate-400 text-sm py-4 text-center animate-pulse">Loading upcoming classes...</div>
@@ -366,13 +366,13 @@ const CustomerDashboard = () => {
           className="p-4 rounded-xl bg-[#0e172a] border border-[#1a2947] flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-700 transition-colors"
         >
           <div className="flex items-start sm:items-center gap-4">
-            {/* Box ngĂ y giá» */}
+                    {/* Date & Time Box */}
             <div className="px-3 py-2 rounded-lg bg-[#080e1c] border border-[#182645] text-center min-w-[70px]">
               <span className="text-[10px] font-bold text-blue-400 tracking-wider block">{badge}</span>
               <span className="text-base font-extrabold text-white leading-tight">{time}</span>
             </div>
 
-            {/* ThĂ´ng tin chi tiáº¿t */}
+                    {/* Session Details */}
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-bold text-white">{item.className}</h4>
@@ -399,7 +399,7 @@ const CustomerDashboard = () => {
             </div>
           </div>
 
-          {/* NĂºt thao tĂ¡c */}
+                    {/* Action Buttons */}
           <div className="flex items-center gap-2 mt-2 sm:mt-0">
             <button className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors">
               <QrCode className="w-3.5 h-3.5" />
@@ -416,7 +416,7 @@ const CustomerDashboard = () => {
               </div>
             </div>
 
-            {/* Footer đồng bộ Telemetry */}
+            {/* Footer - Telemetry Sync */}
             <div className="pt-4 mt-6 border-t border-[#172545] flex items-center justify-between text-xs text-slate-400">
               <span className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
@@ -428,7 +428,7 @@ const CustomerDashboard = () => {
             </div>
           </div>
 
-          {/* Right Column: Pass & Express Actions (1 Cột bên phải) */}
+            {/* Right Column: Pass & Express Actions */}
           <div className="space-y-6">
             {/* NEXUS PASS Card */}
             <div className="p-5 rounded-2xl bg-[#0b1326] border border-[#172545]">
@@ -449,8 +449,8 @@ const CustomerDashboard = () => {
                 <span className="font-mono font-bold text-white tracking-widest">#NX-{dynamicMemberId}</span>
               </div>
 
-              {/* Giả lập Barcode hiện đại */}
-              {/* QR Code siêu ngầu */}
+                {/* Simulated Modern Barcode */}
+                {/* QR Code section */}
               <div className="p-4 rounded-xl bg-white flex items-center justify-center my-4 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
                 <img 
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=NEXUS-${dynamicMemberId}-${userInfo?.email}`} 

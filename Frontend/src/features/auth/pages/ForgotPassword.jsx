@@ -46,46 +46,62 @@ export default function ForgotPassword() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleOtpChange = (index, val) => {
-    if (val.length > 1) val = val.slice(-1);
-    const newOtp = [...otp];
-    newOtp[index] = val;
-    setOtp(newOtp);
-    if (val && index < 5) inputRefs.current[index + 1]?.focus();
-  };
-
-  const handleKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+  
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pastedData) {
+      const newOtp = [...otp];
+      pastedData.split('').forEach((char, i) => {
+        newOtp[i] = char;
+      });
+      setOtp(newOtp);
+      const focusIndex = Math.min(pastedData.length, 5);
+      inputRefs.current[focusIndex]?.focus();
     }
   };
 
-  // 1. API Gửi OTP Khôi phục mật khẩu
+  const handleOtpChange = (index, val) => {
+    val = val.replace(/\D/g, '');
+    if (!val) {
+      const newOtp = [...otp];
+      newOtp[index] = '';
+      setOtp(newOtp);
+      return;
+    }
+    val = val.slice(-1);
+    const newOtp = [...otp];
+    newOtp[index] = val;
+    setOtp(newOtp);
+    if (val !== '' && index < 5) inputRefs.current[index + 1]?.focus();
+  };
+
+  // 1. API: Send Forgot Password OTP
   const handleSendOtp = async (e) => {
     e.preventDefault();
     if (!email) {
-      setErrorMsg('Vui lòng nhập địa chỉ email hợp lệ.');
+      setErrorMsg('Please enter a valid email address.');
       return;
     }
     setErrorMsg('');
     setIsLoading(true);
 
     try {
-      await axios.post('http://localhost:8080/api/v1/auth/forgot-password/send-otp', { email });
+      await axios.post(`http://localhost:8080/api/v1/auth/forgot-password/send-otp?email=${encodeURIComponent(email)}`);
       setStep(2);
       setTimeLeft(300);
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Lỗi khi gửi OTP.');
+      setErrorMsg(err.response?.data?.message || 'Failed to send OTP. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 2. API Xác thực OTP
+  // 2. API: Verify OTP
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     if (otp.some((digit) => digit === '')) {
-      setErrorMsg('Vui lòng nhập đầy đủ 6 chữ số mã OTP.');
+      setErrorMsg('Please enter all 6 digits of the OTP code.');
       return;
     }
     setErrorMsg('');
@@ -98,21 +114,21 @@ export default function ForgotPassword() {
       });
       setStep(3);
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Mã OTP không hợp lệ hoặc đã hết hạn.');
+      setErrorMsg(err.response?.data?.message || 'Invalid or expired OTP code.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 3. API Đổi mật khẩu
+  // 3. API: Reset Password
   const handleResetPassword = async (e) => {
     e.preventDefault();
     if (newPassword.length < 8) {
-      setErrorMsg('Mật khẩu phải có ít nhất 8 ký tự.');
+      setErrorMsg('Password must be at least 8 characters long.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      setErrorMsg('Mật khẩu xác nhận không khớp.');
+      setErrorMsg('Passwords do not match.');
       return;
     }
     setErrorMsg('');
@@ -126,7 +142,7 @@ export default function ForgotPassword() {
       });
       setStep(4);
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Lỗi khi đổi mật khẩu.');
+      setErrorMsg(err.response?.data?.message || 'Failed to reset password. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -164,14 +180,14 @@ export default function ForgotPassword() {
 
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-10 flex items-center justify-center">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
-          {/* CỘT TRÁI */}
+          {/* LEFT COLUMN */}
           <div className="lg:col-span-5 rounded-3xl bg-[#0b1326] border border-[#172545] p-8 flex flex-col justify-between relative overflow-hidden shadow-2xl">
             <div className="absolute top-0 right-0 -mr-20 -mt-20 w-72 h-72 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
             <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
             <div className="relative z-10 space-y-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold">
                 <ShieldCheck className="w-4 h-4" />
-                <span>Security Protocol · Auth Gateway v4.9</span>
+                <span>Security Protocol &middot; Auth Gateway v4.9</span>
               </div>
               <div>
                 <h1 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
@@ -211,7 +227,7 @@ export default function ForgotPassword() {
             </div>
           </div>
 
-          {/* CỘT PHẢI */}
+          {/* RIGHT COLUMN */}
           <div className="lg:col-span-7 rounded-3xl bg-[#0b1326] border border-[#172545] p-6 sm:p-8 flex flex-col justify-between shadow-2xl relative">
             <div>
               <div className="grid grid-cols-3 gap-2 pb-6 border-b border-[#172545] mb-6">
@@ -239,7 +255,7 @@ export default function ForgotPassword() {
                 </div>
               )}
 
-              {/* BƯỚC 1 */}
+              {/* STEP 1 */}
               {step === 1 && (
                 <form onSubmit={handleSendOtp} className="space-y-5">
                   <div>
@@ -252,7 +268,7 @@ export default function ForgotPassword() {
                     <label className="text-xs font-semibold text-slate-300">Registered Email Address</label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="athlete@nexus.com" className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors" />
+                      <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="********" className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors" />
                     </div>
                   </div>
                   <button type="submit" disabled={isLoading} className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all disabled:opacity-50">
@@ -261,7 +277,7 @@ export default function ForgotPassword() {
                 </form>
               )}
 
-              {/* BƯỚC 2 */}
+              {/* STEP 2 */}
               {step === 2 && (
                 <form onSubmit={handleVerifyOtp} className="space-y-5">
                   <div className="flex items-start justify-between">
@@ -277,13 +293,14 @@ export default function ForgotPassword() {
                     <label className="text-xs font-semibold text-slate-300">Security PIN Code</label>
                     <div className="flex justify-between gap-2 sm:gap-3">
                       {otp.map((digit, index) => (
-                        <input key={index} ref={(el) => (inputRefs.current[index] = el)} type="text" inputMode="numeric" maxLength={1} value={digit} onChange={(e) => handleOtpChange(index, e.target.value)} onKeyDown={(e) => handleKeyDown(index, e)} className="w-12 h-14 sm:w-14 sm:h-16 text-center text-xl font-bold bg-[#0e172a] border border-[#1a2947] focus:border-blue-500 focus:bg-blue-950/20 text-white rounded-xl outline-none transition-all shadow-inner" />
+                        <input key={index} ref={(el) => (inputRefs.current[index] = el)} type="tel" value={digit} autoComplete="off" onChange={(e) => handleOtpChange(index, e.target.value)}
+                        onPaste={handlePaste} onKeyDown={(e) => handleKeyDown(index, e)} className="w-12 h-14 sm:w-14 sm:h-16 text-center text-xl font-bold bg-[#0e172a] border border-[#1a2947] focus:border-blue-500 focus:bg-blue-950/20 text-white rounded-xl outline-none transition-all shadow-inner" />
                       ))}
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-400">
                     <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-blue-400" /> Code expires in: <strong className="text-white font-mono">{formatTimer(timeLeft)}</strong></span>
-                    <button type="button" onClick={handleSendOtp} className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">Resend Code</button>
+                    <button type="button" onClick={handleSendOtp} disabled={timeLeft > 0} className={`font-semibold transition-colors ${timeLeft > 0 ? 'text-slate-500 cursor-not-allowed' : 'text-blue-400 hover:text-blue-300'}`}>Resend Code</button>
                   </div>
                   <button type="submit" disabled={isLoading} className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all disabled:opacity-50">
                     {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><span>Verify Code & Continue</span><ArrowRight className="w-4 h-4" /></>}
@@ -291,7 +308,7 @@ export default function ForgotPassword() {
                 </form>
               )}
 
-              {/* BƯỚC 3 */}
+              {/* STEP 3 */}
               {step === 3 && (
                 <form onSubmit={handleResetPassword} className="space-y-4">
                   <div>
@@ -302,7 +319,7 @@ export default function ForgotPassword() {
                     <label className="text-xs font-semibold text-slate-300">New Password</label>
                     <div className="relative">
                       <KeyRound className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input type={showPassword ? 'text' : 'password'} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••••••" className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors" />
+                      <input type={showPassword ? 'text' : 'password'} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="********" className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors" />
                       <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -321,7 +338,7 @@ export default function ForgotPassword() {
                     <label className="text-xs font-semibold text-slate-300">Confirm New Password</label>
                     <div className="relative">
                       <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input type={showConfirmPassword ? 'text' : 'password'} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••••••" className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors" />
+                      <input type={showConfirmPassword ? 'text' : 'password'} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="********" className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors" />
                       <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
                         {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -333,7 +350,7 @@ export default function ForgotPassword() {
                 </form>
               )}
 
-              {/* BƯỚC 4 */}
+              {/* STEP 4 */}
               {step === 4 && (
                 <div className="py-8 text-center space-y-4">
                   <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 mx-auto flex items-center justify-center shadow-lg shadow-emerald-500/20">

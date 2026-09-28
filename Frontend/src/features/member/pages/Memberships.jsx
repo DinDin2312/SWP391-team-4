@@ -184,7 +184,7 @@ const Memberships = () => {
                     <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Standard Fitness</h3>
                     <p className="font-body-sm text-body-sm text-on-surface-variant mt-1 mb-space-md">Engineered for dedicated athletes maintaining consistent day-to-day baseline performance.</p>
                     <div className="flex items-baseline gap-1 mb-space-lg">
-                        <span className="font-headline-xl text-headline-xl text-on-surface font-extrabold tier-price" data-monthly="1,200,000 ₫" data-yearly="960,000 ₫">1,200,000 ₫</span>
+                        <span className="font-headline-xl text-headline-xl text-on-surface font-extrabold tier-price" data-monthly="1,200,000  VND" data-yearly="960,000  VND">1,200,000  VND</span>
                         <span className="font-body-sm text-body-sm text-on-surface-variant">/ month</span>
                     </div>
                     {/* Feature List */}
@@ -232,7 +232,7 @@ const Memberships = () => {
                     <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Pro Athlete Suite</h3>
                     <p className="font-body-sm text-body-sm text-on-surface-variant mt-1 mb-space-md">Tailored for serious performers demanding intensive classes and continuous metric analysis.</p>
                     <div className="flex items-baseline gap-1 mb-space-lg">
-                        <span className="font-headline-xl text-headline-xl text-primary font-extrabold tier-price" data-monthly="2,400,000 ₫" data-yearly="1,920,000 ₫">2,400,000 ₫</span>
+                        <span className="font-headline-xl text-headline-xl text-primary font-extrabold tier-price" data-monthly="2,400,000  VND" data-yearly="1,920,000  VND">2,400,000  VND</span>
                         <span className="font-body-sm text-body-sm text-on-surface-variant">/ month</span>
                     </div>
                     {/* Feature List */}
@@ -276,7 +276,7 @@ const Memberships = () => {
                     <h3 className="font-headline-md text-headline-md text-on-surface font-bold">Elite All-Access Lab</h3>
                     <p className="font-body-sm text-body-sm text-on-surface-variant mt-1 mb-space-md">The pinnacle of athletic science, deep cryo-recovery protocols, and fully personalized training.</p>
                     <div className="flex items-baseline gap-1 mb-space-lg">
-                        <span className="font-headline-xl text-headline-xl text-on-surface font-extrabold tier-price" data-monthly="4,500,000 ₫" data-yearly="3,600,000 ₫">4,500,000 ₫</span>
+                        <span className="font-headline-xl text-headline-xl text-on-surface font-extrabold tier-price" data-monthly="4,500,000  VND" data-yearly="3,600,000  VND">4,500,000  VND</span>
                         <span className="font-body-sm text-body-sm text-on-surface-variant">/ month</span>
                     </div>
                     {/* Feature List */}
@@ -335,7 +335,7 @@ const Memberships = () => {
                 <div className="flex items-center justify-between pt-space-md mt-space-md bg-surface-container-low -mx-space-md -mb-space-md p-space-md rounded-b-xl">
                     <div className="flex flex-col">
                         <span className="font-label-sm text-label-sm text-on-surface-variant">Special Price</span>
-                        <span className="font-headline-sm text-headline-sm text-on-surface font-bold">1,450,000 ₫</span>
+                        <span className="font-headline-sm text-headline-sm text-on-surface font-bold">1,450,000  VND</span>
                     </div>
                     <button className="px-space-md py-1.5 rounded-lg bg-surface-container-high text-on-surface font-label-md text-label-md hover:bg-surface-container-highest transition-all">
                         Purchase
@@ -355,7 +355,7 @@ const Memberships = () => {
                 <div className="flex items-center justify-between pt-space-md mt-space-md bg-surface-container-low -mx-space-md -mb-space-md p-space-md rounded-b-xl">
                     <div className="flex flex-col">
                         <span className="font-label-sm text-label-sm text-on-surface-variant">Special Price</span>
-                        <span className="font-headline-sm text-headline-sm text-on-surface font-bold">3,200,000 ₫</span>
+                        <span className="font-headline-sm text-headline-sm text-on-surface font-bold">3,200,000  VND</span>
                     </div>
                     <button className="px-space-md py-1.5 rounded-lg bg-surface-container-high text-on-surface font-label-md text-label-md hover:bg-surface-container-highest transition-all">
                         Purchase
@@ -375,7 +375,7 @@ const Memberships = () => {
                 <div className="flex items-center justify-between pt-space-md mt-space-md bg-surface-container-low -mx-space-md -mb-space-md p-space-md rounded-b-xl">
                     <div className="flex flex-col">
                         <span className="font-label-sm text-label-sm text-on-surface-variant">Special Price</span>
-                        <span className="font-headline-sm text-headline-sm text-on-surface font-bold">1,800,000 ₫</span>
+                        <span className="font-headline-sm text-headline-sm text-on-surface font-bold">1,800,000  VND</span>
                     </div>
                     <button className="px-space-md py-1.5 rounded-lg bg-surface-container-high text-on-surface font-label-md text-label-md hover:bg-surface-container-highest transition-all">
                         Purchase
@@ -428,7 +428,7 @@ const Memberships = () => {
                         </div>
                     </td>
                     <td className="py-space-md px-space-md text-on-surface-variant">Visa •••• 4092</td>
-                    <td className="py-space-md px-space-md font-mono font-semibold text-on-surface">2,400,000 ₫</td>
+                    <td className="py-space-md px-space-md font-mono font-semibold text-on-surface">2,400,000  VND</td>
                     <td className="py-space-md px-space-md">
 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-label-sm text-label-sm font-semibold bg-tertiary-container/30 text-tertiary">
 <span className="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
@@ -453,7 +453,7 @@ const Memberships = () => {
                         </div>
                     </td>
                     <td className="py-space-md px-space-md text-on-surface-variant">MoMo Smart Pay</td>
-                    <td className="py-space-md px-space-md font-mono font-semibold text-on-surface">3,200,000 ₫</td>
+                    <td className="py-space-md px-space-md font-mono font-semibold text-on-surface">3,200,000  VND</td>
                     <td className="py-space-md px-space-md">
 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-label-sm text-label-sm font-semibold bg-tertiary-container/30 text-tertiary">
 <span className="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
@@ -478,7 +478,7 @@ const Memberships = () => {
                         </div>
                     </td>
                     <td className="py-space-md px-space-md text-on-surface-variant">Visa •••• 4092</td>
-                    <td className="py-space-md px-space-md font-mono font-semibold text-on-surface">2,400,000 ₫</td>
+                    <td className="py-space-md px-space-md font-mono font-semibold text-on-surface">2,400,000  VND</td>
                     <td className="py-space-md px-space-md">
 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-label-sm text-label-sm font-semibold bg-tertiary-container/30 text-tertiary">
 <span className="w-1.5 h-1.5 rounded-full bg-tertiary"></span>

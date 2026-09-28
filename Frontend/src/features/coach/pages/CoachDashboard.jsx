@@ -1,6 +1,8 @@
 import React from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import { CalendarDays, Users, Dumbbell, Award, ArrowRight } from 'lucide-react';
+ 
 
 const CoachDashboard = () => {
   const navigate = useNavigate();

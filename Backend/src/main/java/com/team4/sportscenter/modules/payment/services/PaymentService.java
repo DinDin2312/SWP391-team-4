@@ -1,5 +1,12 @@
 package com.team4.sportscenter.modules.payment.services;
 
+import com.team4.sportscenter.modules.payment.dtos.CartResponse;
+import java.util.Map;
+
 public interface PaymentService {
-    // TODO: Khai báo các hàm liên quan đến thanh toán và giỏ hàng
+    CartResponse getCartItems(String email);
+    String checkout(String email, String ipAddress, String paymentMethod);
+    void removeFromCart(String email, Integer classId);
+    void handleVNPayCallback(Map<String, String> queryParams);
+    void handleMoMoCallback(Map<String, String> queryParams);
 }

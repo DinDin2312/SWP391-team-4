@@ -12,15 +12,15 @@ import java.time.LocalDateTime;
 public class BookingCleanupTask {
     private final BookingRepository bookingRepository;
 
-    // Chạy mỗi 1 phút (60000 ms)
+    // Runs every 1 minute (60000 ms)
     @Scheduled(fixedRate = 60000)
     @Transactional
     public void cleanupExpiredBookings() {
-        // Hủy các booking PENDING đã tồn tại quá 15 phút
+        // Cancel PENDING bookings that have existed for more than 15 minutes
         LocalDateTime cutoffTime = LocalDateTime.now().minusMinutes(15);
         int cancelledCount = bookingRepository.cancelExpiredPendingBookings(cutoffTime);
         if (cancelledCount > 0) {
-            System.out.println("[CRON JOB] Đã hủy tự động " + cancelledCount + " vé PENDING quá hạn (15 phút). Giải phóng chỗ trống!");
+            System.out.println("[CRON JOB] Auto-cancelled " + cancelledCount + " PENDING bookings (expired > 15 min). Slots freed.");
         }
     }
 }

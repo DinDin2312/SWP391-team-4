@@ -205,7 +205,7 @@ const Settings = () => {
                         <label className="font-label-md text-label-md text-on-surface-variant">System Display Language</label>
                         <select className="w-full bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded-lg px-space-md py-2.5 focus:outline-none focus:ring-1 focus:ring-primary shadow-sm">
                             <option selected="" value="en">English (US - Default)</option>
-                            <option value="vi">Tiếng Việt</option>
+              <option value="vi">Vietnamese</option>
                         </select>
                     </div>
                 </form>

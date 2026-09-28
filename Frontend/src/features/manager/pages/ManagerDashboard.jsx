@@ -1,3 +1,4 @@
+
 import { useCallback, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -10,6 +11,7 @@ import RoleThemeToggle from '../../../components/RoleThemeToggle';
 import { useRoleTheme } from '../../../hooks/useRoleTheme';
 import managerService from '../services/managerService';
 import './manager.css';
+
 
 const today = new Date();
 const isoDate = (date) => date.toISOString().slice(0, 10);
