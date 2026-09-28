@@ -71,6 +71,12 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "OTP verified successfully!"));
     }
 
+    @PostMapping("/resend-otp")
+    public ResponseEntity<String> resendRegistrationOtp(@RequestParam String email) {
+        userService.resendRegistrationOtp(email);
+        return ResponseEntity.ok("OTP has been resent to your email!");
+    }
+
     @PostMapping("/forgot-password/send-otp")
     public ResponseEntity<Map<String, String>> sendForgotPasswordOtp(
             @RequestBody(required = false) OtpRequest request,
