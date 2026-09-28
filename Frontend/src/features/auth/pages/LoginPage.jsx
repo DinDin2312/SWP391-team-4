@@ -1,12 +1,12 @@
 import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, LockKeyhole } from 'lucide-react';
+import { Dumbbell, LockKeyhole, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 import { AuthContext } from '../../../context/AuthContext';
 import { useGoogleLogin } from '@react-oauth/google';
 
 const ROLE_ROUTES = {
-  Member: '/customer/dashboard',
+  Member: '/member/dashboard',
   Receptionist: '/staff/dashboard',
   Coach: '/trainer/dashboard',
   Admin: '/admin/dashboard',
@@ -18,6 +18,7 @@ function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 

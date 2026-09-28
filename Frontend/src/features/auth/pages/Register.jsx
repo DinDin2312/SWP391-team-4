@@ -36,21 +36,21 @@ export default function Register() {
   const handleRegistration = async (e) => {
     e.preventDefault();
     if (!isAgreed) {
-      alert("Bạn phải đồng ý với Điều khoản dịch vụ!");
+      alert("You must agree to the Terms of Service!");
       return;
     }
 
     setLoading(true);
     try {
       const response = await axios.post('http://localhost:8080/api/v1/auth/register', formData);
-      setToastMessage({ type: 'success', text: response.data.message || 'Đăng ký tài khoản Member thành công!' });
+      setToastMessage({ type: 'success', text: response.data.message || 'Member account registered successfully!' });
       
-      // Chuyển hướng sang trang nhập OTP, truyền theo email vừa đăng ký
+      // Redirect to OTP verification page
       setTimeout(() => {
         navigate('/verify-otp', { state: { email: formData.email } });
       }, 1500);
     } catch (error) {
-      setToastMessage({ type: 'error', text: error.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại!' });
+      setToastMessage({ type: 'error', text: error.response?.data?.message || 'An error occurred, please try again!' });
     } finally {
       setLoading(false);
       setTimeout(() => setToastMessage(null), 3200);
@@ -203,7 +203,7 @@ export default function Register() {
           <span className="material-symbols-outlined text-[20px]">{toastMessage?.type === 'error' ? 'close' : 'check'}</span>
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-sm font-semibold text-white">{toastMessage?.type === 'error' ? 'Lỗi!' : 'Thành công!'}</span>
+          <span className="text-sm font-semibold text-white">{toastMessage?.type === 'error' ? 'Error!' : 'Success!'}</span>
           <span className="text-xs text-[#C2C6D6]">{toastMessage?.text}</span>
         </div>
       </div>

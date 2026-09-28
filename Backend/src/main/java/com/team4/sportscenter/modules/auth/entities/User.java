@@ -45,6 +45,9 @@ public class User implements UserDetails {
     @Column(name = "bio", columnDefinition = "TEXT")
     private String bio;
 
+    @Column(name = "loyalty_points")
+    private Integer loyaltyPoints;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.getRoleName().toUpperCase().replace(" ", "_")));
