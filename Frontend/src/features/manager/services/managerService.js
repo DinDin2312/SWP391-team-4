@@ -21,6 +21,8 @@ const managerService = {
     ? axiosClient.put(`/manager/classes/${payload.classId}`, payload)
     : axiosClient.post('/manager/classes', payload),
   schedules: (from, to) => axiosClient.get('/manager/schedules', { params: { from, to } }),
+  scheduleBookings: (id) => axiosClient.get(`/manager/schedules/${id}/bookings`),
+  createScheduleSeries: (payload) => axiosClient.post('/manager/schedules/series', payload),
   saveSchedule: (payload) => payload.scheduleId
     ? axiosClient.put(`/manager/schedules/${payload.scheduleId}`, payload)
     : axiosClient.post('/manager/schedules', payload),
