@@ -49,6 +49,9 @@ public class SecurityConfig {
                         // Cho phép truy cập các API của Receptionist
                         .requestMatchers("/api/receptionist/**", "/receptionist/**").permitAll()
 
+                        // Manager operations are restricted to the Center Manager authority.
+                        .requestMatchers("/api/manager/**").hasRole("CENTER_MANAGER")
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

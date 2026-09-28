@@ -61,7 +61,7 @@ function AppRoutes() {
       <Route path={ROLE_ROUTES.customer} element={<Navigate to="/member/dashboard" replace />} />
       <Route path={ROLE_ROUTES.staff} element={<ProtectedRoute allowedRoles={['Receptionist']}><ReceptionistDashboard /></ProtectedRoute>} />
       <Route path={ROLE_ROUTES.trainer} element={<Navigate to="/coach/dashboard" replace />} />
-      <Route path={ROLE_ROUTES.admin} element={<ProtectedRoute allowedRoles={['Admin']}><ManagerDashboard /></ProtectedRoute>} />
+      <Route path={ROLE_ROUTES.admin} element={<ProtectedRoute allowedRoles={['Center Manager']}><ManagerDashboard /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

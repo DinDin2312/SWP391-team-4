@@ -2,15 +2,18 @@
 import React, { useContext } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import RoleThemeToggle from '../components/RoleThemeToggle';
+import { useRoleTheme } from '../hooks/useRoleTheme';
 import {
   LayoutDashboard, CalendarDays, CreditCard, Dumbbell,
-  Bell, Settings, LogOut, ShoppingCart, Activity, ShieldCheck
+  Bell, Settings, LogOut, ShoppingCart
 } from 'lucide-react';
 
 const MemberLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userInfo, logout } = useContext(AuthContext);
+  const { theme, toggleTheme } = useRoleTheme();
 
   const fullName = userInfo?.fullName || 'Active Member';
   const firstName = fullName.split(' ')[0];
@@ -36,7 +39,7 @@ const MemberLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#060b17] text-slate-200 flex font-sans antialiased selection:bg-blue-600 selection:text-white">
+    <div className={`role-shell is-${theme} min-h-screen bg-[#060b17] text-slate-200 flex font-sans antialiased selection:bg-blue-600 selection:text-white`}>
       {/* ===================== SIDEBAR ===================== */}
       <aside className="w-64 border-r border-[#15203b] bg-[#091124] flex flex-col justify-between shrink-0">
         <div>
@@ -134,6 +137,7 @@ const MemberLayout = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <RoleThemeToggle theme={theme} onToggle={toggleTheme} />
             <div className="px-3.5 py-2 rounded-xl bg-[#0e172a] border border-[#1a2947] flex items-center gap-2 text-xs text-slate-300">
               <span className="w-2 h-2 rounded-full bg-blue-500"></span>
               <span className="text-slate-400">Next Session:</span>
