@@ -1,32 +1,33 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { ROLE_ROUTES } from '../config/roles';
 
 // Auth Pages
-import LoginPage from '../features/auth/pages/LoginPage';
-import Register from '../features/auth/pages/Register';
-import OTPVerification from '../features/auth/pages/OTPVerification';
-import ForgotPassword from '../features/auth/pages/ForgotPassword';
+const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'));
+const Register = lazy(() => import('../features/auth/pages/Register'));
+const OTPVerification = lazy(() => import('../features/auth/pages/OTPVerification'));
+const ForgotPassword = lazy(() => import('../features/auth/pages/ForgotPassword'));
 
 // Layouts & Pages
 import MemberLayout from '../layouts/MemberLayout';
-import CustomerDashboard from '../features/member/pages/CustomerDashboard';
-import MySchedule from '../features/member/pages/MySchedule';
-import Memberships from '../features/member/pages/Memberships';
-import BookClass from '../features/member/pages/BookClass';
-import Notifications from '../features/member/pages/Notifications';
-import Settings from '../features/member/pages/Settings';
+const CustomerDashboard = lazy(() => import('../features/member/pages/CustomerDashboard'));
+const MySchedule = lazy(() => import('../features/member/pages/MySchedule'));
+const Memberships = lazy(() => import('../features/member/pages/Memberships'));
+const BookClass = lazy(() => import('../features/member/pages/BookClass'));
+const Notifications = lazy(() => import('../features/member/pages/Notifications'));
+const Settings = lazy(() => import('../features/member/pages/Settings'));
 
 import CoachLayout from '../layouts/CoachLayout';
-import CoachDashboard from '../features/coach/pages/CoachDashboard';
-import CoachSchedule from '../features/coach/pages/CoachSchedule';
-import CoachStudents from '../features/coach/pages/CoachStudents';
-import ManagerDashboard from '../features/manager/pages/ManagerDashboard';
-import ReceptionistDashboard from '../features/receptionist/pages/ReceptionistDashboard';
+const CoachDashboard = lazy(() => import('../features/coach/pages/CoachDashboard'));
+const CoachSchedule = lazy(() => import('../features/coach/pages/CoachSchedule'));
+const CoachStudents = lazy(() => import('../features/coach/pages/CoachStudents'));
+const ManagerDashboard = lazy(() => import('../features/manager/pages/ManagerDashboard'));
+const ReceptionistDashboard = lazy(() => import('../features/receptionist/pages/ReceptionistDashboard'));
 
 function AppRoutes() {
   return (
-    <Routes>
+    <Suspense fallback={<div role="status" style={{ padding: 32 }}>Đang tải trang...</div>}><Routes>
       <Route path="/" element={<LoginPage />} />
       <Route path="/register" element={<Register />} />
       <Route path="/verify-otp" element={<OTPVerification />} />
@@ -64,7 +65,7 @@ function AppRoutes() {
       <Route path={ROLE_ROUTES.admin} element={<ProtectedRoute allowedRoles={['Center Manager']}><ManagerDashboard /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    </Routes></Suspense>
   );
 }
 
