@@ -85,10 +85,13 @@ jobs:
       - name: Make Maven wrapper executable
         run: chmod +x mvnw
 
+      - name: Initialize MySQL schema and fixtures
+        run: mysql --protocol=TCP -h 127.0.0.1 -uroot -proot < database_init.sql
+
       - name: Test and package
         run: ./mvnw --batch-mode --no-transfer-progress clean verify
         env:
-          SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/sportscenter?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+          SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/SportCenter?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
           SPRING_DATASOURCE_USERNAME: root
           SPRING_DATASOURCE_PASSWORD: root
 
