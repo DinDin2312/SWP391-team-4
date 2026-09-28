@@ -284,3 +284,15 @@
   .manager-bars > div { grid-template-columns: 62px 1fr; }
   .manager-bars strong { grid-column: 2; }
 }
+
+/* Manager feedback, accessible forms and roster */
+.manager-notice { padding: 12px 16px; margin-bottom: 16px; border: 1px solid #2c876c; border-radius: 10px; color: #63d6ae; background: #173d3226; }
+.manager-app.is-light .manager-notice { color: #17694e; }
+.manager-modal fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.manager-modal input[type="checkbox"] { width: 20px; height: 20px; }
+.manager-help { line-height: 1.6; font-size: 13px; margin: 0; opacity: .85; }
+.manager-roster { width: min(900px, 94vw); }
+.manager-roster .manager-table-wrap { margin: 16px; }
+.manager-app button:disabled, .manager-modal button:disabled { opacity: .5; cursor: not-allowed; }
+.manager-app :focus-visible, .manager-modal :focus-visible { outline: 2px solid #4d9aff; outline-offset: 3px; }
+.manager-report-range { flex-wrap: wrap; }
