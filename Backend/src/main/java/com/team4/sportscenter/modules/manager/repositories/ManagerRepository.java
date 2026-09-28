@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,13 +20,97 @@ import java.util.Map;
 public class ManagerRepository {
     private final JdbcTemplate jdbc;
 
+    // Serialize manager assignment/capacity changes, including requests on different server instances.
+    // Always acquire this row before checking constraints and hold it until the service transaction commits.
+    public void lockOperations() {
+        jdbc.queryForList("SELECT role_id FROM ROLES WHERE role_name='Center Manager' FOR UPDATE");
+    }
+
+    public void requireSubject(Integer id) {
+        jdbc.queryForObject("SELECT subject_id FROM SUBJECTS WHERE subject_id=?", Integer.class, id);
+    }
+
+    public void requireRoom(Integer id) {
+        jdbc.queryForObject("SELECT room_id FROM ROOMS WHERE room_id=?", Integer.class, id);
+    }
+
+    public void requirePackage(Integer id) {
+        jdbc.queryForObject("SELECT package_id FROM PACKAGES WHERE package_id=?", Integer.class, id);
+    }
+
+    public boolean coachHasAssignments(Integer id) {
+        return jdbc.queryForObject("""
+                SELECT COUNT(*) FROM CLASSES c WHERE c.coach_id=? AND
+                (c.status='ACTIVE' OR EXISTS (SELECT 1 FROM SCHEDULES s WHERE s.class_id=c.class_id
+                  AND s.status='SCHEDULED' AND s.end_time>NOW()))
+                """, Integer.class, id) > 0;
+    }
+
+    public int requiredRoomCapacity(Integer id) {
+        return jdbc.queryForObject("SELECT COALESCE(MAX(max_slots),0) FROM CLASSES WHERE room_id=?",
+                Integer.class, id);
+    }
+
+    public int peakBookings(Integer id) {
+        return jdbc.queryForObject("""
+                SELECT COALESCE(MAX(n),0) FROM (
+                  SELECT COUNT(*) n FROM BOOKINGS b JOIN SCHEDULES s ON s.schedule_id=b.schedule_id
+                  WHERE s.class_id=? AND s.status<>'CANCELLED' AND b.status IN ('CONFIRMED','PENDING')
+                  GROUP BY s.schedule_id
+                ) counts
+                """, Integer.class, id);
+    }
+
+    public boolean hasUpcomingSchedules(Integer id) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM SCHEDULES WHERE class_id=? AND status='SCHEDULED' AND end_time>NOW()",
+                Integer.class, id) > 0;
+    }
+
+    public Map<String, Object> schedule(Integer id) {
+        return localTimes(jdbc.queryForMap("SELECT schedule_id scheduleId,class_id classId,start_time startTime,end_time endTime,status FROM SCHEDULES WHERE schedule_id=?", id));
+    }
+
+    public List<Map<String, Object>> scheduleBookings(Integer id) {
+        return jdbc.queryForList("""
+                SELECT b.booking_id bookingId,u.full_name fullName,u.email,u.phone,b.status,b.attendance_status attendanceStatus
+                FROM BOOKINGS b JOIN USERS u ON u.user_id=b.user_id WHERE b.schedule_id=? ORDER BY u.full_name,b.booking_id
+                """, id);
+    }
+
+    public boolean hasMemberConflict(Integer id, LocalDateTime start, LocalDateTime end) {
+        return jdbc.queryForObject("""
+                SELECT COUNT(*) FROM BOOKINGS own_b JOIN BOOKINGS other_b ON other_b.user_id=own_b.user_id
+                JOIN SCHEDULES s ON s.schedule_id=other_b.schedule_id
+                WHERE own_b.schedule_id=? AND other_b.schedule_id<>? AND own_b.status IN ('CONFIRMED','PENDING')
+                  AND other_b.status IN ('CONFIRMED','PENDING') AND s.status<>'CANCELLED'
+                  AND s.start_time<? AND s.end_time>?
+                """, Integer.class, id, id, end, start) > 0;
+    }
+
+    public void notifyScheduleBookings(Integer id, String title, String message) {
+        jdbc.update("""
+                INSERT INTO NOTIFICATIONS(user_id,title,message,is_read,created_at)
+                SELECT DISTINCT user_id,?,?,false,NOW() FROM BOOKINGS
+                WHERE schedule_id=? AND status IN ('CONFIRMED','PENDING')
+                """, title, message, id);
+    }
+
+    public void cancelScheduleBookings(Integer id) {
+        jdbc.update("UPDATE BOOKINGS SET status='CANCELLED' WHERE schedule_id=? AND status IN ('CONFIRMED','PENDING')", id);
+    }
+
+    private Map<String, Object> localTimes(Map<String, Object> row) {
+        row.replaceAll((key, value) -> value instanceof Timestamp timestamp ? timestamp.toLocalDateTime() : value);
+        return row;
+    }
+
     public Map<String, Object> dashboard() {
         return jdbc.queryForMap("""
                 SELECT
                   (SELECT COUNT(*) FROM USERS u JOIN ROLES r ON r.role_id=u.role_id WHERE r.role_name='Member') totalMembers,
                   (SELECT COUNT(*) FROM USERS u JOIN ROLES r ON r.role_id=u.role_id WHERE r.role_name='Coach' AND u.status='ACTIVE') activeCoaches,
                   (SELECT COUNT(*) FROM CLASSES WHERE status='ACTIVE') activeClasses,
-                  (SELECT COUNT(*) FROM USER_MEMBERSHIPS WHERE status='ACTIVE' AND end_date >= CURDATE()) activeMemberships,
+                  (SELECT COUNT(*) FROM USER_MEMBERSHIPS WHERE status='ACTIVE' AND start_date<=CURDATE() AND end_date >= CURDATE()) activeMemberships,
                   (SELECT COALESCE(SUM(amount),0) FROM PAYMENTS WHERE status='SUCCESS' AND YEAR(payment_date)=YEAR(CURDATE()) AND MONTH(payment_date)=MONTH(CURDATE())) monthlyRevenue,
                   (SELECT COUNT(*) FROM SCHEDULES WHERE status='SCHEDULED' AND start_time BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)) upcomingSchedules
                 """);
@@ -102,7 +187,10 @@ public class ManagerRepository {
                 SELECT c.class_id classId,c.class_name className,c.subject_id subjectId,s.subject_name subjectName,
                        c.coach_id coachId,u.full_name coachName,c.room_id roomId,r.room_name roomName,
                        c.price,c.max_slots maxSlots,c.status,
-                       COUNT(DISTINCT CASE WHEN b.status='CONFIRMED' THEN b.user_id END) enrolled
+                       COALESCE((SELECT MAX(booked) FROM (
+                         SELECT sx.class_id,COUNT(*) booked FROM SCHEDULES sx JOIN BOOKINGS bx ON bx.schedule_id=sx.schedule_id
+                         WHERE sx.status<>'CANCELLED' AND bx.status IN ('CONFIRMED','PENDING') GROUP BY sx.class_id,sx.schedule_id
+                       ) counts WHERE counts.class_id=c.class_id),0) enrolled
                 FROM CLASSES c JOIN SUBJECTS s ON s.subject_id=c.subject_id
                 JOIN USERS u ON u.user_id=c.coach_id JOIN ROOMS r ON r.room_id=c.room_id
                 LEFT JOIN SCHEDULES sc ON sc.class_id=c.class_id LEFT JOIN BOOKINGS b ON b.schedule_id=sc.schedule_id
@@ -114,10 +202,10 @@ public class ManagerRepository {
     public int saveClass(Integer id, ManagerRequests.ClassRequest request) {
         if (id == null) {
             return insert("INSERT INTO CLASSES(subject_id,coach_id,room_id,class_name,price,max_slots,status) VALUES (?,?,?,?,?,?,?)",
-                    request.subjectId(), request.coachId(), request.roomId(), request.className(), request.price(), request.maxSlots(), request.status());
+                    request.subjectId(), request.coachId(), request.roomId(), request.className(), request.price(), request.maxSlots(), request.status().toUpperCase(java.util.Locale.ROOT));
         }
         jdbc.update("UPDATE CLASSES SET subject_id=?,coach_id=?,room_id=?,class_name=?,price=?,max_slots=?,status=? WHERE class_id=?",
-                request.subjectId(), request.coachId(), request.roomId(), request.className(), request.price(), request.maxSlots(), request.status(), id);
+                request.subjectId(), request.coachId(), request.roomId(), request.className(), request.price(), request.maxSlots(), request.status().toUpperCase(java.util.Locale.ROOT), id);
         return id;
     }
 
@@ -139,17 +227,17 @@ public class ManagerRepository {
                 SELECT sc.schedule_id scheduleId,sc.class_id classId,c.class_name className,
                        c.coach_id coachId,u.full_name coachName,c.room_id roomId,r.room_name roomName,
                        sc.start_time startTime,sc.end_time endTime,sc.status,
-                       COUNT(CASE WHEN b.status='CONFIRMED' THEN 1 END) booked,c.max_slots maxSlots
+                       COUNT(CASE WHEN b.status IN ('CONFIRMED','PENDING') THEN 1 END) booked,c.max_slots maxSlots
                 FROM SCHEDULES sc JOIN CLASSES c ON c.class_id=sc.class_id JOIN USERS u ON u.user_id=c.coach_id
                 JOIN ROOMS r ON r.room_id=c.room_id LEFT JOIN BOOKINGS b ON b.schedule_id=sc.schedule_id
-                WHERE DATE(sc.start_time) BETWEEN ? AND ?
+                WHERE sc.start_time >= ? AND sc.start_time < ?
                 GROUP BY sc.schedule_id,sc.class_id,c.class_name,c.coach_id,u.full_name,c.room_id,r.room_name,sc.start_time,sc.end_time,sc.status,c.max_slots
                 ORDER BY sc.start_time
-                """, from, to);
+                """, from.atStartOfDay(), to.plusDays(1).atStartOfDay()).stream().map(this::localTimes).toList();
     }
 
     public Map<String, Object> classAssignment(Integer classId) {
-        return jdbc.queryForMap("SELECT coach_id coachId,room_id roomId FROM CLASSES WHERE class_id=?", classId);
+        return jdbc.queryForMap("SELECT coach_id coachId,room_id roomId,status,class_name className FROM CLASSES WHERE class_id=?", classId);
     }
 
     public boolean hasScheduleConflict(Integer scheduleId, Integer coachId, Integer roomId, LocalDateTime start, LocalDateTime end) {
@@ -164,10 +252,10 @@ public class ManagerRepository {
     public int saveSchedule(Integer id, ManagerRequests.ScheduleRequest request) {
         if (id == null) {
             return insert("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,?)",
-                    request.classId(), request.startTime(), request.endTime(), request.status());
+                    request.classId(), request.startTime(), request.endTime(), request.status().toUpperCase(java.util.Locale.ROOT));
         }
         jdbc.update("UPDATE SCHEDULES SET class_id=?,start_time=?,end_time=?,status=? WHERE schedule_id=?",
-                request.classId(), request.startTime(), request.endTime(), request.status(), id);
+                request.classId(), request.startTime(), request.endTime(), request.status().toUpperCase(java.util.Locale.ROOT), id);
         return id;
     }
 
@@ -176,7 +264,7 @@ public class ManagerRepository {
                 SELECT p.package_id packageId,p.package_name packageName,p.package_type packageType,
                        p.duration_days durationDays,p.price,
                        COUNT(um.membership_id) subscribers,
-                       COUNT(CASE WHEN um.status='ACTIVE' AND um.end_date>=CURDATE() THEN 1 END) activeSubscribers
+                       COUNT(CASE WHEN um.status='ACTIVE' AND um.start_date<=CURDATE() AND um.end_date>=CURDATE() THEN 1 END) activeSubscribers
                 FROM PACKAGES p LEFT JOIN USER_MEMBERSHIPS um ON um.package_id=p.package_id
                 GROUP BY p.package_id,p.package_name,p.package_type,p.duration_days,p.price ORDER BY p.package_id DESC
                 """);
@@ -213,11 +301,13 @@ public class ManagerRepository {
                 GROUP BY p.package_id,p.package_name ORDER BY value DESC
                 """, from, to));
         result.put("classOccupancy", jdbc.queryForList("""
-                SELECT c.class_name label,c.max_slots capacity,COUNT(DISTINCT CASE WHEN b.status='CONFIRMED' THEN b.user_id END) value
-                FROM CLASSES c LEFT JOIN SCHEDULES sc ON sc.class_id=c.class_id AND DATE(sc.start_time) BETWEEN ? AND ?
+                SELECT c.class_id classId,c.class_name label,c.max_slots*COUNT(DISTINCT sc.schedule_id) capacity,
+                       COUNT(CASE WHEN b.status='CONFIRMED' THEN 1 END) value
+                FROM CLASSES c JOIN SCHEDULES sc ON sc.class_id=c.class_id AND sc.status<>'CANCELLED'
+                  AND sc.start_time>=? AND sc.start_time<?
                 LEFT JOIN BOOKINGS b ON b.schedule_id=sc.schedule_id
                 GROUP BY c.class_id,c.class_name,c.max_slots ORDER BY value DESC LIMIT 10
-                """, from, to));
+                """, from.atStartOfDay(), to.plusDays(1).atStartOfDay()));
         return result;
     }
 
