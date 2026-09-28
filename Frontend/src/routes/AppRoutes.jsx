@@ -19,7 +19,10 @@ import Settings from '../features/member/pages/Settings';
 import PaymentCart from '../features/member/pages/PaymentCart';
 import PaymentResult from '../features/member/pages/PaymentResult';
 
+import CoachLayout from '../layouts/CoachLayout';
 import CoachDashboard from '../features/coach/pages/CoachDashboard';
+import CoachSchedule from '../features/coach/pages/CoachSchedule';
+import CoachStudents from '../features/coach/pages/CoachStudents';
 import ManagerDashboard from '../features/manager/pages/ManagerDashboard';
 import ReceptionistDashboard from '../features/receptionist/pages/ReceptionistDashboard';
 
@@ -47,11 +50,22 @@ function AppRoutes() {
         <Route path="payment-result" element={<PaymentResult />} />
       </Route>
 
+      {/* Coach Routes wrapped in CoachLayout */}
+      <Route path="/coach" element={
+        <ProtectedRoute allowedRoles={['Coach']}>
+          <CoachLayout />
+        </ProtectedRoute>
+      }>
+        <Route path="dashboard" element={<CoachDashboard />} />
+        <Route path="schedule" element={<CoachSchedule />} />
+        <Route path="students" element={<CoachStudents />} />
+      </Route>
+
       {/* Legacy role path mappings */}
       <Route path={ROLE_ROUTES.customer} element={<Navigate to="/member/dashboard" replace />} />
       <Route path={ROLE_ROUTES.staff} element={<ProtectedRoute allowedRoles={['Receptionist']}><ReceptionistDashboard /></ProtectedRoute>} />
-      <Route path={ROLE_ROUTES.trainer} element={<ProtectedRoute allowedRoles={['Coach']}><CoachDashboard /></ProtectedRoute>} />
-      <Route path={ROLE_ROUTES.admin} element={<ProtectedRoute allowedRoles={['Admin']}><ManagerDashboard /></ProtectedRoute>} />
+      <Route path={ROLE_ROUTES.trainer} element={<Navigate to="/coach/dashboard" replace />} />
+      <Route path={ROLE_ROUTES.admin} element={<ProtectedRoute allowedRoles={['Center Manager']}><ManagerDashboard /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

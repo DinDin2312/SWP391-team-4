@@ -8,8 +8,8 @@ import { useGoogleLogin } from '@react-oauth/google';
 const ROLE_ROUTES = {
   Member: '/member/dashboard',
   Receptionist: '/staff/dashboard',
-  Coach: '/trainer/dashboard',
-  Admin: '/admin/dashboard',
+  Coach: '/coach/dashboard',
+  'Center Manager': '/admin/dashboard',
 };
 
 function LoginPage() {
@@ -179,13 +179,13 @@ function LoginPage() {
             {[
               { id: 'Member', label: 'Customer', description: 'Book & manage activities', route: '/customer/dashboard' },
               { id: 'Receptionist', label: 'Staff', description: 'Operate the sports center', route: '/staff/dashboard' },
-              { id: 'Coach', label: 'Trainer', description: 'Coach & track members', route: '/trainer/dashboard' },
-              { id: 'Admin', label: 'Admin', description: 'Manage the entire system', route: '/admin/dashboard' },
+              { id: 'Coach', label: 'Trainer', description: 'Coach & track members', route: '/coach/dashboard' },
+              { id: 'Center Manager', label: 'Center Manager', description: 'Manage center operations', route: '/admin/dashboard' },
             ].map(({ id, label, description, route }) => (
               <button
                 key={id}
                 type="button"
-                className={`role-button role-${id.toLowerCase()}`}
+                className={`role-button role-${id.toLowerCase().replace(' ', '-')}`}
                 onClick={() => {
                   login({ token: 'demo', role: id, email: 'demo@nexus.com', fullName: `Demo ${label}` });
                   navigate(route);
