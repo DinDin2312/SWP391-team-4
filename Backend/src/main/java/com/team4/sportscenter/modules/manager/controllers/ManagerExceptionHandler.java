@@ -24,7 +24,7 @@ public class ManagerExceptionHandler {
         Map<String, String> fields = new LinkedHashMap<>();
         exception.getBindingResult().getFieldErrors().forEach(error ->
                 fields.putIfAbsent(error.getField(), error.getDefaultMessage()));
-        return ResponseEntity.badRequest().body(Map.of("message", "Vui lòng kiểm tra dữ liệu nhập.", "errors", fields));
+        return ResponseEntity.badRequest().body(Map.of("message", "Please check the entered data.", "errors", fields));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -34,17 +34,17 @@ public class ManagerExceptionHandler {
 
     @ExceptionHandler(EmptyResultDataAccessException.class)
     ResponseEntity<?> missing() {
-        return ResponseEntity.status(404).body(Map.of("message", "Dữ liệu không tồn tại hoặc đã bị xóa. Hãy tải lại trang."));
+        return ResponseEntity.status(404).body(Map.of("message", "The data does not exist or has been deleted. Please refresh the page."));
     }
 
     @ExceptionHandler({HttpMessageNotReadableException.class, MissingServletRequestParameterException.class,
             MethodArgumentTypeMismatchException.class})
     ResponseEntity<?> malformed() {
-        return ResponseEntity.badRequest().body(Map.of("message", "Dữ liệu hoặc ngày giờ không hợp lệ."));
+        return ResponseEntity.badRequest().body(Map.of("message", "Invalid data or date/time value."));
     }
 
     @ExceptionHandler({DataIntegrityViolationException.class, PessimisticLockingFailureException.class})
     ResponseEntity<?> conflict() {
-        return ResponseEntity.status(409).body(Map.of("message", "Dữ liệu trùng, đang được sử dụng hoặc vừa thay đổi. Hãy tải lại và kiểm tra."));
+        return ResponseEntity.status(409).body(Map.of("message", "The data is duplicated, in use, or was recently changed. Refresh and check again."));
     }
 }
