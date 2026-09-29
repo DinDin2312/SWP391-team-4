@@ -17,7 +17,7 @@ test('create forms submit defaults without requiring a select change', () => {
   assert.equal(initialForm('package').packageType, 'GYM_ACCESS');
   assert.equal(initialForm('user', { status: 'INACTIVE' }).status, 'INACTIVE');
 });
-test('CSV preserves Vietnamese and neutralizes spreadsheet formulas', () => {
+test('CSV preserves Unicode text and neutralizes spreadsheet formulas', () => {
   const csv = reportCsv({ summary: { revenue: 500000 }, classOccupancy: [{ label: '=1+1,"Yoga"', value: 2, capacity: 10 }] });
   assert.ok(csv.startsWith('\uFEFF'));
   assert.ok(csv.includes('"\'=1+1,""Yoga"""'));
