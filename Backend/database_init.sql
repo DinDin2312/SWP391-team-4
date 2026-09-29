@@ -98,7 +98,7 @@ INSERT INTO USERS (user_id, role_id, full_name, email, password_hash, status) VA
 INSERT INTO USER_SUBJECTS VALUES (3, 1), (4, 2), (5, 3), (5, 4);
 
 -- Thẻ Thành Viên
-INSERT INTO USER_MEMBERSHIPS VALUES
+INSERT INTO USER_MEMBERSHIPS (membership_id, user_id, package_id, start_date, end_date, status) VALUES
                                  (1, 6, 1, '2026-09-01', '2026-10-01', 'ACTIVE'),
                                  (2, 7, 3, '2026-01-01', '2027-01-01', 'ACTIVE'),
                                  (3, 8, 4, '2026-09-15', '2026-10-15', 'ACTIVE'),
