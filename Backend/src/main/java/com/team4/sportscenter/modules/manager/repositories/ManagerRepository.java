@@ -26,6 +26,13 @@ public class ManagerRepository {
         jdbc.queryForList("SELECT role_id FROM ROLES WHERE role_name='Center Manager' FOR UPDATE");
     }
 
+    public int activeManagerCount() {
+        return jdbc.queryForObject("""
+                SELECT COUNT(*) FROM USERS u JOIN ROLES r ON r.role_id=u.role_id
+                WHERE r.role_name='Center Manager' AND u.status='ACTIVE'
+                """, Integer.class);
+    }
+
     public void requireSubject(Integer id) {
         jdbc.queryForObject("SELECT subject_id FROM SUBJECTS WHERE subject_id=?", Integer.class, id);
     }

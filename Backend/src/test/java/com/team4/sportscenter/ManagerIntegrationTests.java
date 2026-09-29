@@ -96,8 +96,9 @@ class ManagerIntegrationTests {
         assertEquals(401, request("GET", "/api/receptionist/members", null, null).statusCode());
         String token = token(admin);
         assertEquals(200, request("GET", "/api/manager/dashboard", token, null).statusCode());
-        service.updateUserStatus(admin, new UserStatusRequest("INACTIVE"), actor);
+        service.updateUserStatus(admin, new UserStatusRequest("INACTIVE", "Security review"), actor);
         assertEquals(401, request("GET", "/api/manager/dashboard", token, null).statusCode());
+        assertEquals(1, count("SELECT COUNT(*) FROM AUDIT_LOGS WHERE entity_type='USER' AND entity_id=? AND details LIKE '%Security review%'", admin));
     }
 
     @Test void emptyPasswordKeepsExistingPasswordAndValidationIsReadable() throws Exception {
@@ -118,8 +119,8 @@ class ManagerIntegrationTests {
     }
 
     @Test void selfLockAndAssignedCoachDemotionAreRejected() {
-        assertThrows(IllegalArgumentException.class, () -> service.updateUserStatus(admin, new UserStatusRequest("INACTIVE"), "admin" + actor));
-        assertThrows(IllegalArgumentException.class, () -> service.updateUserStatus(coach, new UserStatusRequest("INACTIVE"), actor));
+        assertThrows(IllegalArgumentException.class, () -> service.updateUserStatus(admin, new UserStatusRequest("INACTIVE", "Self lock"), "admin" + actor));
+        assertThrows(IllegalArgumentException.class, () -> service.updateUserStatus(coach, new UserStatusRequest("INACTIVE", "Assigned coach"), actor));
         assertThrows(IllegalArgumentException.class, () -> service.updateUser(coach,
                 new UserRequest("coach", "coach" + actor, null, "", role("Member"), "ACTIVE"), actor));
     }

@@ -26,7 +26,7 @@ public final class ManagerRequests {
             @NotBlank String status) {
     }
 
-    public record UserStatusRequest(@NotBlank String status) {
+    public record UserStatusRequest(@NotBlank String status, @Size(max = 500) String reason) {
     }
 
     public record SubjectRequest(@NotBlank @Size(max = 255) String subjectName, @Size(max = 10000) String description) {
