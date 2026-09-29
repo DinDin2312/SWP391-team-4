@@ -1,0 +1,8 @@
+# Generated build and dependency artifacts
+Backend/target/
+Frontend/node_modules/
+Frontend/dist/
+
+# Local IDE settings
+.vscode/
+.idea/

@@ -32,6 +32,9 @@ public class UserMembership {
     @Column(name = "end_date")
     private LocalDate endDate;
 
+    @Column(name = "remaining_sessions")
+    private Integer remainingSessions;
+
     @Column(name = "status")
     private String status;
 }

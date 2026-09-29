@@ -1,6 +1,7 @@
-﻿
-import React, { useContext } from 'react';
+
+import React, { useContext, useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import RoleThemeToggle from '../components/RoleThemeToggle';
 import { useRoleTheme } from '../hooks/useRoleTheme';
@@ -12,6 +13,28 @@ import {
 const MemberLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const res = await axios.get('http://localhost:8080/api/v1/payment/cart', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setCartCount(res.data.items?.length || 0);
+        }
+      } catch (err) {
+        console.error("Cart count error", err);
+      }
+    };
+    fetchCartCount();
+    
+    window.addEventListener('cartUpdated', fetchCartCount);
+    return () => window.removeEventListener('cartUpdated', fetchCartCount);
+  }, [location.pathname]); // Refresh when navigating or when cart updates
+
   const { userInfo, logout } = useContext(AuthContext);
   const { theme, toggleTheme } = useRoleTheme();
 
@@ -34,6 +57,7 @@ const MemberLayout = () => {
           case '/member/book-class': return 'Book a Class';
           case '/member/notifications': return 'Notifications';
           case '/member/settings': return 'Settings';
+          case '/member/cart': return 'Checkout Cart';
           default: return 'Nexus Portal';
       }
   };
@@ -133,7 +157,7 @@ const MemberLayout = () => {
                 Logged in as: Active Member
               </div>
             </div>
-            <p className="text-xs text-slate-400 mt-1">Welcome back, {firstName}! System synced today at 16:42</p>
+            <p className="text-xs text-slate-400 mt-1">Welcome back, {firstName}! System synced at {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -150,11 +174,13 @@ const MemberLayout = () => {
             </button>
 
             {/* Shopping Cart Button */}
-            <button className="relative p-2.5 rounded-xl bg-[#0e172a] border border-[#1a2947] hover:border-emerald-500 hover:text-emerald-400 text-slate-300 transition-colors" title="View Cart">
+            <button onClick={() => navigate('/member/cart')} className="relative p-2.5 rounded-xl bg-[#0e172a] border border-[#1a2947] hover:border-emerald-500 hover:text-emerald-400 text-slate-300 transition-colors" title="View Cart">
               <ShoppingCart className="w-4 h-4" />
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-[#060b17]">
-                2
-              </span>
+              {cartCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-[#060b17]">
+                  {cartCount}
+                </span>
+              )}
             </button>
 
             <button onClick={handleLogout} className="px-3 py-2 rounded-xl bg-[#0e172a] border border-[#1a2947] hover:border-slate-600 text-slate-300 hover:text-white text-xs font-medium transition-colors">

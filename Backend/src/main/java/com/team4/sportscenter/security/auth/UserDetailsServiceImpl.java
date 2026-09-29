@@ -16,6 +16,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Tài khoản không tồn tại!"));
+                .orElseThrow(() -> new UsernameNotFoundException("Account not found!"));
     }
 }

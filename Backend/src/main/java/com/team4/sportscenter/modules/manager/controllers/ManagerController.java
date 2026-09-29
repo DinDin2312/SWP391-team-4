@@ -69,6 +69,13 @@ public class ManagerController {
         return managerService.schedules(from, to);
     }
     @PostMapping("/schedules") public Map<String, Integer> createSchedule(@Valid @RequestBody ManagerRequests.ScheduleRequest request, Authentication auth) { return Map.of("id", managerService.saveSchedule(null, request, auth.getName())); }
+    @PostMapping("/schedules/series")
+    public Map<String, List<Integer>> createScheduleSeries(@Valid @RequestBody ManagerRequests.ScheduleSeriesRequest request, Authentication auth) {
+        return Map.of("ids", managerService.createScheduleSeries(request, auth.getName()));
+    }
+
+    @GetMapping("/schedules/{id}/bookings")
+    public List<Map<String, Object>> scheduleBookings(@PathVariable Integer id) { return managerService.scheduleBookings(id); }
     @PutMapping("/schedules/{id}") public Map<String, Integer> updateSchedule(@PathVariable Integer id, @Valid @RequestBody ManagerRequests.ScheduleRequest request, Authentication auth) { return Map.of("id", managerService.saveSchedule(id, request, auth.getName())); }
 
     @GetMapping("/packages") public List<Map<String, Object>> packages() { return managerService.packages(); }

@@ -47,7 +47,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**", "/api/auth/**", "/auth/**").permitAll()
 
                         // Cho phép truy cập các API của Receptionist
-                        .requestMatchers("/api/receptionist/**", "/receptionist/**").permitAll()
+                        .requestMatchers("/api/receptionist/**", "/receptionist/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
+
+                        // Manager operations are restricted to the Center Manager authority.
+                        .requestMatchers("/api/manager/**").hasRole("CENTER_MANAGER")
+                        .requestMatchers("/api/v1/coach/**", "/api/coach/**").hasAnyRole("COACH", "CENTER_MANAGER")
 
                         // Manager operations are restricted to the Center Manager authority.
                         .requestMatchers("/api/manager/**").hasRole("CENTER_MANAGER")
@@ -55,6 +59,17 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(errors -> errors
+                        .authenticationEntryPoint((request, response, exception) -> {
+                            response.setStatus(401);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"message\":\"Phiên đăng nhập không hợp lệ hoặc tài khoản đã bị khóa.\"}");
+                        })
+                        .accessDeniedHandler((request, response, exception) -> {
+                            response.setStatus(403);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"message\":\"Bạn không có quyền thực hiện thao tác này.\"}");
+                        }))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

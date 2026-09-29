@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import ReceptionistLayout from '../../../layouts/ReceptionistLayout';
 import MemberManagementView from '../components/MemberManagementView';
 import RegisterMemberView from '../components/RegisterMemberView'; // Thêm dòng import này
 import { Sparkles, ArrowLeft, Clock } from 'lucide-react';
 import ManageMembershipsView from '../components/ManageMembershipsView';
+
 
 const ReceptionistDashboard = () => {
   const [activeFeature, setActiveFeature] = useState('search-members');

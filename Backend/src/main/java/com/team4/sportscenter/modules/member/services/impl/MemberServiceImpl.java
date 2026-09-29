@@ -49,7 +49,7 @@ public class MemberServiceImpl implements MemberService {
                 .orElse(null);
 
         if (membership == null) {
-            return null; // TrĂ„â€Ă‚Â¡Ä‚â€Ă‚ÂºÄ‚â€Ă‚Â£ vĂ„â€Ă‚Â¡Ä‚â€Ă‚Â»Ä‚â€Ă‚Â null nĂ„â€Ă‚Â¡Ä‚â€Ă‚ÂºÄ‚â€Ă‚Â¿u khÄ‚â€Ă¢â‚¬ÂÄ‚â€Ă‚Â´ng cÄ‚â€Ă¢â‚¬ÂÄ‚â€Ă‚Â³ gÄ‚â€Ă¢â‚¬ÂÄ‚â€Ă‚Â³i nÄ‚â€Ă¢â‚¬ÂÄ‚â€Ă‚Â o active
+            return null; // Return null if no active package found
         }
 
         long remainingDays = ChronoUnit.DAYS.between(LocalDate.now(), membership.getEndDate());
@@ -67,10 +67,9 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public List<UpcomingBookingResponse> getMyUpcomingBookings(String email) {
-        // LĂ„â€Ă‚Â¡Ä‚â€Ă‚ÂºÄ‚â€Ă‚Â¥y danh sÄ‚â€Ă¢â‚¬ÂÄ‚â€Ă‚Â¡ch booking tĂ„â€Ă‚Â¡Ä‚â€Ă‚Â»Ä‚â€Ă‚Â« database
+        // Fetch booking list from database
         List<Booking> bookings = bookingRepository.findUpcomingBookingsByEmail(email, LocalDateTime.now());
         
-        // Convert qua DTO
         return bookings.stream().map(b -> {
             long duration = ChronoUnit.MINUTES.between(b.getSchedule().getStartTime(), b.getSchedule().getEndTime());
             return UpcomingBookingResponse.builder()
@@ -90,7 +89,7 @@ public class MemberServiceImpl implements MemberService {
     public long getTotalCheckIns(String email) {
         List<Booking> attended = bookingRepository.findAttendedBookingsByEmail(email);
         
-        // Ă„â€Ă¢â‚¬ÂÄ‚â€Ă‚ÂĂ„â€Ă‚Â¡Ä‚â€Ă‚ÂºÄ‚â€Ă‚Â¿m sĂ„â€Ă‚Â¡Ä‚â€Ă‚Â»Ä‚Â¢Ă¢â€Â¬Ă‹Å“ ngÄ‚â€Ă¢â‚¬ÂÄ‚â€Ă‚Â y Ă„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‹Å“i tĂ„â€Ă‚Â¡Ä‚â€Ă‚ÂºÄ‚â€Ă‚Â­p duy nhĂ„â€Ă‚Â¡Ä‚â€Ă‚ÂºÄ‚â€Ă‚Â¥t (distinct date)
+        // Count distinct training days
         return attended.stream()
                 .map(b -> b.getSchedule().getStartTime().toLocalDate())
                 .distinct()
@@ -125,22 +124,24 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public List<CalendarBookingResponse> getAllCalendarBookings(String email) {
         List<Booking> bookings = bookingRepository.findAllBookingsByEmail(email);
-        return bookings.stream().map(b -> CalendarBookingResponse.builder()
-                .bookingId(b.getBookingId())
-                .className(b.getSchedule().getGymClass().getClassName())
-                .coachName(b.getSchedule().getGymClass().getCoach().getFullName())
-                .roomName(b.getSchedule().getGymClass().getRoom().getRoomName())
-                .startTime(b.getSchedule().getStartTime())
-                .endTime(b.getSchedule().getEndTime())
-                .status(b.getStatus())
-                .build()
-        ).collect(Collectors.toList());
+        return bookings.stream()
+                .filter(b -> !"CANCELLED".equals(b.getStatus()) && !"PENDING".equals(b.getStatus()))
+                .map(b -> CalendarBookingResponse.builder()
+                        .bookingId(b.getBookingId())
+                        .className(b.getSchedule().getGymClass().getClassName())
+                        .coachName(b.getSchedule().getGymClass().getCoach().getFullName())
+                        .roomName(b.getSchedule().getGymClass().getRoom().getRoomName())
+                        .startTime(b.getSchedule().getStartTime())
+                        .endTime(b.getSchedule().getEndTime())
+                        .status(b.getStatus())
+                        .build()
+                ).collect(Collectors.toList());
     }
 
     @Override
     public List<AvailableClassResponse> getAvailableClasses() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        LocalDateTime currentTime = LocalDateTime.of(2026, 10, 1, 0, 0); 
+        LocalDateTime currentTime = LocalDateTime.now();
         List<Schedule> schedules = scheduleRepository.findAvailableSchedules(currentTime);
         
         Map<GymClass, List<Schedule>> classSchedules = schedules.stream()
@@ -201,7 +202,7 @@ public class MemberServiceImpl implements MemberService {
             throw new RuntimeException("You have already booked this course.");
         }
         
-        LocalDateTime currentTime = LocalDateTime.of(2026, 10, 1, 0, 0); 
+        LocalDateTime currentTime = LocalDateTime.now();
         List<Schedule> schedules = scheduleRepository.findAvailableSchedules(currentTime).stream()
             .filter(s -> s.getGymClass().getClassId().equals(classId))
             .collect(Collectors.toList());
@@ -242,3 +243,4 @@ public class MemberServiceImpl implements MemberService {
         }
     }
 }
+

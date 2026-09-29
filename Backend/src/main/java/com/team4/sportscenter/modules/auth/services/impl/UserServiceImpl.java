@@ -33,27 +33,37 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public RegisterResponse registerMember(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email is already in use!");
+        java.util.Optional<User> existingUserOpt = userRepository.findByEmail(request.getEmail());
+        User user;
+        
+        if (existingUserOpt.isPresent()) {
+            user = existingUserOpt.get();
+            if ("ACTIVE".equals(user.getStatus())) {
+                throw new RuntimeException("Email is already in use!");
+            }
+            // Reuse PENDING user
+            user.setFullName(request.getFullName());
+            user.setPhone(request.getPhone());
+            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        } else {
+            Role memberRole = roleRepository.findById(4).orElseGet(() -> {
+                Role newRole = new Role();
+                newRole.setRoleId(4);
+                newRole.setRoleName("Member");
+                return roleRepository.save(newRole);
+            });
+
+            user = User.builder()
+                    .fullName(request.getFullName())
+                    .email(request.getEmail())
+                    .phone(request.getPhone())
+                    .passwordHash(passwordEncoder.encode(request.getPassword())) 
+                    .role(memberRole)
+                    .status("PENDING")
+                    .build();
         }
 
-        Role memberRole = roleRepository.findById(4).orElseGet(() -> {
-            Role newRole = new Role();
-            newRole.setRoleId(4);
-            newRole.setRoleName("Member");
-            return roleRepository.save(newRole);
-        });
-
-        User newUser = User.builder()
-                .fullName(request.getFullName())
-                .email(request.getEmail())
-                .phone(request.getPhone())
-                .passwordHash(passwordEncoder.encode(request.getPassword())) 
-                .role(memberRole)
-                .status("PENDING")
-                .build();
-
-        userRepository.save(newUser);
+        userRepository.save(user);
 
         // Generate 6-digit random OTP
         String otpCode = String.format("%06d", new Random().nextInt(999999));
@@ -66,8 +76,21 @@ public class UserServiceImpl implements UserService {
 
         return RegisterResponse.builder()
                 .message("Registration successful! Please check your email for the OTP code.")
-                .email(newUser.getEmail())
+                .email(user.getEmail())
                 .build();
+    }
+
+    @Override
+    public void resendRegistrationOtp(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Account not found!"));
+        if ("ACTIVE".equals(user.getStatus())) {
+            throw new RuntimeException("Account is already active!");
+        }
+
+        String otpCode = String.format("%06d", new Random().nextInt(999999));
+        otpStorage.put(email, otpCode);
+        emailService.sendOtpEmail(email, otpCode, user.getFullName());
     }
 
     @Override

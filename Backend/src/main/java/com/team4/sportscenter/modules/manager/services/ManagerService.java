@@ -19,6 +19,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.Locale;
+import java.nio.charset.StandardCharsets;
 
 @Service
 @RequiredArgsConstructor
@@ -50,40 +53,45 @@ public class ManagerService {
     public List<Map<String, Object>> roles() { return managerRepository.roles(); }
 
     public Integer createUser(ManagerRequests.UserRequest request, String actor) {
+        managerRepository.lockOperations();
         validateStatus(request.status(), USER_STATUSES);
+        validatePassword(request.password());
         if (request.password() == null || request.password().isBlank()) {
-            throw new IllegalArgumentException("Mật khẩu là bắt buộc khi tạo tài khoản");
+            throw new IllegalArgumentException("A password is required when creating an account");
         }
-        if (userRepository.existsByEmail(request.email().trim())) {
-            throw new IllegalArgumentException("Email đã được sử dụng");
+        if (userRepository.existsByEmail(normalizeEmail(request.email()))) {
+            throw new IllegalArgumentException("This email address is already in use");
         }
         Role role = findRole(request.roleId());
         User user = User.builder()
                 .fullName(request.fullName().trim())
-                .email(request.email().trim().toLowerCase())
+                .email(normalizeEmail(request.email()))
                 .phone(blankToNull(request.phone()))
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .role(role)
                 .status(request.status().toUpperCase())
                 .build();
         userRepository.save(user);
-        audit(actor, "CREATE", "USER", user.getUserId(), "Tạo tài khoản " + user.getEmail() + " - " + role.getRoleName());
+        audit(actor, "CREATE", "USER", user.getUserId(), "Created account " + user.getEmail() + " - " + role.getRoleName());
         return user.getUserId();
     }
 
     public void updateUser(Integer id, ManagerRequests.UserRequest request, String actor) {
+        managerRepository.lockOperations();
         validateStatus(request.status(), USER_STATUSES);
+        validatePassword(request.password());
         User user = findUser(id);
         boolean isSelf = user.getEmail().equalsIgnoreCase(actor);
         if (isSelf && (!user.getRole().getRoleId().equals(request.roleId()) || !"ACTIVE".equalsIgnoreCase(request.status()))) {
-            throw new IllegalArgumentException("Không thể tự khóa hoặc hạ quyền tài khoản đang đăng nhập");
+            throw new IllegalArgumentException("You cannot deactivate or downgrade the account currently signed in");
         }
         userRepository.findByEmail(request.email().trim()).filter(other -> !other.getUserId().equals(id)).ifPresent(other -> {
-            throw new IllegalArgumentException("Email đã được sử dụng");
+            throw new IllegalArgumentException("This email address is already in use");
         });
         Role role = findRole(request.roleId());
+        validateCoachChange(user, role, request.status());
         user.setFullName(request.fullName().trim());
-        user.setEmail(request.email().trim().toLowerCase());
+        user.setEmail(normalizeEmail(request.email()));
         user.setPhone(blankToNull(request.phone()));
         user.setRole(role);
         user.setStatus(request.status().toUpperCase());
@@ -91,24 +99,27 @@ public class ManagerService {
             user.setPasswordHash(passwordEncoder.encode(request.password()));
         }
         userRepository.save(user);
-        audit(actor, "UPDATE", "USER", id, "Cập nhật tài khoản " + user.getEmail() + " - " + role.getRoleName());
+        audit(actor, "UPDATE", "USER", id, "Updated account " + user.getEmail() + " - " + role.getRoleName());
     }
 
     public void updateUserStatus(Integer id, ManagerRequests.UserStatusRequest request, String actor) {
+        managerRepository.lockOperations();
         validateStatus(request.status(), USER_STATUSES);
         User user = findUser(id);
+        validateCoachChange(user, user.getRole(), request.status());
         if (user.getEmail().equalsIgnoreCase(actor) && !"ACTIVE".equalsIgnoreCase(request.status())) {
-            throw new IllegalArgumentException("Không thể tự khóa tài khoản đang đăng nhập");
+            throw new IllegalArgumentException("You cannot deactivate the account currently signed in");
         }
         user.setStatus(request.status().toUpperCase());
         userRepository.save(user);
-        audit(actor, "STATUS_CHANGE", "USER", id, "Chuyển trạng thái " + user.getEmail() + " sang " + user.getStatus());
+        audit(actor, "STATUS_CHANGE", "USER", id, "Changed " + user.getEmail() + " status to " + user.getStatus());
     }
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> subjects() { return managerRepository.subjects(); }
 
     public int saveSubject(Integer id, ManagerRequests.SubjectRequest request, String actor) {
+        if (id != null) managerRepository.requireSubject(id);
         int savedId = managerRepository.saveSubject(id, request);
         audit(actor, id == null ? "CREATE" : "UPDATE", "SUBJECT", savedId, request.subjectName());
         return savedId;
@@ -118,8 +129,15 @@ public class ManagerService {
     public List<Map<String, Object>> rooms() { return managerRepository.rooms(); }
 
     public int saveRoom(Integer id, ManagerRequests.RoomRequest request, String actor) {
+        managerRepository.lockOperations();
+        if (id != null) {
+            managerRepository.requireRoom(id);
+            if (request.capacity() < managerRepository.requiredRoomCapacity(id)) {
+                throw new IllegalArgumentException("Room capacity cannot be lower than the maximum capacity of its assigned classes");
+            }
+        }
         int savedId = managerRepository.saveRoom(id, request);
-        audit(actor, id == null ? "CREATE" : "UPDATE", "ROOM", savedId, request.roomName() + " - " + request.capacity() + " chỗ");
+        audit(actor, id == null ? "CREATE" : "UPDATE", "ROOM", savedId, request.roomName() + " - " + request.capacity() + " seats");
         return savedId;
     }
 
@@ -127,16 +145,27 @@ public class ManagerService {
     public List<Map<String, Object>> classes() { return managerRepository.classes(); }
 
     public int saveClass(Integer id, ManagerRequests.ClassRequest request, String actor) {
+        managerRepository.lockOperations();
+        if (id != null) {
+            managerRepository.classAssignment(id);
+            if (request.maxSlots() < managerRepository.peakBookings(id)) {
+                throw new IllegalArgumentException("Class capacity cannot be lower than the number of booked or held seats in a session");
+            }
+            if ("INACTIVE".equalsIgnoreCase(request.status()) && managerRepository.hasUpcomingSchedules(id)) {
+                throw new IllegalArgumentException("Cancel upcoming sessions before deactivating the class");
+            }
+        }
+        managerRepository.requireSubject(request.subjectId());
         validateStatus(request.status(), CLASS_STATUSES);
         User coach = findUser(request.coachId());
         if (!"Coach".equalsIgnoreCase(coach.getRole().getRoleName()) || !"ACTIVE".equalsIgnoreCase(coach.getStatus())) {
-            throw new IllegalArgumentException("Chỉ có thể phân công huấn luyện viên đang hoạt động");
+            throw new IllegalArgumentException("Only active coaches can be assigned");
         }
         Integer capacity = managerRepository.roomCapacity(request.roomId());
-        if (capacity == null) throw new IllegalArgumentException("Phòng tập không tồn tại");
-        if (request.maxSlots() > capacity) throw new IllegalArgumentException("Số học viên tối đa vượt sức chứa phòng");
+        if (capacity == null) throw new IllegalArgumentException("The room does not exist");
+        if (request.maxSlots() > capacity) throw new IllegalArgumentException("Maximum class capacity exceeds room capacity");
         if (id != null && managerRepository.hasAssignmentConflict(id, request.coachId(), request.roomId())) {
-            throw new IllegalArgumentException("Phân công mới làm trùng lịch huấn luyện viên hoặc phòng tập");
+            throw new IllegalArgumentException("The new assignment conflicts with the coach or room schedule");
         }
         int savedId = managerRepository.saveClass(id, request);
         audit(actor, id == null ? "CREATE" : "UPDATE", "CLASS", savedId, request.className() + " - HLV " + coach.getFullName());
@@ -145,41 +174,111 @@ public class ManagerService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> schedules(LocalDate from, LocalDate to) {
-        if (to.isBefore(from)) throw new IllegalArgumentException("Ngày kết thúc phải sau ngày bắt đầu");
+        validateDateRange(from, to);
         return managerRepository.schedules(from, to);
     }
 
     public int saveSchedule(Integer id, ManagerRequests.ScheduleRequest request, String actor) {
+        managerRepository.lockOperations();
         validateStatus(request.status(), SCHEDULE_STATUSES);
         if (!request.endTime().isAfter(request.startTime())) {
-            throw new IllegalArgumentException("Giờ kết thúc phải sau giờ bắt đầu");
+            throw new IllegalArgumentException("The end time must be after the start time");
         }
         Map<String, Object> assignment = managerRepository.classAssignment(request.classId());
+        Map<String, Object> previous = id == null ? null : managerRepository.schedule(id);
+        boolean cancelled = "CANCELLED".equalsIgnoreCase(request.status());
+        boolean completed = "COMPLETED".equalsIgnoreCase(request.status());
+        boolean timingChanged = previous == null || !request.startTime().equals(previous.get("startTime"))
+                || !request.endTime().equals(previous.get("endTime"));
+        if (previous != null) {
+            if (!"SCHEDULED".equals(previous.get("status"))) {
+                throw new IllegalArgumentException("Completed or cancelled sessions cannot be edited; create a new session instead");
+            }
+            if (!request.classId().equals(((Number) previous.get("classId")).intValue())
+                    && !managerRepository.scheduleBookings(id).isEmpty()) {
+                throw new IllegalArgumentException("A session with bookings cannot be moved to another class");
+            }
+            if ((cancelled || completed) && (timingChanged
+                    || !request.classId().equals(((Number) previous.get("classId")).intValue()))) {
+                throw new IllegalArgumentException("Keep the class and times unchanged when cancelling or completing a session");
+            }
+        }
+        if (id == null && (cancelled || completed)) {
+            throw new IllegalArgumentException("A new session must have Scheduled status");
+        }
+        if (completed && request.endTime().isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Only sessions that have ended can be completed");
+        }
+        if (!cancelled && !completed) {
+            if (!"ACTIVE".equals(assignment.get("status"))) {
+                throw new IllegalArgumentException("Only active classes can be scheduled");
+            }
+            User coach = findUser(((Number) assignment.get("coachId")).intValue());
+            if (!"Coach".equalsIgnoreCase(coach.getRole().getRoleName()) || !coach.isEnabled()) {
+                throw new IllegalArgumentException("The assigned coach is no longer active; assign another coach");
+            }
+            if (timingChanged && !request.startTime().isAfter(LocalDateTime.now())) {
+                throw new IllegalArgumentException("The new start time must be in the future");
+            }
+            if (id != null && timingChanged && managerRepository.hasMemberConflict(id, request.startTime(), request.endTime())) {
+                throw new IllegalArgumentException("The new time conflicts with the schedule of a registered student");
+            }
+        }
         Integer coachId = ((Number) assignment.get("coachId")).intValue();
         Integer roomId = ((Number) assignment.get("roomId")).intValue();
-        if (!"CANCELLED".equalsIgnoreCase(request.status())
+        if (!cancelled && !completed
                 && managerRepository.hasScheduleConflict(id, coachId, roomId, request.startTime(), request.endTime())) {
-            throw new IllegalArgumentException("Khung giờ bị trùng lịch huấn luyện viên hoặc phòng tập");
+            throw new IllegalArgumentException("The time slot conflicts with the coach or room schedule");
         }
         int savedId = managerRepository.saveSchedule(id, request);
+        if (id != null && cancelled) {
+            managerRepository.notifyScheduleBookings(id, "Buổi học đã hủy",
+                    assignment.get("className") + " lúc " + request.startTime()
+                            + " đã hủy. Liên hệ lễ tân để được hỗ trợ về học phí.");
+            managerRepository.cancelScheduleBookings(id);
+        } else if (id != null && timingChanged) {
+            managerRepository.notifyScheduleBookings(id, "Thay đổi lịch học",
+                    assignment.get("className") + " chuyển sang " + request.startTime() + " - " + request.endTime());
+        }
         audit(actor, id == null ? "CREATE" : "UPDATE", "SCHEDULE", savedId,
                 request.startTime() + " - " + request.endTime() + " / " + request.status());
         return savedId;
+    }
+
+    public List<Integer> createScheduleSeries(ManagerRequests.ScheduleSeriesRequest request, String actor) {
+        managerRepository.lockOperations();
+        if (request.occurrences() < 2 || request.occurrences() > 52 || request.intervalWeeks() < 1 || request.intervalWeeks() > 4) {
+            throw new IllegalArgumentException("Create 2 to 52 sessions at intervals of 1 to 4 weeks");
+        }
+        List<Integer> ids = new ArrayList<>();
+        for (int i = 0; i < request.occurrences(); i++) {
+            long weeks = (long) i * request.intervalWeeks();
+            ids.add(saveSchedule(null, new ManagerRequests.ScheduleRequest(request.classId(),
+                    request.startTime().plusWeeks(weeks), request.endTime().plusWeeks(weeks), "SCHEDULED"), actor));
+        }
+        return ids;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> scheduleBookings(Integer id) {
+        managerRepository.schedule(id);
+        return managerRepository.scheduleBookings(id);
     }
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> packages() { return managerRepository.packages(); }
 
     public int savePackage(Integer id, ManagerRequests.PackageRequest request, String actor) {
+        if (id != null) managerRepository.requirePackage(id);
         int savedId = managerRepository.savePackage(id, request);
         audit(actor, id == null ? "CREATE" : "UPDATE", "PACKAGE", savedId,
-                request.packageName() + " - " + request.durationDays() + " ngày");
+                request.packageName() + " - " + request.durationDays() + " days");
         return savedId;
     }
 
     @Transactional(readOnly = true)
     public Map<String, Object> report(LocalDate from, LocalDate to) {
-        if (to.isBefore(from)) throw new IllegalArgumentException("Ngày kết thúc phải sau ngày bắt đầu");
+        validateDateRange(from, to);
         return managerRepository.report(from, to);
     }
 
@@ -187,21 +286,43 @@ public class ManagerService {
     public List<AuditLog> auditLogs() { return auditLogRepository.findTop100ByOrderByCreatedAtDesc(); }
 
     private User findUser(Integer id) {
-        return userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Tài khoản không tồn tại"));
+        return userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("The account does not exist"));
     }
 
     private Role findRole(Integer id) {
-        return roleRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Vai trò không tồn tại"));
+        return roleRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("The role does not exist"));
     }
 
     private void validateStatus(String status, Set<String> allowed) {
         if (status == null || !allowed.contains(status.toUpperCase())) {
-            throw new IllegalArgumentException("Trạng thái không hợp lệ");
+            throw new IllegalArgumentException("Invalid status");
         }
     }
 
     private String normalizeFilter(String value) { return value == null || value.isBlank() ? "ALL" : value; }
+    private String normalizeEmail(String value) { return value.trim().toLowerCase(Locale.ROOT); }
     private String blankToNull(String value) { return value == null || value.isBlank() ? null : value.trim(); }
+
+    private void validatePassword(String password) {
+        if (password != null && !password.isEmpty()
+                && (password.isBlank() || password.length() < 6 || password.getBytes(StandardCharsets.UTF_8).length > 72)) {
+            throw new IllegalArgumentException("The password must contain at least 6 characters and no more than 72 UTF-8 bytes");
+        }
+    }
+
+    private void validateCoachChange(User user, Role role, String status) {
+        if ("Coach".equalsIgnoreCase(user.getRole().getRoleName())
+                && (!"Coach".equalsIgnoreCase(role.getRoleName()) || !"ACTIVE".equalsIgnoreCase(status))
+                && managerRepository.coachHasAssignments(user.getUserId())) {
+            throw new IllegalArgumentException("Reassign the coach's classes before deactivating the account or changing its role");
+        }
+    }
+
+    private void validateDateRange(LocalDate from, LocalDate to) {
+        if (from == null || to == null || to.isBefore(from) || to.isAfter(from.plusYears(1))) {
+            throw new IllegalArgumentException("Select a valid date range of no more than one year");
+        }
+    }
 
     private void audit(String actor, String action, String entityType, Object entityId, String details) {
         auditLogRepository.save(AuditLog.builder()

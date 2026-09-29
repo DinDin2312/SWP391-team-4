@@ -2,7 +2,9 @@ package com.team4.sportscenter.modules.manager.dtos.request;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -16,10 +18,10 @@ public final class ManagerRequests {
     }
 
     public record UserRequest(
-            @NotBlank String fullName,
-            @NotBlank @Email String email,
-            String phone,
-            @Size(min = 6) String password,
+            @NotBlank @Size(max = 255) String fullName,
+            @NotBlank @Email @Size(max = 255) String email,
+            @Size(max = 30) String phone,
+            @Pattern(regexp = "(?s)(|.{6,72})", message = "Password must contain between 6 and 72 characters") String password,
             @NotNull Integer roleId,
             @NotBlank String status) {
     }
@@ -27,18 +29,18 @@ public final class ManagerRequests {
     public record UserStatusRequest(@NotBlank String status) {
     }
 
-    public record SubjectRequest(@NotBlank String subjectName, String description) {
+    public record SubjectRequest(@NotBlank @Size(max = 255) String subjectName, @Size(max = 10000) String description) {
     }
 
-    public record RoomRequest(@NotBlank String roomName, @NotNull @Min(1) Integer capacity) {
+    public record RoomRequest(@NotBlank @Size(max = 255) String roomName, @NotNull @Min(1) Integer capacity) {
     }
 
     public record ClassRequest(
-            @NotBlank String className,
+            @NotBlank @Size(max = 255) String className,
             @NotNull Integer subjectId,
             @NotNull Integer coachId,
             @NotNull Integer roomId,
-            @NotNull @DecimalMin("0") BigDecimal price,
+            @NotNull @DecimalMin("0") @Digits(integer = 8, fraction = 2) BigDecimal price,
             @NotNull @Min(1) Integer maxSlots,
             @NotBlank String status) {
     }
@@ -51,9 +53,17 @@ public final class ManagerRequests {
     }
 
     public record PackageRequest(
-            @NotBlank String packageName,
-            @NotBlank String packageType,
+            @NotBlank @Size(max = 255) String packageName,
+            @NotBlank @Pattern(regexp = "GYM_ACCESS|AI_ACCESS|PREMIUM", message = "Invalid package type") String packageType,
             @NotNull @Min(1) Integer durationDays,
-            @NotNull @DecimalMin("0") BigDecimal price) {
+            @NotNull @DecimalMin("0") @Digits(integer = 8, fraction = 2) BigDecimal price) {
+    }
+
+    public record ScheduleSeriesRequest(
+            @NotNull Integer classId,
+            @NotNull LocalDateTime startTime,
+            @NotNull LocalDateTime endTime,
+            @NotNull @Min(2) @Max(52) Integer occurrences,
+            @NotNull @Min(1) @Max(4) Integer intervalWeeks) {
     }
 }

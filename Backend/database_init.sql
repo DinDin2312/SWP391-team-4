@@ -4,12 +4,12 @@ USE SportCenter;
 
 -- ================== 1. TẠO BẢNG (ĐÃ FIX AUTO_INCREMENT) ==================
 CREATE TABLE `ROLES` (`role_id` int PRIMARY KEY AUTO_INCREMENT, `role_name` varchar(255));
-CREATE TABLE `USERS` (`user_id` int PRIMARY KEY AUTO_INCREMENT, `role_id` int, `full_name` varchar(255), `email` varchar(255), `phone` varchar(255), `password_hash` varchar(255), `status` varchar(255), `bio` text);
+CREATE TABLE `USERS` (`user_id` int PRIMARY KEY AUTO_INCREMENT, `role_id` int, `full_name` varchar(255), `email` varchar(255), `phone` varchar(255), `password_hash` varchar(255), `status` varchar(255), `bio` text, `loyalty_points` int DEFAULT 0);
 CREATE TABLE `SUBJECTS` (`subject_id` int PRIMARY KEY AUTO_INCREMENT, `subject_name` varchar(255), `description` text);
 CREATE TABLE `USER_SUBJECTS` (`user_id` int, `subject_id` int, PRIMARY KEY (`user_id`, `subject_id`));
 CREATE TABLE `ROOMS` (`room_id` int PRIMARY KEY AUTO_INCREMENT, `room_name` varchar(255), `capacity` int);
 CREATE TABLE `PACKAGES` (`package_id` int PRIMARY KEY AUTO_INCREMENT, `package_name` varchar(255), `package_type` varchar(255), `duration_days` int, `price` decimal(10,2));
-CREATE TABLE `USER_MEMBERSHIPS` (`membership_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` int, `package_id` int, `start_date` date, `end_date` date, `status` varchar(255));
+CREATE TABLE `USER_MEMBERSHIPS` (`membership_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` int, `package_id` int, `start_date` date, `end_date` date, `remaining_sessions` int, `status` varchar(255));
 CREATE TABLE `CLASSES` (`class_id` int PRIMARY KEY AUTO_INCREMENT, `subject_id` int, `coach_id` int, `room_id` int, `class_name` varchar(255), `price` decimal(10,2), `max_slots` int, `status` varchar(255));
 CREATE TABLE `SCHEDULES` (`schedule_id` int PRIMARY KEY AUTO_INCREMENT, `class_id` int, `start_time` datetime, `end_time` datetime, `status` varchar(255));
 CREATE TABLE `BOOKINGS` (`booking_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` int, `schedule_id` int, `status` varchar(255), `attendance_status` varchar(255));
@@ -20,6 +20,7 @@ CREATE TABLE `NOTIFICATIONS` (`notification_id` int PRIMARY KEY AUTO_INCREMENT, 
 CREATE TABLE `AI_WORKOUT_PLANS` (`plan_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` int, `goal` varchar(255), `fitness_level` varchar(255), `created_at` datetime);
 CREATE TABLE `EXERCISES` (`exercise_id` int PRIMARY KEY AUTO_INCREMENT, `exercise_name` varchar(255), `muscle_group` varchar(255), `video_url` varchar(255));
 CREATE TABLE `AI_PLAN_DETAILS` (`detail_id` int PRIMARY KEY AUTO_INCREMENT, `plan_id` int, `exercise_id` int, `sets` int, `reps` int, `rest_seconds` int);
+CREATE TABLE `AUDIT_LOGS` (`audit_id` bigint PRIMARY KEY AUTO_INCREMENT, `actor_email` varchar(255) NOT NULL, `action` varchar(50) NOT NULL, `entity_type` varchar(100) NOT NULL, `entity_id` varchar(100), `details` text, `created_at` datetime NOT NULL);
 
 -- ================== 2. NỐI KHÓA NGOẠI ==================
 ALTER TABLE `USERS` ADD FOREIGN KEY (`role_id`) REFERENCES `ROLES` (`role_id`);
@@ -98,11 +99,11 @@ INSERT INTO USER_SUBJECTS VALUES (3, 1), (4, 2), (5, 3), (5, 4);
 
 -- Thẻ Thành Viên
 INSERT INTO USER_MEMBERSHIPS VALUES
-                                 (1, 6, 1, '2026-09-01', '2026-10-01', 'ACTIVE'),
-                                 (2, 7, 3, '2026-01-01', '2027-01-01', 'ACTIVE'),
-                                 (3, 8, 4, '2026-09-15', '2026-10-15', 'ACTIVE'),
-                                 (4, 9, 2, '2026-08-01', '2026-11-01', 'ACTIVE'),
-                                 (5, 10, 1, '2026-09-20', '2026-10-20', 'ACTIVE');
+                                 (1, 6, 1, '2026-09-01', '2026-10-01', 30, 'ACTIVE'),
+                                 (2, 7, 3, '2026-01-01', '2027-01-01', 365, 'ACTIVE'),
+                                 (3, 8, 4, '2026-09-15', '2026-10-15', 30, 'ACTIVE'),
+                                 (4, 9, 2, '2026-08-01', '2026-11-01', 90, 'ACTIVE'),
+                                 (5, 10, 1, '2026-09-20', '2026-10-20', 30, 'ACTIVE');
 
 -- Danh sách Lớp học
 INSERT INTO CLASSES VALUES
