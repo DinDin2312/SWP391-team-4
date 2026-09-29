@@ -274,8 +274,8 @@ export default function ManageMembershipsView() {
                                         {selectedMember.fullName}
                                     </h2>
                                     <span style={{ fontSize: '0.8rem', color: '#38bdf8' }}>
-                    Member ID: #MEM-{String(selectedMember.userId).padStart(4, '0')} • {selectedMember.phone || selectedMember.email}
-                  </span>
+                                        Member ID: #MEM-{String(selectedMember.userId).padStart(4, '0')} • {selectedMember.phone || selectedMember.email}
+                                    </span>
                                 </div>
 
                                 {/* Nhóm các nút thao tác phía trên */}
@@ -333,50 +333,50 @@ export default function ManageMembershipsView() {
                                 <div style={{ overflowX: 'auto', border: '1px solid #1e293b', borderRadius: '0.75rem' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                                         <thead>
-                                        <tr style={{ backgroundColor: '#0c1630', borderBottom: '1px solid #162444', color: '#94a3b8' }}>
-                                            <th style={{ padding: '0.75rem 1rem' }}>Course Name</th>
-                                            <th style={{ padding: '0.75rem 1rem' }}>Coach</th>
-                                            <th style={{ padding: '0.75rem 1rem' }}>Room</th>
-                                            <th style={{ padding: '0.75rem 1rem' }}>Course Timeline</th>
-                                            <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Total Sessions</th>
-                                            <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Action</th>
-                                        </tr>
+                                            <tr style={{ backgroundColor: '#0c1630', borderBottom: '1px solid #162444', color: '#94a3b8' }}>
+                                                <th style={{ padding: '0.75rem 1rem' }}>Course Name</th>
+                                                <th style={{ padding: '0.75rem 1rem' }}>Coach</th>
+                                                <th style={{ padding: '0.75rem 1rem' }}>Room</th>
+                                                <th style={{ padding: '0.75rem 1rem' }}>Course Timeline</th>
+                                                <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Total Sessions</th>
+                                                <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Action</th>
+                                            </tr>
                                         </thead>
                                         <tbody>
-                                        {memberBookings.map((c, idx) => (
-                                            <tr key={idx} style={{ borderBottom: '1px solid #162444' }}>
-                                                <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#f8fafc' }}>{c.courseName}</td>
-                                                <td style={{ padding: '0.85rem 1rem', color: '#cbd5e1' }}>{c.coachName}</td>
-                                                <td style={{ padding: '0.85rem 1rem', color: '#94a3b8' }}>{c.roomName}</td>
-                                                <td style={{ padding: '0.85rem 1rem', color: '#94a3b8' }}>
-                                                    {formatDateTime(c.firstSessionDate)} → {formatDateTime(c.lastSessionDate)}
-                                                </td>
-                                                <td style={{ padding: '0.85rem 1rem', textAlign: 'center', color: '#38bdf8', fontWeight: 600 }}>
-                                                    {c.sessionsCount} sessions
-                                                </td>
-                                                <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
-                                                    <button
-                                                        onClick={() => handleFindRenewal(c.sampleBookingId)}
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            gap: '0.4rem',
-                                                            padding: '0.4rem 0.85rem',
-                                                            backgroundColor: '#2563eb',
-                                                            color: '#ffffff',
-                                                            border: 'none',
-                                                            borderRadius: '0.5rem',
-                                                            fontSize: '0.75rem',
-                                                            fontWeight: 600,
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        <RotateCw style={{ width: '12px', height: '12px' }} />
-                                                        <span>Renew Course</span>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                            {memberBookings.map((c, idx) => (
+                                                <tr key={idx} style={{ borderBottom: '1px solid #162444' }}>
+                                                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#f8fafc' }}>{c.courseName}</td>
+                                                    <td style={{ padding: '0.85rem 1rem', color: '#cbd5e1' }}>{c.coachName}</td>
+                                                    <td style={{ padding: '0.85rem 1rem', color: '#94a3b8' }}>{c.roomName}</td>
+                                                    <td style={{ padding: '0.85rem 1rem', color: '#94a3b8' }}>
+                                                        {formatDateTime(c.firstSessionDate)} → {formatDateTime(c.lastSessionDate)}
+                                                    </td>
+                                                    <td style={{ padding: '0.85rem 1rem', textAlign: 'center', color: '#38bdf8', fontWeight: 600 }}>
+                                                        {c.sessionsCount} sessions
+                                                    </td>
+                                                    <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                                                        <button
+                                                            onClick={() => handleFindRenewal(c.sampleBookingId)}
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '0.4rem',
+                                                                padding: '0.4rem 0.85rem',
+                                                                backgroundColor: '#2563eb',
+                                                                color: '#ffffff',
+                                                                border: 'none',
+                                                                borderRadius: '0.5rem',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 600,
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            <RotateCw style={{ width: '12px', height: '12px' }} />
+                                                            <span>Renew Course</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>
