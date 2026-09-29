@@ -25,6 +25,7 @@ const PaymentResult = () => {
         });
         
         setStatus('success');
+        window.dispatchEvent(new Event('notificationUpdated'));
         setMessage(response.data.message || 'Payment Successful! Your courses are now confirmed.');
       } catch (error) {
         setStatus('error');

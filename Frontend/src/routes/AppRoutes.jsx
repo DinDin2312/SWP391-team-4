@@ -17,6 +17,10 @@ const Memberships = lazy(() => import('../features/member/pages/Memberships'));
 const BookClass = lazy(() => import('../features/member/pages/BookClass'));
 const Notifications = lazy(() => import('../features/member/pages/Notifications'));
 const Settings = lazy(() => import('../features/member/pages/Settings'));
+const PaymentCart = lazy(() => import('../features/member/pages/PaymentCart'));
+const PaymentResult = lazy(() => import('../features/member/pages/PaymentResult'));
+const PackageStore = lazy(() => import('../features/member/pages/PackageStore'));
+const BillingHistory = lazy(() => import('../features/member/pages/BillingHistory'));
 
 import CoachLayout from '../layouts/CoachLayout';
 const CoachDashboard = lazy(() => import('../features/coach/pages/CoachDashboard'));
@@ -45,6 +49,10 @@ function AppRoutes() {
         <Route path="book-class" element={<BookClass />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="cart" element={<PaymentCart />} />
+        <Route path="payment-result" element={<PaymentResult />} />
+        <Route path="package-store" element={<PackageStore />} />
+        <Route path="billing" element={<BillingHistory />} />
       </Route>
 
       {/* Coach Routes wrapped in CoachLayout */}

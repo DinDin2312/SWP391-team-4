@@ -134,6 +134,7 @@ public class MemberServiceImpl implements MemberService {
                         .startTime(b.getSchedule().getStartTime())
                         .endTime(b.getSchedule().getEndTime())
                         .status(b.getStatus())
+                        .attendanceStatus(b.getAttendanceStatus())
                         .build()
                 ).collect(Collectors.toList());
     }
