@@ -1,15 +1,18 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Activity, BarChart3, BookOpen, CalendarDays, ChevronRight,
+  Activity, BarChart3, BookOpen, CalendarDays,
   CircleDollarSign, ClipboardList, Dumbbell, LayoutDashboard, LogOut,
-  Menu, Package, Pencil, Plus, RefreshCw, Search, ShieldCheck, Users, X,
+  Menu, Package, Pencil, Plus, RefreshCw, ShieldCheck, Users, X,
 } from 'lucide-react';
 import { AuthContext } from '../../../context/AuthContext';
 import RoleThemeToggle from '../../../components/RoleThemeToggle';
 import { useRoleTheme } from '../../../hooks/useRoleTheme';
 import managerService from '../services/managerService';
 import { isoDate, initialForm, apiError, reportCsv } from '../managerUtils';
+import StaffPage from '../staff/StaffPage';
+import ManagerToast from '../staff/ManagerToast';
+import StaffSkeleton from '../staff/StaffSkeleton';
 import './manager.css';
 
 const today = new Date();
@@ -66,7 +69,6 @@ function ManagerDashboard() {
     const currentRequest = ++requestId.current;
     setLoading(true);
     setError('');
-    setData(null);
     const publish = (result) => { if (currentRequest === requestId.current) setData(result); };
     try {
       if (['operations', 'reports'].includes(active) && (!appliedFilters.from || !appliedFilters.to || appliedFilters.from > appliedFilters.to)) {
@@ -111,9 +113,10 @@ function ManagerDashboard() {
 
   const handleLogout = () => { logout(); navigate('/'); };
   const handleSaved = async (message = 'Changes saved.') => { setModal(null); setNotice(message); await load(); };
-  const applyFilters = () => setAppliedFilters({ ...filters });
+  const applyFilters = (nextFilters = filters) => setAppliedFilters({ ...nextFilters });
   const initials = (userInfo?.fullName || 'Center Manager').split(' ').filter(Boolean).slice(-2).map((part) => part[0]).join('').toUpperCase();
   const pageTitle = navItems.find((item) => item.id === active)?.label;
+  const initialLoading = loading && data === null;
 
   return (
     <div className={`manager-app ${theme === 'light' ? 'is-light' : 'is-dark'}`}>
@@ -121,7 +124,7 @@ function ManagerDashboard() {
         <div className="manager-brand"><span><Dumbbell size={22} /></span><div><strong>NEXUS</strong><small>CENTER CONTROL</small></div><button className="manager-mobile-close" onClick={() => setMobileNav(false)} aria-label="Close menu"><X size={20} /></button></div>
         <div className="manager-role"><ShieldCheck size={16} /><span>Center Manager</span></div>
         <nav>
-          {navItems.map(({ id, label, icon: Icon }) => <button key={id} className={active === id ? 'active' : ''} onClick={() => selectPage(id)}><Icon size={18} /><span>{label}</span><ChevronRight size={15} /></button>)}
+          {navItems.map(({ id, label, icon: Icon }) => <button key={id} className={active === id ? 'active' : ''} onClick={() => selectPage(id)}><Icon size={18} /><span>{label}</span></button>)}
         </nav>
         <div className="manager-profile">
           <div className="manager-avatar">{initials}</div><div><strong>{userInfo?.fullName || 'Center Manager'}</strong><small>{userInfo?.email || 'admin@sport.com'}</small></div>
@@ -135,15 +138,15 @@ function ManagerDashboard() {
           <button className="manager-menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button>
           <div><span>NEXUS Center</span><h1>{pageTitle}</h1></div>
           <RoleThemeToggle theme={theme} onToggle={toggleTheme} />
-          <button className="manager-icon-button" onClick={load} title="Refresh" aria-label="Refresh data"><RefreshCw size={18} /></button>
+          <button className={`manager-icon-button ${loading ? 'is-refreshing' : ''}`} onClick={load} title="Refresh" aria-label="Refresh data" aria-busy={loading} disabled={initialLoading}><RefreshCw size={18} /></button>
         </header>
 
         <section className="manager-content">
-          {notice && <div className="manager-notice" role="status">{notice}</div>}
           {error && <div className="manager-alert" role="alert"><span>{error}</span><button onClick={load}>Retry</button></div>}
-          {loading ? <Loading /> : <ManagerView active={active} data={data} filters={filters} appliedFilters={appliedFilters} setFilters={setFilters} reload={applyFilters} openModal={setModal} openRoster={setRoster} operationTab={operationTab} setOperationTab={setOperationTab} />}
+          {initialLoading ? (active === 'people' ? <StaffSkeleton /> : <Loading />) : <ManagerView active={active} data={data} filters={filters} appliedFilters={appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} openRoster={setRoster} operationTab={operationTab} setOperationTab={setOperationTab} />}
         </section>
       </main>
+      <ManagerToast message={notice} onClose={() => setNotice('')} />
       {modal && <EditorModal config={modal} dictionaries={active === 'people' || active === 'operations' ? data : null} onClose={() => setModal(null)} onSaved={handleSaved} />}
       {roster && <RosterModal schedule={roster} onClose={() => setRoster(null)} />}
     </div>
@@ -152,7 +155,7 @@ function ManagerDashboard() {
 
 function ManagerView(props) {
   if (props.active === 'dashboard') return <DashboardView {...props} />;
-  if (props.active === 'people') return <PeopleView {...props} />;
+  if (props.active === 'people') return <StaffPage {...props} />;
   if (props.active === 'operations') return <OperationsView {...props} />;
   if (props.active === 'packages') return <PackagesView {...props} />;
   if (props.active === 'reports') return <ReportsView {...props} />;
@@ -171,29 +174,6 @@ function DashboardView({ data }) {
       <section className="manager-panel manager-revenue"><div className="manager-panel-heading"><div><span>Revenue this month</span><strong>{money(data?.monthlyRevenue)}</strong></div><CircleDollarSign size={24} /></div><div className="manager-metric-row"><span>Sessions in the next 7 days</span><b>{data?.upcomingSchedules || 0} sessions</b></div></section>
       <section className="manager-panel"><div className="manager-panel-heading"><div><span>Recent activity</span><strong>Operations feed</strong></div><Activity size={21} /></div><div className="manager-timeline">{data?.recentActivity?.length ? data.recentActivity.map((item, index) => <div key={`${item.type}-${index}`}><i /><div><strong>{item.title}</strong><span>{item.detail}</span></div><time>{dateTime(item.occurredAt)}</time></div>) : <EmptyState />}</div></section>
     </div>
-  </>;
-}
-
-function PeopleView({ data, filters, setFilters, reload, openModal }) {
-  const [actionError, setActionError] = useState('');
-  const [pendingId, setPendingId] = useState(null);
-  const applyFilters = (event) => { event.preventDefault(); reload(); };
-  const toggle = async (user) => {
-    setActionError(''); setPendingId(user.userId);
-    try { await managerService.updateUserStatus(user.userId, user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'); reload(); }
-    catch (err) { setActionError(apiError(err)); }
-    finally { setPendingId(null); }
-  };
-  return <>
-    <PageHeader eyebrow="Center accounts" title="Staff & Permissions" actions={<button className="manager-primary" onClick={() => openModal({ type: 'user' })}><Plus size={17} /> Add Account</button>} />
-    {actionError && <div className="manager-alert" role="alert">{actionError}</div>}
-    <form className="manager-filterbar" onSubmit={applyFilters}>
-      <label className="manager-search"><Search size={17} /><input value={filters.keyword} onChange={(e) => setFilters({ ...filters, keyword: e.target.value })} placeholder="Name, email, or phone number" /></label>
-      <select value={filters.role} onChange={(e) => setFilters({ ...filters, role: e.target.value })}><option value="ALL">All roles</option>{data?.roles?.map((role) => <option key={role.roleId} value={role.roleName}>{role.roleName}</option>)}</select>
-      <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}><option value="ALL">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="PENDING">Pending</option></select>
-      <button className="manager-secondary" type="submit">Filter</button>
-    </form>
-    <div className="manager-table-wrap"><table><thead><tr><th>Member</th><th>Contact</th><th>Role</th><th>Status</th><th /></tr></thead><tbody>{data?.users?.map((user) => <tr key={user.userId}><td><div className="manager-person"><span>{user.fullName?.[0]}</span><div><strong>{user.fullName}</strong><small>UID-{String(user.userId).padStart(4, '0')}</small></div></div></td><td><strong>{user.email}</strong><small className="manager-cell-sub">{user.phone || 'No phone number'}</small></td><td>{user.roleName}</td><td><Status value={user.status} /></td><td><div className="manager-row-actions"><button title="Edit" onClick={() => openModal({ type: 'user', item: user })}><Pencil size={16} /></button><button className="manager-text-action" disabled={pendingId !== null} onClick={() => toggle(user)}>{user.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}</button></div></td></tr>)}</tbody></table>{!data?.users?.length && <EmptyState />}</div>
   </>;
 }
 

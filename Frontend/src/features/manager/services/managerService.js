@@ -6,7 +6,7 @@ const managerService = {
   roles: () => axiosClient.get('/manager/roles'),
   createUser: (payload) => axiosClient.post('/manager/users', payload),
   updateUser: (id, payload) => axiosClient.put(`/manager/users/${id}`, payload),
-  updateUserStatus: (id, status) => axiosClient.patch(`/manager/users/${id}/status`, { status }),
+  updateUserStatus: (id, status, reason = '') => axiosClient.patch(`/manager/users/${id}/status`, { status, reason }),
 
   subjects: () => axiosClient.get('/manager/subjects'),
   saveSubject: (payload) => payload.subjectId
