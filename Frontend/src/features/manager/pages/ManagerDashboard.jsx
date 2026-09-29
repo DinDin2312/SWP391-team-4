@@ -69,7 +69,6 @@ function ManagerDashboard() {
     const currentRequest = ++requestId.current;
     setLoading(true);
     setError('');
-    setData(null);
     const publish = (result) => { if (currentRequest === requestId.current) setData(result); };
     try {
       if (['operations', 'reports'].includes(active) && (!appliedFilters.from || !appliedFilters.to || appliedFilters.from > appliedFilters.to)) {
@@ -117,6 +116,7 @@ function ManagerDashboard() {
   const applyFilters = (nextFilters = filters) => setAppliedFilters({ ...nextFilters });
   const initials = (userInfo?.fullName || 'Center Manager').split(' ').filter(Boolean).slice(-2).map((part) => part[0]).join('').toUpperCase();
   const pageTitle = navItems.find((item) => item.id === active)?.label;
+  const initialLoading = loading && data === null;
 
   return (
     <div className={`manager-app ${theme === 'light' ? 'is-light' : 'is-dark'}`}>
@@ -138,12 +138,12 @@ function ManagerDashboard() {
           <button className="manager-menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button>
           <div><span>NEXUS Center</span><h1>{pageTitle}</h1></div>
           <RoleThemeToggle theme={theme} onToggle={toggleTheme} />
-          <button className="manager-icon-button" onClick={load} title="Refresh" aria-label="Refresh data"><RefreshCw size={18} /></button>
+          <button className={`manager-icon-button ${loading ? 'is-refreshing' : ''}`} onClick={load} title="Refresh" aria-label="Refresh data" aria-busy={loading} disabled={initialLoading}><RefreshCw size={18} /></button>
         </header>
 
         <section className="manager-content">
           {error && <div className="manager-alert" role="alert"><span>{error}</span><button onClick={load}>Retry</button></div>}
-          {loading ? (active === 'people' ? <StaffSkeleton /> : <Loading />) : <ManagerView active={active} data={data} filters={filters} appliedFilters={appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} openRoster={setRoster} operationTab={operationTab} setOperationTab={setOperationTab} />}
+          {initialLoading ? (active === 'people' ? <StaffSkeleton /> : <Loading />) : <ManagerView active={active} data={data} filters={filters} appliedFilters={appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} openRoster={setRoster} operationTab={operationTab} setOperationTab={setOperationTab} />}
         </section>
       </main>
       <ManagerToast message={notice} onClose={() => setNotice('')} />
