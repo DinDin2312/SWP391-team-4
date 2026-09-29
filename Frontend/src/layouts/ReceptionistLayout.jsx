@@ -38,51 +38,51 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
   const navItems = [
     {
       id: 'search-members',
-      label: 'Tìm kiếm & Xem hội viên',
+      label: 'Search & View Members',
       icon: Users,
-      badge: 'Chính',
+      badge: 'Primary',
       isReady: true,
     },
     {
       id: 'register-member',
-      label: 'Đăng ký hội viên mới',
+      label: 'Register New Member',
       icon: UserPlus,
-      badge: 'Sắp ra mắt',
+      badge: '',
       isReady: false,
     },
     {
       id: 'manage-memberships',
-      label: 'Gói tập & Gia hạn',
+      label: 'Packages & Renewals',
       icon: CreditCard,
-      badge: 'Sắp ra mắt',
+      badge: '',
       isReady: false,
     },
     {
       id: 'check-validity',
-      label: 'Kiểm tra gói & Thời hạn',
+      label: 'Package Status',
       icon: Clock,
-      badge: 'Sắp ra mắt',
+      badge: '',
       isReady: false,
     },
     {
       id: 'class-bookings',
-      label: 'Đặt & Hủy lịch lớp học',
+      label: 'Class Bookings',
       icon: Dumbbell,
-      badge: 'Sắp ra mắt',
+      badge: '',
       isReady: false,
     },
     {
       id: 'invoices-payment',
-      label: 'Thu phí & Hóa đơn',
+      label: 'Billing & Invoices',
       icon: Receipt,
-      badge: 'Sắp ra mắt',
+      badge: '',
       isReady: false,
     },
     {
       id: 'support-requests',
-      label: 'Tiếp nhận hỗ trợ',
+      label: 'Customer Support',
       icon: Headphones,
-      badge: 'Sắp ra mắt',
+      badge: '',
       isReady: false,
     },
   ];
@@ -146,8 +146,8 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
             >
               <ShieldCheck style={{ width: '16px', height: '16px', color: '#38bdf8' }} />
               <div style={{ fontSize: '0.75rem' }}>
-                <span style={{ color: '#94a3b8' }}>Vai trò: </span>
-                <strong style={{ color: '#38bdf8' }}>Lễ Tân Trung Tâm</strong>
+                <span style={{ color: '#94a3b8' }}>Role: </span>
+                <strong style={{ color: '#38bdf8' }}>Front Desk Receptionist</strong>
               </div>
             </div>
           </div>
@@ -155,7 +155,7 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
           {/* Navigation Links */}
           <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
             <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0.5rem 0.75rem' }}>
-              CHỨC NĂNG LỄ TÂN
+              RECEPTIONIST FEATURES
             </span>
 
             {navItems.map((item) => {

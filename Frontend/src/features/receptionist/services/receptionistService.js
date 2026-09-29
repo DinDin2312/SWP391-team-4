@@ -36,7 +36,24 @@ export const receptionistService = {
    */
   registerMember: async (memberData) => {
     return await axiosClient.post('/receptionist/members/register', memberData);
-  }
+  },
+  suggestNextClassRenewal: async (userId, bookingId) => {
+    return await axiosClient.get('/receptionist/classes/suggest-renewal', {
+      params: { userId, bookingId }
+    });
+  },
+
+  confirmClassRenewal: async (renewalData) => {
+    return await axiosClient.post('/receptionist/classes/confirm-renewal', renewalData);
+  },
+
+  getAllPackages: async () => {
+    return await axiosClient.get('/receptionist/packages');
+  },
+
+  subscribePackage: async (data) => {
+    return await axiosClient.post('/receptionist/packages/subscribe', data);
+  },
 };
 
 export default receptionistService;

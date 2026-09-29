@@ -53,6 +53,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/manager/**").hasRole("CENTER_MANAGER")
                         .requestMatchers("/api/v1/coach/**", "/api/coach/**").hasAnyRole("COACH", "CENTER_MANAGER")
 
+                        // Manager operations are restricted to the Center Manager authority.
+                        .requestMatchers("/api/manager/**").hasRole("CENTER_MANAGER")
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
