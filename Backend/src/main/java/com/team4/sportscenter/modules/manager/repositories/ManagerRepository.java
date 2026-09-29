@@ -96,10 +96,10 @@ public class ManagerRepository {
 
     public void notifyScheduleBookings(Integer id, String title, String message) {
         jdbc.update("""
-                INSERT INTO NOTIFICATIONS(user_id,title,message,is_read,created_at)
-                SELECT DISTINCT user_id,?,?,false,NOW() FROM BOOKINGS
+                INSERT INTO NOTIFICATIONS(user_id,title,message,type,is_read,created_at)
+                SELECT DISTINCT user_id,?,?,?,false,NOW() FROM BOOKINGS
                 WHERE schedule_id=? AND status IN ('CONFIRMED','PENDING')
-                """, title, message, id);
+                """, title, message, "BOOKING", id);
     }
 
     public void cancelScheduleBookings(Integer id) {

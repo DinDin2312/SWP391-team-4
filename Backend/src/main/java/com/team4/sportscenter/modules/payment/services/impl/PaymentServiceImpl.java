@@ -20,6 +20,7 @@ import com.team4.sportscenter.modules.payment.repositories.InvoiceDetailReposito
 import com.team4.sportscenter.modules.payment.repositories.InvoiceRepository;
 import com.team4.sportscenter.modules.payment.repositories.PaymentRepository;
 import com.team4.sportscenter.modules.payment.services.PaymentService;
+import com.team4.sportscenter.modules.notification.services.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +43,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final InvoiceDetailRepository invoiceDetailRepository;
     private final PaymentRepository paymentRepository;
     private final VNPayConfig vnPayConfig;
+    private final NotificationService notificationService;
 
     @Override
     public CartResponse getCartItems(String email) {
@@ -268,6 +270,10 @@ public class PaymentServiceImpl implements PaymentService {
         Invoice invoice = invoiceRepository.findById(Integer.parseInt(invoiceIdStr))
                 .orElseThrow(() -> new RuntimeException("Invoice not found"));
                 
+        if (!"PENDING".equals(invoice.getStatus())) {
+            return; // Already processed
+        }
+                
         if ("00".equals(responseCode)) {
             invoice.setStatus("PAID");
             invoiceRepository.save(invoice);
@@ -289,6 +295,13 @@ public class PaymentServiceImpl implements PaymentService {
                 b.setStatus("CONFIRMED");
                 bookingRepository.save(b);
             }
+            
+            notificationService.createNotification(
+                invoice.getUser().getEmail(), 
+                "Payment Successful", 
+                "Your payment of " + invoice.getTotalAmount() + " VND via VNPay has been processed successfully. Your classes/packages are confirmed.", 
+                "PAYMENT"
+            );
         } else {
             invoice.setStatus("FAILED");
             invoiceRepository.save(invoice);
@@ -347,6 +360,13 @@ public class PaymentServiceImpl implements PaymentService {
                 b.setStatus("CONFIRMED");
                 bookingRepository.save(b);
             }
+            
+            notificationService.createNotification(
+                invoice.getUser().getEmail(), 
+                "Payment Successful", 
+                "Your payment of " + invoice.getTotalAmount() + " VND via MoMo has been processed successfully. Your classes/packages are confirmed.", 
+                "PAYMENT"
+            );
         } else {
             // Failed
             invoice.setStatus("FAILED");

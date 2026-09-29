@@ -49,12 +49,13 @@ public class SecurityConfig {
                         // Cho phép truy cập các API của Receptionist
                         .requestMatchers("/api/receptionist/**", "/receptionist/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
 
-                        // Manager operations are restricted to the Center Manager authority.
-                        .requestMatchers("/api/manager/**").hasRole("CENTER_MANAGER")
-                        .requestMatchers("/api/v1/coach/**", "/api/coach/**").hasAnyRole("COACH", "CENTER_MANAGER")
+
+                  
+
 
                         // Manager operations are restricted to the Center Manager authority.
                         .requestMatchers("/api/manager/**").hasRole("CENTER_MANAGER")
+                        .requestMatchers("/api/v1/coach/**", "/api/coach/**").hasAnyRole("COACH", "CENTER_MANAGER")
 
                         .anyRequest().authenticated()
                 )

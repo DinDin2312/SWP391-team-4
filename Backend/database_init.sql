@@ -98,12 +98,14 @@ INSERT INTO USERS (user_id, role_id, full_name, email, password_hash, status) VA
 INSERT INTO USER_SUBJECTS VALUES (3, 1), (4, 2), (5, 3), (5, 4);
 
 -- Thẻ Thành Viên
+
 INSERT INTO USER_MEMBERSHIPS VALUES
                                  (1, 6, 1, '2026-09-01', '2026-10-01', 30, 'ACTIVE'),
                                  (2, 7, 3, '2026-01-01', '2027-01-01', 365, 'ACTIVE'),
                                  (3, 8, 4, '2026-09-15', '2026-10-15', 30, 'ACTIVE'),
                                  (4, 9, 2, '2026-08-01', '2026-11-01', 90, 'ACTIVE'),
                                  (5, 10, 1, '2026-09-20', '2026-10-20', 30, 'ACTIVE');
+
 
 -- Danh sách Lớp học
 INSERT INTO CLASSES VALUES
