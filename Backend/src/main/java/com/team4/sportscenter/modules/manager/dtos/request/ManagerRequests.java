@@ -21,12 +21,12 @@ public final class ManagerRequests {
             @NotBlank @Size(max = 255) String fullName,
             @NotBlank @Email @Size(max = 255) String email,
             @Size(max = 30) String phone,
-            @Pattern(regexp = "(?s)(|.{6,72})", message = "Mật khẩu phải có từ 6 đến 72 ký tự") String password,
+            @Pattern(regexp = "(?s)(|.{6,72})", message = "Password must contain between 6 and 72 characters") String password,
             @NotNull Integer roleId,
             @NotBlank String status) {
     }
 
-    public record UserStatusRequest(@NotBlank String status) {
+    public record UserStatusRequest(@NotBlank String status, @Size(max = 500) String reason) {
     }
 
     public record SubjectRequest(@NotBlank @Size(max = 255) String subjectName, @Size(max = 10000) String description) {
@@ -54,7 +54,7 @@ public final class ManagerRequests {
 
     public record PackageRequest(
             @NotBlank @Size(max = 255) String packageName,
-            @NotBlank @Pattern(regexp = "GYM_ACCESS|AI_ACCESS|PREMIUM", message = "Loại gói không hợp lệ") String packageType,
+            @NotBlank @Pattern(regexp = "GYM_ACCESS|AI_ACCESS|PREMIUM", message = "Invalid package type") String packageType,
             @NotNull @Min(1) Integer durationDays,
             @NotNull @DecimalMin("0") @Digits(integer = 8, fraction = 2) BigDecimal price) {
     }

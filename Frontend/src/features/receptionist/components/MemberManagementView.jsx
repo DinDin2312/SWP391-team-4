@@ -294,20 +294,20 @@ const MemberManagementView = () => {
       .toUpperCase();
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '—';
-    try {
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return dateStr;
-      return date.toLocaleDateString('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-    } catch {
-      return dateStr;
-    }
-  };
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '—';
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: '2-digit',
+                year: 'numeric',
+            });
+        } catch {
+            return dateStr;
+        }
+    };
 
   // Stats calculation
   const totalCount = members.length;
@@ -318,59 +318,38 @@ const MemberManagementView = () => {
   return (
     <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       {/* ================= PAGE HEADER ================= */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f8fafc', margin: 0, letterSpacing: '-0.02em' }}>
-              Tra Cứu & Quản Lý Hội Viên
-            </h1>
-            <span
-              style={{
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                padding: '0.2rem 0.65rem',
-                borderRadius: '9999px',
-                backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                color: '#38bdf8',
-                border: '1px solid rgba(56, 189, 248, 0.3)',
-              }}
-            >
-              Lễ Tân Quầy
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f8fafc', margin: 0, letterSpacing: '-0.02em' }}>
+                    Member Search & Directory
+                </h1>
+                <span
+                    style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        padding: '0.2rem 0.65rem',
+                        borderRadius: '9999px',
+                        backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                        color: '#38bdf8',
+                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                    }}
+                >
+              Front Desk
             </span>
-          </div>
-          <p style={{ margin: '0.4rem 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
-            Tìm kiếm nhanh thông tin thành viên qua Họ tên, Số điện thoại, Email hoặc Mã ID. Xem chi tiết thẻ tập và lịch sử đặt lớp.
-          </p>
+            </div>
+            <p style={{ margin: '0.4rem 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
+                Search members by Name, Phone number, Email or Member ID (#MEM). View membership status and course history.
+            </p>
         </div>
 
         <button
-          onClick={fetchMembers}
-          disabled={loading}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.65rem 1.15rem',
-            backgroundColor: '#111d38',
-            color: '#38bdf8',
-            border: '1px solid rgba(56, 189, 248, 0.3)',
-            borderRadius: '0.65rem',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#182b52';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#111d38';
-          }}
+            onClick={fetchMembers}
+            disabled={loading}
+            // ...style giữ nguyên...
         >
-          <RefreshCw style={{ width: '15px', height: '15px', animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-          <span>Làm mới danh sách</span>
+            <RefreshCw style={{ width: '15px', height: '15px', animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+            <span>Refresh List</span>
         </button>
-      </div>
 
       {/* ================= STATS OVERVIEW CARDS ================= */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
@@ -403,7 +382,7 @@ const MemberManagementView = () => {
             <Users style={{ width: '24px', height: '24px' }} />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>Tổng số hội viên</span>
+            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>Total Members</span>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.1rem' }}>
               {totalCount}
             </div>
@@ -439,7 +418,7 @@ const MemberManagementView = () => {
             <UserCheck style={{ width: '24px', height: '24px' }} />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>Đang hoạt động</span>
+            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>Active Accounts</span>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#34d399', marginTop: '0.1rem' }}>
               {activeCount}
             </div>
@@ -475,7 +454,7 @@ const MemberManagementView = () => {
             <CreditCard style={{ width: '24px', height: '24px' }} />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>Gói tập còn hạn</span>
+            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>Active Packages</span>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#38bdf8', marginTop: '0.1rem' }}>
               {hasActivePackageCount}
             </div>
@@ -511,7 +490,7 @@ const MemberManagementView = () => {
             <AlertCircle style={{ width: '24px', height: '24px' }} />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>Gói tập hết hạn</span>
+            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>Expired Packages</span>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f87171', marginTop: '0.1rem' }}>
               {expiredPackageCount}
             </div>
@@ -547,7 +526,7 @@ const MemberManagementView = () => {
             />
             <input
               type="text"
-              placeholder="Tìm theo Tên hội viên, SĐT (09xx), Email hoặc Mã ID (#MEM)..."
+              placeholder="Search by Member Name, Phone (09xx), Email or ID (#MEM)..."
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               style={{
@@ -585,58 +564,38 @@ const MemberManagementView = () => {
             )}
           </div>
 
-          {/* Filter: Account Status */}
-          <div style={{ minWidth: '180px' }}>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              style={{
-                width: '100%',
-                backgroundColor: '#060b17',
-                border: '1px solid #1e293b',
-                borderRadius: '0.75rem',
-                padding: '0.75rem 1rem',
-                color: '#f8fafc',
-                fontSize: '0.875rem',
-                outline: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="ALL">Tất cả tài khoản</option>
-              <option value="ACTIVE">● Đang hoạt động (Active)</option>
-              <option value="INACTIVE">● Tạm ngưng (Inactive)</option>
-            </select>
-          </div>
+            {/* Filter: Account Status */}
+            <div style={{ minWidth: '180px' }}>
+                <select
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    // ...style giữ nguyên...
+                >
+                    <option value="ALL">All Account Status</option>
+                    <option value="ACTIVE">● Active</option>
+                    <option value="INACTIVE">● Inactive</option>
+                </select>
+            </div>
 
-          {/* Filter: Membership Package Status */}
-          <div style={{ minWidth: '200px' }}>
-            <select
-              value={selectedPackageStatus}
-              onChange={(e) => setSelectedPackageStatus(e.target.value)}
-              style={{
-                width: '100%',
-                backgroundColor: '#060b17',
-                border: '1px solid #1e293b',
-                borderRadius: '0.75rem',
-                padding: '0.75rem 1rem',
-                color: '#f8fafc',
-                fontSize: '0.875rem',
-                outline: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="ALL">Tất cả gói tập</option>
-              <option value="ACTIVE">🟢 Gói đang hiệu lực</option>
-              <option value="EXPIRED">🔴 Gói đã hết hạn</option>
-              <option value="NO_MEMBERSHIP">⚪ Chưa có gói tập</option>
-            </select>
-          </div>
+            {/* Filter: Membership Package Status */}
+            <div style={{ minWidth: '200px' }}>
+                <select
+                    value={selectedPackageStatus}
+                    onChange={(e) => setSelectedPackageStatus(e.target.value)}
+                    // ...style giữ nguyên...
+                >
+                    <option value="ALL">All Package Status</option>
+                    <option value="ACTIVE">🟢 Active Package</option>
+                    <option value="EXPIRED">🔴 Expired Package</option>
+                    <option value="NO_MEMBERSHIP">⚪ No Package</option>
+                </select>
+            </div>
         </div>
 
         {/* Active Filter Chips indicator */}
         {(searchKeyword || selectedStatus !== 'ALL' || selectedPackageStatus !== 'ALL') && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '0.25rem' }}>
-            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Đang lọc:</span>
+            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Filtering by:</span>
             {searchKeyword && (
               <span
                 style={{
@@ -650,7 +609,7 @@ const MemberManagementView = () => {
                   gap: '0.35rem',
                 }}
               >
-                Từ khóa: "{searchKeyword}"
+                Keyword: "${searchKeyword}"
                 <button
                   onClick={() => setSearchKeyword('')}
                   style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
@@ -672,7 +631,7 @@ const MemberManagementView = () => {
                   gap: '0.35rem',
                 }}
               >
-                Trạng thái: {selectedStatus}
+                Status: ${selectedStatus}
                 <button
                   onClick={() => setSelectedStatus('ALL')}
                   style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
@@ -694,7 +653,7 @@ const MemberManagementView = () => {
                   gap: '0.35rem',
                 }}
               >
-                Gói tập: {selectedPackageStatus}
+                Package: ${selectedPackageStatus}
                 <button
                   onClick={() => setSelectedPackageStatus('ALL')}
                   style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
@@ -718,7 +677,7 @@ const MemberManagementView = () => {
                 textDecoration: 'underline',
               }}
             >
-              Xóa bộ lọc
+                Clear Filters
             </button>
           </div>
         )}
@@ -737,21 +696,21 @@ const MemberManagementView = () => {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
             <thead>
-              <tr style={{ backgroundColor: '#0c1630', borderBottom: '1px solid #162444', color: '#94a3b8' }}>
-                <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Mã & Họ tên</th>
-                <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Liên hệ (SĐT / Email)</th>
-                <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Gói tập hiện tại</th>
-                <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Thời hạn & Số ngày</th>
-                <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Trạng thái TK</th>
-                <th style={{ padding: '1rem 1.25rem', fontWeight: 600, textAlign: 'center' }}>Thao tác</th>
-              </tr>
+                <tr style={{ backgroundColor: '#0c1630', borderBottom: '1px solid #162444', color: '#94a3b8' }}>
+                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Member & Name</th>
+                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Contact Info</th>
+                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Current Package</th>
+                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Validity & Days</th>
+                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Account Status</th>
+                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600, textAlign: 'center' }}>Action</th>
+                </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan={6} style={{ padding: '3.5rem', textAlign: 'center', color: '#94a3b8' }}>
                     <div style={{ display: 'inline-block', width: '28px', height: '28px', border: '3px solid rgba(56, 189, 248, 0.2)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    <p style={{ marginTop: '0.75rem', margin: '0.75rem 0 0', fontSize: '0.9rem' }}>Đang tìm kiếm dữ liệu thành viên...</p>
+                    <p style={{ marginTop: '0.75rem', margin: '0.75rem 0 0', fontSize: '0.9rem' }}>Searching member records...</p>
                   </td>
                 </tr>
               ) : members.length === 0 ? (
@@ -773,10 +732,10 @@ const MemberManagementView = () => {
                       <UserX style={{ width: '28px', height: '28px' }} />
                     </div>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f8fafc', margin: '0 0 0.4rem' }}>
-                      Không tìm thấy hội viên nào
+                        No members found
                     </h3>
                     <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: 0 }}>
-                      Không có kết quả phù hợp với từ khóa "{searchKeyword}". Hãy thử thay đổi tiêu chí tìm kiếm.
+                        No results found matching keyword "${searchKeyword}". Please try other filters.
                     </p>
                   </td>
                 </tr>
@@ -833,7 +792,7 @@ const MemberManagementView = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#cbd5e1', fontSize: '0.85rem' }}>
                             <Phone style={{ width: '13px', height: '13px', color: '#38bdf8' }} />
-                            <span>{member.phone || 'Chưa có SĐT'}</span>
+                            <span>{member.phone || 'No phone'}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#64748b', fontSize: '0.775rem' }}>
                             <Mail style={{ width: '13px', height: '13px', color: '#818cf8' }} />
@@ -847,15 +806,15 @@ const MemberManagementView = () => {
                         {isCurrentActive ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                             <span style={{ fontWeight: 600, color: '#38bdf8' }}>{member.currentPackageName}</span>
-                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Loại: {member.currentPackageType || 'GYM_ACCESS'}</span>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Type: ${member.currentPackageType || 'COMBO'}</span>
                           </div>
                         ) : isExpired ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                             <span style={{ color: '#94a3b8', textDecoration: 'line-through' }}>{member.currentPackageName}</span>
-                            <span style={{ fontSize: '0.75rem', color: '#f87171' }}>Đã hết hạn</span>
+                            <span style={{ fontSize: '0.75rem', color: '#f87171' }}>Expired</span>
                           </div>
                         ) : (
-                          <span style={{ color: '#64748b', fontStyle: 'italic', fontSize: '0.85rem' }}>Chưa đăng ký gói</span>
+                          <span style={{ color: '#64748b', fontStyle: 'italic', fontSize: '0.85rem' }}>No Package Enrolled</span>
                         )}
                       </td>
 
@@ -879,10 +838,10 @@ const MemberManagementView = () => {
                               }}
                             >
                               <Clock style={{ width: '12px', height: '12px' }} />
-                              Còn {member.daysRemaining} ngày
+                              {member.daysRemaining} days left
                             </span>
                             <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                              Hết hạn: {formatDate(member.membershipEndDate)}
+                              Expires on: {formatDate(member.membershipEndDate)}
                             </span>
                           </div>
                         ) : isExpired ? (
@@ -896,7 +855,7 @@ const MemberManagementView = () => {
                               borderRadius: '0.35rem',
                             }}
                           >
-                            Hết hạn từ {formatDate(member.membershipEndDate)}
+                            Expired since ${formatDate(member.membershipEndDate)}
                           </span>
                         ) : (
                           <span style={{ color: '#64748b', fontSize: '0.8rem' }}>—</span>
@@ -916,7 +875,7 @@ const MemberManagementView = () => {
                             border: `1px solid ${member.status === 'ACTIVE' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
                           }}
                         >
-                          {member.status === 'ACTIVE' ? '● Hoạt động' : '● Tạm khóa'}
+                          {member.status === 'ACTIVE' ? '● Active' : '● Inactive'}
                         </span>
                       </td>
 
@@ -951,7 +910,7 @@ const MemberManagementView = () => {
                           }}
                         >
                           <Eye style={{ width: '14px', height: '14px' }} />
-                          <span>Xem chi tiết</span>
+                          <span>View Details</span>
                         </button>
                       </td>
                     </tr>
@@ -963,21 +922,21 @@ const MemberManagementView = () => {
         </div>
 
         {/* Table Footer info */}
-        <div
-          style={{
-            padding: '0.85rem 1.25rem',
-            backgroundColor: '#0c1630',
-            borderTop: '1px solid #162444',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '0.8rem',
-            color: '#64748b',
-          }}
-        >
-          <span>Hiển thị {members.length} hội viên</span>
-          <span>Bấm vào hàng bất kỳ để xem hồ sơ hội viên đầy đủ</span>
-        </div>
+          <div
+              style={{
+                  padding: '0.85rem 1.25rem',
+                  backgroundColor: '#0c1630',
+                  borderTop: '1px solid #162444',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '0.8rem',
+                  color: '#64748b',
+              }}
+          >
+              <span>Showing {members.length} members</span>
+              <span>Click any row to view complete member profile</span>
+          </div>
       </div>
 
       {/* ================= MEMBER DETAIL MODAL ================= */}

@@ -16,11 +16,11 @@ export function initialForm(type, item = {}) {
   };
 }
 
-export function apiError(error, fallback = 'Không thể lưu thay đổi.') {
+export function apiError(error, fallback = 'Unable to save changes.') {
   const response = error.response?.data;
-  const labels = { fullName: 'Họ tên', email: 'Email', password: 'Mật khẩu', price: 'Giá',
-    status: 'Trạng thái', classId: 'Lớp', roleId: 'Vai trò', capacity: 'Sức chứa',
-    startTime: 'Bắt đầu', endTime: 'Kết thúc', packageType: 'Loại gói' };
+  const labels = { fullName: 'Full name', email: 'Email', password: 'Password', price: 'Price',
+    status: 'Status', classId: 'Class', roleId: 'Role', capacity: 'Capacity',
+    startTime: 'Start time', endTime: 'End time', packageType: 'Package type' };
   if (response?.errors) return Object.entries(response.errors).map(([key, value]) => `${labels[key] || key}: ${value}`).join('; ');
   return response?.message || fallback;
 }
@@ -32,11 +32,11 @@ export function reportCsv(data) {
     return `"${text.replaceAll('"', '""')}"`;
   };
   const rows = [
-    ['Chỉ tiêu', 'Giá trị'], ['Doanh thu (VND)', data.summary?.revenue || 0],
-    ['Giao dịch thành công', data.summary?.successfulPayments || 0],
-    ['Hóa đơn chờ', data.summary?.pendingInvoices || 0], ['Lượt đăng ký', data.summary?.confirmedBookings || 0],
-    [], ['Ngày', 'Doanh thu (VND)'], ...(data.revenueByDay || []).map((row) => [row.label, row.value]),
-    [], ['Lớp', 'Lượt đặt', 'Tổng chỗ của các buổi'], ...(data.classOccupancy || []).map((row) => [row.label, row.value, row.capacity]),
+    ['Metric', 'Value'], ['Revenue (VND)', data.summary?.revenue || 0],
+    ['Successful transactions', data.summary?.successfulPayments || 0],
+    ['Pending invoices', data.summary?.pendingInvoices || 0], ['Class bookings', data.summary?.confirmedBookings || 0],
+    [], ['Date', 'Revenue (VND)'], ...(data.revenueByDay || []).map((row) => [row.label, row.value]),
+    [], ['Class', 'Bookings', 'Total session capacity'], ...(data.classOccupancy || []).map((row) => [row.label, row.value, row.capacity]),
   ];
   return '\uFEFF' + rows.map((row) => row.map(cell).join(',')).join('\r\n');
 }
