@@ -177,7 +177,7 @@ class ManagerIntegrationTests {
         assertThrows(IllegalArgumentException.class, () -> service.saveSchedule(first,
                 new ScheduleRequest(another, start, start.plusHours(1), "SCHEDULED"), actor));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> service.saveSchedule(first,
-                new ScheduleRequest(course, start.plusHours(2), start.plusHours(3), "SCHEDULED"), actor)).getMessage().contains("học viên"));
+                new ScheduleRequest(course, start.plusHours(2), start.plusHours(3), "SCHEDULED"), actor)).getMessage().contains("registered student"));
         service.saveSchedule(first, new ScheduleRequest(course, start.plusDays(1), start.plusDays(1).plusHours(1), "SCHEDULED"), actor);
         assertEquals(1, count("SELECT COUNT(*) FROM NOTIFICATIONS WHERE user_id=?", member));
     }

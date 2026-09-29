@@ -118,11 +118,11 @@ public class ManagerRepository {
 
     public List<Map<String, Object>> recentActivity() {
         return jdbc.queryForList("""
-                SELECT 'PAYMENT' type, CONCAT('Thanh toán #', payment_id) title,
+                SELECT 'PAYMENT' type, CONCAT('Payment #', payment_id) title,
                        CONCAT(FORMAT(amount,0),' VND - ',payment_method) detail, payment_date occurredAt
                 FROM PAYMENTS WHERE status='SUCCESS'
                 UNION ALL
-                SELECT 'MEMBERSHIP', CONCAT('Gói tập của ',u.full_name), p.package_name, um.start_date
+                SELECT 'MEMBERSHIP', CONCAT('Membership for ',u.full_name), p.package_name, um.start_date
                 FROM USER_MEMBERSHIPS um JOIN USERS u ON u.user_id=um.user_id JOIN PACKAGES p ON p.package_id=um.package_id
                 ORDER BY occurredAt DESC LIMIT 8
                 """);
@@ -321,7 +321,7 @@ public class ManagerRepository {
             return statement;
         }, keyHolder);
         if (keyHolder.getKey() == null) {
-            throw new IllegalStateException("Không thể tạo bản ghi mới");
+            throw new IllegalStateException("Unable to create a new record");
         }
         return keyHolder.getKey().intValue();
     }
