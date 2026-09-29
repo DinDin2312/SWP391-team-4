@@ -89,6 +89,7 @@ public class ManagerService {
             throw new IllegalArgumentException("This email address is already in use");
         });
         Role role = findRole(request.roleId());
+        validateLastManager(user, role, request.status());
         validateCoachChange(user, role, request.status());
         user.setFullName(request.fullName().trim());
         user.setEmail(normalizeEmail(request.email()));
@@ -106,13 +107,18 @@ public class ManagerService {
         managerRepository.lockOperations();
         validateStatus(request.status(), USER_STATUSES);
         User user = findUser(id);
+        if ("INACTIVE".equalsIgnoreCase(request.status()) && (request.reason() == null || request.reason().isBlank())) {
+            throw new IllegalArgumentException("A reason is required when locking an account");
+        }
+        validateLastManager(user, user.getRole(), request.status());
         validateCoachChange(user, user.getRole(), request.status());
         if (user.getEmail().equalsIgnoreCase(actor) && !"ACTIVE".equalsIgnoreCase(request.status())) {
             throw new IllegalArgumentException("You cannot deactivate the account currently signed in");
         }
         user.setStatus(request.status().toUpperCase());
         userRepository.save(user);
-        audit(actor, "STATUS_CHANGE", "USER", id, "Changed " + user.getEmail() + " status to " + user.getStatus());
+        String reason = request.reason() == null || request.reason().isBlank() ? "" : " - Reason: " + request.reason().trim();
+        audit(actor, "STATUS_CHANGE", "USER", id, "Changed " + user.getEmail() + " status to " + user.getStatus() + reason);
     }
 
     @Transactional(readOnly = true)
@@ -315,6 +321,16 @@ public class ManagerService {
                 && (!"Coach".equalsIgnoreCase(role.getRoleName()) || !"ACTIVE".equalsIgnoreCase(status))
                 && managerRepository.coachHasAssignments(user.getUserId())) {
             throw new IllegalArgumentException("Reassign the coach's classes before deactivating the account or changing its role");
+        }
+    }
+
+    private void validateLastManager(User user, Role nextRole, String nextStatus) {
+        boolean currentlyActiveManager = "Center Manager".equalsIgnoreCase(user.getRole().getRoleName())
+                && "ACTIVE".equalsIgnoreCase(user.getStatus());
+        boolean remainsActiveManager = "Center Manager".equalsIgnoreCase(nextRole.getRoleName())
+                && "ACTIVE".equalsIgnoreCase(nextStatus);
+        if (currentlyActiveManager && !remainsActiveManager && managerRepository.activeManagerCount() <= 1) {
+            throw new IllegalArgumentException("The last active manager cannot be locked or demoted");
         }
     }
 
