@@ -118,14 +118,37 @@ function LoginPage() {
                 <label htmlFor="password">Password</label>
                 <button type="button" className="text-link" onClick={() => navigate('/forgot-password')}>Forgot password?</button>
               </div>
-              <input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ paddingRight: '40px', width: '100%', boxSizing: 'border-box' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    color: '#94a3b8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             {error && (

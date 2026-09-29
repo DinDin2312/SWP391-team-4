@@ -8,6 +8,7 @@ import com.team4.sportscenter.modules.auth.repositories.RoleRepository;
 import com.team4.sportscenter.modules.auth.repositories.UserRepository;
 import com.team4.sportscenter.modules.auth.services.EmailService;
 import com.team4.sportscenter.modules.auth.services.UserService;
+import com.team4.sportscenter.modules.notification.services.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ public class UserServiceImpl implements UserService {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final com.team4.sportscenter.security.jwt.JwtService jwtService;
+    private final NotificationService notificationService;
 
     // RAM storage for OTP (Email -> OTP)
     private final Map<String, String> otpStorage = new ConcurrentHashMap<>();
@@ -146,6 +148,39 @@ public class UserServiceImpl implements UserService {
 
         // Remove OTP after reset
         otpStorage.remove(email + "_FORGOT");
+    }
+
+    @Override
+    public void sendEmailUpdateOtp(String currentEmail, String newEmail) {
+        if (userRepository.existsByEmail(newEmail)) {
+            throw new RuntimeException("New email is already in use by another account.");
+        }
+        String otpCode = String.format("%06d", new java.util.Random().nextInt(999999));
+        otpStorage.put(currentEmail + "_CHANGE_EMAIL_" + newEmail, otpCode);
+        emailService.sendOtpEmail(newEmail, otpCode, "Valued Member");
+    }
+
+    @Override
+    public void verifyAndChangeEmail(String currentEmail, String newEmail, String otp) {
+        String cacheKey = currentEmail + "_CHANGE_EMAIL_" + newEmail;
+        String storedOtp = otpStorage.get(cacheKey);
+        if (storedOtp == null || !storedOtp.equals(otp)) {
+            throw new RuntimeException("Invalid or expired OTP code!");
+        }
+        User user = userRepository.findByEmail(currentEmail)
+                .orElseThrow(() -> new RuntimeException("Account not found!"));
+        
+        user.setEmail(newEmail);
+        userRepository.save(user);
+        
+        otpStorage.remove(cacheKey);
+        
+        notificationService.createNotification(
+            newEmail,
+            "Security Alert: Email Updated",
+            "Your account email was successfully updated. If you did not make this change, please contact support immediately.",
+            "SYSTEM"
+        );
     }
 
     @Override

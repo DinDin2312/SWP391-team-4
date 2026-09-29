@@ -7,33 +7,43 @@ import RoleThemeToggle from '../components/RoleThemeToggle';
 import { useRoleTheme } from '../hooks/useRoleTheme';
 import {
   LayoutDashboard, CalendarDays, CreditCard, Dumbbell,
-  Bell, Settings, LogOut, ShoppingCart
+  Bell, Settings, LogOut, ShoppingCart, Receipt
 } from 'lucide-react';
 
 const MemberLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [cartCount, setCartCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    const fetchCartCount = async () => {
+    const fetchData = async () => {
       try {
         const token = localStorage.getItem('token');
         if (token) {
-          const res = await axios.get('http://localhost:8080/api/v1/payment/cart', {
+          const cartRes = await axios.get('http://localhost:8080/api/v1/payment/cart', {
             headers: { Authorization: `Bearer ${token}` }
           });
-          setCartCount(res.data.items?.length || 0);
+          setCartCount(cartRes.data.items?.length || 0);
+
+          const notifRes = await axios.get('http://localhost:8080/api/v1/notifications', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setUnreadCount(notifRes.data.filter(n => !n.read).length || 0);
         }
       } catch (err) {
-        console.error("Cart count error", err);
+        console.error("Data fetch error", err);
       }
     };
-    fetchCartCount();
+    fetchData();
     
-    window.addEventListener('cartUpdated', fetchCartCount);
-    return () => window.removeEventListener('cartUpdated', fetchCartCount);
-  }, [location.pathname]); // Refresh when navigating or when cart updates
+    window.addEventListener('cartUpdated', fetchData);
+    window.addEventListener('notificationUpdated', fetchData);
+    return () => {
+        window.removeEventListener('cartUpdated', fetchData);
+        window.removeEventListener('notificationUpdated', fetchData);
+    };
+  }, [location.pathname]); // Refresh when navigating
 
   const { userInfo, logout } = useContext(AuthContext);
   const { theme, toggleTheme } = useRoleTheme();
@@ -58,6 +68,7 @@ const MemberLayout = () => {
           case '/member/notifications': return 'Notifications';
           case '/member/settings': return 'Settings';
           case '/member/cart': return 'Checkout Cart';
+          case '/member/billing': return 'Billing & Invoices';
           default: return 'Nexus Portal';
       }
   };
@@ -96,9 +107,17 @@ const MemberLayout = () => {
             <button onClick={() => navigate("/member/memberships")} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/memberships') ? 'bg-blue-600/15 border border-blue-500/30 text-blue-400 font-semibold' : 'text-slate-400 hover:text-slate-200 hover:bg-[#111d38]'}`}>
               <div className="flex items-center gap-3">
                 <CreditCard className="w-4 h-4" />
-                <span>Memberships</span>
+                <span>My Packages</span>
               </div>
               <span className="text-[10px] font-bold bg-[#1a2b50] text-blue-300 px-1.5 py-0.5 rounded">PRO</span>
+            </button>
+
+            <button onClick={() => navigate("/member/package-store")} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/package-store') ? 'bg-blue-600/15 border border-blue-500/30 text-blue-400 font-semibold' : 'text-slate-400 hover:text-slate-200 hover:bg-[#111d38]'}`}>
+              <div className="flex items-center gap-3">
+                <ShoppingCart className="w-4 h-4" />
+                <span>Package Store</span>
+              </div>
+              <span className="text-[10px] font-bold bg-[#1a2b50] text-emerald-300 px-1.5 py-0.5 rounded">NEW</span>
             </button>
 
             <button onClick={() => navigate("/member/book-class")} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/book-class') ? 'bg-blue-600/15 border border-blue-500/30 text-blue-400 font-semibold' : 'text-slate-400 hover:text-slate-200 hover:bg-[#111d38]'}`}>
@@ -111,9 +130,16 @@ const MemberLayout = () => {
                 <Bell className="w-4 h-4" />
                 <span>Notifications</span>
               </div>
-              <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center">
-                3
-              </span>
+              {unreadCount > 0 && (
+                <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            <button onClick={() => navigate("/member/billing")} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/billing') ? 'bg-blue-600/15 border border-blue-500/30 text-blue-400 font-semibold' : 'text-slate-400 hover:text-slate-200 hover:bg-[#111d38]'}`}>
+              <Receipt className="w-4 h-4" />
+              <span>Billing & Invoices</span>
             </button>
 
             <button onClick={() => navigate("/member/settings")} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/settings') ? 'bg-blue-600/15 border border-blue-500/30 text-blue-400 font-semibold' : 'text-slate-400 hover:text-slate-200 hover:bg-[#111d38]'}`}>
