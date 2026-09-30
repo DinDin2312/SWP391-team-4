@@ -12,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -36,6 +39,7 @@ public class ManagerService {
     private final RoleRepository roleRepository;
     private final AuditLogRepository auditLogRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AvatarStorageService avatarStorageService;
 
     @Transactional(readOnly = true)
     public Map<String, Object> dashboard() {
@@ -70,6 +74,7 @@ public class ManagerService {
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .role(role)
                 .status(request.status().toUpperCase())
+                .forcePasswordChange(Boolean.TRUE.equals(request.forcePasswordChange()))
                 .build();
         userRepository.save(user);
         audit(actor, "CREATE", "USER", user.getUserId(), "Created account " + user.getEmail() + " - " + role.getRoleName());
@@ -96,11 +101,31 @@ public class ManagerService {
         user.setPhone(blankToNull(request.phone()));
         user.setRole(role);
         user.setStatus(request.status().toUpperCase());
+        user.setForcePasswordChange(Boolean.TRUE.equals(request.forcePasswordChange()));
         if (request.password() != null && !request.password().isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(request.password()));
         }
         userRepository.save(user);
         audit(actor, "UPDATE", "USER", id, "Updated account " + user.getEmail() + " - " + role.getRoleName());
+    }
+
+    public void deleteUser(Integer id, String actor) {
+        managerRepository.lockOperations();
+        User user = findUser(id);
+        if (user.getEmail().equalsIgnoreCase(actor)) {
+            throw new IllegalArgumentException("You cannot delete the account currently signed in");
+        }
+        validateLastManager(user, user.getRole(), "INACTIVE");
+        validateCoachChange(user, user.getRole(), "INACTIVE");
+        String email = user.getEmail();
+        String avatar = user.getAvatarPath();
+        userRepository.delete(user);
+        userRepository.flush();
+        audit(actor, "DELETE", "USER", id, "Deleted account " + email);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() { avatarStorageService.delete(avatar); }
+        });
     }
 
     public void updateUserStatus(Integer id, ManagerRequests.UserStatusRequest request, String actor) {
@@ -119,6 +144,25 @@ public class ManagerService {
         userRepository.save(user);
         String reason = request.reason() == null || request.reason().isBlank() ? "" : " - Reason: " + request.reason().trim();
         audit(actor, "STATUS_CHANGE", "USER", id, "Changed " + user.getEmail() + " status to " + user.getStatus() + reason);
+    }
+
+    public String updateUserAvatar(Integer id, MultipartFile file, String actor) {
+        User user = findUser(id);
+        String previousAvatar = user.getAvatarPath();
+        String storedAvatar = avatarStorageService.store(file);
+        user.setAvatarPath(storedAvatar);
+        userRepository.save(user);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() { avatarStorageService.delete(previousAvatar); }
+
+            @Override
+            public void afterCompletion(int status) {
+                if (status != TransactionSynchronization.STATUS_COMMITTED) avatarStorageService.delete(storedAvatar);
+            }
+        });
+        audit(actor, "UPDATE_AVATAR", "USER", id, "Updated avatar for " + user.getEmail());
+        return storedAvatar;
     }
 
     @Transactional(readOnly = true)

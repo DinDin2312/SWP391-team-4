@@ -23,7 +23,11 @@ public final class ManagerRequests {
             @Size(max = 30) String phone,
             @Pattern(regexp = "(?s)(|.{6,72})", message = "Password must contain between 6 and 72 characters") String password,
             @NotNull Integer roleId,
-            @NotBlank String status) {
+            @NotBlank String status,
+            Boolean forcePasswordChange) {
+        public UserRequest(String fullName, String email, String phone, String password, Integer roleId, String status) {
+            this(fullName, email, phone, password, roleId, status, false);
+        }
     }
 
     public record UserStatusRequest(@NotBlank String status, @Size(max = 500) String reason) {

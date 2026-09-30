@@ -138,7 +138,8 @@ public class ManagerRepository {
     public List<Map<String, Object>> users(String keyword, String role, String status) {
         String search = "%" + (keyword == null ? "" : keyword.trim()) + "%";
         return jdbc.queryForList("""
-                SELECT u.user_id userId,u.full_name fullName,u.email,u.phone,u.status,
+                SELECT u.user_id userId,u.full_name fullName,u.email,u.phone,u.status,u.avatar_path avatarPath,
+                       u.force_password_change forcePasswordChange,
                        r.role_id roleId,r.role_name roleName
                 FROM USERS u JOIN ROLES r ON r.role_id=u.role_id
                 WHERE (u.full_name LIKE ? OR u.email LIKE ? OR COALESCE(u.phone,'') LIKE ?)
