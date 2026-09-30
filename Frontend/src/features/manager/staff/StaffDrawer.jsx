@@ -1,27 +1,80 @@
-import { X } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { Activity, CalendarDays, Check, Clipboard, Clock3, CreditCard, FileClock, KeyRound, LockKeyhole, Mail, Pencil, Phone, UnlockKeyhole, UserRound, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import managerEn from '../i18n/en';
-import { roleLabel } from './roleUtils';
-import { staffDate } from './staffData';
+import { RoleBadge, StatusBadge } from './AccountBadge';
+import StaffAvatar from './StaffAvatar';
+import { displayStaffName, staffDate } from './staffData';
 
-function StaffDrawer({ user, onClose }) {
-  const drawerRef = useRef(null);
+const permissionsByRole = {
+  Administrator: ['Full access', 'Manage accounts', 'Audit logs'],
+  'Center Manager': ['Manage staff', 'Center operations', 'Reports'],
+  Receptionist: ['Member records', 'Bookings', 'Payments'],
+  Coach: ['Class roster', 'Attendance', 'Schedule'],
+  Member: ['Book classes', 'Membership', 'Profile'],
+};
+const money = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(Number(value || 0));
+
+function StaffDrawer({ user, onClose, onEdit, onResetPassword, onToggleLock, onViewLogs, lockDisabled }) {
+  const dialogRef = useRef(null);
+  const [copied, setCopied] = useState(false);
   useEffect(() => {
+    if (!user) return undefined;
     const previous = document.activeElement;
-    drawerRef.current?.focus();
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.focus();
     const keyDown = (event) => { if (event.key === 'Escape') onClose(); };
     document.addEventListener('keydown', keyDown);
-    return () => { document.removeEventListener('keydown', keyDown); previous?.focus(); };
-  }, [onClose]);
+    return () => { document.removeEventListener('keydown', keyDown); document.body.style.overflow = overflow; previous?.focus(); };
+  }, [user, onClose]);
   if (!user) return null;
+
   const copy = managerEn.staff.drawer;
+  const uid = `UID-${String(user.userId).padStart(4, '0')}`;
+  const runAndClose = (action) => { onClose(); action(user); };
+  const copyUid = async () => { await navigator.clipboard.writeText(uid); setCopied(true); window.setTimeout(() => setCopied(false), 1400); };
+
   return <div className="manager-drawer-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-    <aside className="manager-detail-drawer" ref={drawerRef} role="dialog" aria-modal="true" aria-labelledby="staff-drawer-title" tabIndex="-1">
-      <header><div><span>{copy.title}</span><h2 id="staff-drawer-title">{user.fullName}</h2><small>{roleLabel(user.roleName)}</small></div><button type="button" title={copy.close} aria-label={copy.close} onClick={onClose}><X size={19} /></button></header>
-      <section><h3>{copy.information}</h3><dl><div><dt>{copy.email}</dt><dd>{user.email}</dd></div><div><dt>{copy.phone}</dt><dd>{user.phone || '—'}</dd></div><div><dt>{copy.status}</dt><dd>{user.status}</dd></div><div><dt>{copy.joined}</dt><dd>{staffDate(user.joinedAt)}</dd></div><div><dt>{copy.lastLogin}</dt><dd>{staffDate(user.lastLoginAt)}</dd></div><div><dt>{copy.plan}</dt><dd>{user.currentPlan}</dd></div></dl></section>
-      <section><h3>{copy.planHistory}</h3>{user.planHistory.length ? <ul>{user.planHistory.map((plan, index) => <li key={`${plan.name}-${index}`}><strong>{plan.name}</strong><span>{plan.status} · {staffDate(plan.startedAt)}</span></li>)}</ul> : <p>{copy.noPlans}</p>}</section>
-      <section><h3>{copy.activity}</h3>{user.activity.length ? <ul>{user.activity.map((item, index) => <li key={`${item.label}-${index}`}><strong>{item.label}</strong><span>{staffDate(item.occurredAt)}</span></li>)}</ul> : <p>{copy.noActivity}</p>}</section>
-    </aside>
+    <section className="manager-detail-drawer" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="staff-drawer-title" tabIndex="-1">
+      <header className="manager-detail-hero">
+        <button className="manager-drawer-close" type="button" title={copy.close} aria-label={copy.close} onClick={onClose}><X size={19} /></button>
+        <StaffAvatar user={user} className="manager-profile-avatar" />
+        <div className="manager-detail-identity"><span>{copy.title}</span><h2 id="staff-drawer-title">{displayStaffName(user.fullName)}</h2><p>{user.email}</p><div className="manager-detail-badges"><RoleBadge role={user.roleName} /><StatusBadge status={user.status} /></div></div>
+      </header>
+
+      <div className="manager-detail-actions" role="toolbar" aria-label="Account actions">
+        <button type="button" onClick={() => runAndClose(onEdit)}><Pencil size={15} />Edit</button>
+        <button type="button" onClick={() => runAndClose(onResetPassword)}><KeyRound size={15} />Reset password</button>
+        <button className="is-warning" type="button" disabled={user.status !== 'INACTIVE' && lockDisabled} onClick={() => runAndClose(onToggleLock)}>{user.status === 'INACTIVE' ? <UnlockKeyhole size={15} /> : <LockKeyhole size={15} />}{user.status === 'INACTIVE' ? 'Unlock' : 'Lock'}</button>
+        <button type="button" onClick={onViewLogs}><FileClock size={15} />View logs</button>
+      </div>
+
+      <section className="manager-detail-summary" aria-label={copy.summary}>
+        <article><CreditCard size={17} /><div><span>{copy.plan}</span><strong>{user.currentPlan || 'No plan'}</strong></div></article>
+        <article><CalendarDays size={17} /><div><span>{copy.joined}</span><strong>{staffDate(user.joinedAt)}</strong></div></article>
+        <article><Clock3 size={17} /><div><span>{copy.lastLogin}</span><strong>{staffDate(user.lastLoginAt)}</strong></div></article>
+      </section>
+
+      <section className="manager-detail-section">
+        <div className="manager-detail-section-title"><UserRound size={17} /><div><h3>Contact details</h3><p>Contact information and account identifier</p></div></div>
+        <div className="manager-contact-grid">
+          <article><span><Mail size={17} /></span><div><small>{copy.email}</small><strong>{user.email}</strong></div></article>
+          <article><span><Phone size={17} /></span><div><small>{copy.phone}</small><strong>{user.phone || 'No phone'}</strong></div></article>
+          <article><span><Clipboard size={17} /></span><div><small>Account UID</small><strong>{uid}</strong></div><button className="manager-copy-icon" type="button" onClick={copyUid} aria-label="Copy UID">{copied ? <Check size={15} /> : <Clipboard size={15} />}</button></article>
+        </div>
+        <div className="manager-permissions"><small>Permissions</small><div>{(permissionsByRole[user.roleName] || ['Standard access']).map((permission) => <span key={permission}>{permission}</span>)}</div></div>
+      </section>
+
+      <section className="manager-detail-section">
+        <div className="manager-detail-section-title"><CreditCard size={17} /><div><h3>{copy.planHistory}</h3><p>{copy.planHint}</p></div></div>
+        {user.planHistory.length ? <div className="manager-plan-history">{user.planHistory.map((plan, index) => <article key={`${plan.name}-${index}`}><div><strong>{plan.name}</strong><StatusBadge status={String(plan.status).toUpperCase()} /></div><dl><div><dt>Start</dt><dd>{staffDate(plan.startedAt)}</dd></div><div><dt>End</dt><dd>{staffDate(plan.endedAt)}</dd></div><div><dt>Price</dt><dd>{money(plan.price)}</dd></div></dl></article>)}</div> : <div className="manager-detail-empty">{copy.noPlans}</div>}
+      </section>
+
+      <section className="manager-detail-section">
+        <div className="manager-detail-section-title"><Activity size={17} /><div><h3>{copy.activity}</h3><p>{copy.activityHint}</p></div></div>
+        {user.activity.length ? <ul className="manager-detail-timeline is-activity">{user.activity.map((item, index) => <li key={`${item.label}-${index}`}><i /><div><strong>{item.label}</strong><span>{staffDate(item.occurredAt)}</span></div></li>)}</ul> : <div className="manager-detail-empty">{copy.noActivity}</div>}
+      </section>
+    </section>
   </div>;
 }
 
