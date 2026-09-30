@@ -1,6 +1,5 @@
 const managerEn = {
   staff: {
-    eyebrow: 'Center accounts',
     addAccount: 'Add Account',
     stats: {
       total: 'Total',
@@ -15,7 +14,6 @@ const managerEn = {
       Coach: 'Trainer',
       Member: 'Member',
     },
-    changeRoleFor: (name) => `Change role for ${name}`,
     actions: {
       open: 'Open actions',
       details: 'Details',
@@ -26,6 +24,7 @@ const managerEn = {
       viewLogs: 'View logs',
     },
     filters: {
+      searchLabel: 'Search accounts',
       searchPlaceholder: 'Name, email, or phone number',
       allRoles: 'All roles',
       allStatuses: 'All statuses',
@@ -45,8 +44,6 @@ const managerEn = {
     bulk: {
       selected: (count) => `${count} selected`,
       lock: 'Lock accounts',
-      role: 'Role',
-      changeRole: 'Change role',
       exportCsv: 'Export CSV',
       csvFile: 'staff-export.csv',
       csvHeaders: ['ID', 'Name', 'Email', 'Phone', 'Role', 'Status', 'Joined', 'Last login', 'Current plan'],
@@ -54,15 +51,22 @@ const managerEn = {
     drawer: {
       title: 'Account details',
       close: 'Close account details',
+      edit: 'Edit account',
+      uploadAvatar: 'Upload a new avatar',
+      summary: 'Account summary',
       information: 'Information',
+      informationHint: 'Contact and permission details',
       email: 'Email',
       phone: 'Phone',
+      role: 'Role',
       status: 'Status',
       plan: 'Plan',
       joined: 'Joined',
       lastLogin: 'Last login',
       planHistory: 'Plan history',
+      planHint: 'Membership and access history',
       activity: 'Recent activity',
+      activityHint: 'Latest events for this account',
       noPlans: 'No plan history.',
       noActivity: 'No recent activity.',
       activePlan: 'Active',
@@ -86,10 +90,9 @@ const managerEn = {
       loading: 'Loading staff accounts',
       emptyTitle: 'No staff accounts found',
       emptyBody: 'Try clearing filters or add a new account.',
-      roleUpdated: 'Role updated.',
       accountUnlocked: 'Account unlocked.',
+      avatarUpdated: 'Avatar updated.',
       accountsLocked: (count) => `${count} ${count === 1 ? 'account' : 'accounts'} locked.`,
-      rolesUpdated: (count) => `Role updated for ${count} ${count === 1 ? 'account' : 'accounts'}.`,
       exported: (count) => `Exported ${count} ${count === 1 ? 'account' : 'accounts'}.`,
       dismiss: 'Dismiss notification',
     },
