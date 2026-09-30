@@ -45,6 +45,13 @@ public class User implements UserDetails {
     @Column(name = "bio", columnDefinition = "TEXT")
     private String bio;
 
+    @Column(name = "avatar_path", length = 255)
+    private String avatarPath;
+
+    @Column(name = "force_password_change", nullable = false)
+    @Builder.Default
+    private Boolean forcePasswordChange = false;
+
     @Column(name = "loyalty_points")
     private Integer loyaltyPoints;
 

@@ -9,6 +9,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -48,6 +49,20 @@ public class ManagerController {
     public ResponseEntity<Void> updateUserStatus(@PathVariable Integer id, @Valid @RequestBody ManagerRequests.UserStatusRequest request, Authentication auth) {
         managerService.updateUserStatus(id, request, auth.getName());
         return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Integer id, Authentication auth) {
+        managerService.deleteUser(id, auth.getName());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/users/{id}/avatar", consumes = "multipart/form-data")
+    public Map<String, String> updateUserAvatar(@PathVariable Integer id,
+                                                @RequestPart("avatar") MultipartFile avatar,
+                                                Authentication auth) {
+        String avatarPath = managerService.updateUserAvatar(id, avatar, auth.getName());
+        return Map.of("avatarPath", avatarPath, "avatarUrl", "/api/avatars/" + avatarPath);
     }
 
     @GetMapping("/subjects") public List<Map<String, Object>> subjects() { return managerService.subjects(); }

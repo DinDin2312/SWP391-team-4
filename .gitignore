@@ -1,5 +1,6 @@
 # Generated build and dependency artifacts
 Backend/target/
+Backend/uploads/
 Frontend/node_modules/
 Frontend/dist/
 

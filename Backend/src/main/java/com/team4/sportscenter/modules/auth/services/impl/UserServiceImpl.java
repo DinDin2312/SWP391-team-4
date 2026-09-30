@@ -144,6 +144,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new RuntimeException("Account not found with this email!"));
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setForcePasswordChange(false);
         userRepository.save(user);
 
         // Remove OTP after reset

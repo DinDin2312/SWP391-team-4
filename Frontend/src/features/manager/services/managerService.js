@@ -6,7 +6,13 @@ const managerService = {
   roles: () => axiosClient.get('/manager/roles'),
   createUser: (payload) => axiosClient.post('/manager/users', payload),
   updateUser: (id, payload) => axiosClient.put(`/manager/users/${id}`, payload),
+  updateUserAvatar: (id, avatar) => {
+    const form = new FormData();
+    form.append('avatar', avatar);
+    return axiosClient.post(`/manager/users/${id}/avatar`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
   updateUserStatus: (id, status, reason = '') => axiosClient.patch(`/manager/users/${id}/status`, { status, reason }),
+  deleteUser: (id) => axiosClient.delete(`/manager/users/${id}`),
 
   subjects: () => axiosClient.get('/manager/subjects'),
   saveSubject: (payload) => payload.subjectId
