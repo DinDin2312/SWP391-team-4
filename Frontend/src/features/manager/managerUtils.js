@@ -11,7 +11,7 @@ export function localDateTime(value) {
 export function initialForm(type, item = {}) {
   return {
     status: type === 'schedule' ? 'SCHEDULED' : 'ACTIVE', packageType: 'GYM_ACCESS',
-    occurrences: 4, intervalWeeks: 1, repeat: false, ...item, password: '',
+    occurrences: 4, intervalWeeks: 1, repeat: false, forcePasswordChange: false, ...item, password: '',
     startTime: localDateTime(item.startTime), endTime: localDateTime(item.endTime),
   };
 }
