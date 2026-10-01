@@ -9,9 +9,10 @@ import java.util.Optional;
 
 public interface UserMembershipRepository extends JpaRepository<UserMembership, Integer> {
     
-    @Query("SELECT um FROM UserMembership um WHERE um.user.email = :email AND um.status = 'ACTIVE'")
+    @Query("SELECT um FROM UserMembership um JOIN FETCH um.aPackage WHERE um.user.email = :email AND um.status = 'ACTIVE'")
     java.util.List<UserMembership> findActiveMembershipByEmail(@Param("email") String email);
-    @Query("SELECT um FROM UserMembership um WHERE um.user.email = :email AND (um.status = 'ACTIVE' OR um.status = 'EXPIRED')")
+
+    @Query("SELECT um FROM UserMembership um JOIN FETCH um.aPackage WHERE um.user.email = :email AND (um.status = 'ACTIVE' OR um.status = 'EXPIRED')")
     java.util.List<UserMembership> findMyPackagesByEmail(@Param("email") String email);
 
     @Query("SELECT um FROM UserMembership um JOIN FETCH um.aPackage WHERE um.user.email = :email AND um.status = :status")
