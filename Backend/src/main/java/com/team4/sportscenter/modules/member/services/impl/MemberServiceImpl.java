@@ -42,26 +42,49 @@ public class MemberServiceImpl implements MemberService {
     private final BookingRepository bookingRepository;
     private final ScheduleRepository scheduleRepository;
     private final UserRepository userRepository;
+    private final com.team4.sportscenter.modules.member.repositories.PackageRepository packageRepository;
 
     @Override
     public MemberMembershipResponse getMyActiveMembership(String email) {
-        UserMembership membership = membershipRepository.findActiveMembershipByEmail(email)
-                .orElse(null);
-
-        if (membership == null) {
-            return null; // Return null if no active package found
+        java.util.List<UserMembership> allActive = membershipRepository.findActiveMembershipByEmail(email);
+        if (allActive != null) {
+            allActive.forEach(m -> {
+                if (m.getEndDate() != null && m.getEndDate().isBefore(LocalDate.now())) {
+                    m.setStatus("EXPIRED");
+                    membershipRepository.save(m);
+                }
+            });
         }
 
-        long remainingDays = ChronoUnit.DAYS.between(LocalDate.now(), membership.getEndDate());
-        if(remainingDays < 0) remainingDays = 0;
+        java.util.List<UserMembership> memberships = membershipRepository.findActiveMembershipByEmail(email);
+
+        if (memberships == null || memberships.isEmpty()) {
+            return null;
+        }
+
+        String targetType = memberships.stream().anyMatch(m -> "GYM_ACCESS".equals(m.getAPackage().getPackageType())) ? "GYM_ACCESS" : memberships.get(0).getAPackage().getPackageType();
+
+        long totalRemainingDays = memberships.stream()
+            .filter(m -> targetType.equals(m.getAPackage().getPackageType()))
+            .map(m -> m.getEndDate())
+            .max(LocalDate::compareTo)
+            .map(date -> ChronoUnit.DAYS.between(LocalDate.now(), date))
+            .orElse(0L);
+
+        if(totalRemainingDays < 0) totalRemainingDays = 0;
+
+        UserMembership bestMembership = memberships.stream()
+            .filter(m -> targetType.equals(m.getAPackage().getPackageType()))
+            .max((m1, m2) -> Integer.compare(m1.getAPackage().getDurationDays(), m2.getAPackage().getDurationDays()))
+            .orElse(memberships.get(0));
 
         return MemberMembershipResponse.builder()
-                .packageName(membership.getAPackage().getPackageName())
-                .packageType(membership.getAPackage().getPackageType())
-                .startDate(membership.getStartDate())
-                .endDate(membership.getEndDate())
-                .status(membership.getStatus())
-                .remainingDays((int) remainingDays)
+                .packageName(bestMembership.getAPackage().getPackageName())
+                .packageType(bestMembership.getAPackage().getPackageType())
+                .startDate(bestMembership.getStartDate())
+                .endDate(LocalDate.now().plusDays(totalRemainingDays))
+                .status(bestMembership.getStatus())
+                .remainingDays((int) totalRemainingDays)
                 .build();
     }
 
@@ -242,6 +265,86 @@ public class MemberServiceImpl implements MemberService {
             booking.setAttendanceStatus("NOT_YET");
             bookingRepository.save(booking);
         }
+    }
+
+    @Override
+    public List<com.team4.sportscenter.modules.member.dtos.response.PackageResponse> getAllPackages() {
+        return packageRepository.findAll().stream().map(p -> com.team4.sportscenter.modules.member.dtos.response.PackageResponse.builder()
+            .packageId(p.getPackageId())
+            .packageName(p.getPackageName())
+            .packageType(p.getPackageType() != null ? p.getPackageType() : "STANDARD")
+            .durationDays(p.getDurationDays() != null ? p.getDurationDays() : 30)
+            .price(p.getPrice() != null ? p.getPrice() : java.math.BigDecimal.ZERO)
+            .description(null)
+            .build()).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<com.team4.sportscenter.modules.member.dtos.response.MemberPackageResponse> getMyPackages(String email) {
+        List<UserMembership> allMemberships = membershipRepository.findMyPackagesByEmail(email);
+        
+        allMemberships.forEach(m -> {
+            if ("ACTIVE".equals(m.getStatus()) && m.getEndDate() != null && m.getEndDate().isBefore(LocalDate.now())) {
+                m.setStatus("EXPIRED");
+                membershipRepository.save(m);
+            }
+        });
+
+        Map<String, List<UserMembership>> grouped = allMemberships.stream()
+            .collect(Collectors.groupingBy(m -> 
+                (m.getAPackage() != null ? m.getAPackage().getPackageType() : "STANDARD") + "_" + m.getStatus()
+            ));
+
+        List<com.team4.sportscenter.modules.member.dtos.response.MemberPackageResponse> result = new ArrayList<>();
+        
+        for (List<UserMembership> group : grouped.values()) {
+            if (group.isEmpty()) continue;
+            
+            LocalDate minStart = group.stream().map(UserMembership::getStartDate).min(LocalDate::compareTo).orElse(LocalDate.now());
+            LocalDate maxEnd = group.stream().map(UserMembership::getEndDate).max(LocalDate::compareTo).orElse(LocalDate.now());
+            
+            UserMembership bestPkg = group.stream()
+                .max((m1, m2) -> Integer.compare(
+                    m1.getAPackage() != null ? m1.getAPackage().getDurationDays() : 0, 
+                    m2.getAPackage() != null ? m2.getAPackage().getDurationDays() : 0
+                )).orElse(group.get(0));
+                
+            result.add(com.team4.sportscenter.modules.member.dtos.response.MemberPackageResponse.builder()
+                .membershipId(bestPkg.getMembershipId())
+                .packageName(bestPkg.getAPackage() != null ? bestPkg.getAPackage().getPackageName() : "Basic Membership")
+                .packageType(bestPkg.getAPackage() != null ? bestPkg.getAPackage().getPackageType() : "STANDARD")
+                .startDate(minStart)
+                .endDate(maxEnd)
+                .status(bestPkg.getStatus())
+                .durationDays(bestPkg.getAPackage() != null ? bestPkg.getAPackage().getDurationDays() : 30)
+                .price(bestPkg.getAPackage() != null ? bestPkg.getAPackage().getPrice() : java.math.BigDecimal.ZERO)
+                .build());
+        }
+        
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void addPackageToCart(String email, Integer packageId) {
+        com.team4.sportscenter.modules.auth.entities.User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        com.team4.sportscenter.modules.member.entities.Package pkg = packageRepository.findById(packageId)
+            .orElseThrow(() -> new RuntimeException("Package not found"));
+
+        boolean hasPending = membershipRepository.findAll().stream()
+            .anyMatch(m -> m.getUser().getUserId().equals(user.getUserId()) && "PENDING".equals(m.getStatus()) && m.getAPackage().getPackageId().equals(packageId));
+            
+        if (hasPending) {
+            throw new RuntimeException("This exact package is already in your cart.");
+        }
+
+        com.team4.sportscenter.modules.member.entities.UserMembership membership = com.team4.sportscenter.modules.member.entities.UserMembership.builder()
+            .user(user)
+            .aPackage(pkg)
+            .status("PENDING")
+            .build();
+            
+        membershipRepository.save(membership);
     }
 }
 

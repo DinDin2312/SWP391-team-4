@@ -5,6 +5,8 @@ import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import RoleThemeToggle from '../components/RoleThemeToggle';
 import { useRoleTheme } from '../hooks/useRoleTheme';
+import { Bot } from 'lucide-react';
+import NexusAiChat from '../features/member/components/NexusAiChat';
 import {
   LayoutDashboard, CalendarDays, CreditCard, Dumbbell,
   Bell, Settings, LogOut, ShoppingCart, Receipt
@@ -14,7 +16,10 @@ const MemberLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [cartCount, setCartCount] = useState(0);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [hasAiAccess, setHasAiAccess] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '' });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,6 +35,12 @@ const MemberLayout = () => {
             headers: { Authorization: `Bearer ${token}` }
           });
           setUnreadCount(notifRes.data.filter(n => !n.read).length || 0);
+
+          const myPkgsRes = await axios.get('http://localhost:8080/api/v1/member/my-packages', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const hasAi = myPkgsRes.data.some(p => p.packageType === 'AI_ACCESS' && p.status === 'ACTIVE');
+          setHasAiAccess(hasAi);
         }
       } catch (err) {
         console.error("Data fetch error", err);
@@ -109,7 +120,7 @@ const MemberLayout = () => {
                 <CreditCard className="w-4 h-4" />
                 <span>My Packages</span>
               </div>
-              <span className="text-[10px] font-bold bg-[#1a2b50] text-blue-300 px-1.5 py-0.5 rounded">PRO</span>
+              
             </button>
 
             <button onClick={() => navigate("/member/package-store")} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/package-store') ? 'bg-blue-600/15 border border-blue-500/30 text-blue-400 font-semibold' : 'text-slate-400 hover:text-slate-200 hover:bg-[#111d38]'}`}>
@@ -194,10 +205,10 @@ const MemberLayout = () => {
               <span className="font-semibold text-white">HIIT Endurance in 1h 45m</span>
             </div>
 
-            <button className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all">
-              <CreditCard className="w-4 h-4" />
-                <span>Buy Package</span>
-            </button>
+            <button onClick={() => { if (hasAiAccess) setIsChatOpen(!isChatOpen); else { setToast({ visible: true, message: 'Please purchase an AI package in the Package Store to unlock this feature.' }); setTimeout(() => setToast({ visible: false, message: '' }), 4000); } }} className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all">
+                <Bot className="w-4 h-4" />
+                <span>Ask NEXUS AI</span>
+              </button>
 
             {/* Shopping Cart Button */}
             <button onClick={() => navigate('/member/cart')} className="relative p-2.5 rounded-xl bg-[#0e172a] border border-[#1a2947] hover:border-emerald-500 hover:text-emerald-400 text-slate-300 transition-colors" title="View Cart">
@@ -218,6 +229,15 @@ const MemberLayout = () => {
         <div className="animate-fade-in mt-6">
           <Outlet />
         </div>
+      {toast.visible && (
+        <div className="fixed bottom-4 right-4 z-50 bg-slate-800 text-white px-4 py-3 rounded-lg shadow-lg border border-slate-700 flex items-center gap-3 animate-fade-in">
+          <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+            <Bot className="w-4 h-4 text-blue-400" />
+          </div>
+          <p className="text-sm font-medium">{toast.message}</p>
+        </div>
+      )}
+      <NexusAiChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
       </main>
     </div>
   );

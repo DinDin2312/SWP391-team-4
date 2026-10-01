@@ -40,6 +40,20 @@ public class PaymentController {
         return ResponseEntity.ok(Map.of("message", "Item removed from cart."));
     }
 
+    @DeleteMapping("/cart/package/{packageId}")
+    public ResponseEntity<?> removePackageFromCart(Authentication authentication, @PathVariable Integer packageId) {
+        String email = authentication.getName();
+        paymentService.removePackageFromCart(email, packageId);
+        return ResponseEntity.ok(Map.of("message", "Package removed from cart."));
+    }
+
+    @DeleteMapping("/cart/clear")
+    public ResponseEntity<?> clearCart(Authentication authentication) {
+        String email = authentication.getName();
+        paymentService.clearCart(email);
+        return ResponseEntity.ok(Map.of("message", "Cart cleared."));
+    }
+
     @GetMapping("/momo-callback")
     public ResponseEntity<?> momoCallback(@RequestParam Map<String, String> queryParams) {
         paymentService.handleMoMoCallback(queryParams);

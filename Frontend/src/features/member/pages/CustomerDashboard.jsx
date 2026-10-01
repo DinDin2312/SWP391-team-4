@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+﻿import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../../../context/AuthContext';
@@ -18,11 +18,11 @@ import {
   Flame,
   Search,
   Download,
-  ChevronRight,
+  ChevronRight, ChevronLeft,
   Radio,
   Clock,
   MapPin,
-  User,
+  User, TrendingUp,
   Waves,
   ShoppingCart,
 } from 'lucide-react';
@@ -55,7 +55,9 @@ const CustomerDashboard = () => {
 // Call 2 APIs in parallel for speed
         const [membershipRes, bookingsRes, checkInsRes, recentRes] = await Promise.all([
           axios.get('http://localhost:8080/api/v1/member/my-membership', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://localhost:8080/api/v1/member/upcoming-bookings', { headers: { Authorization: `Bearer ${token}` } })
+          axios.get('http://localhost:8080/api/v1/member/upcoming-bookings', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('http://localhost:8080/api/v1/member/total-checkins', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('http://localhost:8080/api/v1/member/recent-activities', { headers: { Authorization: `Bearer ${token}` } })
         ]);
         
         setMembership(membershipRes.data);
@@ -249,7 +251,7 @@ const CustomerDashboard = () => {
                   {totalCheckIns} <span className="text-xs font-medium text-slate-400">Sessions</span>
                 </div>
                 <div className="flex items-center gap-1 text-xs font-semibold text-emerald-400 mt-1">
-              <span>↑ +21% vs last month</span>
+              <span className="flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> +21% vs last month</span>
                 </div>
               </div>
               {/* Mini Spark Bar Graph */}
@@ -327,7 +329,7 @@ const CustomerDashboard = () => {
 
                 <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#060e20] border border-[#172545] text-xs font-semibold">
                   {[
-                    { key: 'all', label: 'All (3)' },
+                    { key: 'all', label: `All (${upcomingBookings.length})` },
                     { key: 'group', label: 'Group Classes' },
                     { key: 'courts', label: 'Smart Courts' },
                     { key: 'recovery', label: 'Recovery' },
@@ -354,7 +356,14 @@ const CustomerDashboard = () => {
   ) : upcomingBookings.length === 0 ? (
     <div className="text-slate-400 text-sm py-4 text-center">No upcoming classes scheduled.</div>
   ) : (
-    upcomingBookings.map((item) => {
+    upcomingBookings.filter(item => {
+      if (activeTab === 'all') return true;
+      const name = item.className.toLowerCase();
+      if (activeTab === 'group') return name.includes('yoga') || name.includes('gym') || name.includes('cơ');
+      if (activeTab === 'courts') return name.includes('court') || name.includes('sân');
+      if (activeTab === 'recovery') return name.includes('recovery') || name.includes('hồi phục');
+      return true;
+    }).map((item) => {
       const dateObj = new Date(item.startTime);
       const isToday = new Date().toDateString() === dateObj.toDateString();
       const badge = isToday ? "TODAY" : dateObj.toLocaleDateString("en-GB", { month: "short", day: "2-digit" }).toUpperCase();
@@ -422,7 +431,7 @@ const CustomerDashboard = () => {
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                 Telemetry synchronization: Connected to Nexus Core
               </span>
-              <a href="#calendar" className="text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
+              <a href="/member/schedule" onClick={(e) => { e.preventDefault(); navigate('/member/schedule'); }} className="text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
                 View Full Calendar <ChevronRight className="w-3.5 h-3.5" />
               </a>
             </div>
@@ -472,7 +481,7 @@ const CustomerDashboard = () => {
               <h3 className="text-sm font-bold text-white mb-3">Express Actions</h3>
               <div className="space-y-2">
                 {[
-                  { title: "Book PT Session", subtitle: "Consult biomechanics coaches", icon: User, onClick: () => alert("System is matching you with an available trainer...") },
+                  { title: "Book PT Session", subtitle: "Consult biomechanics coaches", icon: User, TrendingUp, onClick: () => alert("System is matching you with an available trainer...") },
                   { title: "Reserve Smart Court", subtitle: "Tennis, Basketball & Padel", icon: Search, onClick: () => alert("Loading Smart Court layout...") },
                   { title: "Biometric Telemetry", subtitle: "VO2 Max & recovery index", icon: Activity, onClick: () => alert("Syncing data with your Apple Watch/Garmin...") },
                   { title: "Locker & Facility Access", subtitle: "Manage digital locker keys", icon: Dumbbell, onClick: () => alert("Connecting NFC to unlock locker #42...") },
@@ -506,7 +515,7 @@ const CustomerDashboard = () => {
         <div className="p-6 rounded-2xl bg-[#0b1326] border border-[#172545]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h3 className="text-lg font-bold text-white">Recent Activity & Check–in Log</h3>
+              <h3 className="text-lg font-bold text-white">Recent Activity & Check-in Log</h3>
               <p className="text-xs text-slate-400 mt-0.5">
                 Verified turnstile entries and biometric session outputs
               </p>
@@ -552,7 +561,7 @@ const CustomerDashboard = () => {
                       </td>
                     </tr>
                   ) : (
-                    recentActivities.map((log) => {
+                    recentActivities.slice((currentPage - 1) * 3, currentPage * 3).map((log) => {
                       const dateObj = new Date(log.startTime);
                       const isYesterday = new Date(new Date().setDate(new Date().getDate()-1)).toDateString() === dateObj.toDateString();
                       const dateStr = isYesterday ? 'Yesterday' : dateObj.toLocaleDateString('en-GB', { month: 'short', day: '2-digit', year: 'numeric' });
@@ -590,35 +599,27 @@ const CustomerDashboard = () => {
 
           {/* Table Pagination */}
           <div className="pt-4 mt-2 border-t border-[#182645] flex items-center justify-between text-xs text-slate-400">
-            <span>Showing 4 of 38 recorded sessions</span>
+            <span>Showing {recentActivities.slice((currentPage - 1) * 3, currentPage * 3).length} of {recentActivities.length} recorded sessions</span>
             <div className="flex items-center gap-1.5">
               <button
-                disabled
-                className="w-7 h-7 rounded-lg bg-[#0e172a] border border-[#1a2947] flex items-center justify-center text-slate-600 cursor-not-allowed"
-              >
-                ‹
-              </button>
-              <button
-                onClick={() => setCurrentPage(1)}
-                className="w-7 h-7 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center shadow-md shadow-blue-600/30"
-              >
-                1
-              </button>
-              <button
-                onClick={() => setCurrentPage(2)}
-                className="w-7 h-7 rounded-lg bg-[#0e172a] border border-[#1a2947] hover:border-slate-600 text-slate-300 flex items-center justify-center transition-colors"
-              >
-                2
-              </button>
-              <button
-                onClick={() => setCurrentPage(3)}
-                className="w-7 h-7 rounded-lg bg-[#0e172a] border border-[#1a2947] hover:border-slate-600 text-slate-300 flex items-center justify-center transition-colors"
-              >
-                3
-              </button>
-              <button className="w-7 h-7 rounded-lg bg-[#0e172a] border border-[#1a2947] hover:border-slate-600 text-slate-300 flex items-center justify-center transition-colors">
-                ›
-              </button>
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${currentPage === 1 ? 'bg-[#0e172a] border border-[#1a2947] text-slate-600 cursor-not-allowed' : 'bg-[#0e172a] border border-[#1a2947] hover:border-slate-600 text-slate-300'}`}
+                ><ChevronLeft className="w-4 h-4" /></button>
+                {Array.from({ length: Math.ceil(recentActivities.length / 3) || 1 }).map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentPage(idx + 1)}
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold transition-colors ${currentPage === idx + 1 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30' : 'bg-[#0e172a] border border-[#1a2947] hover:border-slate-600 text-slate-300'}`}
+                  >
+                    {idx + 1}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(recentActivities.length / 3) || 1))}
+                  disabled={currentPage === (Math.ceil(recentActivities.length / 3) || 1)}
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${currentPage === (Math.ceil(recentActivities.length / 3) || 1) ? 'bg-[#0e172a] border border-[#1a2947] text-slate-600 cursor-not-allowed' : 'bg-[#0e172a] border border-[#1a2947] hover:border-slate-600 text-slate-300'}`}
+                ><ChevronRight className="w-4 h-4" /></button>
             </div>
           </div>
         </div>
