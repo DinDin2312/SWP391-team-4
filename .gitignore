@@ -1,9 +1,32 @@
-# Generated build and dependency artifacts
-Backend/target/
-Backend/uploads/
+# ============================
+# Frontend (React/Vite)
+# ============================
 Frontend/node_modules/
 Frontend/dist/
+Frontend/.env
+Frontend/.env.*
+Frontend/*.log
 
-# Local IDE settings
-.vscode/
+# ============================
+# Backend (Spring Boot/Java)
+# ============================
+Backend/target/
+Backend/uploads/
+Backend/.mvn/
+Backend/*.log
+
+# ============================
+# IDEs and OS Files
+# ============================
 .idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.class
+
+# Script rác tạo trong lúc fix code
+Fix*.java
+fix*.py
+fix*.js

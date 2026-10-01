@@ -62,6 +62,11 @@ const Settings = () => {
   };
 
   const handleSendOtp = async () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!newEmail || !emailRegex.test(newEmail)) {
+      setEmailError('Please enter a valid email address.');
+      return;
+    }
     try {
       setEmailLoading(true);
       setEmailError('');
