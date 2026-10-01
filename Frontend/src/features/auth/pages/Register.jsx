@@ -35,6 +35,14 @@ export default function Register() {
 
   const handleRegistration = async (e) => {
     e.preventDefault();
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setToastMessage({ type: 'error', text: 'Please enter a valid email address.' });
+      return;
+    }
+    
     if (!isAgreed) {
       alert("You must agree to the Terms of Service!");
       return;

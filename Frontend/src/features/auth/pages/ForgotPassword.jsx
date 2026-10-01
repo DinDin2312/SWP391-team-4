@@ -79,7 +79,8 @@ export default function ForgotPassword() {
   // 1. API: Send Forgot Password OTP
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    if (!email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
       setErrorMsg('Please enter a valid email address.');
       return;
     }

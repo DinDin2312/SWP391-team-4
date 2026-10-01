@@ -1,171 +1,145 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, ShoppingBag, Percent, Smartphone, RefreshCw, 
   Dumbbell, Flame, Trophy, Shield, Gauge, Activity, Snowflake, 
   Building2, Lock, QrCode, FileCheck, ArrowRight, CheckCircle2,
   Trash2, ShoppingCart, Check, ShieldCheck, Tag,
-  CircleDollarSign, DollarSign, BadgeCheck
+  CircleDollarSign, DollarSign, BadgeCheck, AlertCircle
 } from 'lucide-react';
-
-const packages = [
-  {
-    id: 1,
-    name: "Standard Fitness Pass",
-    category: "membership",
-    validity: "30 Days Validity",
-    desc: "Foundation access for rigorous solo training & Olympic free-weight zones.",
-    price: 1200000,
-    priceSuffix: "/ month",
-    icon: Dumbbell,
-    iconColor: "text-primary",
-    iconBg: "bg-surface-container-high group-hover:bg-primary-container/20 text-primary",
-    features: [
-      "Full access to Gym & Olympic Free Weights",
-      "Smart Locker with contactless RFID pairing",
-      "Standard Nexus Telemetry app sync",
-      "Complimentary electrolyte hydration & linens"
-    ]
-  },
-  {
-    id: 2,
-    name: "Pro Athlete Suite",
-    category: "membership",
-    validity: "30 Days Full Pass",
-    desc: "High-frequency performance optimization with coach supervision & analytics.",
-    price: 2400000,
-    priceSuffix: "/ month",
-    icon: Trophy,
-    popular: true,
-    tag: "Most Popular • Recommended",
-    iconBg: "bg-primary-container text-on-primary-container",
-    features: [
-      "All Standard access & multi-club privileges",
-      "Unlimited Yoga, Functional HIIT & Cycling sessions",
-      "4 One-on-One Master Trainer consultations",
-      "Priority Smart Tennis & Badminton court slots",
-      "Weekly real-time Biometrics & VO2 Max telemetry"
-    ]
-  },
-  {
-    id: 3,
-    name: "Elite All-Access Lab",
-    category: "membership",
-    validity: "VIP 30 Days",
-    desc: "Uncompromised sports science protocols, physiotherapy & complete facility freedom.",
-    price: 4500000,
-    priceSuffix: "/ month",
-    icon: Shield,
-    iconColor: "text-tertiary",
-    iconBg: "bg-surface-container-high group-hover:bg-tertiary/20 text-tertiary",
-    features: [
-      "Unrestricted entry to all zones & indoor courts",
-      "Unlimited Cryotherapy (-110°C) & Hyperbaric O2",
-      "Weekly 3D Gait & biomechanical motion scans",
-      "Dedicated Sports Physiotherapist concierge",
-      "4 VIP Guest Passes included per cycle"
-    ]
-  },
-  {
-    id: 4,
-    name: "10-Session HIIT & Functional",
-    category: "combo",
-    validity: "60 Days Validity",
-    typeTag: "10 SESSIONS",
-    typeSuffix: "FLEX PACK",
-    desc: "High-output conditioning led by senior sports lab coaches with HR live syncing.",
-    price: 1850000,
-    priceSuffix: "/ 10 classes",
-    icon: Gauge,
-    iconColor: "text-primary",
-    iconBg: "bg-surface-container-high group-hover:bg-primary/20 text-primary",
-    features: [
-      "10 Coach-led high intensity training blocks",
-      "Medical-grade heart rate telemetry band loaner",
-      "Free reschedule penalty-free up to 2 hours",
-      "Nutritional recovery smoothie perk post-session"
-    ]
-  },
-  {
-    id: 5,
-    name: "Zen Yoga & Deep Recovery",
-    category: "combo",
-    validity: "45 Days Validity",
-    typeTag: "8 CLASSES + SPA",
-    typeSuffix: "WELLNESS",
-    desc: "Holistic biomechanical mobility, sound frequency therapy, and nervous system reset.",
-    price: 1450000,
-    priceSuffix: "/ 8 classes",
-    icon: Activity,
-    iconColor: "text-tertiary",
-    iconBg: "bg-surface-container-high group-hover:bg-tertiary/20 text-tertiary",
-    features: [
-      "8 Restorative Yoga & Sound Bath sessions",
-      "2 Infrared Sauna & Cold Plunge spa tokens",
-      "Lululemon mat & essential oil kit provided",
-      "Complimentary range-of-motion assessment"
-    ]
-  },
-  {
-    id: 6,
-    name: "Cryo Bio-Recovery Chamber",
-    category: "amenity",
-    validity: "Best Recovery Value",
-    typeTag: "5 SESSIONS",
-    typeSuffix: "CLINICAL",
-    desc: "Whole-body sub-zero cryotherapy to flush systemic inflammation and boost ATP reload.",
-    price: 1200000,
-    priceSuffix: "/ 5 sessions",
-    icon: Snowflake,
-    iconColor: "text-tertiary",
-    iconBg: "bg-surface-container-high group-hover:bg-tertiary-container/30 text-tertiary",
-    features: [
-      "5 Whole-body -110°C cryotherapy immersions",
-      "Accelerated muscle repair & metabolic reboot",
-      "Physician-supervised by Dr. Elena Marks",
-      "Pre-session real-time vitals and blood pressure check"
-    ]
-  }
-];
 
 const PackageStore = () => {
   const navigate = useNavigate();
+  const [packages, setPackages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [cartCount, setCartCount] = useState(2);
-  const [cartTotal, setCartTotal] = useState(3650000);
   
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastName, setToastName] = useState('');
+  // Fake cart context until Backend Cart API supports packages
+  const [cartCount, setCartCount] = useState(0);
+  const [cartTotal, setCartTotal] = useState(0);
+  
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
   const [addedItems, setAddedItems] = useState({});
 
+  useEffect(() => {
+    fetchPackages();
+    fetchCart();
+  }, []);
+
+  const fetchPackages = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:8080/api/v1/member/packages', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPackages(response.data || []);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to load packages. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getPackageIcon = (type) => {
+    switch (type?.toLowerCase()) {
+      case 'membership': return Dumbbell;
+      case 'combo': return Trophy;
+      case 'amenity': return Snowflake;
+      case 'pt': return Activity;
+      default: return BadgeCheck;
+    }
+  };
+
   const filteredPackages = packages.filter(p => {
-    const matchCategory = activeCategory === 'all' || p.category === activeCategory;
-    const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchCategory = activeCategory === 'all' || p.packageType?.toLowerCase() === activeCategory;
+    const matchSearch = p.packageName?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchCategory && matchSearch;
   });
 
-  const handleAddToCart = (pkg) => {
-    setCartCount(prev => prev + 1);
-    setCartTotal(prev => prev + pkg.price);
-    
-    // Show temporary feedback on button
-    setAddedItems(prev => ({ ...prev, [pkg.id]: true }));
-    setTimeout(() => {
-      setAddedItems(prev => ({ ...prev, [pkg.id]: false }));
-    }, 1400);
+  const handleAddToCart = async (pkg) => {
+    if (addedItems[pkg.packageId]) return;
 
-    // Show Toast
-    setToastName(pkg.name);
-    setToastVisible(true);
-    setTimeout(() => {
-      setToastVisible(false);
-    }, 2800);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:8080/api/v1/member/add-package-to-cart/${pkg.packageId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      window.dispatchEvent(new Event('cartUpdated'));
+
+      setCartCount(prev => prev + 1);
+      setCartTotal(prev => prev + pkg.price);
+      
+      setToast({ visible: true, message: `${pkg.packageName} added to your vault`, type: 'success' });
+      setTimeout(() => {
+        setToast({ visible: false, message: '', type: 'success' });
+      }, 2800);
+      
+      fetchCart();
+    } catch (err) {
+      setToast({ visible: true, message: err.response?.data?.message || err.response?.data || 'Error adding to cart', type: 'error' });
+      setTimeout(() => {
+        setToast({ visible: false, message: '', type: 'error' });
+      }, 4000);
+    }
   };
 
-  const clearCart = () => {
-    setCartCount(0);
-    setCartTotal(0);
+  const fetchCart = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:8080/api/v1/payment/cart', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data && response.data.items) {
+        setCartCount(response.data.items.length);
+        setCartTotal(response.data.totalPrice || 0);
+        
+        const cartPackageIds = {};
+        response.data.items.forEach(item => {
+          if (item.type === 'PACKAGE' && item.packageId) {
+            cartPackageIds[item.packageId] = true;
+          }
+        });
+        setAddedItems(cartPackageIds);
+      } else {
+        setCartCount(0);
+        setCartTotal(0);
+        setAddedItems({});
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const clearCart = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:8080/api/v1/payment/cart/clear`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCartCount(0);
+      setCartTotal(0);
+      setAddedItems({});
+      fetchCart();
+      window.dispatchEvent(new Event('cartUpdated'));
+      
+      setToast({ visible: true, message: 'Cart cleared successfully', type: 'success' });
+      setTimeout(() => {
+        setToast({ visible: false, message: '', type: 'success' });
+      }, 2800);
+    } catch (err) {
+      setToast({ visible: true, message: 'Failed to clear cart', type: 'error' });
+      setTimeout(() => {
+        setToast({ visible: false, message: '', type: 'error' });
+      }, 3000);
+    }
   };
 
   return (
@@ -182,14 +156,14 @@ const PackageStore = () => {
             <div className="flex items-center gap-space-xs">
               <span className="w-2.5 h-2.5 rounded-full bg-tertiary animate-pulse"></span>
               <span className="text-[11px] font-semibold tracking-widest text-tertiary uppercase">Performance Protocol Access</span>
-              <span className="text-on-surface-variant mx-1">•</span>
+              <span className="text-on-surface-variant mx-1">&bull;</span>
               <span className="text-[11px] font-semibold text-on-surface-variant uppercase">Q3 Optimization Windows Open</span>
             </div>
             <div className="flex items-center gap-space-sm">
               <div className="flex items-center gap-1.5 px-space-sm py-1 rounded bg-surface-container-high text-on-surface text-[12px] font-semibold">
                 <DollarSign className="w-4 h-4 text-tertiary" />
                 <span>STORE CURRENCY:</span>
-                <span className="font-bold text-primary">VND (₫)</span>
+                <span className="font-bold text-primary">VND</span>
               </div>
               <div className="hidden sm:flex items-center gap-1.5 px-space-sm py-1 rounded bg-surface-container-high text-on-surface text-[12px] font-semibold">
                 <ShieldCheck className="w-4 h-4 text-primary" />
@@ -238,7 +212,7 @@ const PackageStore = () => {
                 <div className="flex flex-col text-left">
                   <span className="text-[11px] font-semibold text-on-surface-variant uppercase leading-none">Cart Vault</span>
                   <span className="text-[14px] text-on-surface leading-tight font-bold">
-                    {cartTotal.toLocaleString()} ₫
+                    {cartTotal.toLocaleString()} &curren;
                   </span>
                 </div>
               </button>
@@ -283,10 +257,10 @@ const PackageStore = () => {
         {/* Category Tabs */}
         <div className="flex items-center gap-1.5 p-1 rounded-xl bg-surface-container-low overflow-x-auto max-w-full">
           {[
-            { id: 'all', label: 'All Packages', count: 6 },
-            { id: 'membership', label: 'Membership Tiers', count: 3 },
-            { id: 'combo', label: 'Class Combos', count: 2 },
-            { id: 'amenity', label: 'Bio-Tech & Recovery', count: 1 },
+            { id: 'all', label: 'All Packages', count: packages.length },
+            { id: 'membership', label: 'Membership Tiers', count: packages.filter(p => p.packageType?.toLowerCase() === 'membership').length },
+            { id: 'combo', label: 'Class Combos', count: packages.filter(p => p.packageType?.toLowerCase() === 'combo').length },
+            { id: 'amenity', label: 'Bio-Tech & Recovery', count: packages.filter(p => p.packageType?.toLowerCase() === 'amenity').length },
           ].map(tab => {
             const isActive = activeCategory === tab.id;
             return (
@@ -329,14 +303,29 @@ const PackageStore = () => {
 
       {/* Package Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredPackages.map((pkg) => {
-          const Icon = pkg.icon;
-          const isPopular = pkg.popular;
-          const isAdded = addedItems[pkg.id];
+        {loading ? (
+          <div className="col-span-full flex flex-col justify-center items-center py-20 text-on-surface-variant">
+            <RefreshCw className="w-10 h-10 animate-spin mb-4 text-primary" />
+            <span className="text-sm font-semibold">Syncing packages from backend...</span>
+          </div>
+        ) : error ? (
+          <div className="col-span-full flex flex-col justify-center items-center py-20 text-error">
+            <AlertCircle className="w-10 h-10 mb-4" />
+            <span className="text-sm font-semibold">{error}</span>
+          </div>
+        ) : filteredPackages.length === 0 ? (
+          <div className="col-span-full flex flex-col justify-center items-center py-20 text-on-surface-variant">
+            <ShoppingBag className="w-10 h-10 mb-4 opacity-50" />
+            <span className="text-sm font-semibold">No packages available for this category.</span>
+          </div>
+        ) : filteredPackages.map((pkg) => {
+          const Icon = getPackageIcon(pkg.packageType);
+          const isPopular = pkg.price > 2000000;
+          const isAdded = addedItems[pkg.packageId];
 
           return (
             <div 
-              key={pkg.id} 
+              key={pkg.packageId} 
               className={`flex flex-col justify-between rounded-2xl p-6 transition-all duration-300 group relative ${
                 isPopular 
                   ? 'bg-surface-container-high/90 shadow-xl shadow-primary-container/10 transform lg:-translate-y-2' 
@@ -348,64 +337,49 @@ const PackageStore = () => {
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-primary/30 via-transparent to-primary/10 pointer-events-none -z-0"></div>
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-primary-container text-on-primary-container text-[11px] font-bold tracking-widest uppercase shadow-md flex items-center gap-1 z-20 whitespace-nowrap">
                     <Flame className="w-3.5 h-3.5" />
-                    <span>{pkg.tag}</span>
+                    <span>Most Popular &bull; Recommended</span>
                   </div>
                 </>
               )}
 
               <div className="relative z-10">
-                {/* Card Top Indicator */}
                 <div className="flex items-start justify-between mb-4 pt-1">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${pkg.iconBg}`}>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors bg-surface-container-high group-hover:bg-primary-container/20 text-primary`}>
                     <Icon className="w-7 h-7" />
                   </div>
-                  <span className={`px-2 py-1 rounded text-[11px] font-bold tracking-wider uppercase ${
-                    isPopular ? 'bg-primary/20 text-primary' : 'bg-surface-container-high text-on-surface-variant'
-                  }`}>
-                    {pkg.validity}
+                  <span className={`px-2 py-1 rounded text-[11px] font-bold tracking-wider uppercase bg-surface-variant text-on-surface-variant`}>
+                    {pkg.durationDays} Days
                   </span>
                 </div>
 
                 <div className="mb-4">
-                  {pkg.typeTag && (
+                  {pkg.packageType && (
                     <div className="flex items-center gap-1.5 mb-1">
-                      <span className={`text-[11px] font-bold ${pkg.iconColor}`}>{pkg.typeTag}</span>
-                      <span className="text-on-surface-variant">•</span>
-                      <span className="text-[11px] font-semibold text-on-surface-variant">{pkg.typeSuffix}</span>
+                      <span className="text-[11px] font-bold text-primary uppercase">{pkg.packageType}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-1.5">
-                    <h2 className={`text-xl font-bold text-on-surface transition-colors ${!isPopular && 'group-hover:' + pkg.iconColor}`}>
-                      {pkg.name}
-                    </h2>
-                    {isPopular && <CheckCircle2 className="w-5 h-5 text-tertiary" title="Elite Verified" />}
-                  </div>
-                  <p className="text-[13px] text-on-surface-variant mt-1">{pkg.desc}</p>
+                  <h3 className="text-xl font-bold text-on-surface mb-2">{pkg.packageName}</h3>
+                  <p className="text-sm text-on-surface-variant min-h-[40px] leading-relaxed">
+                    {pkg.description || ("Gain full access for " + pkg.durationDays + " days. Upgrade your fitness routine today.")}
+                  </p>
                 </div>
 
-                {/* Price */}
-                <div className={`mb-6 p-4 rounded-xl ${isPopular ? 'bg-surface-container-lowest/90' : 'bg-surface-container-lowest'}`}>
-                  <div className="flex items-center justify-between">
-                    <span className={`text-[11px] uppercase tracking-wider block font-semibold ${isPopular ? 'text-tertiary' : 'text-on-surface-variant'}`}>
-                      {isPopular ? 'Tier Pricing' : 'Membership Fee'}
-                    </span>
-                    {isPopular && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-tertiary/15 text-tertiary font-semibold">Save 20%</span>
-                    )}
-                  </div>
-                  <div className="flex items-baseline gap-1 mt-0.5">
-                    <span className="text-2xl font-extrabold text-on-surface">{pkg.price.toLocaleString()}</span>
-                    <span className="text-[13px] text-primary font-bold">VND</span>
-                    <span className="text-[12px] text-on-surface-variant ml-1">{pkg.priceSuffix}</span>
-                  </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-[11px] font-bold tracking-wider uppercase ${isPopular ? 'text-primary' : 'text-on-surface-variant'}`}>
+                    Membership Fee
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-1 mt-0.5 mb-5">
+                  <span className="text-2xl font-extrabold text-on-surface">{pkg.price.toLocaleString()}</span>
+                  <span className="text-[13px] text-primary font-bold">VND</span>
+                  <span className="text-[12px] text-on-surface-variant ml-1">/ {pkg.durationDays} days</span>
                 </div>
 
-                {/* Features List */}
                 <div className="flex flex-col gap-3 mb-6">
                   <span className={`text-[11px] uppercase tracking-wider font-semibold ${isPopular ? 'text-primary' : 'text-on-surface-variant'}`}>
-                    {isPopular ? 'Full Tier Privileges' : 'Included Privileges'}
+                    Included Privileges
                   </span>
-                  {pkg.features.map((feature, idx) => (
+                  {['Full facility access', 'Smart locker usage', 'App telemetry sync'].map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-3">
                       <CheckCircle2 className="w-4 h-4 text-tertiary shrink-0 mt-0.5" />
                       <span className="text-[14px] text-on-surface">{feature}</span>
@@ -414,12 +388,12 @@ const PackageStore = () => {
                 </div>
               </div>
 
-              {/* Action Button */}
               <button 
                 onClick={() => handleAddToCart(pkg)}
+                disabled={isAdded}
                 className={`relative z-10 w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-semibold text-[14px] transition-all active:scale-[0.99] ${
                   isAdded 
-                    ? 'bg-tertiary-container text-on-tertiary-container'
+                    ? 'bg-surface-container-highest text-on-surface-variant cursor-not-allowed border border-surface-container-highest'
                     : isPopular 
                       ? 'bg-primary-container hover:bg-inverse-primary text-on-primary-container hover:text-surface shadow-lg shadow-primary-container/20'
                       : 'bg-surface-container-high hover:bg-primary text-on-surface hover:text-on-primary shadow-sm'
@@ -427,8 +401,8 @@ const PackageStore = () => {
               >
                 {isAdded ? (
                   <>
-                    <Check className="w-5 h-5" />
-                    <span>Added!</span>
+                    <Check className="w-5 h-5 text-tertiary" />
+                    <span className="text-tertiary">Added to Cart</span>
                   </>
                 ) : (
                   <>
@@ -478,7 +452,7 @@ const PackageStore = () => {
         </div>
         <div className="flex items-center justify-center gap-2 text-on-surface-variant">
           <FileCheck className="w-5 h-5 text-secondary" />
-          <span className="text-[11px] font-bold tracking-wide uppercase">Zero Setup Fees • Cancel Anytime</span>
+          <span className="text-[11px] font-bold tracking-wide uppercase">Zero Setup Fees &bull; Cancel Anytime</span>
         </div>
       </div>
 
@@ -525,16 +499,21 @@ const PackageStore = () => {
         </div>
       </div>
 
-      {/* Toast Notification */}
-      <div className={`fixed top-24 right-8 z-50 transform transition-all duration-300 flex items-center gap-3 p-4 rounded-xl bg-surface-container-highest shadow-2xl border border-surface-container-highest/50 ${
-        toastVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'
+      {/* Floating Action Toast Notification */}
+      <div className={`fixed bottom-32 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ${
+        toast.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
       }`}>
-        <div className="w-8 h-8 rounded-full bg-tertiary/20 text-tertiary flex items-center justify-center">
-          <Check className="w-5 h-5" />
-        </div>
-        <div className="flex flex-col">
-          <span className="text-[13px] text-on-surface font-bold">{toastName}</span>
-          <span className="text-[12px] text-on-surface-variant">Added to active lab cart.</span>
+        <div className={`flex items-center gap-3 px-5 py-3 rounded-full shadow-2xl ${
+          toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-inverse-surface text-inverse-on-surface'
+        }`}>
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+            toast.type === 'error' ? 'bg-white/20' : 'bg-primary'
+          }`}>
+            {toast.type === 'error' ? <AlertCircle className="w-4 h-4 text-white" /> : <Check className="w-4 h-4 text-on-primary" />}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] font-semibold">{toast.message}</span>
+          </div>
         </div>
       </div>
     </div>

@@ -39,18 +39,24 @@ const PaymentCart = () => {
   };
 
   
-  const handleRemoveItem = async (classId) => {
+  const handleRemoveItem = async (id, type) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:8080/api/v1/payment/cart/${classId}`, {
-        headers: { Authorization: `Bearer ${token}`}
-      });
-      setToast({ visible: true, type: 'success', title: 'Removed', message: 'Course removed from cart.' });
+      if (type === 'PACKAGE') {
+        await axios.delete(`http://localhost:8080/api/v1/payment/cart/package/${id}`, {
+          headers: { Authorization: `Bearer ${token}`}
+        });
+      } else {
+        await axios.delete(`http://localhost:8080/api/v1/payment/cart/${id}`, {
+          headers: { Authorization: `Bearer ${token}`}
+        });
+      }
+      setToast({ visible: true, type: 'success', title: 'Removed', message: 'Item removed from cart.' });
       setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 3000);
       fetchCartItems(); // Refresh the cart
       window.dispatchEvent(new Event('cartUpdated')); // Update the global badge
     } catch (err) {
-      setToast({ visible: true, type: 'error', title: 'Error', message: 'Failed to remove course.' });
+      setToast({ visible: true, type: 'error', title: 'Error', message: 'Failed to remove item.' });
       setTimeout(() => setToast({ visible: false, type: 'error', title: '', message: '' }), 3000);
     }
   };
@@ -64,7 +70,7 @@ const PaymentCart = () => {
         headers: { Authorization: `Bearer ${token}`}
       });
       
-      // Chuyển hướng sang trang VNPay
+      // ChuyĂ¡Â»Æ’n hĂ†Â°Ă¡Â»â€ºng sang trang VNPay
       if (response.data && response.data.paymentUrl) {
           window.location.href = response.data.paymentUrl;
       }
@@ -141,17 +147,29 @@ const PaymentCart = () => {
             {items.map((item, idx) => (
               <div key={idx} className="bg-[#0e172a] border border-[#1a2947] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
-                  <h3 className="font-bold text-white text-lg">{item.className}</h3>
-                  <p className="text-sm text-slate-400">Coach: {item.coachName}</p>
-                  <div className="mt-2 inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 text-xs font-semibold">
-                    {item.sessionCount} Sessions
-                  </div>
+                  {item.type === 'PACKAGE' ? (
+                    <>
+                      <h3 className="font-bold text-white text-lg">{item.packageName}</h3>
+                      <p className="text-sm text-slate-400">Duration: {item.durationDays} Days</p>
+                      <div className="mt-2 inline-block px-2.5 py-1 rounded-lg bg-green-500/10 text-green-400 text-xs font-semibold">
+                        Membership Package
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="font-bold text-white text-lg">{item.className}</h3>
+                      <p className="text-sm text-slate-400">Coach: {item.coachName}</p>
+                      <div className="mt-2 inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 text-xs font-semibold">
+                        {item.sessionCount} Sessions
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2">
                   <span className="text-xl font-extrabold text-white">
                     {Number(item.price).toLocaleString()} VND
                   </span>
-                  <button onClick={() => handleRemoveItem(item.classId)} className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 font-semibold transition-colors">
+                  <button onClick={() => handleRemoveItem(item.type === 'PACKAGE' ? item.packageId : item.classId, item.type)} className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 font-semibold transition-colors">
                     <Trash2 className="w-3.5 h-3.5" /> Remove
                   </button>
                 </div>

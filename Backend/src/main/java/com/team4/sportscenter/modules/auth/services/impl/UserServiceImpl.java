@@ -62,6 +62,7 @@ public class UserServiceImpl implements UserService {
                     .passwordHash(passwordEncoder.encode(request.getPassword())) 
                     .role(memberRole)
                     .status("PENDING")
+                    .loyaltyPoints(0)
                     .build();
         }
 
@@ -211,6 +212,7 @@ public class UserServiceImpl implements UserService {
                         .passwordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
                         .role(memberRole)
                         .status("ACTIVE")
+                        .loyaltyPoints(0)
                         .build();
                 return userRepository.save(newUser);
             });

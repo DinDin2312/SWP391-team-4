@@ -11,6 +11,8 @@ import com.team4.sportscenter.modules.auth.repositories.UserRepository;
 import com.team4.sportscenter.modules.member.entities.Booking;
 import com.team4.sportscenter.modules.member.entities.GymClass;
 import com.team4.sportscenter.modules.member.repositories.BookingRepository;
+import com.team4.sportscenter.modules.member.repositories.UserMembershipRepository;
+import com.team4.sportscenter.modules.member.entities.UserMembership;
 import com.team4.sportscenter.modules.payment.dtos.CartItemDto;
 import com.team4.sportscenter.modules.payment.dtos.CartResponse;
 import com.team4.sportscenter.modules.payment.entities.Invoice;
@@ -38,6 +40,7 @@ import java.util.stream.Collectors;
 public class PaymentServiceImpl implements PaymentService {
 
     private final BookingRepository bookingRepository;
+    private final UserMembershipRepository userMembershipRepository;
     private final UserRepository userRepository;
     private final InvoiceRepository invoiceRepository;
     private final InvoiceDetailRepository invoiceDetailRepository;
@@ -46,7 +49,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final NotificationService notificationService;
 
     @Override
-    public CartResponse getCartItems(String email) {
+        public CartResponse getCartItems(String email) {
         List<Booking> pendingBookings = bookingRepository.findAllBookingsByEmail(email)
                 .stream()
                 .filter(b -> "PENDING".equals(b.getStatus()))
@@ -58,6 +61,7 @@ public class PaymentServiceImpl implements PaymentService {
         List<CartItemDto> items = groupedByClass.entrySet().stream().map(entry -> {
             GymClass gymClass = entry.getKey();
             return CartItemDto.builder()
+                    .type("CLASS")
                     .classId(gymClass.getClassId())
                     .className(gymClass.getClassName())
                     .coachName(gymClass.getCoach() != null ? gymClass.getCoach().getFullName() : "Unknown")
@@ -65,6 +69,20 @@ public class PaymentServiceImpl implements PaymentService {
                     .sessionCount(entry.getValue().size())
                     .build();
         }).collect(Collectors.toList());
+
+        List<UserMembership> pendingMemberships = userMembershipRepository.findAll().stream()
+                .filter(m -> m.getUser().getEmail().equals(email) && "PENDING".equals(m.getStatus()))
+                .collect(Collectors.toList());
+
+        items.addAll(pendingMemberships.stream().map(m -> 
+            CartItemDto.builder()
+                .type("PACKAGE")
+                .packageId(m.getAPackage().getPackageId())
+                .packageName(m.getAPackage().getPackageName())
+                .durationDays(m.getAPackage().getDurationDays())
+                .price(m.getAPackage().getPrice())
+                .build()
+        ).collect(Collectors.toList()));
 
         BigDecimal totalPrice = items.stream()
                 .map(CartItemDto::getPrice)
@@ -87,8 +105,12 @@ public class PaymentServiceImpl implements PaymentService {
                 .filter(b -> "PENDING".equals(b.getStatus()))
                 .collect(Collectors.toList());
 
-        if (pendingBookings.isEmpty()) {
-            throw new RuntimeException("No pending bookings found in your cart.");
+        List<UserMembership> pendingMemberships = userMembershipRepository.findAll().stream()
+                .filter(m -> m.getUser().getEmail().equals(email) && "PENDING".equals(m.getStatus()))
+                .collect(Collectors.toList());
+
+        if (pendingBookings.isEmpty() && pendingMemberships.isEmpty()) {
+            throw new RuntimeException("No pending items found in your cart.");
         }
 
         for (Booking booking : pendingBookings) {
@@ -97,7 +119,8 @@ public class PaymentServiceImpl implements PaymentService {
             Integer maxSlots = booking.getSchedule().getGymClass().getMaxSlots();
             
             if (bookedSlots >= maxSlots) {
-                throw new RuntimeException("Checkout failed! The class '" + booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedule().getStartTime() + " is now fully booked by others.");
+                throw new RuntimeException("Checkout failed! The class '" + 
+booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedule().getStartTime() + " is now fully booked by others.");
             }
         }
 
@@ -108,6 +131,12 @@ public class PaymentServiceImpl implements PaymentService {
         for (GymClass gymClass : groupedByClass.keySet()) {
             if (gymClass.getPrice() != null) {
                 totalAmount = totalAmount.add(gymClass.getPrice());
+            }
+        }
+
+        for (UserMembership membership : pendingMemberships) {
+            if (membership.getAPackage().getPrice() != null) {
+                totalAmount = totalAmount.add(membership.getAPackage().getPrice());
             }
         }
 
@@ -128,7 +157,16 @@ public class PaymentServiceImpl implements PaymentService {
                     .build();
             invoiceDetailRepository.save(detail);
         }
-        
+
+        for (UserMembership membership : pendingMemberships) {
+            InvoiceDetail detail = InvoiceDetail.builder()
+                    .invoice(invoice)
+                    .aPackage(membership.getAPackage())
+                    .unitPrice(membership.getAPackage().getPrice())
+                    .build();
+            invoiceDetailRepository.save(detail);
+        }
+
         PaymentEntity payment = PaymentEntity.builder()
                 .invoice(invoice)
                 .amount(totalAmount)
@@ -207,7 +245,7 @@ public class PaymentServiceImpl implements PaymentService {
         vnp_Params.put("vnp_TxnRef", String.valueOf(invoiceId));
         vnp_Params.put("vnp_OrderInfo", "Thanh toan hoa don " + invoiceId);
         vnp_Params.put("vnp_OrderType", "other");
-        vnp_Params.put("vnp_BankCode", "NCB"); // Ép nhảy thẳng vào màn hình thẻ test NCB
+        vnp_Params.put("vnp_BankCode", "NCB"); // Ă„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚â€Ă‚Â¢Ă„â€Ă‚Â¢Ä‚Â¢Ă¢â€Â¬Ă‚ÂÄ‚â€Ă‚Â¬Ă„â€Ă¢â‚¬ÂÄ‚â€Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â¢Ä‚â€Ă¢â‚¬ÂÄ‚â€Ă‚Â¢Ă„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â¬Ä‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â°p nhÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â¡Ă„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚ÂºĂ„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â£y thÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â¡Ă„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚ÂºĂ„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â³ng vĂ„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚â€Ă‚Â¢Ă„â€Ă‚Â¢Ä‚Â¢Ă¢â€Â¬Ă‚ÂÄ‚â€Ă‚Â¬Ă„â€Ă¢â‚¬ÂÄ‚â€Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â o mĂ„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚â€Ă‚Â¢Ă„â€Ă‚Â¢Ä‚Â¢Ă¢â€Â¬Ă‚ÂÄ‚â€Ă‚Â¬Ă„â€Ă¢â‚¬ÂÄ‚â€Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â n hĂ„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚â€Ă‚Â¢Ă„â€Ă‚Â¢Ä‚Â¢Ă¢â€Â¬Ă‚ÂÄ‚â€Ă‚Â¬Ă„â€Ă¢â‚¬ÂÄ‚â€Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â¬nh thÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â¡Ă„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚ÂºĂ„â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚ÂÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚ÂĂ„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â» test NCB
         vnp_Params.put("vnp_Locale", "vn");
         vnp_Params.put("vnp_ReturnUrl", vnPayConfig.vnp_ReturnUrl);
         vnp_Params.put("vnp_IpAddr", ipAddress);
@@ -296,6 +334,27 @@ public class PaymentServiceImpl implements PaymentService {
                 bookingRepository.save(b);
             }
             
+            List<com.team4.sportscenter.modules.member.entities.UserMembership> pendingMemberships = userMembershipRepository.findAll().stream()
+                .filter(m -> m.getUser().getEmail().equals(invoice.getUser().getEmail()) && "PENDING".equals(m.getStatus()))
+                .collect(Collectors.toList());
+            java.util.List<com.team4.sportscenter.modules.member.entities.UserMembership> activeMemberships = userMembershipRepository.findActiveMembershipByEmail(invoice.getUser().getEmail());
+            for (com.team4.sportscenter.modules.member.entities.UserMembership m : pendingMemberships) {
+                m.setStatus("ACTIVE");
+                java.time.LocalDate latestEndDate = java.time.LocalDate.now().minusDays(1);
+                if (activeMemberships != null) {
+                    for (com.team4.sportscenter.modules.member.entities.UserMembership active : activeMemberships) {
+                        if (active.getAPackage().getPackageType().equals(m.getAPackage().getPackageType()) && active.getEndDate() != null && active.getEndDate().isAfter(latestEndDate)) {
+                            latestEndDate = active.getEndDate();
+                        }
+                    }
+                }
+                java.time.LocalDate start = latestEndDate.isBefore(java.time.LocalDate.now()) ? java.time.LocalDate.now() : latestEndDate.plusDays(1);
+                m.setStartDate(start);
+                m.setEndDate(start.plusDays(m.getAPackage().getDurationDays() - 1));
+                if (activeMemberships != null) { activeMemberships.add(m); }
+                userMembershipRepository.save(m);
+            }
+            
             notificationService.createNotification(
                 invoice.getUser().getEmail(), 
                 "Payment Successful", 
@@ -319,6 +378,34 @@ public class PaymentServiceImpl implements PaymentService {
                 
         if (!pendingBookings.isEmpty()) {
             bookingRepository.deleteAll(pendingBookings);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void removePackageFromCart(String email, Integer packageId) {
+        List<com.team4.sportscenter.modules.member.entities.UserMembership> memberships = userMembershipRepository.findAll().stream()
+            .filter(m -> m.getUser().getEmail().equals(email) && "PENDING".equals(m.getStatus()) && m.getAPackage().getPackageId().equals(packageId))
+            .collect(Collectors.toList());
+        if (!memberships.isEmpty()) {
+            userMembershipRepository.deleteAll(memberships);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void clearCart(String email) {
+        List<Booking> pendingBookings = bookingRepository.findAllBookingsByEmail(email)
+                .stream().filter(b -> "PENDING".equals(b.getStatus())).collect(Collectors.toList());
+        if (!pendingBookings.isEmpty()) {
+            bookingRepository.deleteAll(pendingBookings);
+        }
+        
+        List<com.team4.sportscenter.modules.member.entities.UserMembership> pendingMemberships = userMembershipRepository.findAll().stream()
+                .filter(m -> m.getUser().getEmail().equals(email) && "PENDING".equals(m.getStatus()))
+                .collect(Collectors.toList());
+        if (!pendingMemberships.isEmpty()) {
+            userMembershipRepository.deleteAll(pendingMemberships);
         }
     }
     @Override
@@ -359,6 +446,27 @@ public class PaymentServiceImpl implements PaymentService {
             for (Booking b : pendingBookings) {
                 b.setStatus("CONFIRMED");
                 bookingRepository.save(b);
+            }
+            
+            List<com.team4.sportscenter.modules.member.entities.UserMembership> pendingMemberships = userMembershipRepository.findAll().stream()
+                .filter(m -> m.getUser().getEmail().equals(invoice.getUser().getEmail()) && "PENDING".equals(m.getStatus()))
+                .collect(Collectors.toList());
+            java.util.List<com.team4.sportscenter.modules.member.entities.UserMembership> activeMemberships = userMembershipRepository.findActiveMembershipByEmail(invoice.getUser().getEmail());
+            for (com.team4.sportscenter.modules.member.entities.UserMembership m : pendingMemberships) {
+                m.setStatus("ACTIVE");
+                java.time.LocalDate latestEndDate = java.time.LocalDate.now().minusDays(1);
+                if (activeMemberships != null) {
+                    for (com.team4.sportscenter.modules.member.entities.UserMembership active : activeMemberships) {
+                        if (active.getAPackage().getPackageType().equals(m.getAPackage().getPackageType()) && active.getEndDate() != null && active.getEndDate().isAfter(latestEndDate)) {
+                            latestEndDate = active.getEndDate();
+                        }
+                    }
+                }
+                java.time.LocalDate start = latestEndDate.isBefore(java.time.LocalDate.now()) ? java.time.LocalDate.now() : latestEndDate.plusDays(1);
+                m.setStartDate(start);
+                m.setEndDate(start.plusDays(m.getAPackage().getDurationDays() - 1));
+                if (activeMemberships != null) { activeMemberships.add(m); }
+                userMembershipRepository.save(m);
             }
             
             notificationService.createNotification(
