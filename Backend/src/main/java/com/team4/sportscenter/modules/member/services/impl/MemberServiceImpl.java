@@ -300,8 +300,14 @@ public class MemberServiceImpl implements MemberService {
         for (List<UserMembership> group : grouped.values()) {
             if (group.isEmpty()) continue;
             
-            LocalDate minStart = group.stream().map(UserMembership::getStartDate).min(LocalDate::compareTo).orElse(LocalDate.now());
-            LocalDate maxEnd = group.stream().map(UserMembership::getEndDate).max(LocalDate::compareTo).orElse(LocalDate.now());
+            LocalDate minStart = group.stream()
+                .map(UserMembership::getStartDate)
+                .filter(d -> d != null)
+                .min(LocalDate::compareTo).orElse(LocalDate.now());
+            LocalDate maxEnd = group.stream()
+                .map(UserMembership::getEndDate)
+                .filter(d -> d != null)
+                .max(LocalDate::compareTo).orElse(LocalDate.now().plusDays(30));
             
             UserMembership bestPkg = group.stream()
                 .max((m1, m2) -> Integer.compare(
