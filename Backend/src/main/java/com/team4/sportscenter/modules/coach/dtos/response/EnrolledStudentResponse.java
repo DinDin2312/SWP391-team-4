@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EnrolledStudentResponse {
+    private Integer bookingId;
     private Integer userId;
     private String fullName;
     private String email;

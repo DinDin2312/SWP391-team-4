@@ -3,7 +3,7 @@ import axios from 'axios';
 import {
   ChevronLeft, ChevronRight, MapPin,
   Clock, Users, BookOpen, Phone, Mail, ChevronDown, ChevronUp,
-  X, Search, Sparkles
+  X, Search, Sparkles, Save, Check, AlertCircle, AlertTriangle
 } from 'lucide-react';
 
 const CoachSchedule = () => {
@@ -13,9 +13,13 @@ const CoachSchedule = () => {
   const [loading, setLoading] = useState(true);
   const [expandedScheduleId, setExpandedScheduleId] = useState(null);
 
-  // Modal State for viewing enrolled trainees of a class
+  // Modal State for viewing & updating enrolled trainees attendance
   const [activeModalSchedule, setActiveModalSchedule] = useState(null);
   const [searchModalQuery, setSearchModalQuery] = useState('');
+  const [attendanceMap, setAttendanceMap] = useState({});
+  const [savingAttendance, setSavingAttendance] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+  const [saveErrorMsg, setSaveErrorMsg] = useState('');
 
   const fetchCoachSchedules = async () => {
     try {
@@ -35,6 +39,110 @@ const CoachSchedule = () => {
   useEffect(() => {
     fetchCoachSchedules();
   }, []);
+
+  // Helper function to check if attendance is allowed (session date must be EQUAL to today)
+  const canTakeAttendance = (startTime) => {
+    if (!startTime) return false;
+    const sessionDate = new Date(startTime);
+    sessionDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return sessionDate.getTime() === today.getTime();
+  };
+
+  const getAttendanceRestrictionReason = (startTime) => {
+    if (!startTime) return null;
+    const sessionDate = new Date(startTime);
+    sessionDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (sessionDate > today) {
+      return `Chưa đến ngày học (${sessionDate.toLocaleDateString('vi-VN')}). Điểm danh chỉ được phép thực hiện vào đúng ngày học.`;
+    }
+    if (sessionDate < today) {
+      return `Buổi học đã trôi qua (${sessionDate.toLocaleDateString('vi-VN')}). Không thể điểm danh hoặc thay đổi điểm danh sau khi ngày học đã trôi qua.`;
+    }
+    return null;
+  };
+
+  const openTraineesModal = (schedule) => {
+    setActiveModalSchedule(schedule);
+    setSearchModalQuery('');
+    setSaveSuccessMsg('');
+    setSaveErrorMsg('');
+
+    const initialMap = {};
+    if (schedule.enrolledStudents) {
+      schedule.enrolledStudents.forEach(st => {
+        const key = st.bookingId || st.userId;
+        initialMap[key] = st.attendanceStatus || 'NOT_YET';
+      });
+    }
+    setAttendanceMap(initialMap);
+  };
+
+  const handleStatusChange = (studentKey, status) => {
+    setAttendanceMap(prev => ({
+      ...prev,
+      [studentKey]: status
+    }));
+  };
+
+  const handleSaveAttendance = async () => {
+    if (!activeModalSchedule) return;
+    try {
+      setSavingAttendance(true);
+      setSaveSuccessMsg('');
+      setSaveErrorMsg('');
+
+      const token = localStorage.getItem('token');
+      const payload = {
+        attendances: Object.entries(attendanceMap).map(([key, status]) => {
+          const numId = Number(key);
+          const st = activeModalSchedule.enrolledStudents.find(s => (s.bookingId === numId || s.userId === numId));
+          return {
+            bookingId: st?.bookingId || (numId ? numId : null),
+            userId: st?.userId || null,
+            attendanceStatus: status
+          };
+        })
+      };
+
+      const res = await axios.put(
+        `http://localhost:8080/api/v1/coach/schedules/${activeModalSchedule.scheduleId}/attendance`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setSaveSuccessMsg('Điểm danh đã được lưu thành công!');
+
+      // Re-fetch fresh schedule data from backend
+      await fetchCoachSchedules();
+
+      // Update local state in active modal as well
+      setActiveModalSchedule(prev => {
+        if (!prev) return null;
+        const updatedStudents = prev.enrolledStudents.map(st => {
+          const k = st.bookingId || st.userId;
+          if (attendanceMap[k]) {
+            return { ...st, attendanceStatus: attendanceMap[k] };
+          }
+          return st;
+        });
+        return { ...prev, enrolledStudents: updatedStudents };
+      });
+
+      setTimeout(() => setSaveSuccessMsg(''), 4000);
+    } catch (error) {
+      console.error('Error saving attendance:', error);
+      const msg = error.response?.data?.message || error.response?.data || 'Không thể lưu điểm danh';
+      setSaveErrorMsg(typeof msg === 'string' ? msg : 'Lỗi khi lưu điểm danh');
+      setTimeout(() => setSaveErrorMsg(''), 5000);
+    } finally {
+      setSavingAttendance(false);
+    }
+  };
 
   // Helper functions for calendar grid
   const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
@@ -69,7 +177,7 @@ const CoachSchedule = () => {
     });
   }
 
-  // Next month leading days to complete grid (up to 35 or 42 cells)
+  // Next month leading days to complete grid
   const remainingCells = 35 - calendarGrid.length;
   const cellsToAdd = remainingCells < 0 ? 42 - calendarGrid.length : remainingCells;
   for (let i = 1; i <= cellsToAdd; i++) {
@@ -122,7 +230,7 @@ const CoachSchedule = () => {
             </div>
             <h1 className="text-3xl font-bold text-white tracking-tight">Coach Schedule & Trainee Enrolment</h1>
             <p className="text-sm text-slate-400 max-w-3xl">
-              Select a date on the calendar grid to inspect scheduled sessions, then click to view registered trainees for each class.
+              Select a date on the calendar grid to inspect scheduled sessions, then click to view registered trainees and mark attendance for each class.
             </p>
           </div>
         </div>
@@ -255,6 +363,7 @@ const CoachSchedule = () => {
                   const startTime = new Date(s.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
                   const endTime = new Date(s.endTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
                   const isExpanded = expandedScheduleId === s.scheduleId;
+                  const canMark = canTakeAttendance(s.startTime);
 
                   return (
                     <div key={idx} className="p-4 rounded-xl bg-[#0e172a] border border-[#1a2947] flex flex-col gap-3 relative overflow-hidden group hover:border-blue-500/40 transition-all">
@@ -288,10 +397,7 @@ const CoachSchedule = () => {
                       {/* Main Action Button: View registered trainees modal */}
                       <div className="mt-3 pt-3 border-t border-[#1a2947] flex flex-col gap-2">
                         <button
-                          onClick={() => {
-                            setActiveModalSchedule(s);
-                            setSearchModalQuery('');
-                          }}
+                          onClick={() => openTraineesModal(s)}
                           className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
                         >
                           <Users className="w-4 h-4" />
@@ -324,19 +430,15 @@ const CoachSchedule = () => {
                                         {st.email}
                                       </span>
                                     )}
-                                    {st.phone && (
-                                      <span className="flex items-center gap-1">
-                                        <Phone className="w-3 h-3 text-slate-500" />
-                                        {st.phone}
-                                      </span>
-                                    )}
                                   </div>
                                 </div>
                                 <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${st.attendanceStatus === 'PRESENT'
                                     ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                    : st.attendanceStatus === 'ABSENT'
+                                      ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                      : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                                   }`}>
-                                  {st.attendanceStatus}
+                                  {st.attendanceStatus || 'NOT_YET'}
                                 </span>
                               </div>
                             ))
@@ -352,17 +454,17 @@ const CoachSchedule = () => {
         </div>
       </div>
 
-      {/* ===================== ENROLLED TRAINEES MODAL ===================== */}
+      {/* ===================== ENROLLED TRAINEES & ATTENDANCE MODAL ===================== */}
       {activeModalSchedule && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
-          <div className="bg-[#091124] border border-[#1b2b4f] rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#091124] border border-[#1b2b4f] rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
 
             {/* Modal Header */}
             <div className="p-6 bg-gradient-to-r from-[#0b1326] via-[#111d38] to-[#0e172a] border-b border-[#1b2b4f] flex items-start justify-between">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 text-blue-400 text-xs font-semibold">
                   <Sparkles className="w-4 h-4" />
-                  <span>Class Enrolled Trainees</span>
+                  <span>Class Trainee Roster & Attendance</span>
                 </div>
                 <h3 className="text-xl font-bold text-white leading-snug">
                   {activeModalSchedule.className}
@@ -382,14 +484,24 @@ const CoachSchedule = () => {
 
               <button
                 onClick={() => setActiveModalSchedule(null)}
-                className="w-8 h-8 rounded-lg bg-[#111d38] text-slate-400 hover:text-white hover:bg-[#1a2947] flex items-center justify-center transition-all"
+                className="w-8 h-8 rounded-lg bg-[#111d38] text-slate-400 hover:text-white hover:bg-[#1a2947] flex items-center justify-center transition-all cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
+            {/* Attendance Restriction Notice */}
+            {!canTakeAttendance(activeModalSchedule.startTime) && (
+              <div className="mx-6 mt-4 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 text-amber-300 text-xs font-medium">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+                <span>
+                  {getAttendanceRestrictionReason(activeModalSchedule.startTime)}
+                </span>
+              </div>
+            )}
+
             {/* Modal Subheader Bar */}
-            <div className="px-6 py-4 bg-[#0d172e] border-b border-[#1b2b4f] flex flex-wrap items-center justify-between gap-4">
+            <div className="px-6 py-4 bg-[#0d172e] border-b border-[#1b2b4f] flex flex-wrap items-center justify-between gap-4 mt-2">
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
@@ -419,18 +531,26 @@ const CoachSchedule = () => {
               ) : (
                 modalTrainees.map((st, stIdx) => {
                   const initials = st.fullName ? st.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'TR';
+                  const key = st.bookingId || st.userId;
+                  const currentStatus = attendanceMap[key] || 'NOT_YET';
+                  const isAllowed = canTakeAttendance(activeModalSchedule.startTime);
 
                   return (
                     <div
                       key={stIdx}
-                      className="p-4 rounded-xl bg-[#0e172a] border border-[#1b2b4f] hover:border-blue-500/30 flex items-center justify-between gap-4 transition-all"
+                      className="p-4 rounded-xl bg-[#0e172a] border border-[#1b2b4f] hover:border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-300 font-bold text-xs flex items-center justify-center shrink-0">
                           {initials}
                         </div>
                         <div className="flex flex-col gap-0.5">
-                          <h5 className="font-bold text-white text-sm">{st.fullName}</h5>
+                          <div className="flex items-center gap-2">
+                            <h5 className="font-bold text-white text-sm">{st.fullName}</h5>
+                            <span className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[10px] font-semibold">
+                              {st.bookingStatus || 'CONFIRMED'}
+                            </span>
+                          </div>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
                             {st.email && (
                               <span className="flex items-center gap-1">
@@ -448,16 +568,46 @@ const CoachSchedule = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-semibold">
-                          {st.bookingStatus || 'CONFIRMED'}
-                        </span>
-                        <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${st.attendanceStatus === 'PRESENT'
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                          }`}>
-                          {st.attendanceStatus === 'PRESENT' ? 'PRESENT' : 'NOT YET'}
-                        </span>
+                      {/* Attendance Selector Controls */}
+                      <div className="flex items-center gap-1.5 bg-[#060b17] border border-[#15223e] rounded-xl p-1 shrink-0">
+                        <button
+                          type="button"
+                          disabled={!isAllowed}
+                          onClick={() => handleStatusChange(key, 'NOT_YET')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${currentStatus === 'NOT_YET'
+                              ? 'bg-slate-700 text-slate-100 border border-slate-500/50 shadow'
+                              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                            } ${!isAllowed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          title={!isAllowed ? 'Chưa đến ngày học' : 'Đặt trạng thái Chưa điểm danh'}
+                        >
+                          NOT YET
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!isAllowed}
+                          onClick={() => handleStatusChange(key, 'PRESENT')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${currentStatus === 'PRESENT'
+                              ? 'bg-emerald-600 text-white border border-emerald-400 shadow shadow-emerald-950/50'
+                              : 'text-slate-400 hover:text-emerald-400 hover:bg-emerald-950/30'
+                            } ${!isAllowed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          title={!isAllowed ? 'Chưa đến ngày học' : 'Điểm danh Có Mặt'}
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          Present
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!isAllowed}
+                          onClick={() => handleStatusChange(key, 'ABSENT')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${currentStatus === 'ABSENT'
+                              ? 'bg-rose-600 text-white border border-rose-400 shadow shadow-rose-950/50'
+                              : 'text-slate-400 hover:text-rose-400 hover:bg-rose-950/30'
+                            } ${!isAllowed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          title={!isAllowed ? 'Chưa đến ngày học' : 'Điểm danh Vắng Mặt'}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          Absent
+                        </button>
                       </div>
                     </div>
                   );
@@ -466,13 +616,30 @@ const CoachSchedule = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 bg-[#0b1326] border-t border-[#1b2b4f] flex justify-end">
-              <button
-                onClick={() => setActiveModalSchedule(null)}
-                className="px-5 py-2 rounded-xl bg-[#111d38] hover:bg-[#1a2947] text-slate-300 hover:text-white font-semibold text-xs transition-all cursor-pointer"
-              >
-                Close Window
-              </button>
+            <div className="p-4 bg-[#0b1326] border-t border-[#1b2b4f] flex flex-wrap items-center justify-between gap-4">
+              <div className="text-xs font-semibold">
+                {saveSuccessMsg && <span className="text-emerald-400">{saveSuccessMsg}</span>}
+                {saveErrorMsg && <span className="text-rose-400">{saveErrorMsg}</span>}
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setActiveModalSchedule(null)}
+                  className="px-4 py-2 rounded-xl bg-[#111d38] hover:bg-[#1a2947] text-slate-300 hover:text-white font-semibold text-xs transition-all cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  disabled={!canTakeAttendance(activeModalSchedule.startTime) || savingAttendance}
+                  onClick={handleSaveAttendance}
+                  className={`px-5 py-2 rounded-xl font-semibold text-xs flex items-center gap-2 transition-all shadow-lg ${canTakeAttendance(activeModalSchedule.startTime) && !savingAttendance
+                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-900/30 cursor-pointer'
+                      : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                    }`}
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{savingAttendance ? 'Saving...' : 'Save Attendance'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

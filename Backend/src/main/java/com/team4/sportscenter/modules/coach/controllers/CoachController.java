@@ -1,5 +1,6 @@
 package com.team4.sportscenter.modules.coach.controllers;
 
+import com.team4.sportscenter.modules.coach.dtos.request.UpdateAttendanceRequest;
 import com.team4.sportscenter.modules.coach.dtos.response.CoachScheduleResponse;
 import com.team4.sportscenter.modules.coach.dtos.response.CoachStudentResponse;
 import com.team4.sportscenter.modules.coach.dtos.response.EnrolledStudentResponse;
@@ -10,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/coach")
@@ -33,6 +35,16 @@ public class CoachController {
         String coachEmail = authentication.getName();
         List<EnrolledStudentResponse> students = coachScheduleService.getScheduleStudents(scheduleId, coachEmail);
         return ResponseEntity.ok(students);
+    }
+
+    @PutMapping("/schedules/{scheduleId}/attendance")
+    public ResponseEntity<?> updateAttendance(
+            @PathVariable Integer scheduleId,
+            @RequestBody UpdateAttendanceRequest request,
+            Authentication authentication) {
+        String coachEmail = authentication.getName();
+        coachScheduleService.updateAttendance(scheduleId, request, coachEmail);
+        return ResponseEntity.ok(Map.of("message", "Cập nhật điểm danh thành công!"));
     }
 
     @GetMapping("/students")
