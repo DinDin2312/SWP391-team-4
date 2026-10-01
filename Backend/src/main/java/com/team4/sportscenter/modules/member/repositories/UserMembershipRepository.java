@@ -13,4 +13,7 @@ public interface UserMembershipRepository extends JpaRepository<UserMembership, 
     java.util.List<UserMembership> findActiveMembershipByEmail(@Param("email") String email);
     @Query("SELECT um FROM UserMembership um WHERE um.user.email = :email AND (um.status = 'ACTIVE' OR um.status = 'EXPIRED')")
     java.util.List<UserMembership> findMyPackagesByEmail(@Param("email") String email);
+
+    @Query("SELECT um FROM UserMembership um JOIN FETCH um.aPackage WHERE um.user.email = :email AND um.status = :status")
+    java.util.List<UserMembership> findByEmailAndStatus(@Param("email") String email, @Param("status") String status);
 }

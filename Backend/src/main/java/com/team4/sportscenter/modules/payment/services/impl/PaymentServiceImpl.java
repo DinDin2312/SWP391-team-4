@@ -70,9 +70,7 @@ public class PaymentServiceImpl implements PaymentService {
                     .build();
         }).collect(Collectors.toList());
 
-        List<UserMembership> pendingMemberships = userMembershipRepository.findAll().stream()
-                .filter(m -> m.getUser().getEmail().equals(email) && "PENDING".equals(m.getStatus()))
-                .collect(Collectors.toList());
+        List<UserMembership> pendingMemberships = userMembershipRepository.findByEmailAndStatus(email, "PENDING");
 
         items.addAll(pendingMemberships.stream().map(m -> 
             CartItemDto.builder()
