@@ -58,7 +58,7 @@ const PackageStore = () => {
   };
 
   const filteredPackages = packages.filter(p => {
-    const matchCategory = activeCategory === 'all' || p.packageType?.toLowerCase() === activeCategory;
+    const matchCategory = activeCategory === 'all' || p.packageType?.toUpperCase() === activeCategory.toUpperCase();
     const matchSearch = p.packageName?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchCategory && matchSearch;
   });
@@ -257,10 +257,11 @@ const PackageStore = () => {
         {/* Category Tabs */}
         <div className="flex items-center gap-1.5 p-1 rounded-xl bg-surface-container-low overflow-x-auto max-w-full">
           {[
-            { id: 'all', label: 'All Packages', count: packages.length },
-            { id: 'membership', label: 'Membership Tiers', count: packages.filter(p => p.packageType?.toLowerCase() === 'membership').length },
-            { id: 'combo', label: 'Class Combos', count: packages.filter(p => p.packageType?.toLowerCase() === 'combo').length },
-            { id: 'amenity', label: 'Bio-Tech & Recovery', count: packages.filter(p => p.packageType?.toLowerCase() === 'amenity').length },
+            { id: 'all',        label: 'All Packages',     count: packages.length },
+            { id: 'gym_access', label: 'Gym Access',        count: packages.filter(p => p.packageType?.toUpperCase() === 'GYM_ACCESS').length },
+            { id: 'ai_access',  label: 'AI Access',         count: packages.filter(p => p.packageType?.toUpperCase() === 'AI_ACCESS').length },
+            { id: 'combo',      label: 'Combo (Gym + AI)',  count: packages.filter(p => p.packageType?.toUpperCase() === 'COMBO').length },
+            { id: 'premium',    label: 'Premium',           count: packages.filter(p => p.packageType?.toUpperCase() === 'PREMIUM').length },
           ].map(tab => {
             const isActive = activeCategory === tab.id;
             return (
