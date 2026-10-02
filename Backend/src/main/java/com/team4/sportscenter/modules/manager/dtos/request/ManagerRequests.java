@@ -58,7 +58,7 @@ public final class ManagerRequests {
 
     public record PackageRequest(
             @NotBlank @Size(max = 255) String packageName,
-            @NotBlank @Pattern(regexp = "GYM_ACCESS|AI_ACCESS|PREMIUM", message = "Invalid package type") String packageType,
+            @NotBlank @Pattern(regexp = "GYM_ACCESS|AI_ACCESS|PREMIUM|COMBO", message = "Invalid package type") String packageType,
             @NotNull @Min(1) Integer durationDays,
             @NotNull @DecimalMin("0") @Digits(integer = 8, fraction = 2) BigDecimal price) {
     }

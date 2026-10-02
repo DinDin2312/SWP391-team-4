@@ -39,7 +39,7 @@ const MemberLayout = () => {
           const myPkgsRes = await axios.get('http://localhost:8080/api/v1/member/my-packages', {
             headers: { Authorization: `Bearer ${token}` }
           });
-          const hasAi = myPkgsRes.data.some(p => p.packageType === 'AI_ACCESS' && p.status === 'ACTIVE');
+          const hasAi = myPkgsRes.data.some(p => (p.packageType === 'AI_ACCESS' || p.packageType === 'COMBO') && p.status === 'ACTIVE');
           setHasAiAccess(hasAi);
         }
       } catch (err) {
