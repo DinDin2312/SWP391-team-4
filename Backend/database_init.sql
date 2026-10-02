@@ -16,7 +16,7 @@ CREATE TABLE `BOOKINGS` (`booking_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` 
 CREATE TABLE `INVOICES` (`invoice_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` int, `total_amount` decimal(10,2), `status` varchar(255), `created_at` datetime);
 CREATE TABLE `INVOICE_DETAILS` (`detail_id` int PRIMARY KEY AUTO_INCREMENT, `invoice_id` int, `class_id` int, `package_id` int, `schedule_id` int, `unit_price` decimal(10,2));
 CREATE TABLE `PAYMENTS` (`payment_id` int PRIMARY KEY AUTO_INCREMENT, `invoice_id` int, `amount` decimal(10,2), `payment_method` varchar(255), `transaction_no` varchar(255), `status` varchar(255), `payment_date` datetime);
-CREATE TABLE `NOTIFICATIONS` (`notification_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` int, `title` varchar(255), `message` text, `is_read` boolean, `created_at` datetime);
+CREATE TABLE `NOTIFICATIONS` (`notification_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` int, `title` varchar(255), `message` text, `type` varchar(50) NOT NULL DEFAULT 'SYSTEM', `is_read` boolean NOT NULL DEFAULT false, `created_at` datetime);
 CREATE TABLE `AI_WORKOUT_PLANS` (`plan_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` int, `goal` varchar(255), `fitness_level` varchar(255), `created_at` datetime);
 CREATE TABLE `EXERCISES` (`exercise_id` int PRIMARY KEY AUTO_INCREMENT, `exercise_name` varchar(255), `muscle_group` varchar(255), `video_url` varchar(255));
 CREATE TABLE `AI_PLAN_DETAILS` (`detail_id` int PRIMARY KEY AUTO_INCREMENT, `plan_id` int, `exercise_id` int, `sets` int, `reps` int, `rest_seconds` int);
@@ -144,15 +144,15 @@ INSERT INTO SCHEDULES VALUES
                           (20, 10, '2026-10-10 09:00:00', '2026-10-10 11:00:00', 'SCHEDULED');
 
 -- Đặt chỗ của Học sinh vào Lịch học
-INSERT INTO BOOKINGS VALUES
-                         (1, 6, 1, 'CONFIRMED', 'PRESENT'), (2, 6, 2, 'CONFIRMED', 'PRESENT'), (3, 6, 3, 'CONFIRMED', 'NOT_YET'),
-                         (4, 7, 1, 'CONFIRMED', 'PRESENT'), (5, 7, 2, 'CONFIRMED', 'ABSENT'), (6, 7, 3, 'CONFIRMED', 'NOT_YET'),
-                         (7, 8, 4, 'CONFIRMED', 'PRESENT'), (8, 8, 5, 'CONFIRMED', 'PRESENT'),
-                         (9, 9, 6, 'CONFIRMED', 'PRESENT'), (10, 9, 7, 'CONFIRMED', 'PRESENT'),
-                         (11, 10, 12, 'CONFIRMED', 'PRESENT'), (12, 10, 13, 'CONFIRMED', 'NOT_YET'),
-                         (13, 11, 10, 'CONFIRMED', 'PRESENT'), (14, 11, 11, 'CONFIRMED', 'PRESENT'),
-                         (15, 12, 18, 'CONFIRMED', 'PRESENT'), (16, 12, 19, 'CONFIRMED', 'NOT_YET'),
-                         (17, 13, 1, 'CANCELLED', 'ABSENT');
+INSERT INTO BOOKINGS (booking_id, user_id, schedule_id, status, attendance_status, booking_time) VALUES
+                         (1, 6, 1, 'CONFIRMED', 'PRESENT', '2026-09-01 06:00:00'), (2, 6, 2, 'CONFIRMED', 'PRESENT', '2026-09-01 06:00:00'), (3, 6, 3, 'CONFIRMED', 'NOT_YET', '2026-09-01 06:00:00'),
+                         (4, 7, 1, 'CONFIRMED', 'PRESENT', '2026-09-01 06:00:00'), (5, 7, 2, 'CONFIRMED', 'ABSENT', '2026-09-01 06:00:00'), (6, 7, 3, 'CONFIRMED', 'NOT_YET', '2026-09-01 06:00:00'),
+                         (7, 8, 4, 'CONFIRMED', 'PRESENT', '2026-09-01 06:00:00'), (8, 8, 5, 'CONFIRMED', 'PRESENT', '2026-09-01 06:00:00'),
+                         (9, 9, 6, 'CONFIRMED', 'PRESENT', '2026-09-01 06:00:00'), (10, 9, 7, 'CONFIRMED', 'PRESENT', '2026-09-01 06:00:00'),
+                         (11, 10, 12, 'CONFIRMED', 'PRESENT', '2026-09-01 06:00:00'), (12, 10, 13, 'CONFIRMED', 'NOT_YET', '2026-09-01 06:00:00'),
+                         (13, 11, 10, 'CONFIRMED', 'PRESENT', '2026-09-01 06:00:00'), (14, 11, 11, 'CONFIRMED', 'PRESENT', '2026-09-01 06:00:00'),
+                         (15, 12, 18, 'CONFIRMED', 'PRESENT', '2026-09-01 06:00:00'), (16, 12, 19, 'CONFIRMED', 'NOT_YET', '2026-09-01 06:00:00'),
+                         (17, 13, 1, 'CANCELLED', 'ABSENT', '2026-09-01 06:00:00');
 
 -- Bài tập Mẫu
 INSERT INTO EXERCISES VALUES
