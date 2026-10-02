@@ -16,8 +16,8 @@ INSERT INTO PACKAGES VALUES
     -- Gói Gym thêm lựa chọn
     (8,  'Gói Yoga Chuyên Sâu 1 Tháng','GYM_ACCESS', 30,  650000),
     (9,  'Gói Bơi Lội 1 Tháng',        'GYM_ACCESS', 30,  800000),
-    -- Gói combo (dùng để test hiển thị nhiều loại)
-    (10, 'Gói Combo Gym + AI 1 Tháng', 'GYM_ACCESS', 30,  550000);
+    -- Gói combo - type AI_ACCESS để unlock tính năng AI chat
+    (10, 'Gói Combo Gym + AI 1 Tháng', 'AI_ACCESS', 30,  550000);
 
 -- ================================================================
 -- PHẦN 2: BỔ SUNG SCHEDULES TƯƠNG LAI - Để test đặt lớp
