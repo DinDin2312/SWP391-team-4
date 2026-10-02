@@ -76,6 +76,7 @@ const NexusAiChat = ({ isOpen, onClose }) => {
         await axios.post('http://localhost:8080/api/v1/member/book-class/' + target, {}, {
           headers: { Authorization: "Bearer " + token }
         });
+        window.dispatchEvent(new Event('cartUpdated'));
       }
     } catch (err) {
       console.error('Action failed:', err);
