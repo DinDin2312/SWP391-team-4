@@ -9,7 +9,7 @@ import { Bot } from 'lucide-react';
 import NexusAiChat from '../features/member/components/NexusAiChat';
 import {
   LayoutDashboard, CalendarDays, CreditCard, Dumbbell,
-  Bell, Settings, LogOut, ShoppingCart, Receipt
+  Bell, Settings, LogOut, ShoppingCart, Receipt, ClipboardList
 } from 'lucide-react';
 
 const MemberLayout = () => {
@@ -151,6 +151,11 @@ const MemberLayout = () => {
             <button onClick={() => navigate("/member/billing")} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/billing') ? 'bg-blue-600/15 border border-blue-500/30 text-blue-400 font-semibold' : 'text-slate-400 hover:text-slate-200 hover:bg-[#111d38]'}`}>
               <Receipt className="w-4 h-4" />
               <span>Billing & Invoices</span>
+            </button>
+
+            <button onClick={() => navigate("/member/attendance")} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/attendance') ? 'bg-blue-600/15 border border-blue-500/30 text-blue-400 font-semibold' : 'text-slate-400 hover:text-slate-200 hover:bg-[#111d38]'}`}>
+              <ClipboardList className="w-4 h-4" />
+              <span>Attendance History</span>
             </button>
 
             <button onClick={() => navigate("/member/settings")} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/settings') ? 'bg-blue-600/15 border border-blue-500/30 text-blue-400 font-semibold' : 'text-slate-400 hover:text-slate-200 hover:bg-[#111d38]'}`}>
