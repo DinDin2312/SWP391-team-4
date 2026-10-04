@@ -6,12 +6,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   const { userRole } = useContext(AuthContext);
 
   if (!userRole) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(userRole)) {
     // Return generic fallback or home if unauthorized
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return children;
