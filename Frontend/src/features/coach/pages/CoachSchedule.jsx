@@ -3,8 +3,9 @@ import axios from 'axios';
 import {
   ChevronLeft, ChevronRight, MapPin,
   Clock, Users, BookOpen, Phone, Mail, ChevronDown, ChevronUp,
-  X, Search, Sparkles, Save, Check, AlertCircle, AlertTriangle
+  X, Search, Sparkles, Save, Check, AlertCircle, AlertTriangle, Bell
 } from 'lucide-react';
+import SendNotificationModal from '../components/SendNotificationModal';
 
 const CoachSchedule = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -20,6 +21,18 @@ const CoachSchedule = () => {
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [saveErrorMsg, setSaveErrorMsg] = useState('');
+
+  // Notification Modal States
+  const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+  const [notifTargetType, setNotifTargetType] = useState('CLASS');
+  const [notifClassId, setNotifClassId] = useState(null);
+
+  const handleOpenClassNotification = (classId) => {
+    setNotifTargetType('CLASS');
+    setNotifClassId(classId);
+    setIsNotifModalOpen(true);
+  };
+
 
   const fetchCoachSchedules = async () => {
     try {
@@ -396,13 +409,23 @@ const CoachSchedule = () => {
 
                       {/* Main Action Button: View registered trainees modal */}
                       <div className="mt-3 pt-3 border-t border-[#1a2947] flex flex-col gap-2">
-                        <button
-                          onClick={() => openTraineesModal(s)}
-                          className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
-                        >
-                          <Users className="w-4 h-4" />
-                          <span>View Registered Trainees ({s.enrolledCount})</span>
-                        </button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => openTraineesModal(s)}
+                            className="py-2 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+                          >
+                            <Users className="w-3.5 h-3.5" />
+                            <span>Học viên ({s.enrolledCount})</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenClassNotification(s.classId)}
+                            className="py-2 px-3 rounded-xl bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 hover:text-white font-semibold text-xs border border-blue-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <Bell className="w-3.5 h-3.5 text-blue-400" />
+                            <span>Báo tin lớp</span>
+                          </button>
+                        </div>
 
                         <button
                           onClick={() => toggleExpandSchedule(s.scheduleId)}
@@ -412,6 +435,7 @@ const CoachSchedule = () => {
                           {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                         </button>
                       </div>
+
 
                       {/* Expandable Quick View */}
                       {isExpanded && (
@@ -617,10 +641,23 @@ const CoachSchedule = () => {
 
             {/* Modal Footer */}
             <div className="p-4 bg-[#0b1326] border-t border-[#1b2b4f] flex flex-wrap items-center justify-between gap-4">
-              <div className="text-xs font-semibold">
-                {saveSuccessMsg && <span className="text-emerald-400">{saveSuccessMsg}</span>}
-                {saveErrorMsg && <span className="text-rose-400">{saveErrorMsg}</span>}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const classId = activeModalSchedule.classId;
+                    setActiveModalSchedule(null);
+                    handleOpenClassNotification(classId);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 font-semibold text-xs border border-blue-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Bell className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Gửi thông báo cho lớp này</span>
+                </button>
+                {saveSuccessMsg && <span className="text-emerald-400 text-xs font-semibold">{saveSuccessMsg}</span>}
+                {saveErrorMsg && <span className="text-rose-400 text-xs font-semibold">{saveErrorMsg}</span>}
               </div>
+
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setActiveModalSchedule(null)}
@@ -644,8 +681,17 @@ const CoachSchedule = () => {
           </div>
         </div>
       )}
+
+      {/* Send Notification Modal */}
+      <SendNotificationModal
+        isOpen={isNotifModalOpen}
+        onClose={() => setIsNotifModalOpen(false)}
+        initialTargetType={notifTargetType}
+        initialClassId={notifClassId}
+      />
     </div>
   );
 };
 
 export default CoachSchedule;
+

@@ -1,9 +1,12 @@
 package com.team4.sportscenter.modules.coach.controllers;
 
+import com.team4.sportscenter.modules.coach.dtos.request.SendCoachNotificationRequest;
 import com.team4.sportscenter.modules.coach.dtos.request.UpdateAttendanceRequest;
+import com.team4.sportscenter.modules.coach.dtos.response.CoachClassResponse;
 import com.team4.sportscenter.modules.coach.dtos.response.CoachScheduleResponse;
 import com.team4.sportscenter.modules.coach.dtos.response.CoachStudentResponse;
 import com.team4.sportscenter.modules.coach.dtos.response.EnrolledStudentResponse;
+import com.team4.sportscenter.modules.coach.services.CoachNotificationService;
 import com.team4.sportscenter.modules.coach.services.CoachScheduleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +23,7 @@ import java.util.Map;
 public class CoachController {
 
     private final CoachScheduleService coachScheduleService;
+    private final CoachNotificationService coachNotificationService;
 
     @GetMapping("/schedules")
     public ResponseEntity<List<CoachScheduleResponse>> getCoachSchedules(Authentication authentication) {
@@ -53,4 +57,21 @@ public class CoachController {
         List<CoachStudentResponse> students = coachScheduleService.getCoachStudents(coachEmail);
         return ResponseEntity.ok(students);
     }
+
+    @GetMapping("/classes")
+    public ResponseEntity<List<CoachClassResponse>> getCoachClasses(Authentication authentication) {
+        String coachEmail = authentication.getName();
+        List<CoachClassResponse> classes = coachNotificationService.getCoachClasses(coachEmail);
+        return ResponseEntity.ok(classes);
+    }
+
+    @PostMapping("/notifications/send")
+    public ResponseEntity<?> sendNotification(
+            @RequestBody SendCoachNotificationRequest request,
+            Authentication authentication) {
+        String coachEmail = authentication.getName();
+        Map<String, Object> result = coachNotificationService.sendNotification(request, coachEmail);
+        return ResponseEntity.ok(result);
+    }
 }
+
