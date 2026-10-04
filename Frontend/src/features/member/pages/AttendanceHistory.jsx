@@ -17,7 +17,7 @@ const AttendanceHistory = () => {
       const res = await axios.get("http://localhost:8080/api/v1/member/calendar-bookings", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // S?p x?p ngày m?i nh?t lên ð?u
+      // S?p x?p ngï¿½y m?i nh?t lï¿½n ï¿½?u
       const sorted = res.data.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
       setBookings(sorted);
     } catch (err) {
@@ -28,9 +28,9 @@ const AttendanceHistory = () => {
   };
 
   const getStatusBadge = (status) => {
-    if (status === "PRESENT") return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold uppercase tracking-wider"><CheckCircle className="w-3.5 h-3.5" /> Có m?t</span>;
+    if (status === "PRESENT") return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold uppercase tracking-wider"><CheckCircle className="w-3.5 h-3.5" /> Cï¿½ m?t</span>;
     if (status === "ABSENT") return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-semibold uppercase tracking-wider"><XCircle className="w-3.5 h-3.5" /> V?ng m?t</span>;
-    return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20 text-xs font-semibold uppercase tracking-wider"><Clock className="w-3.5 h-3.5" /> Chýa di?n ra</span>;
+    return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20 text-xs font-semibold uppercase tracking-wider"><Clock className="w-3.5 h-3.5" /> Chï¿½a di?n ra</span>;
   };
 
   const presentCount = bookings.filter(b => b.attendanceStatus === "PRESENT").length;
@@ -48,7 +48,7 @@ const AttendanceHistory = () => {
             <Activity className="w-6 h-6 text-blue-500" />
             Attendance History
           </h1>
-          <p className="text-slate-400 text-sm mt-1">L?ch s? ði?m danh và ðánh giá chuyên c?n c?a b?n</p>
+          <p className="text-slate-400 text-sm mt-1">L?ch s? ï¿½i?m danh vï¿½ ï¿½ï¿½nh giï¿½ chuyï¿½n c?n c?a b?n</p>
         </div>
       </div>
 
@@ -58,7 +58,7 @@ const AttendanceHistory = () => {
             <Activity className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">T? l? chuyên c?n</p>
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">T? l? chuyï¿½n c?n</p>
             <p className="text-2xl font-bold text-white">{attendanceRate}%</p>
           </div>
         </div>
@@ -67,7 +67,7 @@ const AttendanceHistory = () => {
             <CheckCircle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">S? bu?i có m?t</p>
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">S? bu?i cï¿½ m?t</p>
             <p className="text-2xl font-bold text-white">{presentCount}</p>
           </div>
         </div>
@@ -84,12 +84,12 @@ const AttendanceHistory = () => {
 
       <div className="bg-[#111d38] border border-slate-700/50 rounded-2xl overflow-hidden shadow-xl">
         <div className="p-5 border-b border-slate-700/50">
-          <h2 className="text-lg font-bold text-white">Chi ti?t các bu?i h?c</h2>
+          <h2 className="text-lg font-bold text-white">Chi ti?t cï¿½c bu?i h?c</h2>
         </div>
         
         {bookings.length === 0 ? (
           <div className="p-8 text-center text-slate-400">
-            B?n chýa có bu?i h?c nào ðý?c ghi nh?n.
+            B?n chï¿½a cï¿½ bu?i h?c nï¿½o ï¿½ï¿½?c ghi nh?n.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -97,9 +97,9 @@ const AttendanceHistory = () => {
               <thead>
                 <tr className="bg-[#0f1b33] border-b border-slate-700/50 text-slate-400 text-xs uppercase tracking-wider">
                   <th className="p-4 font-semibold">Th?i gian</th>
-                  <th className="p-4 font-semibold">Khóa h?c</th>
-                  <th className="p-4 font-semibold">Thông tin</th>
-                  <th className="p-4 font-semibold text-right">Tr?ng thái</th>
+                  <th className="p-4 font-semibold">Khï¿½a h?c</th>
+                  <th className="p-4 font-semibold">Thï¿½ng tin</th>
+                  <th className="p-4 font-semibold text-right">Tr?ng thï¿½i</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
