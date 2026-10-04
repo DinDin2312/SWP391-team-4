@@ -267,8 +267,8 @@ const MySchedule = () => {
                       {/* Attendance Status */}
                       <div className="mt-2 pt-2 border-t border-[#1a2947] flex items-center justify-between">
                         <span className="text-xs text-slate-400 font-medium">Attendance:</span>
-                        {b.attendanceStatus === 'ATTENDED' ? (
-                          <span className="text-xs font-bold text-emerald-400 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5"/> Attended</span>
+                        {b.attendanceStatus === 'PRESENT' ? (
+                          <span className="text-xs font-bold text-emerald-400 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5"/> Present</span>
                         ) : b.attendanceStatus === 'ABSENT' ? (
                           <span className="text-xs font-bold text-rose-400 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Absent</span>
                         ) : (

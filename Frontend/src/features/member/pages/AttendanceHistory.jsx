@@ -17,7 +17,6 @@ const AttendanceHistory = () => {
       const res = await axios.get("http://localhost:8080/api/v1/member/calendar-bookings", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // S?p x?p ng�y m?i nh?t l�n �?u
       const sorted = res.data.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
       setBookings(sorted);
     } catch (err) {
@@ -28,9 +27,9 @@ const AttendanceHistory = () => {
   };
 
   const getStatusBadge = (status) => {
-    if (status === "PRESENT") return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold uppercase tracking-wider"><CheckCircle className="w-3.5 h-3.5" /> C� m?t</span>;
-    if (status === "ABSENT") return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-semibold uppercase tracking-wider"><XCircle className="w-3.5 h-3.5" /> V?ng m?t</span>;
-    return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20 text-xs font-semibold uppercase tracking-wider"><Clock className="w-3.5 h-3.5" /> Ch�a di?n ra</span>;
+    if (status === "PRESENT") return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold uppercase tracking-wider"><CheckCircle className="w-3.5 h-3.5" /> Present</span>;
+    if (status === "ABSENT") return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-semibold uppercase tracking-wider"><XCircle className="w-3.5 h-3.5" /> Absent</span>;
+    return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20 text-xs font-semibold uppercase tracking-wider"><Clock className="w-3.5 h-3.5" /> Not Yet</span>;
   };
 
   const presentCount = bookings.filter(b => b.attendanceStatus === "PRESENT").length;
@@ -48,7 +47,7 @@ const AttendanceHistory = () => {
             <Activity className="w-6 h-6 text-blue-500" />
             Attendance History
           </h1>
-          <p className="text-slate-400 text-sm mt-1">L?ch s? �i?m danh v� ��nh gi� chuy�n c?n c?a b?n</p>
+          <p className="text-slate-400 text-sm mt-1">Your attendance history and participation rate.</p>
         </div>
       </div>
 
@@ -58,7 +57,7 @@ const AttendanceHistory = () => {
             <Activity className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">T? l? chuy�n c?n</p>
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Attendance Rate</p>
             <p className="text-2xl font-bold text-white">{attendanceRate}%</p>
           </div>
         </div>
@@ -67,7 +66,7 @@ const AttendanceHistory = () => {
             <CheckCircle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">S? bu?i c� m?t</p>
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Present Sessions</p>
             <p className="text-2xl font-bold text-white">{presentCount}</p>
           </div>
         </div>
@@ -76,7 +75,7 @@ const AttendanceHistory = () => {
             <XCircle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">S? bu?i v?ng</p>
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Absent Sessions</p>
             <p className="text-2xl font-bold text-white">{absentCount}</p>
           </div>
         </div>
@@ -84,22 +83,22 @@ const AttendanceHistory = () => {
 
       <div className="bg-[#111d38] border border-slate-700/50 rounded-2xl overflow-hidden shadow-xl">
         <div className="p-5 border-b border-slate-700/50">
-          <h2 className="text-lg font-bold text-white">Chi ti?t c�c bu?i h?c</h2>
+          <h2 className="text-lg font-bold text-white">Session Details</h2>
         </div>
         
         {bookings.length === 0 ? (
           <div className="p-8 text-center text-slate-400">
-            B?n ch�a c� bu?i h?c n�o ��?c ghi nh?n.
+            No attendance records found.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[#0f1b33] border-b border-slate-700/50 text-slate-400 text-xs uppercase tracking-wider">
-                  <th className="p-4 font-semibold">Th?i gian</th>
-                  <th className="p-4 font-semibold">Kh�a h?c</th>
-                  <th className="p-4 font-semibold">Th�ng tin</th>
-                  <th className="p-4 font-semibold text-right">Tr?ng th�i</th>
+                  <th className="p-4 font-semibold">Date & Time</th>
+                  <th className="p-4 font-semibold">Course</th>
+                  <th className="p-4 font-semibold">Info</th>
+                  <th className="p-4 font-semibold text-right">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
@@ -111,7 +110,7 @@ const AttendanceHistory = () => {
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-slate-800 flex flex-col items-center justify-center border border-slate-700">
-                            <span className="text-[10px] uppercase text-slate-400 font-bold leading-none">{date.toLocaleString("default", { month: "short" })}</span>
+                            <span className="text-[10px] uppercase text-slate-400 font-bold leading-none">{date.toLocaleString("en-US", { month: "short" })}</span>
                             <span className="text-sm text-white font-bold leading-none mt-0.5">{date.getDate()}</span>
                           </div>
                           <div>
@@ -146,4 +145,3 @@ const AttendanceHistory = () => {
 };
 
 export default AttendanceHistory;
-
