@@ -44,7 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // Auth endpoints
-                        .requestMatchers("/api/v1/auth/**", "/api/auth/**", "/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**", "/api/auth/**", "/auth/**", "/api/guest/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/avatars/**").permitAll()
 
                         // Cho phép truy cập các API của Receptionist

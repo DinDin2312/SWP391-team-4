@@ -96,10 +96,14 @@ public class CoachNotificationServiceImpl implements CoachNotificationService {
                 ? request.getType().trim().toUpperCase() 
                 : "COACH";
 
+        User coach = userRepository.findByEmail(coachEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin HLV."));
+        String finalTitle = "[Từ HLV " + coach.getFullName() + "] " + request.getTitle().trim();
+
         LocalDateTime now = LocalDateTime.now();
         List<Notification> notificationsToSave = recipients.stream().map(student -> Notification.builder()
                 .user(student)
-                .title(request.getTitle().trim())
+                .title(finalTitle)
                 .message(request.getMessage().trim())
                 .type(notifType)
                 .isRead(false)

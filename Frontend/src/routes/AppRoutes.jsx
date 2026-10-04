@@ -3,7 +3,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { ROLE_ROUTES } from '../config/roles';
 
-// Auth Pages
+// Public & Auth Pages
+const LandingPage = lazy(() => import('../features/public/pages/LandingPage'));
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'));
 const Register = lazy(() => import('../features/auth/pages/Register'));
 const OTPVerification = lazy(() => import('../features/auth/pages/OTPVerification'));
@@ -33,7 +34,8 @@ const ReceptionistDashboard = lazy(() => import('../features/receptionist/pages/
 function AppRoutes() {
   return (
     <Suspense fallback={<div role="status" style={{ padding: 32 }}>Đang tải trang...</div>}><Routes>
-      <Route path="/" element={<LoginPage />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<Register />} />
       <Route path="/verify-otp" element={<OTPVerification />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
