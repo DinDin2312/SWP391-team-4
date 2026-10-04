@@ -180,7 +180,13 @@ public class MemberServiceImpl implements MemberService {
             classScheds.sort(Comparator.comparing(Schedule::getStartTime));
             Schedule nextSession = classScheds.get(0);
             
-            Integer bookedSlots = bookingRepository.countBookedSlots(nextSession.getScheduleId());
+            // Find max booked slots across all sessions
+            Integer bookedSlots = 0;
+            for (Schedule s : classScheds) {
+                int booked = bookingRepository.countBookedSlots(s.getScheduleId());
+                if (booked > bookedSlots) bookedSlots = booked;
+            }
+            
             Boolean isBooked = bookingRepository.existsByEmailAndClassId(email, gymClass.getClassId());
             
             Integer duration = (int) ChronoUnit.MINUTES.between(nextSession.getStartTime(), nextSession.getEndTime());
@@ -233,8 +239,16 @@ public class MemberServiceImpl implements MemberService {
             
         if (schedules.isEmpty()) throw new RuntimeException("No future sessions found for this class.");
         
-        Integer bookedSlots = bookingRepository.countBookedSlots(schedules.get(0).getScheduleId());
-        if (bookedSlots >= schedules.get(0).getGymClass().getMaxSlots()) {
+        // Find the maximum number of booked slots across all future sessions
+        int maxBookedAcrossSessions = 0;
+        for (Schedule s : schedules) {
+            int booked = bookingRepository.countBookedSlots(s.getScheduleId());
+            if (booked > maxBookedAcrossSessions) {
+                maxBookedAcrossSessions = booked;
+            }
+        }
+        
+        if (maxBookedAcrossSessions >= schedules.get(0).getGymClass().getMaxSlots()) {
             throw new RuntimeException("This class is fully booked.");
         }
         
