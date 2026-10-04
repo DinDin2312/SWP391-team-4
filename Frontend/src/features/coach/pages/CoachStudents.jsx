@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-  Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X
+  Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send
 } from 'lucide-react';
+import SendNotificationModal from '../components/SendNotificationModal';
 
 const CoachStudents = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
+
+  // Notification Modal States
+  const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+  const [notifTargetType, setNotifTargetType] = useState('ALL');
+  const [notifStudent, setNotifStudent] = useState(null);
 
   useEffect(() => {
     fetchCoachStudents();
@@ -27,6 +33,18 @@ const CoachStudents = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenBroadcastNotif = () => {
+    setNotifTargetType('ALL');
+    setNotifStudent(null);
+    setIsNotifModalOpen(true);
+  };
+
+  const handleOpenIndividualNotif = (student) => {
+    setNotifTargetType('INDIVIDUAL');
+    setNotifStudent(student);
+    setIsNotifModalOpen(true);
   };
 
   // Filter students by name, email, or phone
@@ -51,16 +69,27 @@ const CoachStudents = () => {
   return (
     <div className="flex flex-col w-full pb-8 space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-1 text-blue-400 font-semibold text-[11px] uppercase tracking-wider">
-          <span>Teaching Management</span>
-          <ChevronRight className="w-3 h-3" />
-          <span className="text-slate-500">Trainee Roster</span>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1 text-blue-400 font-semibold text-[11px] uppercase tracking-wider">
+            <span>Teaching Management</span>
+            <ChevronRight className="w-3 h-3" />
+            <span className="text-slate-500">Trainee Roster</span>
+          </div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Assigned Trainees List</h1>
+          <p className="text-sm text-slate-400 max-w-3xl">
+            Manage and inspect all trainees enrolled in your athletic coaching sessions and classes.
+          </p>
         </div>
-        <h1 className="text-3xl font-bold text-white tracking-tight">Assigned Trainees List</h1>
-        <p className="text-sm text-slate-400 max-w-3xl">
-          Manage and inspect all trainees enrolled in your athletic coaching sessions and classes.
-        </p>
+
+        {/* Global Notification Button */}
+        <button
+          onClick={handleOpenBroadcastNotif}
+          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all cursor-pointer shrink-0 self-start md:self-auto"
+        >
+          <Bell className="w-4 h-4 animate-bounce" />
+          <span>Gửi Thông Báo</span>
+        </button>
       </div>
 
       {/* KPI Stats Grid */}
@@ -194,12 +223,23 @@ const CoachStudents = () => {
                       </td>
 
                       <td className="px-4 py-4 text-right">
-                        <button 
-                          onClick={() => setSelectedStudent(st)}
-                          className="px-3.5 py-1.5 rounded-lg bg-[#111d38] hover:bg-[#162548] text-blue-400 hover:text-blue-300 font-semibold text-xs border border-blue-500/20 transition-all cursor-pointer"
-                        >
-                          View Details
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button 
+                            onClick={() => handleOpenIndividualNotif(st)}
+                            title="Gửi thông báo riêng"
+                            className="px-3 py-1.5 rounded-lg bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 hover:text-white font-semibold text-xs border border-blue-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <Send className="w-3.5 h-3.5 text-blue-400" />
+                            <span>Gửi tin</span>
+                          </button>
+
+                          <button 
+                            onClick={() => setSelectedStudent(st)}
+                            className="px-3.5 py-1.5 rounded-lg bg-[#111d38] hover:bg-[#162548] text-slate-300 hover:text-white font-semibold text-xs border border-slate-700/50 transition-all cursor-pointer"
+                          >
+                            Chi tiết
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -271,19 +311,41 @@ const CoachStudents = () => {
               )}
             </div>
 
-            <div className="p-4 bg-[#0b1326] border-t border-[#1b2b4f] flex justify-end">
+            <div className="p-4 bg-[#0b1326] border-t border-[#1b2b4f] flex justify-between items-center">
+              <button
+                onClick={() => {
+                  const current = selectedStudent;
+                  setSelectedStudent(null);
+                  handleOpenIndividualNotif(current);
+                }}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+                <span>Gửi thông báo</span>
+              </button>
+
               <button
                 onClick={() => setSelectedStudent(null)}
                 className="px-5 py-2 rounded-xl bg-[#111d38] hover:bg-[#1a2947] text-slate-300 hover:text-white font-semibold text-xs transition-all cursor-pointer"
               >
-                Close
+                Đóng
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Send Notification Modal */}
+      <SendNotificationModal 
+        isOpen={isNotifModalOpen}
+        onClose={() => setIsNotifModalOpen(false)}
+        initialTargetType={notifTargetType}
+      />
     </div>
   );
 };
 
 export default CoachStudents;
+
+
+

@@ -1,18 +1,23 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import RoleThemeToggle from '../components/RoleThemeToggle';
 import { useRoleTheme } from '../hooks/useRoleTheme';
 import {
   LayoutDashboard, CalendarDays, Users, Dumbbell,
-  Settings, LogOut, Award
+  Settings, LogOut, Award, Bell
 } from 'lucide-react';
+import SendNotificationModal from '../features/coach/components/SendNotificationModal';
 
 const CoachLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userInfo, logout } = useContext(AuthContext);
   const { theme, toggleTheme } = useRoleTheme();
+
+  const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+
+
 
   const fullName = userInfo?.fullName || 'Coach Trainer';
   const firstName = fullName.split(' ')[0];
@@ -146,6 +151,13 @@ const CoachLayout = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsNotifModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Bell className="w-3.5 h-3.5" />
+              <span>Gửi thông báo</span>
+            </button>
             <RoleThemeToggle theme={theme} onToggle={toggleTheme} />
             <button onClick={handleLogout} className="px-3.5 py-2 rounded-xl bg-[#0e172a] border border-[#1a2947] hover:border-slate-600 text-slate-300 hover:text-white text-xs font-medium transition-colors flex items-center gap-2">
               <LogOut className="w-3.5 h-3.5" />
@@ -158,8 +170,15 @@ const CoachLayout = () => {
           <Outlet />
         </div>
       </main>
+
+      {/* Global Notification Modal for Coach Portal */}
+      <SendNotificationModal
+        isOpen={isNotifModalOpen}
+        onClose={() => setIsNotifModalOpen(false)}
+      />
     </div>
   );
 };
 
 export default CoachLayout;
+
