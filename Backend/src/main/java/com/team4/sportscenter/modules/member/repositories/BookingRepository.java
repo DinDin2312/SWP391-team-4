@@ -36,4 +36,7 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
     @Modifying
     @Query("UPDATE Booking b SET b.status = 'CANCELLED' WHERE b.status = 'PENDING' AND b.bookingTime < :cutoff")
     int cancelExpiredPendingBookings(@Param("cutoff") LocalDateTime cutoff);
+
+    @Query("SELECT b FROM Booking b JOIN FETCH b.schedule s JOIN FETCH s.gymClass c JOIN FETCH b.user WHERE b.status = 'CONFIRMED' AND s.startTime >= :startOfDay AND s.startTime < :endOfDay")
+    List<Booking> findBookingsByDateRange(@Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay);
 }
