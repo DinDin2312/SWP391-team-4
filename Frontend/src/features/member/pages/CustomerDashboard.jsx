@@ -98,7 +98,7 @@ const CustomerDashboard = () => {
         {/* ================= ROW 1: 4 STAT CARDS ================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Active Package */}
-          <div className="p-5 rounded-2xl bg-[#0b1326] border border-[#172545] relative overflow-hidden flex flex-col justify-between">
+          <div className="p-5 rounded-3xl bg-[#0b1326]/80 backdrop-blur-md border border-[#172545] relative overflow-hidden flex flex-col justify-between group hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10">
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Package</span>
@@ -217,7 +217,7 @@ const CustomerDashboard = () => {
         {/* ================= ROW 2: SCHEDULE (2/3) + PASS & ACTIONS (1/3) ================= */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Upcoming Schedule (Left 2 Columns) */}
-          <div className="lg:col-span-2 p-6 rounded-2xl bg-[#0b1326] border border-[#172545] flex flex-col justify-between">
+          <div className="lg:col-span-2 p-6 rounded-3xl bg-[#0b1326]/80 backdrop-blur-md border border-[#172545] flex flex-col justify-between group hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10">
             <div>
               {/* Header & Filter Tabs */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -258,9 +258,9 @@ const CustomerDashboard = () => {
     upcomingBookings.filter(item => {
       if (activeTab === 'all') return true;
       const name = item.className.toLowerCase();
-      if (activeTab === 'group') return name.includes('yoga') || name.includes('gym') || name.includes('cĂ†Â¡');
-      if (activeTab === 'courts') return name.includes('court') || name.includes('sÄ‚Â¢n');
-      if (activeTab === 'recovery') return name.includes('recovery') || name.includes('hĂ¡Â»â€œi phĂ¡Â»Â¥c');
+      if (activeTab === 'group') return name.includes('yoga') || name.includes('gym') || name.includes('cÄ‚â€ Ă‚Â¡');
+      if (activeTab === 'courts') return name.includes('court') || name.includes('sĂ„â€Ă‚Â¢n');
+      if (activeTab === 'recovery') return name.includes('recovery') || name.includes('hÄ‚Â¡Ă‚Â»Ă¢â‚¬Å“i phÄ‚Â¡Ă‚Â»Ă‚Â¥c');
       return true;
     }).map((item) => {
       const dateObj = new Date(item.startTime);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -66,7 +67,13 @@ export default function Register() {
   };
 
   return (
-    <div className="bg-[#0B1326] text-[#DAE2FD] font-sans antialiased min-h-screen selection:bg-blue-500/30 selection:text-white">
+    <motion.main
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+      className="bg-[#0B1326] text-[#DAE2FD] font-sans antialiased min-h-screen selection:bg-blue-500/30 selection:text-white"
+    >
       <div className="min-h-screen w-full flex flex-col lg:flex-row relative">
         <div className="relative w-full lg:w-[52%] xl:w-[54%] min-h-[460px] lg:min-h-screen flex flex-col justify-between p-8 sm:p-12 lg:p-14 overflow-hidden border-b lg:border-b-0 lg:border-r border-[#1e293b]/70">
           <img alt="NEXUS High Performance" className="absolute inset-0 w-full h-full object-cover object-center scale-105 transition-transform duration-1000 hover:scale-100" src="https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1470&auto=format&fit=crop" />
@@ -215,6 +222,6 @@ export default function Register() {
           <span className="text-xs text-[#C2C6D6]">{toastMessage?.text}</span>
         </div>
       </div>
-    </div>
+    </motion.main>
   );
 }

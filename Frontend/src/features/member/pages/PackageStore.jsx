@@ -8,6 +8,7 @@ import {
   Trash2, ShoppingCart, Check, ShieldCheck, Tag,
   CircleDollarSign, DollarSign, BadgeCheck, AlertCircle
 } from 'lucide-react';
+import { Meteors } from '../../../components/ui/meteors';
 
 const PackageStore = () => {
   const navigate = useNavigate();
@@ -327,18 +328,19 @@ const PackageStore = () => {
           return (
             <div 
               key={pkg.packageId} 
-              className={`flex flex-col justify-between rounded-2xl p-6 transition-all duration-300 group relative ${
+              className={`flex flex-col justify-between rounded-2xl p-6 transition-all duration-300 group relative overflow-hidden ${
                 isPopular 
-                  ? 'bg-surface-container-high/90 shadow-xl shadow-primary-container/10 transform lg:-translate-y-2' 
+                  ? 'bg-surface-container-high/90 shadow-xl shadow-primary-container/10 border border-blue-500/30' 
                   : 'bg-surface-container-low hover:bg-surface-container shadow-md'
               }`}
             >
               {isPopular && (
                 <>
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-primary/30 via-transparent to-primary/10 pointer-events-none -z-0"></div>
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-primary-container text-on-primary-container text-[11px] font-bold tracking-widest uppercase shadow-md flex items-center gap-1 z-20 whitespace-nowrap">
+                  <Meteors number={15} />
+                  <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-blue-500/10 to-teal-500/10 blur-xl pointer-events-none -z-0"></div>
+                  <div className="mb-3 px-4 py-1.5 rounded-full bg-primary-container text-on-primary-container text-[11px] font-bold tracking-widest uppercase shadow-md flex items-center gap-1 z-20 w-fit">
                     <Flame className="w-3.5 h-3.5" />
-                    <span>Most Popular &bull; Recommended</span>
+                    <span>Most Popular</span>
                   </div>
                 </>
               )}

@@ -1,108 +1,87 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { CheckCircle, XCircle, Clock, Calendar, MapPin, User, Activity } from "lucide-react";
+import React from "react";
+import { CheckCircle, XCircle, Clock, Calendar, MapPin, User, Activity, Filter } from "lucide-react";
+import { useAttendanceHistory } from "../hooks/useAttendanceHistory";
+import { TracingBeam } from "../../../components/ui/tracing-beam";
 
-import { Filter } from "lucide-react";
+// Extracted UI Component for Badges (React Modernization pattern)
+const StatusBadge = ({ status }) => {
+  if (status === "PRESENT") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold uppercase tracking-wider">
+        <CheckCircle className="w-3.5 h-3.5" /> Present
+      </span>
+    );
+  }
+  if (status === "ABSENT") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-semibold uppercase tracking-wider">
+        <XCircle className="w-3.5 h-3.5" /> Absent
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20 text-xs font-semibold uppercase tracking-wider">
+      <Clock className="w-3.5 h-3.5" /> Not Yet
+    </span>
+  );
+};
 
 const AttendanceHistory = () => {
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState("ALL");
-
-  useEffect(() => {
-    fetchHistory();
-  }, []);
-
-  const fetchHistory = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:8080/api/v1/member/calendar-bookings", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      // Filter out future classes that haven't been marked yet
-      const now = new Date();
-      const pastBookings = res.data.filter(b => 
-        b.attendanceStatus === "PRESENT" || 
-        b.attendanceStatus === "ABSENT" || 
-        new Date(b.startTime) < now
-      );
-      // Sort descending (nearest time to furthest past time)
-      const sorted = pastBookings.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
-      setBookings(sorted);
-    } catch (err) {
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getStatusBadge = (status) => {
-    if (status === "PRESENT") return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold uppercase tracking-wider"><CheckCircle className="w-3.5 h-3.5" /> Present</span>;
-    if (status === "ABSENT") return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-semibold uppercase tracking-wider"><XCircle className="w-3.5 h-3.5" /> Absent</span>;
-    return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20 text-xs font-semibold uppercase tracking-wider"><Clock className="w-3.5 h-3.5" /> Not Yet</span>;
-  };
-
-  const presentCount = bookings.filter(b => b.attendanceStatus === "PRESENT").length;
-  const absentCount = bookings.filter(b => b.attendanceStatus === "ABSENT").length;
-  const totalCompleted = presentCount + absentCount;
-  const attendanceRate = totalCompleted > 0 ? Math.round((presentCount / totalCompleted) * 100) : 0;
-
-  const filteredBookings = bookings.filter(b => filterStatus === "ALL" || b.attendanceStatus === filterStatus);
+  // Logic extracted to custom hook (Frontend Developer pattern)
+  const { loading, filterStatus, setFilterStatus, stats, filteredBookings } = useAttendanceHistory();
 
   if (loading) return <div className="flex items-center justify-center h-64 text-slate-400">Loading history...</div>;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <Activity className="w-6 h-6 text-blue-500" />
-            Attendance History
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">Your attendance history and participation rate.</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-[#111d38] border border-slate-700/50 rounded-xl px-3 py-2">
-            <Filter className="w-4 h-4 text-slate-400" />
-            <select 
-              className="bg-transparent border-none outline-none text-sm text-slate-300 font-medium cursor-pointer"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="ALL">All Past Classes</option>
-              <option value="PRESENT">Present Only</option>
-              <option value="ABSENT">Absent Only</option>
-            </select>
+      <TracingBeam className="px-2 md:px-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+              <Activity className="w-6 h-6 text-blue-500" />
+              Attendance History
+            </h1>
+            <p className="text-slate-400 text-sm mt-1">Your attendance history and participation rate.</p>
           </div>
         </div>
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#111d38]/40 border border-blue-500/20 rounded-2xl p-5 flex items-center gap-4">
+        <div 
+          onClick={() => setFilterStatus("ALL")}
+          className={`bg-[#111d38]/40 border rounded-2xl p-5 flex items-center gap-4 cursor-pointer transition-all hover:-translate-y-1 hover:shadow-lg ${filterStatus === "ALL" ? "border-blue-500 shadow-blue-500/20" : "border-blue-500/20 hover:border-blue-500/50"}`}
+        >
           <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
             <Activity className="w-6 h-6" />
           </div>
           <div>
             <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Attendance Rate</p>
-            <p className="text-2xl font-bold text-white">{attendanceRate}%</p>
+            <p className="text-2xl font-bold text-white">{stats.attendanceRate}%</p>
           </div>
         </div>
-        <div className="bg-[#111d38]/40 border border-emerald-500/20 rounded-2xl p-5 flex items-center gap-4">
+        
+        <div 
+          onClick={() => setFilterStatus("PRESENT")}
+          className={`bg-[#111d38]/40 border rounded-2xl p-5 flex items-center gap-4 cursor-pointer transition-all hover:-translate-y-1 hover:shadow-lg ${filterStatus === "PRESENT" ? "border-emerald-500 shadow-emerald-500/20" : "border-emerald-500/20 hover:border-emerald-500/50"}`}
+        >
           <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
             <CheckCircle className="w-6 h-6" />
           </div>
           <div>
             <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Present Sessions</p>
-            <p className="text-2xl font-bold text-white">{presentCount}</p>
+            <p className="text-2xl font-bold text-white">{stats.presentCount}</p>
           </div>
         </div>
-        <div className="bg-[#111d38]/40 border border-rose-500/20 rounded-2xl p-5 flex items-center gap-4">
+        
+        <div 
+          onClick={() => setFilterStatus("ABSENT")}
+          className={`bg-[#111d38]/40 border rounded-2xl p-5 flex items-center gap-4 cursor-pointer transition-all hover:-translate-y-1 hover:shadow-lg ${filterStatus === "ABSENT" ? "border-rose-500 shadow-rose-500/20" : "border-rose-500/20 hover:border-rose-500/50"}`}
+        >
           <div className="w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-400">
             <XCircle className="w-6 h-6" />
           </div>
           <div>
             <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Absent Sessions</p>
-            <p className="text-2xl font-bold text-white">{absentCount}</p>
+            <p className="text-2xl font-bold text-white">{stats.absentCount}</p>
           </div>
         </div>
       </div>
@@ -156,7 +135,7 @@ const AttendanceHistory = () => {
                         </div>
                       </td>
                       <td className="p-4 text-right">
-                        {getStatusBadge(booking.attendanceStatus)}
+                        <StatusBadge status={booking.attendanceStatus} />
                       </td>
                     </tr>
                   );
@@ -166,6 +145,7 @@ const AttendanceHistory = () => {
           </div>
         )}
       </div>
+      </TracingBeam>
     </div>
   );
 };

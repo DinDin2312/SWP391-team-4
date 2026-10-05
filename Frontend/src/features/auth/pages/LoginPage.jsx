@@ -1,9 +1,13 @@
 import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dumbbell, LockKeyhole, Eye, EyeOff } from 'lucide-react';
+import { motion } from 'framer-motion';
 import axios from 'axios';
 import { AuthContext } from '../../../context/AuthContext';
 import { useGoogleLogin } from '@react-oauth/google';
+import { BackgroundBeamsWithCollision } from '../../../components/ui/background-beams-with-collision';
+import { HoverBorderGradient } from '../../../components/ui/hover-border-gradient';
+import Particles from '../../../components/ui/Particles';
 
 const ROLE_ROUTES = {
   Member: '/member/dashboard',
@@ -79,21 +83,57 @@ function LoginPage() {
   };
 
   return (
-    <main className="login-page">
-      <section className="hero-panel" aria-label="Nexus Sports Center introduction">
+    <motion.main 
+      className="login-page"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <motion.section 
+        className="hero-panel" aria-label="Nexus Sports Center introduction"
+        initial={{ x: -50, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
         <div className="hero-photo" aria-hidden="true" />
         <div className="hero-streak hero-streak-one" aria-hidden="true" />
         <div className="hero-streak hero-streak-two" aria-hidden="true" />
         <div className="hero-copy">
           <div className="hero-kicker"><span /> Performance, connected</div>
-          <h2>NEXUS:<br /><em>Redefining</em><br />Sports Center<br />Management.</h2>
+          <motion.h2 
+            className="text-4xl lg:text-5xl font-bold text-white mb-4"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.2 }
+              }
+            }}
+          >
+            <motion.span variants={{ hidden: { opacity: 0, filter: "blur(10px)" }, visible: { opacity: 1, filter: "blur(0px)" } }}>NEXUS:</motion.span><br />
+            <motion.em variants={{ hidden: { opacity: 0, filter: "blur(10px)" }, visible: { opacity: 1, filter: "blur(0px)" } }}>Redefining</motion.em><br />
+            <motion.span variants={{ hidden: { opacity: 0, filter: "blur(10px)" }, visible: { opacity: 1, filter: "blur(0px)" } }}>Sports Center</motion.span><br />
+            <motion.span variants={{ hidden: { opacity: 0, filter: "blur(10px)" }, visible: { opacity: 1, filter: "blur(0px)" } }}>Management.</motion.span>
+          </motion.h2>
           <p>One intelligent space for every athlete, coach, and team.</p>
         </div>
         <div className="hero-footer"><span>01</span><i /><span>MOVE WITH PURPOSE</span></div>
-      </section>
+      </motion.section>
 
-      <section className="login-shell" aria-labelledby="login-title">
-        <header className="brand-block">
+      <motion.section 
+        className="login-shell relative overflow-hidden flex flex-col justify-center" aria-labelledby="login-title"
+        initial={{ x: 50, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+      >
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <BackgroundBeamsWithCollision className="w-full h-full" />
+        </div>
+        <div className="relative z-10 w-full max-w-md mx-auto">
+          <header className="brand-block">
           <div className="brand-mark" aria-hidden="true">
             <Dumbbell size={25} strokeWidth={2.3} />
           </div>
@@ -235,8 +275,9 @@ function LoginPage() {
         <footer className="login-footer">
           <span>Secure access</span><i aria-hidden="true" /><span>Nexus Sports Center</span>
         </footer>
-      </section>
-    </main>
+        </div>
+      </motion.section>
+    </motion.main>
   );
 }
 
