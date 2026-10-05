@@ -5,6 +5,8 @@ import com.team4.sportscenter.modules.member.dtos.response.UpcomingBookingRespon
 import com.team4.sportscenter.modules.member.dtos.response.CalendarBookingResponse;
 import com.team4.sportscenter.modules.member.dtos.response.AvailableClassResponse;
 import com.team4.sportscenter.modules.member.repositories.ScheduleRepository;
+import com.team4.sportscenter.modules.notification.repositories.NotificationRepository;
+import com.team4.sportscenter.modules.notification.entities.Notification;
 import com.team4.sportscenter.modules.auth.repositories.UserRepository;
 import com.team4.sportscenter.modules.member.entities.Schedule;
 import com.team4.sportscenter.modules.member.entities.GymClass;
@@ -43,6 +45,7 @@ public class MemberServiceImpl implements MemberService {
     private final ScheduleRepository scheduleRepository;
     private final UserRepository userRepository;
     private final com.team4.sportscenter.modules.member.repositories.PackageRepository packageRepository;
+    private final NotificationRepository notificationRepository;
 
     @Override
     public MemberMembershipResponse getMyActiveMembership(String email) {
@@ -96,7 +99,7 @@ public class MemberServiceImpl implements MemberService {
         return bookings.stream().map(b -> {
             long duration = ChronoUnit.MINUTES.between(b.getSchedule().getStartTime(), b.getSchedule().getEndTime());
             return UpcomingBookingResponse.builder()
-                    .bookingId(b.getBookingId())
+                    .bookingId(b.getBookingId()).classId(b.getSchedule().getGymClass().getClassId())
                     .className(b.getSchedule().getGymClass().getClassName())
                     .coachName(b.getSchedule().getGymClass().getCoach().getFullName())
                     .roomName(b.getSchedule().getGymClass().getRoom().getRoomName())
@@ -130,7 +133,7 @@ public class MemberServiceImpl implements MemberService {
             int avgHr = 110 + (int)(Math.random() * 40);
 
             return RecentActivityResponse.builder()
-                    .bookingId(b.getBookingId())
+                    .bookingId(b.getBookingId()).classId(b.getSchedule().getGymClass().getClassId())
                     .className(b.getSchedule().getGymClass().getClassName())
                     .coachName(b.getSchedule().getGymClass().getCoach().getFullName())
                     .roomName(b.getSchedule().getGymClass().getRoom().getRoomName())
@@ -150,7 +153,7 @@ public class MemberServiceImpl implements MemberService {
         return bookings.stream()
                 .filter(b -> !"CANCELLED".equals(b.getStatus()) && !"PENDING".equals(b.getStatus()))
                 .map(b -> CalendarBookingResponse.builder()
-                        .bookingId(b.getBookingId())
+                        .bookingId(b.getBookingId()).classId(b.getSchedule().getGymClass().getClassId())
                         .className(b.getSchedule().getGymClass().getClassName())
                         .coachName(b.getSchedule().getGymClass().getCoach().getFullName())
                         .roomName(b.getSchedule().getGymClass().getRoom().getRoomName())
@@ -282,6 +285,56 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
+    public void cancelClass(String email, Integer classId) {
+        List<Booking> myExistingBookings = bookingRepository.findAllBookingsByEmail(email).stream()
+            .filter(b -> b.getSchedule().getGymClass().getClassId().equals(classId))
+            .filter(b -> !b.getStatus().equals("CANCELLED"))
+            .collect(Collectors.toList());
+
+        if (myExistingBookings.isEmpty()) {
+            throw new RuntimeException("You are not currently booked in this class.");
+        }
+
+        // Check if all sessions are in the past
+        boolean hasFutureSession = false;
+        LocalDateTime now = LocalDateTime.now();
+        for (Booking b : myExistingBookings) {
+            if (b.getSchedule().getStartTime().isAfter(now)) {
+                hasFutureSession = true;
+                break;
+            }
+        }
+
+        if (!hasFutureSession) {
+            throw new RuntimeException("Cannot cancel: All sessions for this class are already in the past.");
+        }
+
+        int cancelledCount = 0;
+        String className = myExistingBookings.get(0).getSchedule().getGymClass().getClassName();
+        User user = myExistingBookings.get(0).getUser();
+
+        for (Booking b : myExistingBookings) {
+            // Only cancel future or pending/confirmed sessions, not already attended ones
+            if (b.getSchedule().getStartTime().isAfter(now) || "PENDING".equals(b.getStatus())) {
+                b.setStatus("CANCELLED");
+                bookingRepository.save(b);
+                cancelledCount++;
+            }
+        }
+
+        if (cancelledCount > 0) {
+            Notification notification = Notification.builder()
+                .user(user)
+                .title("Class Cancelled")
+                .message("You have successfully cancelled " + cancelledCount + " upcoming session(s) of " + className + ". Past/attended sessions were not affected.")
+                .type("SYSTEM")
+                .isRead(false)
+                .build();
+            notificationRepository.save(notification);
+        }
+    }
+
+    @Override
     public List<com.team4.sportscenter.modules.member.dtos.response.PackageResponse> getAllPackages() {
         return packageRepository.findAll().stream().map(p -> com.team4.sportscenter.modules.member.dtos.response.PackageResponse.builder()
             .packageId(p.getPackageId())
@@ -367,4 +420,6 @@ public class MemberServiceImpl implements MemberService {
         membershipRepository.save(membership);
     }
 }
+
+
 

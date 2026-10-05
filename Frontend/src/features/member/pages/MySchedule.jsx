@@ -1,3 +1,4 @@
+﻿import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -12,6 +13,7 @@ const MySchedule = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cancelModal, setCancelModal] = useState({ isOpen: false, classId: null });
 
   useEffect(() => {
     fetchBookings();
@@ -281,9 +283,7 @@ const MySchedule = () => {
                           <button className="flex-1 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-500 text-xs font-bold transition-colors">
                             Check-in QR
                           </button>
-                          <button className="px-3 py-1.5 rounded-lg bg-[#111d38] text-slate-300 hover:text-red-400 text-xs font-medium transition-colors">
-                            Cancel
-                          </button>
+                          <button onClick={() => setCancelModal({ isOpen: true, classId: b.classId })} className="px-3 py-1.5 rounded-lg bg-[#111d38] text-slate-300 hover:text-red-400 text-xs font-medium transition-colors"> Cancel </button>
                         </div>
                       )}
                     </div>
@@ -294,9 +294,25 @@ const MySchedule = () => {
           </div>
         </div>
       </div>
+      <ConfirmModal 
+        isOpen={cancelModal.isOpen}
+        onClose={() => setCancelModal({ isOpen: false, classId: null })}
+        onConfirm={() => {
+          axios.post('http://localhost:8080/api/v1/member/cancel-class/' + cancelModal.classId, {}, {
+            headers: { Authorization: "Bearer " + localStorage.getItem('token') }
+          }).then(() => {
+            window.location.reload();
+          }).catch(err => alert(err.response?.data || 'Failed to cancel class'));
+        }}
+        title="Cancel Class Registration"
+        message="Are you sure you want to cancel this class? All future sessions of this class will be dropped from your schedule. This action cannot be undone."
+        confirmText="Yes, Cancel Class"
+      />
     </div>
   );
 };
 
 export default MySchedule;
+
+
 
