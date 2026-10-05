@@ -38,7 +38,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults()) // Sử dụng cấu hình corsConfigurationSource bên dưới
+                .cors(Customizer.withDefaults()) // SÄ‚Â¡Ă‚Â»Ă‚Â­ dÄ‚Â¡Ă‚Â»Ă‚Â¥ng cÄ‚Â¡Ă‚ÂºĂ‚Â¥u hĂ„â€Ă‚Â¬nh corsConfigurationSource bĂ„â€Ă‚Âªn dÄ‚â€ Ă‚Â°Ä‚Â¡Ă‚Â»Ă¢â‚¬Âºi
                 .authorizeHttpRequests(auth -> auth
                         // Preflight OPTIONS
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -47,7 +47,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**", "/api/auth/**", "/auth/**", "/api/guest/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/avatars/**").permitAll()
 
-                        // Cho phép truy cập các API của Receptionist
+                        // Cho phĂ„â€Ă‚Â©p truy cÄ‚Â¡Ă‚ÂºĂ‚Â­p cĂ„â€Ă‚Â¡c API cÄ‚Â¡Ă‚Â»Ă‚Â§a Receptionist
                         .requestMatchers("/api/receptionist/**", "/receptionist/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
 
 
@@ -65,12 +65,12 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, exception) -> {
                             response.setStatus(401);
                             response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\":\"Phiên đăng nhập không hợp lệ hoặc tài khoản đã bị khóa.\"}");
+                            response.getWriter().write("{\"message\":\"PhiĂ„â€Ă‚Âªn Ä‚â€Ă¢â‚¬ËœÄ‚â€Ă†â€™ng nhÄ‚Â¡Ă‚ÂºĂ‚Â­p khĂ„â€Ă‚Â´ng hÄ‚Â¡Ă‚Â»Ă‚Â£p lÄ‚Â¡Ă‚Â»Ă¢â‚¬Â¡ hoÄ‚Â¡Ă‚ÂºĂ‚Â·c tĂ„â€Ă‚Â i khoÄ‚Â¡Ă‚ÂºĂ‚Â£n Ä‚â€Ă¢â‚¬ËœĂ„â€Ă‚Â£ bÄ‚Â¡Ă‚Â»Ă¢â‚¬Â¹ khĂ„â€Ă‚Â³a.\"}");
                         })
                         .accessDeniedHandler((request, response, exception) -> {
                             response.setStatus(403);
                             response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\":\"Bạn không có quyền thực hiện thao tác này.\"}");
+                            response.getWriter().write("{\"message\":\"BÄ‚Â¡Ă‚ÂºĂ‚Â¡n khĂ„â€Ă‚Â´ng cĂ„â€Ă‚Â³ quyÄ‚Â¡Ă‚Â»Ă‚Ân thÄ‚Â¡Ă‚Â»Ă‚Â±c hiÄ‚Â¡Ă‚Â»Ă¢â‚¬Â¡n thao tĂ„â€Ă‚Â¡c nĂ„â€Ă‚Â y.\"}");
                         }))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -78,11 +78,11 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // Bean cấu hình chi tiết CORS cho toàn bộ ứng dụng
+    // Bean cÄ‚Â¡Ă‚ÂºĂ‚Â¥u hĂ„â€Ă‚Â¬nh chi tiÄ‚Â¡Ă‚ÂºĂ‚Â¿t CORS cho toĂ„â€Ă‚Â n bÄ‚Â¡Ă‚Â»Ă¢â€Â¢ Ä‚Â¡Ă‚Â»Ă‚Â©ng dÄ‚Â¡Ă‚Â»Ă‚Â¥ng
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Cho phép nguồn Front-end (Vite/React thường chạy 5173 hoặc 3000)
+        // Cho phĂ„â€Ă‚Â©p nguÄ‚Â¡Ă‚Â»Ă¢â‚¬Å“n Front-end (Vite/React thÄ‚â€ Ă‚Â°Ä‚Â¡Ă‚Â»Ă‚Âng chÄ‚Â¡Ă‚ÂºĂ‚Â¡y 5173 hoÄ‚Â¡Ă‚ÂºĂ‚Â·c 3000)
         configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin"));
@@ -111,3 +111,6 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
+
+
+
