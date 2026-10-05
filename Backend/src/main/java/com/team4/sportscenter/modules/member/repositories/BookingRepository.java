@@ -13,7 +13,7 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
     @Query("SELECT b FROM Booking b JOIN FETCH b.schedule s JOIN FETCH s.gymClass c JOIN FETCH c.coach u JOIN FETCH c.room r WHERE b.user.email = :email AND b.status = 'CONFIRMED' AND s.startTime >= :currentTime ORDER BY s.startTime ASC")
     List<Booking> findUpcomingBookingsByEmail(@Param("email") String email, @Param("currentTime") LocalDateTime currentTime);
 
-    @Query("SELECT b FROM Booking b WHERE b.user.email = :email AND b.status = 'ATTENDED'")
+    @Query("SELECT b FROM Booking b WHERE b.user.email = :email AND b.attendanceStatus = 'PRESENT'")
     List<Booking> findAttendedBookingsByEmail(@Param("email") String email);
 
     @Query("SELECT b FROM Booking b JOIN FETCH b.schedule s JOIN FETCH s.gymClass c JOIN FETCH c.coach u JOIN FETCH c.room r WHERE b.user.email = :email AND s.startTime < :currentTime ORDER BY s.startTime DESC")
