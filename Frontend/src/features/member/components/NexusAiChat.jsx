@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Send, X, Bot, User, Minus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
@@ -113,13 +114,23 @@ const NexusAiChat = ({ isOpen, onClose }) => {
     }
   };
 
-  if (!isOpen) return null;
+  
 
   return (
-    <div 
-      className="fixed z-[9999] flex flex-col bg-[#0f1b33] border border-[#1a2b50] rounded-2xl shadow-2xl overflow-hidden w-[340px] sm:w-[380px]"
-      style={{ bottom: "24px", right: "24px", transform: "translate(" + position.x + "px, " + position.y + "px)", height: "500px" }}
-    >
+    <AnimatePresence>
+      {isOpen && (
+        <div 
+          className="fixed z-[9999]" 
+          style={{ top: "80px", right: "24px", transform: `translate(${position.x}px, ${position.y}px)` }}
+        >
+          <motion.div 
+            initial={{ opacity: 0, y: -40, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+            className="flex flex-col bg-[#0f1b33]/95 backdrop-blur-xl border border-blue-500/30 rounded-2xl shadow-[0_0_40px_rgba(37,99,235,0.15)] overflow-hidden w-[340px] sm:w-[380px]"
+            style={{ height: "500px" }}
+          >
       <div 
         ref={dragRef}
         onMouseDown={handleMouseDown}
@@ -203,9 +214,11 @@ const NexusAiChat = ({ isOpen, onClose }) => {
         <div className="text-center mt-2">
           <span className="text-[9px] text-slate-500">NEXUS AI can make mistakes. Verify before buying.</span>
         </div>
-      </div>
-    </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 };
-
 export default NexusAiChat;

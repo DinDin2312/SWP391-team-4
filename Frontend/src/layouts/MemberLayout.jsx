@@ -1,6 +1,7 @@
 
-import React, { useContext, useState, useEffect } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import React, { useContext, useState, useEffect, Suspense } from 'react';
+import { useNavigate, useLocation, useOutlet } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import RoleThemeToggle from '../components/RoleThemeToggle';
@@ -15,6 +16,7 @@ import {
 const MemberLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const currentOutlet = useOutlet();
   const [cartCount, setCartCount] = useState(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -231,8 +233,18 @@ const MemberLayout = () => {
           </div>
         </header>
 
-        <div className="animate-fade-in mt-6">
-          <Outlet />
+        <div className="mt-6">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <Suspense fallback={<div className="flex flex-col items-center justify-center h-64 text-slate-400 gap-3"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div><p className="text-sm">Loading module...</p></div>}>{currentOutlet && React.cloneElement(currentOutlet, { key: location.pathname })}</Suspense>
+            </motion.div>
+          </AnimatePresence>
         </div>
       {toast.visible && (
         <div className="fixed bottom-4 right-4 z-50 bg-slate-800 text-white px-4 py-3 rounded-lg shadow-lg border border-slate-700 flex items-center gap-3 animate-fade-in">

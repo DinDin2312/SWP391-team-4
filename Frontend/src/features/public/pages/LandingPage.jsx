@@ -4,6 +4,7 @@ import { Dumbbell, Activity, Shield, Sparkles, ChevronRight, Play, Star, MapPin,
 import { motion } from 'framer-motion';
 import { AuroraBackground } from '../../../components/ui/aurora-background';
 import { TypewriterEffectSmooth } from '../../../components/ui/typewriter-effect';
+import ShinyText from '../../../components/ui/ShinyText';
 import { CardBody, CardContainer, CardItem } from '../../../components/ui/3d-card';
 import { InfiniteMovingCards } from '../../../components/ui/infinite-moving-cards';
 
@@ -80,7 +81,7 @@ const LandingPage = () => {
           <div className="max-w-3xl mx-auto text-center space-y-8">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-semibold mx-auto">
               <Sparkles className="w-4 h-4" />
-              <span>Premium Sports & Fitness Laboratory</span>
+              <ShinyText text="Premium Sports & Fitness Laboratory" speed={3} className="tracking-wider" />
             </div>
             
             <TypewriterEffectSmooth 
@@ -163,7 +164,7 @@ const LandingPage = () => {
                           <td className="p-4 font-semibold text-white group-hover:text-blue-300">{timeStr} <br/><span className="text-xs text-slate-500 font-normal">{dayStr}</span></td>
                           <td className="p-4 font-medium">{schedule.className}<br/><span className="text-xs text-slate-400 font-normal">Coach {schedule.coachName}</span></td>
                           <td className="p-4 text-slate-400">{schedule.roomName}</td>
-                          <td className="p-4 text-emerald-400 font-bold">{schedule.price.toLocaleString()}₫</td>
+                          <td className="p-4 text-emerald-400 font-bold">{schedule.price.toLocaleString()} VND</td>
                         </tr>
                       );
                     })
@@ -183,7 +184,7 @@ const LandingPage = () => {
       )}
 
       {/* Featured Classes */}
-      <section id="classes" className="py-24 bg-[#0a1122]">
+      <motion.section id="classes" className="py-24 bg-[#0a1122]" initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.7, ease: "easeOut" }}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-12">
             <div>
@@ -215,7 +216,7 @@ const LandingPage = () => {
                   <div>
                     <CardItem translateZ="60" className="text-xl font-bold text-white mb-1">HIIT Endurance</CardItem>
                     <CardItem translateZ="40" className="flex items-center gap-2 text-sm text-slate-400">
-                      <User className="w-4 h-4" /> Coach Tuấn
+                      <User className="w-4 h-4" /> Coach Tun
                     </CardItem>
                   </div>
                 </div>
@@ -277,7 +278,7 @@ const LandingPage = () => {
                   <div>
                     <CardItem translateZ="60" className="text-xl font-bold text-white mb-1">Combat & Defense</CardItem>
                     <CardItem translateZ="40" className="flex items-center gap-2 text-sm text-slate-400">
-                      <User className="w-4 h-4" /> Coach Hoàng
+                      <User className="w-4 h-4" /> Coach Hong
                     </CardItem>
                   </div>
                 </div>
@@ -293,23 +294,23 @@ const LandingPage = () => {
             </CardContainer>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Testimonials */}
-      <section className="py-20 bg-[#060b17] overflow-hidden flex flex-col items-center justify-center">
+      <motion.section className="py-20 bg-[#060b17] overflow-hidden flex flex-col items-center justify-center" initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.7, ease: "easeOut" }}>
         <h2 className="text-3xl font-bold text-white mb-10 text-center">What Our Athletes Say</h2>
         <InfiniteMovingCards
           items={testimonials}
           direction="right"
           speed="slow"
         />
-      </section>
+      </motion.section>
 
       {/* Pricing / Packages CTA */}
-      <section id="pricing" className="py-24 bg-[#0a1122]">
+      <motion.section id="pricing" className="py-24 bg-[#0a1122]" initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.7, ease: "easeOut" }}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-5xl font-black text-white mb-6">Membership Packages</h2>
+            <h2 className="text-3xl md:text-5xl font-black mb-6"><ShinyText text="Membership Packages" speed={3} /></h2>
             <p className="text-slate-400 text-lg">Choose the perfect plan to unlock your potential. No hidden fees.</p>
           </div>
           
@@ -319,7 +320,7 @@ const LandingPage = () => {
                 <div key={pkg.packageId} className={`bg-[#060b17] border border-slate-800 rounded-3xl p-8 flex flex-col hover:-translate-y-6 hover:shadow-[0_20px_50px_rgba(59,130,246,0.3)] hover:scale-105 hover:border-blue-500/50 transition-all duration-500 cursor-pointer ${idx === 1 ? 'bg-gradient-to-b from-blue-900/40 to-[#060b17] border-blue-500 shadow-2xl shadow-blue-500/20 relative transform md:-translate-y-4 hover:-translate-y-10 hover:shadow-[0_20px_50px_rgba(59,130,246,0.5)]' : ''}`}>
                   {idx === 1 && <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-bold shadow-lg">MOST POPULAR</div>}
                   <h3 className="text-xl font-bold text-white mb-2">{pkg.packageName}</h3>
-                  <div className="text-3xl font-black text-blue-400 mb-6">{pkg.price.toLocaleString()}₫ <span className="text-sm font-normal text-slate-500">/ {pkg.durationDays} days</span></div>
+                  <div className="text-3xl font-black text-blue-400 mb-6">{pkg.price.toLocaleString()} VND <span className="text-sm font-normal text-slate-500">/ {pkg.durationDays} days</span></div>
                   <ul className="space-y-4 mb-8 flex-1">
                     <li className="flex gap-3 text-slate-300"><CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0"/> {pkg.description || 'Access to premium gym facilities'}</li>
                     <li className="flex gap-3 text-slate-300"><CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0"/> Valid for {pkg.durationDays} days</li>
@@ -333,7 +334,7 @@ const LandingPage = () => {
             )}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Footer */}
       <footer className="border-t border-slate-800 bg-[#040812] py-12">
@@ -342,7 +343,7 @@ const LandingPage = () => {
             <Dumbbell className="w-5 h-5 text-blue-500" />
             <span className="font-bold text-white tracking-tight">NEXUS SPORTS LAB</span>
           </div>
-          <p className="text-slate-500 text-sm">Â© 2026 Nexus Sports Lab. All rights reserved.</p>
+          <p className="text-slate-500 text-sm"> 2026 Nexus Sports Lab. All rights reserved.</p>
           <div className="flex gap-4 text-slate-400">
             <MapPin className="w-5 h-5 cursor-pointer hover:text-white transition-colors" />
             <Star className="w-5 h-5 cursor-pointer hover:text-white transition-colors" />
@@ -360,27 +361,27 @@ export default LandingPage;
 const testimonials = [
   {
     quote: 'Training at Nexus Sports Lab completely transformed my physique and mindset. The coaches are elite and the facilities are world-class.',
-    name: 'Hoàng Minh',
+    name: 'Hoang Minh',
     title: 'Elite Member since 2024',
   },
   {
     quote: 'I\'ve tried many gyms, but the AI-driven insights and personalized programs here are on another level. Worth every penny.',
-    name: 'Trần Mai Anh',
+    name: 'Tran Mai Anh',
     title: 'Powerlifting Competitor',
   },
   {
     quote: 'The Combat & Defense class gave me confidence I never knew I had. The community here is incredibly supportive and focused.',
-    name: 'Lê Văn Tuấn',
+    name: 'Le Van Tuan',
     title: 'Fitness Enthusiast',
   },
   {
     quote: 'From the equipment to the environment, Nexus provides a premium experience that makes you want to push harder every single day.',
-    name: 'Nguyễn Thùy Linh',
+    name: 'Nguyen Thuy Linh',
     title: 'Yoga Practitioner',
   },
   {
     quote: 'The coaches don\'t just train you; they educate you on biomechanics and nutrition. It\'s a complete ecosystem for health.',
-    name: 'Phạm Quốc Huy',
+    name: 'Pham Quoc Huy',
     title: 'Marathon Runner',
   },
 ];

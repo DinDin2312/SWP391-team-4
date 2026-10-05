@@ -33,7 +33,7 @@ const ReceptionistDashboard = lazy(() => import('../features/receptionist/pages/
 
 function AppRoutes() {
   return (
-    <Suspense fallback={<div role="status" style={{ padding: 32 }}>Đang tải trang...</div>}><Routes>
+    <Suspense fallback={<div role="status" style={{ padding: 32 }}>Loading Nexus...</div>}><Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<Register />} />

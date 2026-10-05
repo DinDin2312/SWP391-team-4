@@ -1,5 +1,6 @@
-import React, { useContext, useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import React, { useContext, useState, Suspense } from 'react';
+import { useOutlet, useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
 import RoleThemeToggle from '../components/RoleThemeToggle';
 import { useRoleTheme } from '../hooks/useRoleTheme';
@@ -12,6 +13,7 @@ import SendNotificationModal from '../features/coach/components/SendNotification
 const CoachLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const currentOutlet = useOutlet();
   const { userInfo, logout } = useContext(AuthContext);
   const { theme, toggleTheme } = useRoleTheme();
 
@@ -156,7 +158,7 @@ const CoachLayout = () => {
               className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer"
             >
               <Bell className="w-3.5 h-3.5" />
-              <span>Gửi thông báo</span>
+              <span>Gá»­i thĂ´ng bĂ¡o</span>
             </button>
             <RoleThemeToggle theme={theme} onToggle={toggleTheme} />
             <button onClick={handleLogout} className="px-3.5 py-2 rounded-xl bg-[#0e172a] border border-[#1a2947] hover:border-slate-600 text-slate-300 hover:text-white text-xs font-medium transition-colors flex items-center gap-2">
@@ -166,8 +168,25 @@ const CoachLayout = () => {
           </div>
         </header>
 
-        <div className="animate-fade-in mt-6">
-          <Outlet />
+        <div className="mt-6">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <Suspense fallback={
+                <div className="flex flex-col items-center justify-center h-64 text-slate-400 gap-3">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+                  <p className="text-sm">Loading module...</p>
+                </div>
+              }>
+                {currentOutlet && React.cloneElement(currentOutlet, { key: location.pathname })}
+              </Suspense>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
 
