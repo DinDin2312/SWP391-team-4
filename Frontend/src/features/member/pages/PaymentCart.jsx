@@ -12,6 +12,7 @@ const PaymentCart = () => {
   const [totalPrice, setTotalPrice] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [discountPercent, setDiscountPercent] = useState(0);
   const [selectedMethod, setSelectedMethod] = useState('credit');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [toast, setToast] = useState({ visible: false, type: 'success', title: '', message: '' });
@@ -24,9 +25,17 @@ const PaymentCart = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/v1/payment/cart', {
-        headers: { Authorization: `Bearer ${token}`}
-      });
+      const [cartRes, profileRes] = await Promise.all([
+        axios.get('http://localhost:8080/api/v1/payment/cart', { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get('http://localhost:8080/api/v1/user/profile', { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+      const response = cartRes;
+      if (profileRes.data) {
+        const tier = profileRes.data.memberTier;
+        if (tier === 'PLATINUM') setDiscountPercent(15);
+        else if (tier === 'GOLD') setDiscountPercent(10);
+        else if (tier === 'SILVER') setDiscountPercent(5);
+      }
       setItems(response.data.items || []);
       setTotalPrice(response.data.totalPrice || 0);
       setError('');
@@ -70,7 +79,7 @@ const PaymentCart = () => {
         headers: { Authorization: `Bearer ${token}`}
       });
       
-      // ChuyĂ¡Â»Æ’n hĂ†Â°Ă¡Â»â€ºng sang trang VNPay
+      // ChuyÄ‚â€Ă¢â‚¬ÂÄ‚â€Ă‚Â¡Ă„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â»Ă„â€Ă¢â‚¬Â Ä‚Â¢Ă¢â€Â¬Ă¢â€Â¢n hÄ‚â€Ă¢â‚¬ÂÄ‚Â¢Ă¢â€Â¬Ă‚Â Ă„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â°Ä‚â€Ă¢â‚¬ÂÄ‚â€Ă‚Â¡Ă„â€Ă¢â‚¬ÂÄ‚â€Ă‚Â»Ă„â€Ă‚Â¢Ä‚Â¢Ă¢â‚¬ÂĂ‚Â¬Ä‚â€Ă‚Âºng sang trang VNPay
       if (response.data && response.data.paymentUrl) {
           window.location.href = response.data.paymentUrl;
       }
@@ -223,7 +232,7 @@ const PaymentCart = () => {
                 </div>
                 <div className="flex justify-between text-emerald-400">
                   <span>Discount</span>
-                  <span className="font-semibold">- 0 VND</span>
+                  <span className="font-semibold">- {(totalPrice * discountPercent / 100).toLocaleString()} VND</span>
                 </div>
               </div>
 
@@ -231,7 +240,7 @@ const PaymentCart = () => {
               
               <div className="flex justify-between items-center">
                 <span className="text-slate-300">Total</span>
-                <span className="text-2xl font-black text-white">{Number(totalPrice).toLocaleString()} <span className="text-base text-slate-400 font-bold">VND</span></span>
+                <span className="text-2xl font-black text-white">{Number(totalPrice * (100 - discountPercent) / 100).toLocaleString()} <span className="text-base text-slate-400 font-bold">VND</span></span>
               </div>
 
               <button 

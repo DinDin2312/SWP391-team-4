@@ -32,7 +32,13 @@ public class UserController {
         profile.put("email", user.getEmail());
         profile.put("phone", user.getPhone());
         profile.put("bio", user.getBio());
-        profile.put("loyaltyPoints", user.getLoyaltyPoints());
+        int points = user.getLoyaltyPoints() == null ? 0 : user.getLoyaltyPoints();
+        profile.put("loyaltyPoints", points);
+        String memberTier = "MEMBER";
+        if (points >= 3000) memberTier = "PLATINUM";
+        else if (points >= 1500) memberTier = "GOLD";
+        else if (points >= 500) memberTier = "SILVER";
+        profile.put("memberTier", memberTier);
         
         return ResponseEntity.ok(profile);
     }

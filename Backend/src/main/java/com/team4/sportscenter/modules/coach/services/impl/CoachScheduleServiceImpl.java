@@ -24,6 +24,7 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
 
     private final CoachScheduleRepository coachScheduleRepository;
     private final BookingRepository bookingRepository;
+    private final com.team4.sportscenter.modules.auth.repositories.UserRepository userRepository;
 
     @Override
     public List<CoachScheduleResponse> getCoachSchedules(String coachEmail) {
@@ -107,20 +108,20 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
     @Override
     public void updateAttendance(Integer scheduleId, UpdateAttendanceRequest request, String coachEmail) {
         Schedule schedule = coachScheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch học với ID: " + scheduleId));
+                .orElseThrow(() -> new RuntimeException("KhĂ´ng tĂ¬m tháº¥y lá»‹ch há»c vá»›i ID: " + scheduleId));
 
         if (!schedule.getGymClass().getCoach().getEmail().equalsIgnoreCase(coachEmail)) {
-            throw new RuntimeException("Bạn không có quyền điểm danh cho lịch học này.");
+            throw new RuntimeException("Báº¡n khĂ´ng cĂ³ quyá»n Ä‘iá»ƒm danh cho lá»‹ch há»c nĂ y.");
         }
 
         // Validate date: session date must be EQUAL to today (cannot be in future or past)
         LocalDate sessionDate = schedule.getStartTime().toLocalDate();
         LocalDate today = LocalDate.now();
         if (sessionDate.isAfter(today)) {
-            throw new RuntimeException("Chưa đến ngày học! Chỉ có thể thực hiện điểm danh vào đúng ngày học.");
+            throw new RuntimeException("ChÆ°a Ä‘áº¿n ngĂ y há»c! Chá»‰ cĂ³ thá»ƒ thá»±c hiá»‡n Ä‘iá»ƒm danh vĂ o Ä‘Ăºng ngĂ y há»c.");
         }
         if (sessionDate.isBefore(today)) {
-            throw new RuntimeException("Ngày học đã trôi qua! Không thể thực hiện hoặc chỉnh sửa điểm danh cho buổi học trong quá khứ.");
+            throw new RuntimeException("NgĂ y há»c Ä‘Ă£ trĂ´i qua! KhĂ´ng thá»ƒ thá»±c hiá»‡n hoáº·c chá»‰nh sá»­a Ä‘iá»ƒm danh cho buá»•i há»c trong quĂ¡ khá»©.");
         }
 
         if (request == null || request.getAttendances() == null || request.getAttendances().isEmpty()) {
@@ -143,12 +144,24 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
             }
 
             if (booking != null) {
+                String oldStatus = booking.getAttendanceStatus() == null ? "NOT_YET" : booking.getAttendanceStatus();
                 String newStatus = item.getAttendanceStatus();
                 if (newStatus != null) {
                     newStatus = newStatus.trim().toUpperCase();
                     if (newStatus.equals("PRESENT") || newStatus.equals("ABSENT") || newStatus.equals("NOT_YET")) {
                         booking.setAttendanceStatus(newStatus);
                         bookingRepository.save(booking);
+                        
+                        com.team4.sportscenter.modules.auth.entities.User member = booking.getUser();
+                        int points = member.getLoyaltyPoints() == null ? 0 : member.getLoyaltyPoints();
+                        
+                        if (!"PRESENT".equals(oldStatus) && "PRESENT".equals(newStatus)) {
+                            member.setLoyaltyPoints(points + 10);
+                            userRepository.save(member);
+                        } else if ("PRESENT".equals(oldStatus) && !"PRESENT".equals(newStatus)) {
+                            member.setLoyaltyPoints(Math.max(0, points - 10));
+                            userRepository.save(member);
+                        }
                     }
                 }
             }

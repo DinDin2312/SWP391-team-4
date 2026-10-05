@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { CheckCircle, XCircle, Clock, Calendar, MapPin, User, Activity } from "lucide-react";
 
+import { Filter } from "lucide-react";
+
 const AttendanceHistory = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [filterStatus, setFilterStatus] = useState("ALL");
 
   useEffect(() => {
     fetchHistory();
@@ -17,10 +19,17 @@ const AttendanceHistory = () => {
       const res = await axios.get("http://localhost:8080/api/v1/member/calendar-bookings", {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const sorted = res.data.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+      // Filter out future classes that haven't been marked yet
+      const now = new Date();
+      const pastBookings = res.data.filter(b => 
+        b.attendanceStatus === "PRESENT" || 
+        b.attendanceStatus === "ABSENT" || 
+        new Date(b.startTime) < now
+      );
+      // Sort descending (nearest time to furthest past time)
+      const sorted = pastBookings.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
       setBookings(sorted);
     } catch (err) {
-      setError("Failed to fetch attendance history");
     } finally {
       setLoading(false);
     }
@@ -37,6 +46,8 @@ const AttendanceHistory = () => {
   const totalCompleted = presentCount + absentCount;
   const attendanceRate = totalCompleted > 0 ? Math.round((presentCount / totalCompleted) * 100) : 0;
 
+  const filteredBookings = bookings.filter(b => filterStatus === "ALL" || b.attendanceStatus === filterStatus);
+
   if (loading) return <div className="flex items-center justify-center h-64 text-slate-400">Loading history...</div>;
 
   return (
@@ -48,6 +59,21 @@ const AttendanceHistory = () => {
             Attendance History
           </h1>
           <p className="text-slate-400 text-sm mt-1">Your attendance history and participation rate.</p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-[#111d38] border border-slate-700/50 rounded-xl px-3 py-2">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <select 
+              className="bg-transparent border-none outline-none text-sm text-slate-300 font-medium cursor-pointer"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="ALL">All Past Classes</option>
+              <option value="PRESENT">Present Only</option>
+              <option value="ABSENT">Absent Only</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -86,9 +112,9 @@ const AttendanceHistory = () => {
           <h2 className="text-lg font-bold text-white">Session Details</h2>
         </div>
         
-        {bookings.length === 0 ? (
+        {filteredBookings.length === 0 ? (
           <div className="p-8 text-center text-slate-400">
-            No attendance records found.
+            No attendance records found matching your filter.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -102,7 +128,7 @@ const AttendanceHistory = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
-                {bookings.map((booking) => {
+                {filteredBookings.map((booking) => {
                   const date = new Date(booking.startTime);
                   const endTime = new Date(booking.endTime);
                   return (

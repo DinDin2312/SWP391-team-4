@@ -1,17 +1,10 @@
-﻿import { ConfirmModal } from '../../../components/ui/confirm-modal';
+import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../../../context/AuthContext';
 import {
-  LayoutDashboard,
-  CalendarDays,
-  CreditCard,
   Dumbbell,
-  HeartPulse,
-  Bell,
-  Settings,
-  LogOut,
   QrCode,
   ShieldCheck,
   Calendar,
@@ -24,13 +17,11 @@ import {
   Clock,
   MapPin,
   User, TrendingUp,
-  Waves,
-  ShoppingCart,
 } from 'lucide-react';
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
-  const { userInfo, logout } = useContext(AuthContext);
+  const { userInfo } = useContext(AuthContext);
 
   const [activeTab, setActiveTab] = useState('all');
   const [cancelModal, setCancelModal] = useState({ isOpen: false, classId: null });
@@ -46,6 +37,8 @@ const CustomerDashboard = () => {
   const [loadingBookings, setLoadingBookings] = useState(true);
 
   const [totalCheckIns, setTotalCheckIns] = useState(0);
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [memberTier, setMemberTier] = useState('MEMBER');
   const [recentActivities, setRecentActivities] = useState([]);
 
 // Fetch membership card and schedule data
@@ -55,16 +48,21 @@ const CustomerDashboard = () => {
         const token = localStorage.getItem('token');
         
 // Call 2 APIs in parallel for speed
-        const [membershipRes, bookingsRes, checkInsRes, recentRes] = await Promise.all([
+        const [membershipRes, bookingsRes, checkInsRes, recentRes, profileRes] = await Promise.all([
           axios.get('http://localhost:8080/api/v1/member/my-membership', { headers: { Authorization: `Bearer ${token}` } }),
           axios.get('http://localhost:8080/api/v1/member/upcoming-bookings', { headers: { Authorization: `Bearer ${token}` } }),
           axios.get('http://localhost:8080/api/v1/member/total-checkins', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://localhost:8080/api/v1/member/recent-activities', { headers: { Authorization: `Bearer ${token}` } })
+          axios.get('http://localhost:8080/api/v1/member/recent-activities', { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get('http://localhost:8080/api/v1/user/profile', { headers: { Authorization: `Bearer ${token}` } })
         ]);
         
         setMembership(membershipRes.data);
         setUpcomingBookings(bookingsRes.data);
         setTotalCheckIns(checkInsRes.data);
+        if (profileRes.data) {
+          setLoyaltyPoints(profileRes.data.loyaltyPoints);
+          setMemberTier(profileRes.data.memberTier);
+        }
         setRecentActivities(recentRes.data);
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -83,7 +81,6 @@ const CustomerDashboard = () => {
   }, []);
 
 // Get full name from login session
-  const fullName = userInfo?.fullName || 'Active Member';
   
   const getMemberId = (email) => {
     if (!email) return '88204';
@@ -94,106 +91,6 @@ const CustomerDashboard = () => {
     return Math.abs(hash).toString().substring(0, 5);
   };
   const dynamicMemberId = getMemberId(userInfo?.email);
-
-  const firstName = fullName.split(' ')[0];
-  const initials = fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-// Sample upcoming schedule data
-  const scheduleItems = [
-    {
-      id: 1,
-      badge: 'TODAY',
-      time: '17:30',
-      title: 'HIIT Performance & Conditioning',
-      status: 'Confirmed',
-      trainer: 'Marcus Vance',
-      location: 'Functional Lab 01',
-      duration: '60 min',
-      canCheckIn: true,
-      canCancel: true,
-    },
-    {
-      id: 2,
-      badge: 'TOMORROW',
-      time: '09:00',
-      title: 'Smart Court Tennis Practice',
-      status: 'Booked',
-      trainer: 'Coach Sarah Lin',
-      location: 'Smart Court 3',
-      duration: '90 min',
-      canReschedule: true,
-      canCancel: true,
-    },
-    {
-      id: 3,
-      badge: 'OCT 02',
-      time: '14:00',
-      title: 'Advanced Recovery & Cryo Chamber',
-      status: 'Scheduled',
-      trainer: 'Dr. Elena Marks',
-      location: 'Recovery Zone 4',
-      duration: '45 min',
-      canCancel: true,
-    },
-  ];
-
-// Sample recent activity data
-  const activityLogs = [
-    {
-      id: 1,
-      dateTime: 'Yesterday, 18:15 PM',
-      activity: 'Open Gym Training & Free Weights',
-      facility: 'Main Fitness Floor (Zone A)',
-      trainer: 'Main Fitness Floor (Zone A)',
-      type: 'gym',
-      duration: '1h 15m',
-      status: 'Completed',
-      metric: '485 kcal',
-      subMetric: 'Avg HR 142 bpm',
-    },
-    {
-      id: 2,
-      dateTime: 'Sep 28, 2025, 10:00 AM',
-      activity: 'Smart Badminton Court 4',
-      facility: 'Self-Practice Session',
-      trainer: 'Self-Practice Session',
-      type: 'court',
-      duration: '1h 00m',
-      status: 'Completed',
-      metric: '390 kcal',
-      subMetric: 'Avg HR 134 bpm',
-    },
-    {
-      id: 3,
-      dateTime: 'Sep 26, 2025, 07:30 AM',
-      activity: 'Power Vinyasa Yoga',
-      facility: 'Master Chloe Wei',
-      trainer: 'Master Chloe Wei',
-      type: 'yoga',
-      duration: '50m',
-      status: 'Attended',
-      metric: 'Active Recovery',
-      subMetric: 'Avg HR 108 bpm',
-    },
-    {
-      id: 4,
-      dateTime: 'Sep 24, 2025, 16:45 PM',
-      activity: 'Hydrotherapy & Lap Pool',
-      facility: 'Aquatic Zone B (Lane 2)',
-      trainer: 'Aquatic Zone B (Lane 2)',
-      type: 'pool',
-      duration: '45m',
-      status: 'Attended',
-      metric: '18 Laps',
-      subMetric: 'Recovery Routine',
-    },
-  ];
-
   return (
     <div className="space-y-6">
       
@@ -303,15 +200,15 @@ const CustomerDashboard = () => {
               <div className="mt-4 flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-black text-white">
-                    {totalCheckIns * 50} <span className="text-xs font-medium text-slate-400">Pts</span>
+                    {loyaltyPoints} <span className="text-xs font-medium text-slate-400">Pts</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-amber-400 mt-1 font-semibold">
-                    <span>Unlock Premium Tier at 500 Pts</span>
+                    <span>{memberTier === 'PLATINUM' ? '15% Off all purchases' : memberTier === 'GOLD' ? '10% Off all purchases' : memberTier === 'SILVER' ? '5% Off all purchases' : 'Reach 500 Pts for 5% Off'}</span>
                   </div>
                 </div>
                 {/* Circular Indicator */}
                 <div className="w-11 h-11 rounded-full border-2 border-amber-500/30 flex items-center justify-center font-bold text-[10px] text-amber-400 shadow-lg shadow-amber-500/10">
-                  {totalCheckIns >= 10 ? 'PRO' : 'NEW'}
+                  {memberTier === 'PLATINUM' ? 'PLAT' : memberTier === 'MEMBER' ? 'NEW' : memberTier}
                 </div>
               </div>
             </div>
@@ -361,9 +258,9 @@ const CustomerDashboard = () => {
     upcomingBookings.filter(item => {
       if (activeTab === 'all') return true;
       const name = item.className.toLowerCase();
-      if (activeTab === 'group') return name.includes('yoga') || name.includes('gym') || name.includes('cơ');
-      if (activeTab === 'courts') return name.includes('court') || name.includes('sân');
-      if (activeTab === 'recovery') return name.includes('recovery') || name.includes('hồi phục');
+      if (activeTab === 'group') return name.includes('yoga') || name.includes('gym') || name.includes('cĂ†Â¡');
+      if (activeTab === 'courts') return name.includes('court') || name.includes('sÄ‚Â¢n');
+      if (activeTab === 'recovery') return name.includes('recovery') || name.includes('hĂ¡Â»â€œi phĂ¡Â»Â¥c');
       return true;
     }).map((item) => {
       const dateObj = new Date(item.startTime);
@@ -643,7 +540,6 @@ const CustomerDashboard = () => {
 };
 
 export default CustomerDashboard;
-
 
 
 
