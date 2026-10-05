@@ -22,20 +22,18 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
   useEffect(() => {
     if (isOpen) {
       setTargetType(initialTargetType);
-      if (initialClassId) {
-        setSelectedClassId(initialClassId);
-      }
-      if (initialStudent) {
-        setSelectedStudentId(initialStudent.userId);
-      }
+      const studentId = initialStudent ? (typeof initialStudent === 'object' ? initialStudent.userId : initialStudent) : '';
+      const classId = initialClassId || '';
+
+      setSelectedClassId(classId);
+      setSelectedStudentId(studentId);
       setErrorMsg('');
       setSuccessMsg('');
-      fetchModalData();
+      fetchModalData(classId, studentId);
     }
   }, [isOpen, initialTargetType, initialStudent, initialClassId]);
 
-
-  const fetchModalData = async () => {
+  const fetchModalData = async (currentClassId, currentStudentId) => {
     try {
       setLoadingData(true);
       const token = localStorage.getItem('token');
@@ -46,14 +44,17 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
         axios.get('http://localhost:8080/api/v1/coach/students', { headers })
       ]);
 
-      setClasses(classRes.data || []);
-      setStudents(studentRes.data || []);
+      const fetchedClasses = classRes.data || [];
+      const fetchedStudents = studentRes.data || [];
 
-      if (classRes.data && classRes.data.length > 0 && !selectedClassId) {
-        setSelectedClassId(classRes.data[0].classId);
+      setClasses(fetchedClasses);
+      setStudents(fetchedStudents);
+
+      if (fetchedClasses.length > 0 && !currentClassId) {
+        setSelectedClassId(fetchedClasses[0].classId);
       }
-      if (studentRes.data && studentRes.data.length > 0 && !selectedStudentId && !initialStudent) {
-        setSelectedStudentId(studentRes.data[0].userId);
+      if (fetchedStudents.length > 0 && !currentStudentId) {
+        setSelectedStudentId(fetchedStudents[0].userId);
       }
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu cho modal thông báo:', err);
@@ -192,8 +193,8 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
                 type="button"
                 onClick={() => setTargetType('ALL')}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${targetType === 'ALL'
-                    ? 'bg-blue-600/20 border-blue-500 text-blue-300 font-bold shadow-lg shadow-blue-500/10'
-                    : 'bg-[#0e172a] border-[#1a2947] text-slate-400 hover:border-slate-600 hover:text-slate-200'
+                  ? 'bg-blue-600/20 border-blue-500 text-blue-300 font-bold shadow-lg shadow-blue-500/10'
+                  : 'bg-[#0e172a] border-[#1a2947] text-slate-400 hover:border-slate-600 hover:text-slate-200'
                   }`}
               >
                 <Users className="w-5 h-5 text-blue-400" />
@@ -204,8 +205,8 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
                 type="button"
                 onClick={() => setTargetType('CLASS')}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${targetType === 'CLASS'
-                    ? 'bg-blue-600/20 border-blue-500 text-blue-300 font-bold shadow-lg shadow-blue-500/10'
-                    : 'bg-[#0e172a] border-[#1a2947] text-slate-400 hover:border-slate-600 hover:text-slate-200'
+                  ? 'bg-blue-600/20 border-blue-500 text-blue-300 font-bold shadow-lg shadow-blue-500/10'
+                  : 'bg-[#0e172a] border-[#1a2947] text-slate-400 hover:border-slate-600 hover:text-slate-200'
                   }`}
               >
                 <School className="w-5 h-5 text-emerald-400" />
@@ -216,8 +217,8 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
                 type="button"
                 onClick={() => setTargetType('INDIVIDUAL')}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${targetType === 'INDIVIDUAL'
-                    ? 'bg-blue-600/20 border-blue-500 text-blue-300 font-bold shadow-lg shadow-blue-500/10'
-                    : 'bg-[#0e172a] border-[#1a2947] text-slate-400 hover:border-slate-600 hover:text-slate-200'
+                  ? 'bg-blue-600/20 border-blue-500 text-blue-300 font-bold shadow-lg shadow-blue-500/10'
+                  : 'bg-[#0e172a] border-[#1a2947] text-slate-400 hover:border-slate-600 hover:text-slate-200'
                   }`}
               >
                 <User className="w-5 h-5 text-amber-400" />
