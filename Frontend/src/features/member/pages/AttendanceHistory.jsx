@@ -7,7 +7,6 @@ import { Filter } from "lucide-react";
 const AttendanceHistory = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [filterStatus, setFilterStatus] = useState("ALL");
 
   useEffect(() => {
@@ -31,7 +30,6 @@ const AttendanceHistory = () => {
       const sorted = pastBookings.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
       setBookings(sorted);
     } catch (err) {
-      setError("Failed to fetch attendance history");
     } finally {
       setLoading(false);
     }

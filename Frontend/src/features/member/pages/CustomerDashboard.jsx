@@ -21,7 +21,7 @@ import {
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
-  const { userInfo, logout } = useContext(AuthContext);
+  const { userInfo } = useContext(AuthContext);
 
   const [activeTab, setActiveTab] = useState('all');
   const [cancelModal, setCancelModal] = useState({ isOpen: false, classId: null });
@@ -81,7 +81,6 @@ const CustomerDashboard = () => {
   }, []);
 
 // Get full name from login session
-  const fullName = userInfo?.fullName || 'Active Member';
   
   const getMemberId = (email) => {
     if (!email) return '88204';
@@ -259,9 +258,9 @@ const CustomerDashboard = () => {
     upcomingBookings.filter(item => {
       if (activeTab === 'all') return true;
       const name = item.className.toLowerCase();
-      if (activeTab === 'group') return name.includes('yoga') || name.includes('gym') || name.includes('cÆ¡');
-      if (activeTab === 'courts') return name.includes('court') || name.includes('sĂ¢n');
-      if (activeTab === 'recovery') return name.includes('recovery') || name.includes('há»“i phá»¥c');
+      if (activeTab === 'group') return name.includes('yoga') || name.includes('gym') || name.includes('cĂ†Â¡');
+      if (activeTab === 'courts') return name.includes('court') || name.includes('sÄ‚Â¢n');
+      if (activeTab === 'recovery') return name.includes('recovery') || name.includes('hĂ¡Â»â€œi phĂ¡Â»Â¥c');
       return true;
     }).map((item) => {
       const dateObj = new Date(item.startTime);
