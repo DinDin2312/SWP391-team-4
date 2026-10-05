@@ -340,6 +340,7 @@ const CoachStudents = () => {
         isOpen={isNotifModalOpen}
         onClose={() => setIsNotifModalOpen(false)}
         initialTargetType={notifTargetType}
+        initialStudent={notifStudent}
       />
     </div>
   );
