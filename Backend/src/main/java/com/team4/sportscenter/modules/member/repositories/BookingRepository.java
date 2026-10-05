@@ -25,9 +25,7 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.schedule.scheduleId = :scheduleId AND b.status = 'CONFIRMED'")
     Integer countBookedSlots(@Param("scheduleId") Integer scheduleId);
 
-    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.email = :email AND b.schedule.scheduleId = :scheduleId AND b.status != 'CANCELLED'")
-    boolean existsByEmailAndScheduleId(@Param("email") String email, @Param("scheduleId") Integer scheduleId);
-    
+    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.email = :email AND b.schedule.scheduleId = :scheduleId AND b.status != 'CANCELLED'")    
     @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.email = :email AND b.schedule.gymClass.classId = :classId AND b.status != 'CANCELLED'")
     boolean existsByEmailAndClassId(@Param("email") String email, @Param("classId") Integer classId);
     @Query("SELECT b FROM Booking b WHERE b.status = 'PENDING' AND (b.bookingTime < :cutoff OR b.schedule.startTime < :now)")

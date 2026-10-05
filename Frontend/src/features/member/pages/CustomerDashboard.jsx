@@ -4,14 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../../../context/AuthContext';
 import {
-  LayoutDashboard,
-  CalendarDays,
-  CreditCard,
   Dumbbell,
-  HeartPulse,
-  Bell,
-  Settings,
-  LogOut,
   QrCode,
   ShieldCheck,
   Calendar,
@@ -24,8 +17,6 @@ import {
   Clock,
   MapPin,
   User, TrendingUp,
-  Waves,
-  ShoppingCart,
 } from 'lucide-react';
 
 const CustomerDashboard = () => {
@@ -101,106 +92,6 @@ const CustomerDashboard = () => {
     return Math.abs(hash).toString().substring(0, 5);
   };
   const dynamicMemberId = getMemberId(userInfo?.email);
-
-  const firstName = fullName.split(' ')[0];
-  const initials = fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-// Sample upcoming schedule data
-  const scheduleItems = [
-    {
-      id: 1,
-      badge: 'TODAY',
-      time: '17:30',
-      title: 'HIIT Performance & Conditioning',
-      status: 'Confirmed',
-      trainer: 'Marcus Vance',
-      location: 'Functional Lab 01',
-      duration: '60 min',
-      canCheckIn: true,
-      canCancel: true,
-    },
-    {
-      id: 2,
-      badge: 'TOMORROW',
-      time: '09:00',
-      title: 'Smart Court Tennis Practice',
-      status: 'Booked',
-      trainer: 'Coach Sarah Lin',
-      location: 'Smart Court 3',
-      duration: '90 min',
-      canReschedule: true,
-      canCancel: true,
-    },
-    {
-      id: 3,
-      badge: 'OCT 02',
-      time: '14:00',
-      title: 'Advanced Recovery & Cryo Chamber',
-      status: 'Scheduled',
-      trainer: 'Dr. Elena Marks',
-      location: 'Recovery Zone 4',
-      duration: '45 min',
-      canCancel: true,
-    },
-  ];
-
-// Sample recent activity data
-  const activityLogs = [
-    {
-      id: 1,
-      dateTime: 'Yesterday, 18:15 PM',
-      activity: 'Open Gym Training & Free Weights',
-      facility: 'Main Fitness Floor (Zone A)',
-      trainer: 'Main Fitness Floor (Zone A)',
-      type: 'gym',
-      duration: '1h 15m',
-      status: 'Completed',
-      metric: '485 kcal',
-      subMetric: 'Avg HR 142 bpm',
-    },
-    {
-      id: 2,
-      dateTime: 'Sep 28, 2025, 10:00 AM',
-      activity: 'Smart Badminton Court 4',
-      facility: 'Self-Practice Session',
-      trainer: 'Self-Practice Session',
-      type: 'court',
-      duration: '1h 00m',
-      status: 'Completed',
-      metric: '390 kcal',
-      subMetric: 'Avg HR 134 bpm',
-    },
-    {
-      id: 3,
-      dateTime: 'Sep 26, 2025, 07:30 AM',
-      activity: 'Power Vinyasa Yoga',
-      facility: 'Master Chloe Wei',
-      trainer: 'Master Chloe Wei',
-      type: 'yoga',
-      duration: '50m',
-      status: 'Attended',
-      metric: 'Active Recovery',
-      subMetric: 'Avg HR 108 bpm',
-    },
-    {
-      id: 4,
-      dateTime: 'Sep 24, 2025, 16:45 PM',
-      activity: 'Hydrotherapy & Lap Pool',
-      facility: 'Aquatic Zone B (Lane 2)',
-      trainer: 'Aquatic Zone B (Lane 2)',
-      type: 'pool',
-      duration: '45m',
-      status: 'Attended',
-      metric: '18 Laps',
-      subMetric: 'Recovery Routine',
-    },
-  ];
-
   return (
     <div className="space-y-6">
       
@@ -368,9 +259,9 @@ const CustomerDashboard = () => {
     upcomingBookings.filter(item => {
       if (activeTab === 'all') return true;
       const name = item.className.toLowerCase();
-      if (activeTab === 'group') return name.includes('yoga') || name.includes('gym') || name.includes('cơ');
-      if (activeTab === 'courts') return name.includes('court') || name.includes('sân');
-      if (activeTab === 'recovery') return name.includes('recovery') || name.includes('hồi phục');
+      if (activeTab === 'group') return name.includes('yoga') || name.includes('gym') || name.includes('cÆ¡');
+      if (activeTab === 'courts') return name.includes('court') || name.includes('sĂ¢n');
+      if (activeTab === 'recovery') return name.includes('recovery') || name.includes('há»“i phá»¥c');
       return true;
     }).map((item) => {
       const dateObj = new Date(item.startTime);
