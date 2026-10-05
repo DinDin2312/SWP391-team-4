@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 @Builder
 public class RecentActivityResponse {
     private Integer bookingId;
+    private Integer classId;
     private String className;
     private String coachName;
     private String roomName;

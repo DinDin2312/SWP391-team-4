@@ -60,6 +60,16 @@ public class MemberController {
         }
     }
 
+    @PostMapping("/cancel-class/{classId}")
+    public ResponseEntity<String> cancelClass(Authentication authentication, @PathVariable Integer classId) {
+        try {
+            memberService.cancelClass(authentication.getName(), classId);
+            return ResponseEntity.ok("Successfully cancelled class");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @PostMapping("/add-package-to-cart/{packageId}")
     public ResponseEntity<String> addPackageToCart(Authentication authentication, @PathVariable Integer packageId) {
         try {

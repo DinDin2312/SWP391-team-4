@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class CalendarBookingResponse {
     private Integer bookingId;
+    private Integer classId;
     private String className;
     private String coachName;
     private String roomName;

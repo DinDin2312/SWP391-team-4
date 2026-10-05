@@ -1,4 +1,5 @@
-﻿import React, { useState, useContext } from 'react';
+﻿import { ConfirmModal } from '../../../components/ui/confirm-modal';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../../../context/AuthContext';
@@ -32,6 +33,7 @@ const CustomerDashboard = () => {
   const { userInfo, logout } = useContext(AuthContext);
 
   const [activeTab, setActiveTab] = useState('all');
+  const [cancelModal, setCancelModal] = useState({ isOpen: false, classId: null });
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -414,9 +416,7 @@ const CustomerDashboard = () => {
               <QrCode className="w-3.5 h-3.5" />
               Check-in
             </button>
-            <button className="px-3 py-1.5 rounded-lg bg-transparent hover:bg-red-500/10 text-slate-400 hover:text-red-400 text-xs font-semibold transition-colors">
-              Cancel
-            </button>
+            <button onClick={() => setCancelModal({ isOpen: true, classId: item.classId })} className="px-3 py-1.5 rounded-lg bg-transparent hover:bg-red-500/10 text-slate-400 hover:text-red-400 text-xs font-semibold transition-colors"> Cancel </button>
           </div>
         </div>
       );
@@ -624,8 +624,28 @@ const CustomerDashboard = () => {
           </div>
         </div>
       
+      <ConfirmModal 
+        isOpen={cancelModal.isOpen}
+        onClose={() => setCancelModal({ isOpen: false, classId: null })}
+        onConfirm={() => {
+          axios.post('http://localhost:8080/api/v1/member/cancel-class/' + cancelModal.classId, {}, {
+            headers: { Authorization: "Bearer " + localStorage.getItem('token') }
+          }).then(() => {
+            window.location.reload();
+          }).catch(err => alert(err.response?.data || 'Failed to cancel class'));
+        }}
+        title="Cancel Class Registration"
+        message="Are you sure you want to cancel this class? All future sessions of this class will be dropped from your schedule. This action cannot be undone."
+        confirmText="Yes, Cancel Class"
+      />
     </div>
   );
 };
 
 export default CustomerDashboard;
+
+
+
+
+
+
