@@ -52,23 +52,23 @@ const ReceptionistDashboard = () => {
                         width: '64px',
                         height: '64px',
                         borderRadius: '1.25rem',
-                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                        backgroundColor: 'var(--primary-soft)',
+                        border: '1px solid var(--border)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: '#38bdf8',
+                        color: 'var(--primary)',
                         marginBottom: '1.5rem',
                       }}
                   >
                     <Clock style={{ width: '32px', height: '32px' }} />
                   </div>
 
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f8fafc', margin: '0 0 0.5rem' }}>
+                  <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', margin: '0 0 0.5rem' }}>
                     {getFeatureTitle(activeFeature)}
-                  </h2>
+                  </h1>
 
-                  <p style={{ maxWidth: '480px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.6', margin: '0 0 1.5rem' }}>
+                  <p style={{ maxWidth: '480px', color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.6', margin: '0 0 1.5rem' }}>
                     This feature is currently under development for the Receptionist role. You can switch back to <strong>Search & View Member Information</strong> at any time.
                   </p>
 
@@ -79,18 +79,18 @@ const ReceptionistDashboard = () => {
                         alignItems: 'center',
                         gap: '0.5rem',
                         padding: '0.75rem 1.5rem',
-                        backgroundColor: '#2563eb',
-                        color: '#ffffff',
+                        backgroundColor: 'var(--primary-soft)',
+                        color: 'var(--text)',
                         border: 'none',
                         borderRadius: '0.75rem',
                         fontSize: '0.9rem',
                         fontWeight: 600,
                         cursor: 'pointer',
-                        boxShadow: '0 10px 20px -5px rgba(37, 99, 235, 0.4)',
+                        boxShadow: 'var(--shadow)',
                         transition: 'all 0.2s',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1d4ed8')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#2563eb')}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--primary-soft)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--primary-soft)')}
                   >
                     <ArrowLeft style={{ width: '16px', height: '16px' }} />
                     <span>Back to Member Search</span>

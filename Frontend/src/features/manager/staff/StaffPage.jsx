@@ -89,7 +89,7 @@ function StaffPage({ data, filters, setFilters, reload, openModal, selectPage, c
 
   return <>
     <ManagerPageHeader title={page.title} description={page.description} actions={<button className="manager-primary manager-add-account" onClick={() => openModal({ type: 'user' })}><Plus size={17} /> {managerEn.staff.addAccount}</button>} />
-    <StaffStats users={users} activeFilter={quickFilter} onFilter={selectQuickFilter} />
+    <StaffStats users={visibleUsers} activeFilter={quickFilter} onFilter={selectQuickFilter} />
     {actionError && <div className="manager-alert" role="alert">{actionError}</div>}
     <div className="manager-filterbar">
       <label className="manager-search"><Search size={17} /><input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder={managerEn.staff.filters.searchPlaceholder} aria-label={managerEn.staff.filters.searchLabel} autoComplete="off" /></label>

@@ -1,9 +1,10 @@
+import { formatMoney } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Search, ShoppingBag, Percent, Smartphone, RefreshCw, 
-  Dumbbell, Flame, Trophy, Shield, Gauge, Activity, Snowflake, 
+import {
+  Search, ShoppingBag, Percent, Smartphone, RefreshCw,
+  Dumbbell, Flame, Trophy, Shield, Gauge, Activity, Snowflake,
   Building2, Lock, QrCode, FileCheck, ArrowRight, CheckCircle2,
   Trash2, ShoppingCart, Check, ShieldCheck, Tag,
   CircleDollarSign, DollarSign, BadgeCheck, AlertCircle
@@ -18,11 +19,11 @@ const PackageStore = () => {
 
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Fake cart context until Backend Cart API supports packages
   const [cartCount, setCartCount] = useState(0);
   const [cartTotal, setCartTotal] = useState(0);
-  
+
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
   const [addedItems, setAddedItems] = useState({});
 
@@ -72,17 +73,17 @@ const PackageStore = () => {
       await axios.post(`http://localhost:8080/api/v1/member/add-package-to-cart/${pkg.packageId}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       window.dispatchEvent(new Event('cartUpdated'));
 
       setCartCount(prev => prev + 1);
       setCartTotal(prev => prev + pkg.price);
-      
+
       setToast({ visible: true, message: `${pkg.packageName} added to your vault`, type: 'success' });
       setTimeout(() => {
         setToast({ visible: false, message: '', type: 'success' });
       }, 2800);
-      
+
       fetchCart();
     } catch (err) {
       setToast({ visible: true, message: err.response?.data?.message || err.response?.data || 'Error adding to cart', type: 'error' });
@@ -101,7 +102,7 @@ const PackageStore = () => {
       if (response.data && response.data.items) {
         setCartCount(response.data.items.length);
         setCartTotal(response.data.totalPrice || 0);
-        
+
         const cartPackageIds = {};
         response.data.items.forEach(item => {
           if (item.type === 'PACKAGE' && item.packageId) {
@@ -130,7 +131,7 @@ const PackageStore = () => {
       setAddedItems({});
       fetchCart();
       window.dispatchEvent(new Event('cartUpdated'));
-      
+
       setToast({ visible: true, message: 'Cart cleared successfully', type: 'success' });
       setTimeout(() => {
         setToast({ visible: false, message: '', type: 'success' });
@@ -150,7 +151,7 @@ const PackageStore = () => {
         <div className="absolute -top-24 -left-20 w-96 h-96 rounded-full bg-primary-container/15 blur-[100px] pointer-events-none"></div>
         <div className="absolute top-0 right-1/4 w-80 h-80 rounded-full bg-tertiary/10 blur-[90px] pointer-events-none"></div>
         <div className="absolute -bottom-20 right-0 w-72 h-72 rounded-full bg-secondary/20 blur-[80px] pointer-events-none"></div>
-        
+
         <div className="relative z-10 p-space-lg lg:p-space-xl flex flex-col gap-space-lg">
           {/* Breadcrumb / Overline Info */}
           <div className="flex flex-wrap items-center justify-between gap-space-md">
@@ -190,15 +191,15 @@ const PackageStore = () => {
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-space-sm">
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-5 h-5" />
-                <input 
+                <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search tiers, cryo, passes..." 
-                  className="w-full bg-surface-container-highest text-on-surface placeholder:text-on-surface-variant text-sm pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary border-none shadow-sm"
+                  placeholder="Search tiers, cryo, passes..."
+                  className="w-full bg-surface-container-highest text-on-surface placeholder:text-on-surface-variant text-sm pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary border-none shadow-[var(--shadow)]"
                 />
               </div>
-              <button 
+              <button
                 onClick={() => navigate('/member/cart')}
                 className="flex-shrink-0 flex items-center gap-space-sm px-space-md py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest transition-all group"
               >
@@ -213,7 +214,7 @@ const PackageStore = () => {
                 <div className="flex flex-col text-left">
                   <span className="text-[11px] font-semibold text-on-surface-variant uppercase leading-none">Cart Vault</span>
                   <span className="text-[14px] text-on-surface leading-tight font-bold">
-                    {cartTotal.toLocaleString()} &curren;
+                    {formatMoney(cartTotal)}
                   </span>
                 </div>
               </button>
@@ -266,12 +267,12 @@ const PackageStore = () => {
           ].map(tab => {
             const isActive = activeCategory === tab.id;
             return (
-              <button 
+              <button
                 key={tab.id}
                 onClick={() => setActiveCategory(tab.id)}
                 className={`flex items-center whitespace-nowrap gap-2 px-4 py-2 rounded-lg text-[13px] transition-all font-semibold ${
-                  isActive 
-                    ? 'bg-primary-container text-on-primary-container shadow-sm' 
+                  isActive
+                    ? 'bg-primary-container text-on-primary-container shadow-[var(--shadow)]'
                     : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
                 }`}
               >
@@ -373,8 +374,7 @@ const PackageStore = () => {
                   </span>
                 </div>
                 <div className="flex items-baseline gap-1 mt-0.5 mb-5">
-                  <span className="text-2xl font-extrabold text-on-surface">{pkg.price.toLocaleString()}</span>
-                  <span className="text-[13px] text-primary font-bold">VND</span>
+                  <span className="text-2xl font-extrabold text-on-surface">{formatMoney(pkg.price)}</span>
                   <span className="text-[12px] text-on-surface-variant ml-1">/ {pkg.durationDays} days</span>
                 </div>
 
@@ -391,15 +391,15 @@ const PackageStore = () => {
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={() => handleAddToCart(pkg)}
                 disabled={isAdded}
                 className={`relative z-10 w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-semibold text-[14px] transition-all active:scale-[0.99] ${
-                  isAdded 
+                  isAdded
                     ? 'bg-surface-container-highest text-on-surface-variant cursor-not-allowed border border-surface-container-highest'
-                    : isPopular 
-                      ? 'bg-primary-container hover:bg-inverse-primary text-on-primary-container hover:text-surface shadow-lg shadow-primary-container/20'
-                      : 'bg-surface-container-high hover:bg-primary text-on-surface hover:text-on-primary shadow-sm'
+                    : isPopular
+                      ? 'bg-primary-container hover:bg-inverse-primary text-on-primary-container hover:text-surface shadow-[var(--shadow)] shadow-primary-container/20'
+                      : 'bg-surface-container-high hover:bg-primary text-on-surface hover:text-on-primary shadow-[var(--shadow)]'
                 }`}
               >
                 {isAdded ? (
@@ -420,7 +420,7 @@ const PackageStore = () => {
       </div>
 
       {/* Corporate Callout Banner */}
-      <div className="mt-space-xl p-space-lg lg:p-space-xl rounded-2xl bg-surface-container-low flex flex-col md:flex-row items-center justify-between gap-space-lg shadow-md relative overflow-hidden">
+      <div className="mt-space-xl p-space-lg lg:p-space-xl rounded-2xl bg-surface-container-low flex flex-col md:flex-row items-center justify-between gap-space-lg shadow-[var(--shadow)] relative overflow-hidden">
         <div className="absolute -right-10 -bottom-10 w-48 h-48 rounded-full bg-primary/10 blur-3xl pointer-events-none"></div>
         <div className="flex items-center gap-space-md z-10">
           <div className="w-14 h-14 rounded-2xl bg-surface-container-high text-primary flex items-center justify-center shrink-0">
@@ -461,7 +461,7 @@ const PackageStore = () => {
 
       {/* Sticky Bottom Cart & Checkout Bar */}
       <div className="fixed bottom-4 left-4 right-4 lg:left-80 lg:right-8 z-40">
-        <div className="p-4 sm:p-6 rounded-2xl bg-surface-container-high/95 backdrop-blur-xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 border border-surface-container-highest/50">
+        <div className="p-4 sm:p-6 rounded-2xl bg-surface-container-high/95 backdrop-blur-xl shadow-[var(--shadow)] flex flex-col sm:flex-row items-center justify-between gap-4 border border-surface-container-highest/50">
           <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
             <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-primary-container text-on-primary-container shrink-0">
               <ShoppingBag className="w-6 h-6" />
@@ -476,24 +476,24 @@ const PackageStore = () => {
               </div>
               <div className="flex items-baseline gap-1 mt-0.5">
                 <span className="text-[12px] text-on-surface-variant">Subtotal:</span>
-                <span className="text-xl font-bold text-on-surface">{cartTotal.toLocaleString()}</span>
+                <span className="text-xl font-bold text-on-surface">{formatMoney(cartTotal)}</span>
                 <span className="text-[12px] text-primary font-bold">VND</span>
                 <span className="text-[11px] text-on-surface-variant hidden md:inline ml-1">(15% Member Rebate Calculated)</span>
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <button 
+            <button
               onClick={clearCart}
               className="hidden md:flex items-center gap-1 px-4 py-3 rounded-xl bg-surface-container text-on-surface-variant hover:text-on-surface text-[13px] font-semibold transition-all"
             >
               <Trash2 className="w-4 h-4" />
               <span>Clear</span>
             </button>
-            <button 
+            <button
               onClick={() => navigate('/member/cart')}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-primary-container hover:bg-inverse-primary text-on-primary-container hover:text-surface text-[14px] font-bold transition-all shadow-lg shadow-primary-container/20 active:scale-95"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-primary-container hover:bg-inverse-primary text-on-primary-container hover:text-surface text-[14px] font-bold transition-all shadow-[var(--shadow)] shadow-primary-container/20 active:scale-95"
             >
               <span>Proceed to Checkout</span>
               <ArrowRight className="w-5 h-5" />
@@ -506,13 +506,13 @@ const PackageStore = () => {
       <div className={`fixed bottom-32 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ${
         toast.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
       }`}>
-        <div className={`flex items-center gap-3 px-5 py-3 rounded-full shadow-2xl ${
-          toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-inverse-surface text-inverse-on-surface'
+        <div className={`flex items-center gap-3 px-5 py-3 rounded-full shadow-[var(--shadow)] ${
+          toast.type === 'error' ? 'bg-[var(--danger)] text-[color:var(--on-primary)]' : 'bg-inverse-surface text-inverse-on-surface'
         }`}>
           <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-            toast.type === 'error' ? 'bg-white/20' : 'bg-primary'
+            toast.type === 'error' ? 'bg-[var(--surface)]' : 'bg-primary'
           }`}>
-            {toast.type === 'error' ? <AlertCircle className="w-4 h-4 text-white" /> : <Check className="w-4 h-4 text-on-primary" />}
+            {toast.type === 'error' ? <AlertCircle className="w-4 h-4 text-[var(--text)]" /> : <Check className="w-4 h-4 text-on-primary" />}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-[13px] font-semibold">{toast.message}</span>

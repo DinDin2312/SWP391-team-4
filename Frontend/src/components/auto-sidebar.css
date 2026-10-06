@@ -1,0 +1,19 @@
+.auto-sidebar { --role-sidebar-width: 256px; }
+@media (min-width: 1024px) {
+  .role-shell > .auto-sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; transition: width .2s ease; }
+  .role-shell > .auto-sidebar.is-collapsed { --role-sidebar-width: 76px; --role-sidebar-padding: 12px; --role-sidebar-justify: center; --role-sidebar-direction: column; }
+  .auto-sidebar.is-collapsed .auto-sidebar-brand { padding: 24px 0; justify-content: center; }
+  .auto-sidebar.is-collapsed .auto-sidebar-brand > div:first-child { flex-shrink: 0; }
+  .auto-sidebar.is-collapsed .auto-sidebar-brand > div:nth-child(2),
+  .auto-sidebar.is-collapsed .auto-sidebar-nav button span,
+  .auto-sidebar.is-collapsed .auto-sidebar-nav > span,
+  .auto-sidebar.is-collapsed .auto-sidebar-profile-text,
+  .auto-sidebar.is-collapsed .auto-sidebar-role { display: none; }
+  .auto-sidebar.is-collapsed .auto-sidebar-nav button { justify-content: center; padding-inline: 0; }
+  .auto-sidebar.is-collapsed .auto-sidebar-nav button svg { flex-shrink: 0; }
+  .auto-sidebar.is-collapsed .auto-sidebar-footer { padding: 16px 8px; }
+  .auto-sidebar.is-collapsed .auto-sidebar-footer > div { flex-direction: column; gap: 12px; padding: 0; border: 0; }
+  .auto-sidebar.is-collapsed .auto-sidebar-footer > div > div { gap: 0; }
+}
+@media (max-width: 1023px) { .auto-sidebar { --role-sidebar-width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .role-shell > .auto-sidebar { transition: none; } }

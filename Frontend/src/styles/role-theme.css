@@ -1,70 +1,20 @@
-.role-shell {
-  min-height: 100vh;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  transition: color .18s ease, background-color .18s ease;
-}
-
-.role-theme-toggle {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
-  display: inline-grid;
-  place-items: center;
-  padding: 0;
-  color: #cbd5e1;
-  border: 1px solid #1a2947;
-  border-radius: 8px;
-  background: #0e172a;
-  cursor: pointer;
-  transition: color .18s ease, background-color .18s ease, border-color .18s ease;
-}
-
-.role-theme-toggle:hover { color: #60a5fa; border-color: #3b82f6; }
-.role-theme-toggle.is-floating { position: fixed; z-index: 60; top: 20px; right: 20px; box-shadow: 0 8px 24px rgba(0, 0, 0, .22); }
-
-.role-shell.is-light { color: #17202a !important; background-color: #f4f6f8 !important; color-scheme: light; }
-.role-shell.is-light .role-theme-toggle { color: #475569; border-color: #d6dde2; background: #ffffff; }
-.role-shell.is-light .role-theme-toggle:hover { color: #1d4ed8; border-color: #60a5fa; }
-
-/* Member and Coach use Tailwind utility classes with fixed dark colors. */
-.role-shell.is-light main [class*="bg-[#060b17]"],
-.role-shell.is-light main [class*="bg-[#091124]"],
-.role-shell.is-light main [class*="bg-[#0a1120]"],
-.role-shell.is-light main [class*="bg-[#0b1326]"],
-.role-shell.is-light main [class*="bg-[#0e172a]"],
-.role-shell.is-light main [class*="bg-[#0f1b33]"],
-.role-shell.is-light main [class*="bg-[#111d38]"] { background-color: #ffffff !important; }
-.role-shell.is-light main [class*="from-blue-900"],
-.role-shell.is-light main [class*="from-slate-9"] { background-image: none !important; background-color: #ffffff !important; }
-.role-shell.is-light main .text-white { color: #17202a !important; }
-.role-shell.is-light main .text-slate-200,
-.role-shell.is-light main .text-slate-300 { color: #334155 !important; }
-.role-shell.is-light main .text-slate-400 { color: #64748b !important; }
-.role-shell.is-light main [class*="border-[#15203b]"],
-.role-shell.is-light main [class*="border-[#1a2947]"],
-.role-shell.is-light main [class*="border-[#1b2b4f]"],
-.role-shell.is-light main [class*="border-[#1e293b]"] { border-color: #dce3e8 !important; }
-.role-shell.is-light main input,
-.role-shell.is-light main select,
-.role-shell.is-light main textarea { color: #17202a !important; background-color: #ffffff !important; border-color: #cfd8df !important; color-scheme: light; }
-
-/* Receptionist screens currently use inline colors; these selectors normalize their rendered styles. */
-.role-shell.is-light main [style*="background-color: rgb(6, 11, 23)"],
-.role-shell.is-light main [style*="background-color: rgb(9, 17, 36)"],
-.role-shell.is-light main [style*="background-color: rgb(10, 17, 32)"],
-.role-shell.is-light main [style*="background-color: rgb(11, 19, 38)"],
-.role-shell.is-light main [style*="background-color: rgb(14, 23, 42)"],
-.role-shell.is-light main [style*="background-color: rgb(15, 27, 51)"],
-.role-shell.is-light main [style*="background-color: rgb(17, 29, 56)"] { background-color: #ffffff !important; }
-.role-shell.is-light main [style*="color: rgb(248, 250, 252)"],
-.role-shell.is-light main [style*="color: rgb(241, 245, 249)"],
-.role-shell.is-light main [style*="color: rgb(226, 232, 240)"],
-.role-shell.is-light main [style*="color: rgb(203, 213, 225)"] { color: #17202a !important; }
-.role-shell.is-light main [style*="color: rgb(148, 163, 184)"],
-.role-shell.is-light main [style*="color: rgb(100, 116, 139)"] { color: #64748b !important; }
-.role-shell.is-light main [style*="border: 1px solid rgb(30, 41, 59)"],
-.role-shell.is-light main [style*="border-color: rgb(30, 41, 59)"] { border-color: #dce3e8 !important; }
-
-@media (max-width: 640px) {
-  .role-theme-toggle.is-floating { top: 12px; right: 12px; }
+/* Shared role layout and interaction states; the palette lives in tokens.css. */
+.role-shell { min-height: 100vh; color: var(--text); background: var(--bg); font-family: 'Inter', system-ui, sans-serif; }
+.role-shell > main { min-width: 0; width: 100%; }
+.role-shell > aside { background: var(--surface); }
+.role-shell input, .role-shell select, .role-shell textarea { color-scheme: light; }
+.role-shell table tbody tr:hover { background: var(--surface-hover); }
+.role-shell button, .role-shell a { transition: color .15s, background-color .15s, border-color .15s; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+input:focus, select:focus, textarea:focus { border-color: var(--primary); }
+.role-breadcrumb { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 13px; }
+.role-breadcrumb strong { color: var(--text); font-weight: 600; }
+.auth-hero { color: var(--hero-text); }
+.auth-hero-shade { background: linear-gradient(var(--hero-overlay), var(--hero-overlay)); }
+@media (max-width: 1023px) {
+  .role-shell { flex-direction: column; }
+  .role-shell > aside { width: 100%; border-right: 0; border-bottom: 1px solid var(--border); }
+  .role-shell > aside nav { display: flex; overflow-x: auto; padding-bottom: 12px; }
+  .role-shell > aside nav button { width: auto; flex: 0 0 auto; white-space: nowrap; }
+  .role-shell > main { padding: 20px; }
 }

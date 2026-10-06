@@ -1,0 +1,56 @@
+/* Shared light-theme palette. Components and the Tailwind CDN config reference these tokens. */
+:root {
+  color-scheme: light;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-hover: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #475569;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #eff6ff;
+  --on-primary: #ffffff;
+  --accent: #f97316;
+  --success: #16a34a;
+  --success-text: #166534;
+  --success-soft: #dcfce7;
+  --success-hover: #15803d;
+  --warning: #f97316;
+  --warning-text: #9a3412;
+  --warning-soft: #ffedd5;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-text: #991b1b;
+  --danger-soft: #fee2e2;
+  --violet: #7e22ce;
+  --violet-soft: #f3e8ff;
+  --cyan: #0e7490;
+  --cyan-soft: #cffafe;
+  --rose: #9f1239;
+  --rose-soft: #ffe4e6;
+  --focus-ring: color-mix(in srgb, var(--primary) 24%, transparent);
+  --overlay: rgba(15, 23, 42, 0.48);
+  --shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-popover: 0 12px 32px rgba(15, 23, 42, 0.12);
+  --google-blue: #4285f4;
+  --google-green: #34a853;
+  --google-yellow: #fbbc05;
+  --google-red: #ea4335;
+  --hero-overlay: rgba(15, 23, 42, 0.64);
+  --hero-text: #ffffff;
+  --hero-muted: #f1f5f9;
+  --hero-accent: #bfdbfe;
+  --hero-line: rgba(255, 255, 255, 0.35);
+
+  /* Compatibility aliases for the existing auth and manager components. */
+  --surface-strong: var(--surface);
+  --text-primary: var(--text);
+  --text-secondary: var(--text-muted);
+  --border-color: var(--border);
+  --accent-blue: var(--primary);
+  --accent-cyan: var(--cyan);
+  --accent-coral: var(--warning-text);
+  --accent-violet: var(--violet);
+  --accent-gradient: linear-gradient(135deg, var(--primary), var(--primary-hover));
+}

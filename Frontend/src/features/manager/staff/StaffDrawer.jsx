@@ -1,4 +1,4 @@
-import { Activity, CalendarDays, Check, Clipboard, Clock3, CreditCard, FileClock, KeyRound, LockKeyhole, Mail, Pencil, Phone, UnlockKeyhole, UserRound, X } from 'lucide-react';
+import { Activity, CalendarDays, Check, ChevronDown, Clipboard, Clock3, CreditCard, FileClock, KeyRound, LockKeyhole, Mail, Pencil, Phone, UnlockKeyhole, UserRound, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import managerEn from '../i18n/en';
 import { RoleBadge, StatusBadge } from './AccountBadge';
@@ -65,10 +65,10 @@ function StaffDrawer({ user, onClose, onEdit, onResetPassword, onToggleLock, onV
         <div className="manager-permissions"><small>Permissions</small><div>{(permissionsByRole[user.roleName] || ['Standard access']).map((permission) => <span key={permission}>{permission}</span>)}</div></div>
       </section>
 
-      <section className="manager-detail-section">
-        <div className="manager-detail-section-title"><CreditCard size={17} /><div><h3>{copy.planHistory}</h3><p>{copy.planHint}</p></div></div>
-        {user.planHistory.length ? <div className="manager-plan-history">{user.planHistory.map((plan, index) => <article key={`${plan.name}-${index}`}><div><strong>{plan.name}</strong><StatusBadge status={String(plan.status).toUpperCase()} /></div><dl><div><dt>Start</dt><dd>{staffDate(plan.startedAt)}</dd></div><div><dt>End</dt><dd>{staffDate(plan.endedAt)}</dd></div><div><dt>Price</dt><dd>{money(plan.price)}</dd></div></dl></article>)}</div> : <div className="manager-detail-empty">{copy.noPlans}</div>}
-      </section>
+      <details className="manager-detail-section manager-plan-disclosure" key={user.userId}>
+        <summary><div className="manager-detail-section-title"><CreditCard size={17} /><div><h3>{copy.planHistory} <span className="manager-plan-count">({user.planHistory.length})</span></h3><p>{copy.planHint}</p></div></div><ChevronDown size={18} className="manager-plan-chevron" /></summary>
+        {user.planHistory.length ? <div className="manager-plan-history" tabIndex="0" role="region" aria-label={copy.planHistory}>{user.planHistory.map((plan, index) => <article key={`${plan.name}-${index}`}><div><strong>{plan.name}</strong><StatusBadge status={String(plan.status).toUpperCase()} /></div><dl><div><dt>Start</dt><dd>{staffDate(plan.startedAt)}</dd></div><div><dt>End</dt><dd>{staffDate(plan.endedAt)}</dd></div><div><dt>Price</dt><dd>{money(plan.price)}</dd></div></dl></article>)}</div> : <div className="manager-detail-empty">{copy.noPlans}</div>}
+      </details>
 
       <section className="manager-detail-section">
         <div className="manager-detail-section-title"><Activity size={17} /><div><h3>{copy.activity}</h3><p>{copy.activityHint}</p></div></div>

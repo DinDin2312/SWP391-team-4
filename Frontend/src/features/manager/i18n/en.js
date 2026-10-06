@@ -34,7 +34,7 @@ const managerEn = {
     table: {
       selectAll: 'Select all users on this page',
       selectUser: (name) => `Select ${name}`,
-      columns: { member: 'Member', contact: 'Contact', role: 'Role', status: 'Status', joined: 'Joined', lastLogin: 'Last login', currentPlan: 'Current plan', actions: 'Actions' },
+      columns: { member: 'Account', contact: 'Email', phone: 'Phone number', role: 'Role', status: 'Status', joined: 'Joined', lastLogin: 'Last login', currentPlan: 'Current plan', actions: 'Actions' },
       sortBy: (label) => `Sort by ${label}`,
       rowsPerPage: 'Rows per page',
       page: (current, total) => `Page ${current} of ${total}`,

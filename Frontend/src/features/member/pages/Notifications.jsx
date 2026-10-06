@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -97,7 +98,7 @@ const Notifications = () => {
           <h1 className="text-3xl lg:text-4xl text-on-surface tracking-tight font-extrabold flex items-center gap-3">
             Notifications
             {unreadCount > 0 && (
-              <span className="px-3 py-1 rounded-full bg-primary-container text-on-primary-container text-sm font-bold shadow-sm">
+              <span className="px-3 py-1 rounded-full bg-primary-container text-on-primary-container text-sm font-bold shadow-[var(--shadow)]">
                 {unreadCount} NEW
               </span>
             )}
@@ -106,12 +107,12 @@ const Notifications = () => {
             Stay updated on your schedule, payments, and system alerts.
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3 flex-wrap mt-4 lg:mt-0">
           {notifications.length > 0 && (
-            <button 
+            <button
               onClick={handleDeleteAll}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-error-container text-on-error-container text-sm font-bold transition-all shadow-sm active:scale-95 hover:brightness-95"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-error-container text-on-error-container text-sm font-bold transition-all shadow-[var(--shadow)] active:scale-95 hover:brightness-95"
             >
               <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
               <span>Clear All</span>
@@ -119,11 +120,11 @@ const Notifications = () => {
           )}
 
           {notifications.length > 0 && unreadCount > 0 && (
-            <button 
+            <button
               onClick={handleMarkAllAsRead}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-sm font-bold transition-all shadow-sm active:scale-95"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-sm font-bold transition-all shadow-[var(--shadow)] active:scale-95"
             >
-              <span className="material-symbols-outlined text-[18px] text-emerald-500">done_all</span>
+              <span className="material-symbols-outlined text-[18px] text-[var(--success-text)]">done_all</span>
               <span>Mark all as read</span>
             </button>
           )}
@@ -133,7 +134,7 @@ const Notifications = () => {
       <div className="flex flex-col gap-4 max-w-4xl">
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 bg-surface-container-lowest rounded-xl border border-surface-container text-center">
-            <span className="material-symbols-outlined text-6xl text-surface-container-high mb-4">notifications_off</span>
+            <span className="material-symbols-outlined text-6xl text-on-surface-variant mb-4">notifications_off</span>
             <h3 className="text-xl font-bold text-on-surface">No notifications yet</h3>
             <p className="text-sm text-on-surface-variant mt-2">When you get updates, they'll show up here.</p>
           </div>
@@ -149,11 +150,11 @@ const Notifications = () => {
             const icon = iconMap[notification.type] || 'notifications';
 
             return (
-              <div 
-                key={notification.id} 
+              <div
+                key={notification.id}
                 className={`relative flex gap-4 p-5 rounded-xl transition-all duration-200 border ${
-                  isUnread 
-                    ? 'bg-surface-container-low border-primary/20 shadow-md' 
+                  isUnread
+                    ? 'bg-surface-container-low border-primary/20 shadow-[var(--shadow)]'
                     : 'bg-surface-container-lowest border-surface-container opacity-70'
                 }`}
               >
@@ -165,7 +166,7 @@ const Notifications = () => {
                     <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-primary animate-pulse border-2 border-surface-container-low"></div>
                   )}
                 </div>
-                
+
                 <div className="flex flex-col gap-1 min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-4">
                     <h3 className={`text-base pr-4 ${isUnread ? 'font-bold text-on-surface' : 'font-semibold text-on-surface-variant'}`}>
@@ -173,9 +174,9 @@ const Notifications = () => {
                     </h3>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs text-on-surface-variant font-medium bg-surface-container px-2 py-1 rounded">
-                        {new Date(notification.createdAt).toLocaleString()}
+                        {formatDateTime(notification.createdAt)}
                       </span>
-                      <button 
+                      <button
                         onClick={() => handleDelete(notification.id)}
                         className="text-on-surface-variant hover:text-error transition-colors p-1 rounded-md hover:bg-error-container/20"
                         title="Delete notification"
@@ -184,14 +185,14 @@ const Notifications = () => {
                       </button>
                     </div>
                   </div>
-                  
+
                   <p className={`text-sm mt-1 leading-relaxed ${isUnread ? 'text-on-surface-variant' : 'text-on-surface-variant/80'}`}>
                     {notification.message}
                   </p>
-                  
+
                   {isUnread && (
                     <div className="mt-3 flex items-center">
-                      <button 
+                      <button
                         onClick={() => handleMarkAsRead(notification.id)}
                         className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
                       >

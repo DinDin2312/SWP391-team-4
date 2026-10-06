@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -44,12 +45,12 @@ const BillingHistory = () => {
       case 'SUCCESS':
       case 'COMPLETED':
       case 'PAID':
-        return 'bg-emerald-500/10 text-emerald-500';
+        return 'bg-[var(--success-soft)] text-[var(--success-text)]';
       case 'PENDING':
-        return 'bg-amber-500/10 text-amber-500';
+        return 'bg-[var(--warning-soft)] text-[var(--warning-text)]';
       case 'FAILED':
       case 'CANCELLED':
-        return 'bg-rose-500/10 text-rose-500';
+        return 'bg-[var(--rose-soft)] text-[var(--rose)]';
       default:
         return 'bg-surface-container-high text-on-surface-variant';
     }
@@ -72,14 +73,14 @@ const BillingHistory = () => {
         </div>
       ) : invoices.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 bg-surface-container-lowest rounded-xl border border-surface-container text-center">
-          <span className="material-symbols-outlined text-6xl text-surface-container-high mb-4">receipt_long</span>
+          <span className="material-symbols-outlined text-6xl text-on-surface-variant mb-4">receipt_long</span>
           <h3 className="text-xl font-bold text-on-surface">No invoices found</h3>
           <p className="text-sm text-on-surface-variant mt-2">You haven't made any purchases yet.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-6 max-w-5xl">
           {invoices.map((invoice) => (
-            <div key={invoice.invoiceId} className="flex flex-col bg-surface-container-lowest rounded-2xl border border-surface-container overflow-hidden shadow-sm">
+            <div key={invoice.invoiceId} className="flex flex-col bg-surface-container-lowest rounded-2xl border border-surface-container overflow-hidden shadow-[var(--shadow)]">
               {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-surface-container-low border-b border-surface-container">
                 <div className="flex items-center gap-4">
@@ -94,7 +95,7 @@ const BillingHistory = () => {
                       </span>
                     </span>
                     <span className="text-xs text-on-surface-variant mt-1">
-                      {new Date(invoice.createdAt).toLocaleString()}
+                      {formatDateTime(invoice.createdAt)}
                     </span>
                   </div>
                 </div>
@@ -106,7 +107,7 @@ const BillingHistory = () => {
 
               {/* Body */}
               <div className="p-5 flex flex-col gap-6">
-                
+
                 {/* Details List */}
                 <div className="flex flex-col gap-3">
                   <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Purchased Items</h4>
@@ -145,12 +146,12 @@ const BillingHistory = () => {
                     {invoice.paymentDate && (
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Payment Date</span>
-                        <span className="text-sm font-semibold text-on-surface mt-1">{new Date(invoice.paymentDate).toLocaleString()}</span>
+                        <span className="text-sm font-semibold text-on-surface mt-1">{formatDateTime(invoice.paymentDate)}</span>
                       </div>
                     )}
                   </div>
                 )}
-                
+
               </div>
             </div>
           ))}

@@ -48,30 +48,30 @@ export default function RegisterMemberView({ onSuccess }) {
     return (
         <div style={{ maxWidth: '680px', margin: '0 auto', padding: '2rem 1.5rem' }}>
             <div style={{
-                backgroundColor: '#0a1120',
-                border: '1px solid #1e293b',
+                backgroundColor: 'var(--surface)',
+                border: '1px solid var(--border)',
                 borderRadius: '1.25rem',
                 padding: '2rem',
-                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)'
+                boxShadow: 'var(--shadow)'
             }}>
                 {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1.5rem', borderBottom: '1px solid #1e293b', paddingBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1.25rem' }}>
                     <div style={{
                         width: '44px',
                         height: '44px',
                         borderRadius: '0.75rem',
-                        backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                        backgroundColor: 'var(--primary-soft)',
+                        border: '1px solid var(--border)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: '#38bdf8'
+                        color: 'var(--primary)'
                     }}>
                         <UserPlus style={{ width: '22px', height: '22px' }} />
                     </div>
                     <div>
-                        <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>Register New Member</h2>
-                        <p style={{ margin: '0.2rem 0 0', color: '#94a3b8', fontSize: '0.85rem' }}>
+                        <h1 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Register New Member</h1>
+                        <p style={{ margin: '0.2rem 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                             Create an account for walk-in customers directly at the front desk.
                         </p>
                     </div>
@@ -86,9 +86,9 @@ export default function RegisterMemberView({ onSuccess }) {
                         padding: '0.85rem 1rem',
                         borderRadius: '0.75rem',
                         marginBottom: '1.5rem',
-                        backgroundColor: feedback.type === 'success' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                        border: `1px solid ${feedback.type === 'success' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                        color: feedback.type === 'success' ? '#34d399' : '#f87171',
+                        backgroundColor: feedback.type === 'success' ? 'var(--success-soft)' : 'var(--danger-soft)',
+                        border: `1px solid ${feedback.type === 'success' ? 'var(--border)' : 'var(--border)'}`,
+                        color: feedback.type === 'success' ? 'var(--success-text)' : 'var(--danger-text)',
                         fontSize: '0.875rem'
                     }}>
                         {feedback.type === 'success' ? <CheckCircle2 style={{ width: '18px', height: '18px', flexShrink: 0 }} /> : <AlertCircle style={{ width: '18px', height: '18px', flexShrink: 0 }} />}
@@ -99,11 +99,11 @@ export default function RegisterMemberView({ onSuccess }) {
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                     {/* Full Name */}
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.4rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>
                             Full Name *
                         </label>
                         <div style={{ position: 'relative' }}>
-                            <User style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: '#64748b' }} />
+                            <User style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-muted)' }} />
                             <input
                                 type="text"
                                 name="fullName"
@@ -113,11 +113,11 @@ export default function RegisterMemberView({ onSuccess }) {
                                 onChange={handleChange}
                                 style={{
                                     width: '100%',
-                                    backgroundColor: '#060b17',
-                                    border: '1px solid #1e293b',
+                                    backgroundColor: 'var(--surface)',
+                                    border: '1px solid var(--border)',
                                     borderRadius: '0.65rem',
                                     padding: '0.75rem 1rem 0.75rem 2.5rem',
-                                    color: '#f8fafc',
+                                    color: 'var(--text)',
                                     fontSize: '0.875rem',
                                     outline: 'none'
                                 }}
@@ -127,11 +127,11 @@ export default function RegisterMemberView({ onSuccess }) {
 
                     {/* Email */}
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.4rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>
                             Email Address *
                         </label>
                         <div style={{ position: 'relative' }}>
-                            <Mail style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: '#64748b' }} />
+                            <Mail style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-muted)' }} />
                             <input
                                 type="email"
                                 name="email"
@@ -141,11 +141,11 @@ export default function RegisterMemberView({ onSuccess }) {
                                 onChange={handleChange}
                                 style={{
                                     width: '100%',
-                                    backgroundColor: '#060b17',
-                                    border: '1px solid #1e293b',
+                                    backgroundColor: 'var(--surface)',
+                                    border: '1px solid var(--border)',
                                     borderRadius: '0.65rem',
                                     padding: '0.75rem 1rem 0.75rem 2.5rem',
-                                    color: '#f8fafc',
+                                    color: 'var(--text)',
                                     fontSize: '0.875rem',
                                     outline: 'none'
                                 }}
@@ -155,11 +155,11 @@ export default function RegisterMemberView({ onSuccess }) {
 
                     {/* Phone */}
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.4rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>
                             Phone Number *
                         </label>
                         <div style={{ position: 'relative' }}>
-                            <Phone style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: '#64748b' }} />
+                            <Phone style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-muted)' }} />
                             <input
                                 type="tel"
                                 name="phone"
@@ -169,11 +169,11 @@ export default function RegisterMemberView({ onSuccess }) {
                                 onChange={handleChange}
                                 style={{
                                     width: '100%',
-                                    backgroundColor: '#060b17',
-                                    border: '1px solid #1e293b',
+                                    backgroundColor: 'var(--surface)',
+                                    border: '1px solid var(--border)',
                                     borderRadius: '0.65rem',
                                     padding: '0.75rem 1rem 0.75rem 2.5rem',
-                                    color: '#f8fafc',
+                                    color: 'var(--text)',
                                     fontSize: '0.875rem',
                                     outline: 'none'
                                 }}
@@ -183,11 +183,11 @@ export default function RegisterMemberView({ onSuccess }) {
 
                     {/* Password */}
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.4rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>
                             Default Password *
                         </label>
                         <div style={{ position: 'relative' }}>
-                            <Lock style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: '#64748b' }} />
+                            <Lock style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-muted)' }} />
                             <input
                                 type="password"
                                 name="defaultPassword"
@@ -197,11 +197,11 @@ export default function RegisterMemberView({ onSuccess }) {
                                 onChange={handleChange}
                                 style={{
                                     width: '100%',
-                                    backgroundColor: '#060b17',
-                                    border: '1px solid #1e293b',
+                                    backgroundColor: 'var(--surface)',
+                                    border: '1px solid var(--border)',
                                     borderRadius: '0.65rem',
                                     padding: '0.75rem 1rem 0.75rem 2.5rem',
-                                    color: '#f8fafc',
+                                    color: 'var(--text)',
                                     fontSize: '0.875rem',
                                     outline: 'none'
                                 }}
@@ -211,11 +211,11 @@ export default function RegisterMemberView({ onSuccess }) {
 
                     {/* Bio / Medical Notes */}
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.4rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>
                             Notes / Sports Interests (Optional)
                         </label>
                         <div style={{ position: 'relative' }}>
-                            <FileText style={{ position: 'absolute', left: '0.85rem', top: '0.85rem', width: '16px', height: '16px', color: '#64748b' }} />
+                            <FileText style={{ position: 'absolute', left: '0.85rem', top: '0.85rem', width: '16px', height: '16px', color: 'var(--text-muted)' }} />
                             <textarea
                                 name="bio"
                                 rows={3}
@@ -224,11 +224,11 @@ export default function RegisterMemberView({ onSuccess }) {
                                 onChange={handleChange}
                                 style={{
                                     width: '100%',
-                                    backgroundColor: '#060b17',
-                                    border: '1px solid #1e293b',
+                                    backgroundColor: 'var(--surface)',
+                                    border: '1px solid var(--border)',
                                     borderRadius: '0.65rem',
                                     padding: '0.75rem 1rem 0.75rem 2.5rem',
-                                    color: '#f8fafc',
+                                    color: 'var(--text)',
                                     fontSize: '0.875rem',
                                     outline: 'none',
                                     resize: 'vertical'
@@ -248,8 +248,8 @@ export default function RegisterMemberView({ onSuccess }) {
                             gap: '0.5rem',
                             marginTop: '0.5rem',
                             padding: '0.85rem',
-                            backgroundColor: '#2563eb',
-                            color: '#ffffff',
+                            backgroundColor: 'var(--primary)',
+                            color: 'var(--on-primary)',
                             border: 'none',
                             borderRadius: '0.75rem',
                             fontSize: '0.9rem',

@@ -1,8 +1,7 @@
+import AutoSidebar from '../components/AutoSidebar';
 import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import RoleThemeToggle from '../components/RoleThemeToggle';
-import { useRoleTheme } from '../hooks/useRoleTheme';
 import {
   Users,
   UserPlus,
@@ -18,7 +17,6 @@ import {
 const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSelectFeature }) => {
   const navigate = useNavigate();
   const { userInfo, logout } = useContext(AuthContext);
-  const { theme, toggleTheme } = useRoleTheme();
 
   const fullName = userInfo?.fullName || 'Lễ Tân Thúy Kiều';
   const email = userInfo?.email || 'letan@sport.com';
@@ -88,33 +86,32 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
   ];
 
   return (
-    <div className={`role-shell is-${theme}`} style={{ minHeight: '100vh', backgroundColor: theme === 'light' ? '#f4f6f8' : '#060b17', color: theme === 'light' ? '#17202a' : '#f1f5f9', display: 'flex', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div className="role-shell" style={{ minHeight: '100vh', backgroundColor: 'var(--bg)', color: 'var(--text)', display: 'flex', fontFamily: 'Inter, system-ui, sans-serif' }}>
       {/* ===================== SIDEBAR ===================== */}
-      <aside
+      <AutoSidebar
         style={{
-          width: '280px',
-          backgroundColor: '#091124',
-          borderRight: '1px solid #15203b',
+          backgroundColor: 'var(--surface)',
+          borderRight: '1px solid var(--border)',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
+          justifyContent: 'var(--role-sidebar-justify, space-between)',
           flexShrink: 0,
         }}
       >
         <div>
           {/* Brand Logo Header */}
-          <div style={{ padding: '1.5rem', borderBottom: '1px solid #15203b', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <div className="auto-sidebar-brand" style={{ padding: 'var(--role-sidebar-padding, 1.5rem)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
             <div
               style={{
                 width: '42px',
                 height: '42px',
                 borderRadius: '0.75rem',
-                background: 'linear-gradient(135deg, #2563eb, #06b6d4)',
+                background: 'linear-gradient(135deg, var(--primary-soft), var(--primary-soft))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 8px 16px -4px rgba(37, 99, 235, 0.4)',
-                color: '#ffffff',
+                boxShadow: 'var(--shadow)',
+                color: 'var(--text)',
                 flexShrink: 0,
               }}
             >
@@ -122,39 +119,39 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <span style={{ fontWeight: 800, letterSpacing: '0.05em', fontSize: '1.1rem', color: '#ffffff' }}>NEXUS</span>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#38bdf8' }}></span>
+                <span style={{ fontWeight: 800, letterSpacing: '0.05em', fontSize: '1.1rem', color: 'var(--text)' }}>NEXUS</span>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--primary-soft)' }}></span>
               </div>
-              <p style={{ margin: 0, fontSize: '0.65rem', letterSpacing: '0.12em', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>
+              <p style={{ margin: 0, fontSize: '0.65rem', letterSpacing: '0.12em', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
                 FRONT DESK PORTAL
               </p>
             </div>
           </div>
 
           {/* Role Pill Indicator */}
-          <div style={{ padding: '1rem 1.25rem 0.5rem' }}>
+          <div className="auto-sidebar-role" style={{ padding: '1rem 1.25rem 0.5rem' }}>
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                border: '1px solid rgba(56, 189, 248, 0.25)',
+                backgroundColor: 'var(--primary-soft)',
+                border: '1px solid var(--border)',
                 padding: '0.45rem 0.75rem',
                 borderRadius: '0.5rem',
               }}
             >
-              <ShieldCheck style={{ width: '16px', height: '16px', color: '#38bdf8' }} />
+              <ShieldCheck style={{ width: '16px', height: '16px', color: 'var(--primary)' }} />
               <div style={{ fontSize: '0.75rem' }}>
-                <span style={{ color: '#94a3b8' }}>Role: </span>
-                <strong style={{ color: '#38bdf8' }}>Front Desk Receptionist</strong>
+                <span style={{ color: 'var(--text-muted)' }}>Role: </span>
+                <strong style={{ color: 'var(--primary)' }}>Front Desk Receptionist</strong>
               </div>
             </div>
           </div>
 
           {/* Navigation Links */}
-          <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0.5rem 0.75rem' }}>
+          <div className="auto-sidebar-nav" style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0.5rem 0.75rem' }}>
               RECEPTIONIST FEATURES
             </span>
 
@@ -165,6 +162,8 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
               return (
                 <button
                   key={item.id}
+                  aria-label={item.label}
+                  title={item.label}
                   onClick={() => {
                     if (onSelectFeature) {
                       onSelectFeature(item.id);
@@ -174,33 +173,33 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
                     width: '100%',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.7rem 0.85rem',
+                    justifyContent: 'var(--role-sidebar-justify, space-between)',
+                    padding: '0.7rem var(--role-sidebar-padding, 0.85rem)',
                     borderRadius: '0.65rem',
                     fontSize: '0.85rem',
                     fontWeight: isSelected ? 600 : 500,
-                    color: isSelected ? '#38bdf8' : '#94a3b8',
-                    backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.16)' : 'transparent',
-                    border: isSelected ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent',
+                    color: isSelected ? 'var(--primary)' : 'var(--text-muted)',
+                    backgroundColor: isSelected ? 'var(--primary-soft)' : 'transparent',
+                    border: isSelected ? '1px solid var(--border)' : '1px solid transparent',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                     textAlign: 'left',
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected) {
-                      e.currentTarget.style.backgroundColor = '#111d38';
-                      e.currentTarget.style.color = '#e2e8f0';
+                      e.currentTarget.style.backgroundColor = 'var(--surface)';
+                      e.currentTarget.style.color = 'var(--text)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isSelected) {
                       e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = '#94a3b8';
+                      e.currentTarget.style.color = 'var(--text-muted)';
                     }
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <Icon style={{ width: '18px', height: '18px', color: isSelected ? '#38bdf8' : '#64748b' }} />
+                    <Icon style={{ width: '18px', height: '18px', color: isSelected ? 'var(--primary)' : 'var(--text-muted)' }} />
                     <span>{item.label}</span>
                   </div>
 
@@ -211,8 +210,8 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
                         fontWeight: 700,
                         padding: '0.15rem 0.45rem',
                         borderRadius: '0.25rem',
-                        backgroundColor: item.isReady ? 'rgba(16, 185, 129, 0.2)' : '#1e293b',
-                        color: item.isReady ? '#34d399' : '#64748b',
+                        backgroundColor: item.isReady ? 'var(--success-soft)' : 'var(--surface)',
+                        color: item.isReady ? 'var(--success-text)' : 'var(--text-muted)',
                       }}
                     >
                       {item.badge}
@@ -225,31 +224,31 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
         </div>
 
         {/* Profile & Logout Footer */}
-        <div style={{ padding: '1rem', borderTop: '1px solid #15203b', backgroundColor: '#070d1a' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+        <div className="auto-sidebar-footer" style={{ padding: 'var(--role-sidebar-padding, 1rem)', borderTop: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+          <div style={{ display: 'flex', flexDirection: 'var(--role-sidebar-direction, row)', alignItems: 'center', justifyContent: 'var(--role-sidebar-justify, space-between)', gap: '0.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
               <div
                 style={{
                   width: '38px',
                   height: '38px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                  background: 'linear-gradient(135deg, var(--primary-soft), var(--violet-soft))',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: 700,
                   fontSize: '0.85rem',
-                  color: '#ffffff',
+                  color: 'var(--text)',
                   flexShrink: 0,
                 }}
               >
                 {initials}
               </div>
-              <div style={{ overflow: 'hidden' }}>
-                <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: '#f8fafc', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+              <div className="auto-sidebar-profile-text" style={{ overflow: 'hidden' }}>
+                <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                   {fullName}
                 </p>
-                <p style={{ margin: 0, fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                   {email}
                 </p>
               </div>
@@ -262,9 +261,9 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
                 width: '34px',
                 height: '34px',
                 borderRadius: '0.5rem',
-                border: '1px solid #1e293b',
-                backgroundColor: '#111d38',
-                color: '#94a3b8',
+                border: '1px solid var(--border)',
+                backgroundColor: 'var(--surface)',
+                color: 'var(--text-muted)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -273,23 +272,22 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
                 transition: 'all 0.2s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#ef4444';
-                e.currentTarget.style.borderColor = '#ef4444';
+                e.currentTarget.style.color = 'var(--danger-text)';
+                e.currentTarget.style.borderColor = 'var(--border)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#94a3b8';
-                e.currentTarget.style.borderColor = '#1e293b';
+                e.currentTarget.style.color = 'var(--text-muted)';
+                e.currentTarget.style.borderColor = 'var(--border)';
               }}
             >
               <LogOut style={{ width: '16px', height: '16px' }} />
             </button>
           </div>
         </div>
-      </aside>
+      </AutoSidebar>
 
       {/* ===================== MAIN CONTENT WRAPPER ===================== */}
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-        <RoleThemeToggle theme={theme} onToggle={toggleTheme} floating />
         {children}
       </main>
     </div>
