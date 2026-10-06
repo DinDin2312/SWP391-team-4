@@ -1,3 +1,4 @@
+import AutoSidebar from '../components/AutoSidebar';
 import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -87,9 +88,8 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
   return (
     <div className="role-shell" style={{ minHeight: '100vh', backgroundColor: 'var(--bg)', color: 'var(--text)', display: 'flex', fontFamily: 'Inter, system-ui, sans-serif' }}>
       {/* ===================== SIDEBAR ===================== */}
-      <aside
+      <AutoSidebar
         style={{
-          width: '280px',
           backgroundColor: 'var(--surface)',
           borderRight: '1px solid var(--border)',
           display: 'flex',
@@ -284,7 +284,7 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
             </button>
           </div>
         </div>
-      </aside>
+      </AutoSidebar>
 
       {/* ===================== MAIN CONTENT WRAPPER ===================== */}
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>

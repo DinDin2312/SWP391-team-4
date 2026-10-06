@@ -50,6 +50,7 @@ function ManagerDashboard() {
   const navigate = useNavigate();
   const [active, setActive] = useState('dashboard');
   const [mobileNav, setMobileNav] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -123,8 +124,12 @@ function ManagerDashboard() {
   const initialLoading = loading && data === null;
 
   return (
-    <div className="manager-app">
-      <aside id="manager-sidebar" className={`manager-sidebar ${mobileNav ? 'is-open' : ''}`}>
+    <div className={`manager-app ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}`}>
+      <aside id="manager-sidebar" className={`manager-sidebar ${mobileNav ? 'is-open' : ''}`}
+        onMouseEnter={() => setSidebarCollapsed(false)}
+        onMouseLeave={() => setSidebarCollapsed(true)}
+        onFocus={() => setSidebarCollapsed(false)}
+        onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget) && !event.currentTarget.matches(':hover')) setSidebarCollapsed(true); }}>
         <div className="manager-brand"><span><Dumbbell size={22} /></span><div><strong>NEXUS</strong><small>CENTER CONTROL</small></div><button className="manager-mobile-close" onClick={() => setMobileNav(false)} aria-label="Close menu"><X size={20} /></button></div>
         <div className="manager-role"><ShieldCheck size={16} /><span>Center Manager</span></div>
         <nav>
@@ -139,6 +144,7 @@ function ManagerDashboard() {
 
       <main className="manager-main">
         <header className="manager-topbar">
+          <button type="button" className="manager-sidebar-toggle" onClick={() => setSidebarCollapsed((value) => !value)} aria-controls="manager-sidebar" aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}><Menu size={20} /></button>
           <button className="manager-menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button>
           <nav className="manager-breadcrumb" aria-label="Breadcrumb"><span>Nexus Center</span><i aria-hidden="true">/</i><strong>{currentPage.title}</strong></nav>
           <button className={`manager-icon-button ${loading ? 'is-refreshing' : ''}`} onClick={load} title="Refresh" aria-label="Refresh data" aria-busy={loading} disabled={initialLoading}><RefreshCw size={18} /></button>

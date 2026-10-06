@@ -1,3 +1,4 @@
+import AutoSidebar from '../components/AutoSidebar';
 import React, { useContext, useState, Suspense } from 'react';
 import { useOutlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -41,7 +42,7 @@ const CoachLayout = () => {
   return (
     <div className={`role-shell min-h-screen bg-[var(--bg)] text-[var(--text)] flex font-sans antialiased selection:bg-[var(--primary)] selection:text-[color:var(--on-primary)]`}>
       {/* ===================== SIDEBAR ===================== */}
-      <aside className="w-64 border-r border-[var(--border)] bg-[var(--surface)] flex flex-col justify-between shrink-0">
+      <AutoSidebar className="w-64 border-r border-[var(--border)] bg-[var(--surface)] flex flex-col justify-between shrink-0">
         <div>
           {/* Logo Brand */}
           <div className="auto-sidebar-brand p-6 flex items-center gap-3">
@@ -131,7 +132,7 @@ const CoachLayout = () => {
             </button>
           </div>
         </div>
-      </aside>
+      </AutoSidebar>
 
       {/* ===================== MAIN CONTENT ===================== */}
       <main className="flex-1 overflow-y-auto p-8 max-w-[1440px] mx-auto space-y-6">
