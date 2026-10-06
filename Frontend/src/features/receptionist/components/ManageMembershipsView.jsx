@@ -1,3 +1,4 @@
+import { formatDateTime as displayFormatDateTime, formatMoney } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
 import {
     Search,
@@ -177,59 +178,44 @@ export default function ManageMembershipsView() {
         }
     };
 
-    const formatDateTime = (dtStr) => {
-        if (!dtStr) return '—';
-        try {
-            return new Date(dtStr).toLocaleString('en-US', {
-                month: 'short',
-                day: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-            });
-        } catch {
-            return dtStr;
-        }
-    };
+    const formatDateTime = displayFormatDateTime;
 
-    const formatCurrency = (val) => {
-        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
-    };
+    const formatCurrency = formatMoney;
 
     return (
         <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Header */}
             <div>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>
                     Course & Membership Renewal
                 </h1>
-                <p style={{ margin: '0.4rem 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
+                <p style={{ margin: '0.4rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                     Select a member to view active course enrolments and automatically book next recurring classes.
                 </p>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '1.5rem', alignItems: 'flex-start' }}>
                 {/* Left Column: Select Member */}
-                <div style={{ backgroundColor: '#091124', border: '1px solid #162444', borderRadius: '1rem', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem' }}>
                         <div style={{ flex: 1, position: 'relative' }}>
-                            <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '15px', height: '15px', color: '#64748b' }} />
+                            <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '15px', height: '15px', color: 'var(--text-muted)' }} />
                             <input
                                 type="text"
                                 placeholder="Search member name / phone..."
                                 value={keyword}
                                 onChange={(e) => setKeyword(e.target.value)}
-                                style={{ width: '100%', backgroundColor: '#060b17', border: '1px solid #1e293b', borderRadius: '0.5rem', padding: '0.6rem 0.75rem 0.6rem 2.2rem', color: '#f8fafc', fontSize: '0.85rem', outline: 'none' }}
+                                style={{ width: '100%', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.6rem 0.75rem 0.6rem 2.2rem', color: 'var(--text)', fontSize: '0.85rem', outline: 'none' }}
                             />
                         </div>
-                        <button type="submit" style={{ padding: '0.6rem 0.9rem', backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>
+                        <button type="submit" style={{ padding: '0.6rem 0.9rem', backgroundColor: 'var(--primary)', color: 'var(--on-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>
                             Find
                         </button>
                     </form>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '520px', overflowY: 'auto' }}>
-                        {loading && <p style={{ color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center', margin: '1rem 0' }}>Loading members...</p>}
-                        {!loading && members.length === 0 && <p style={{ color: '#64748b', fontSize: '0.85rem', textAlign: 'center', margin: '1rem 0' }}>No active members found.</p>}
+                        {loading && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', margin: '1rem 0' }}>Loading members...</p>}
+                        {!loading && members.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', margin: '1rem 0' }}>No active members found.</p>}
                         {members.map((m) => {
                             const isSelected = selectedMember?.userId === m.userId;
                             return (
@@ -239,17 +225,17 @@ export default function ManageMembershipsView() {
                                     style={{
                                         padding: '0.85rem',
                                         borderRadius: '0.75rem',
-                                        backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.15)' : '#0d1833',
-                                        border: `1px solid ${isSelected ? '#38bdf8' : '#1e293b'}`,
+                                        backgroundColor: isSelected ? 'var(--primary-soft)' : 'var(--surface)',
+                                        border: `1px solid ${isSelected ? 'var(--border)' : 'var(--border)'}`,
                                         cursor: 'pointer',
                                         transition: 'all 0.15s'
                                     }}
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <strong style={{ color: '#f8fafc', fontSize: '0.9rem' }}>{m.fullName}</strong>
-                                        <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'monospace' }}>#MEM-{String(m.userId).padStart(4, '0')}</span>
+                                        <strong style={{ color: 'var(--text)', fontSize: '0.9rem' }}>{m.fullName}</strong>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>#MEM-{String(m.userId).padStart(4, '0')}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
                                         {m.phone || m.email}
                                     </div>
                                 </div>
@@ -259,21 +245,21 @@ export default function ManageMembershipsView() {
                 </div>
 
                 {/* Right Column: Member Courses & Renewal Workspace */}
-                <div style={{ backgroundColor: '#091124', border: '1px solid #162444', borderRadius: '1rem', padding: '1.5rem', minHeight: '400px' }}>
+                <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.5rem', minHeight: '400px' }}>
                     {!selectedMember ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '350px', textAlign: 'center', color: '#64748b' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '350px', textAlign: 'center', color: 'var(--text-muted)' }}>
                             <Layers style={{ width: '48px', height: '48px', marginBottom: '1rem', opacity: 0.4 }} />
-                            <h3 style={{ margin: '0 0 0.35rem', color: '#94a3b8', fontSize: '1.1rem' }}>No Member Selected</h3>
+                            <h3 style={{ margin: '0 0 0.35rem', color: 'var(--text-muted)', fontSize: '1.1rem' }}>No Member Selected</h3>
                             <p style={{ margin: 0, fontSize: '0.85rem' }}>Select a member from the left list to review their classes and process renewal.</p>
                         </div>
                     ) : (
                         <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
                                 <div>
-                                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+                                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
                                         {selectedMember.fullName}
                                     </h2>
-                                    <span style={{ fontSize: '0.8rem', color: '#38bdf8' }}>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>
                                         Member ID: #MEM-{String(selectedMember.userId).padStart(4, '0')} • {selectedMember.phone || selectedMember.email}
                                     </span>
                                 </div>
@@ -286,9 +272,9 @@ export default function ManageMembershipsView() {
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: '0.4rem',
-                                            backgroundColor: '#10b981',
+                                            backgroundColor: 'var(--success-hover)',
                                             border: 'none',
-                                            color: '#ffffff',
+                                            color: 'var(--on-primary)',
                                             padding: '0.45rem 0.85rem',
                                             borderRadius: '0.5rem',
                                             fontSize: '0.8rem',
@@ -307,8 +293,8 @@ export default function ManageMembershipsView() {
                                             alignItems: 'center',
                                             gap: '0.4rem',
                                             background: 'none',
-                                            border: '1px solid #334155',
-                                            color: '#cbd5e1',
+                                            border: '1px solid var(--border)',
+                                            color: 'var(--text)',
                                             padding: '0.45rem 0.75rem',
                                             borderRadius: '0.5rem',
                                             fontSize: '0.8rem',
@@ -321,19 +307,19 @@ export default function ManageMembershipsView() {
                                 </div>
                             </div>
 
-                            <h4 style={{ fontSize: '0.9rem', color: '#cbd5e1', marginBottom: '0.85rem', fontWeight: 600 }}>
+                            <h4 style={{ fontSize: '0.9rem', color: 'var(--text)', marginBottom: '0.85rem', fontWeight: 600 }}>
                                 Enrolled Courses ({memberBookings.length})
                             </h4>
 
                             {loadingBookings ? (
-                                <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Loading course enrolments...</p>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading course enrolments...</p>
                             ) : memberBookings.length === 0 ? (
-                                <p style={{ color: '#64748b', fontSize: '0.85rem' }}>This member has no past or current course enrolments.</p>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>This member has no past or current course enrolments.</p>
                             ) : (
-                                <div style={{ overflowX: 'auto', border: '1px solid #1e293b', borderRadius: '0.75rem' }}>
+                                <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '0.75rem' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                                         <thead>
-                                            <tr style={{ backgroundColor: '#0c1630', borderBottom: '1px solid #162444', color: '#94a3b8' }}>
+                                            <tr style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                                                 <th style={{ padding: '0.75rem 1rem' }}>Course Name</th>
                                                 <th style={{ padding: '0.75rem 1rem' }}>Coach</th>
                                                 <th style={{ padding: '0.75rem 1rem' }}>Room</th>
@@ -344,14 +330,14 @@ export default function ManageMembershipsView() {
                                         </thead>
                                         <tbody>
                                             {memberBookings.map((c, idx) => (
-                                                <tr key={idx} style={{ borderBottom: '1px solid #162444' }}>
-                                                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: '#f8fafc' }}>{c.courseName}</td>
-                                                    <td style={{ padding: '0.85rem 1rem', color: '#cbd5e1' }}>{c.coachName}</td>
-                                                    <td style={{ padding: '0.85rem 1rem', color: '#94a3b8' }}>{c.roomName}</td>
-                                                    <td style={{ padding: '0.85rem 1rem', color: '#94a3b8' }}>
+                                                <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: 'var(--text)' }}>{c.courseName}</td>
+                                                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text)' }}>{c.coachName}</td>
+                                                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)' }}>{c.roomName}</td>
+                                                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)' }}>
                                                         {formatDateTime(c.firstSessionDate)} → {formatDateTime(c.lastSessionDate)}
                                                     </td>
-                                                    <td style={{ padding: '0.85rem 1rem', textAlign: 'center', color: '#38bdf8', fontWeight: 600 }}>
+                                                    <td style={{ padding: '0.85rem 1rem', textAlign: 'center', color: 'var(--primary)', fontWeight: 600 }}>
                                                         {c.sessionsCount} sessions
                                                     </td>
                                                     <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
@@ -362,8 +348,8 @@ export default function ManageMembershipsView() {
                                                                 alignItems: 'center',
                                                                 gap: '0.4rem',
                                                                 padding: '0.4rem 0.85rem',
-                                                                backgroundColor: '#2563eb',
-                                                                color: '#ffffff',
+                                                                backgroundColor: 'var(--primary-soft)',
+                                                                color: 'var(--text)',
                                                                 border: 'none',
                                                                 borderRadius: '0.5rem',
                                                                 fontSize: '0.75rem',
@@ -388,33 +374,33 @@ export default function ManageMembershipsView() {
 
             {/* Confirmation Modal */}
             {renewalModalOpen && suggestedClass && (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 10000, backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-                    <div style={{ width: '100%', maxWidth: '500px', backgroundColor: '#0c1527', border: '1px solid #2563eb', borderRadius: '1rem', padding: '1.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #1e293b', paddingBottom: '0.75rem' }}>
-                            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>Enroll Next Recurring Course</h3>
-                            <button onClick={() => setRenewalModalOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 10000, backgroundColor: 'var(--surface-hover)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                    <div style={{ width: '100%', maxWidth: '500px', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Enroll Next Recurring Course</h3>
+                            <button onClick={() => setRenewalModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                                 <X style={{ width: '18px', height: '18px' }} />
                             </button>
                         </div>
 
                         {feedback && (
-                            <div style={{ padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', backgroundColor: feedback.type === 'success' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)', color: feedback.type === 'success' ? '#34d399' : '#f87171', fontSize: '0.85rem' }}>
+                            <div style={{ padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', backgroundColor: feedback.type === 'success' ? 'var(--success-soft)' : 'var(--danger-soft)', color: feedback.type === 'success' ? 'var(--success-text)' : 'var(--danger-text)', fontSize: '0.85rem' }}>
                                 {feedback.message}
                             </div>
                         )}
 
-                        <div style={{ backgroundColor: '#060b17', border: '1px solid #1e293b', borderRadius: '0.75rem', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#94a3b8' }}>Target Course:</span><strong style={{ color: '#f8fafc' }}>{suggestedClass.className}</strong></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#94a3b8' }}>Coach:</span><span style={{ color: '#cbd5e1' }}>{suggestedClass.coachName}</span></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#94a3b8' }}>Room:</span><span style={{ color: '#cbd5e1' }}>{suggestedClass.roomName}</span></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#94a3b8' }}>Next Session Starts:</span><strong style={{ color: '#38bdf8' }}>{formatDateTime(suggestedClass.startTime)}</strong></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#94a3b8' }}>Course Fee:</span><strong style={{ color: '#34d399' }}>{formatCurrency(suggestedClass.price)}</strong></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#94a3b8' }}>Availability:</span><span style={{ color: '#e2e8f0' }}>{suggestedClass.availableSlots} / {suggestedClass.maxSlots} slots</span></div>
+                        <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Target Course:</span><strong style={{ color: 'var(--text)' }}>{suggestedClass.className}</strong></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Coach:</span><span style={{ color: 'var(--text)' }}>{suggestedClass.coachName}</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Room:</span><span style={{ color: 'var(--text)' }}>{suggestedClass.roomName}</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Next Session Starts:</span><strong style={{ color: 'var(--primary)' }}>{formatDateTime(suggestedClass.startTime)}</strong></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Course Fee:</span><strong style={{ color: 'var(--success-text)' }}>{formatCurrency(suggestedClass.price)}</strong></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Availability:</span><span style={{ color: 'var(--text)' }}>{suggestedClass.availableSlots} / {suggestedClass.maxSlots} slots</span></div>
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>
-                            <button onClick={() => setRenewalModalOpen(false)} disabled={confirming} style={{ padding: '0.55rem 1rem', backgroundColor: '#1e293b', color: '#cbd5e1', border: '1px solid #334155', borderRadius: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>Cancel</button>
-                            <button onClick={handleConfirmEnrollment} disabled={confirming} style={{ padding: '0.55rem 1.25rem', backgroundColor: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '0.5rem', fontSize: '0.85rem', fontWeight: 600, cursor: confirming ? 'not-allowed' : 'pointer' }}>
+                            <button onClick={() => setRenewalModalOpen(false)} disabled={confirming} style={{ padding: '0.55rem 1rem', backgroundColor: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>Cancel</button>
+                            <button onClick={handleConfirmEnrollment} disabled={confirming} style={{ padding: '0.55rem 1.25rem', backgroundColor: 'var(--primary)', color: 'var(--on-primary)', border: 'none', borderRadius: '0.5rem', fontSize: '0.85rem', fontWeight: 600, cursor: confirming ? 'not-allowed' : 'pointer' }}>
                                 {confirming ? 'Enrolling...' : 'Confirm & Enroll'}
                             </button>
                         </div>
@@ -424,26 +410,26 @@ export default function ManageMembershipsView() {
 
             {/* Modal đăng ký gói Combo */}
             {packageModalOpen && (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 10000, backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-                    <div style={{ width: '100%', maxWidth: '480px', backgroundColor: '#0c1527', border: '1px solid #10b981', borderRadius: '1rem', padding: '1.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #1e293b', paddingBottom: '0.75rem' }}>
-                            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>Subscribe Combo Package</h3>
-                            <button onClick={() => setPackageModalOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>✕</button>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 10000, backgroundColor: 'var(--surface-hover)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                    <div style={{ width: '100%', maxWidth: '480px', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Subscribe Combo Package</h3>
+                            <button onClick={() => setPackageModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
                         </div>
 
                         {pkgFeedback && (
-                            <div style={{ padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', backgroundColor: pkgFeedback.type === 'success' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)', color: pkgFeedback.type === 'success' ? '#34d399' : '#f87171', fontSize: '0.85rem' }}>
+                            <div style={{ padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', backgroundColor: pkgFeedback.type === 'success' ? 'var(--success-soft)' : 'var(--danger-soft)', color: pkgFeedback.type === 'success' ? 'var(--success-text)' : 'var(--danger-text)', fontSize: '0.85rem' }}>
                                 {pkgFeedback.message}
                             </div>
                         )}
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem' }}>
                             <div>
-                                <label style={{ color: '#94a3b8', display: 'block', marginBottom: '0.35rem' }}>Select Combo Package</label>
+                                <label style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Select Combo Package</label>
                                 <select
                                     value={selectedPackageId}
                                     onChange={(e) => setSelectedPackageId(e.target.value)}
-                                    style={{ width: '100%', backgroundColor: '#060b17', border: '1px solid #1e293b', borderRadius: '0.5rem', padding: '0.65rem', color: '#f8fafc', outline: 'none' }}
+                                    style={{ width: '100%', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.65rem', color: 'var(--text)', outline: 'none' }}
                                 >
                                     {packagesList.map(p => (
                                         <option key={p.packageId} value={p.packageId}>
@@ -454,19 +440,19 @@ export default function ManageMembershipsView() {
                             </div>
 
                             <div>
-                                <label style={{ color: '#94a3b8', display: 'block', marginBottom: '0.35rem' }}>Activation Date</label>
+                                <label style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Activation Date</label>
                                 <input
                                     type="date"
                                     value={startDateInput}
                                     onChange={(e) => setStartDateInput(e.target.value)}
-                                    style={{ width: '100%', backgroundColor: '#060b17', border: '1px solid #1e293b', borderRadius: '0.5rem', padding: '0.65rem', color: '#f8fafc', outline: 'none' }}
+                                    style={{ width: '100%', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.65rem', color: 'var(--text)', outline: 'none' }}
                                 />
                             </div>
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-                            <button onClick={() => setPackageModalOpen(false)} disabled={subscribing} style={{ padding: '0.55rem 1rem', backgroundColor: '#1e293b', color: '#cbd5e1', border: '1px solid #334155', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
-                            <button onClick={handleConfirmSubscribe} disabled={subscribing} style={{ padding: '0.55rem 1.25rem', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '0.5rem', fontWeight: 600, cursor: subscribing ? 'not-allowed' : 'pointer' }}>
+                            <button onClick={() => setPackageModalOpen(false)} disabled={subscribing} style={{ padding: '0.55rem 1rem', backgroundColor: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
+                            <button onClick={handleConfirmSubscribe} disabled={subscribing} style={{ padding: '0.55rem 1.25rem', backgroundColor: 'var(--success-hover)', color: 'var(--on-primary)', border: 'none', borderRadius: '0.5rem', fontWeight: 600, cursor: subscribing ? 'not-allowed' : 'pointer' }}>
                                 {subscribing ? 'Subscribing...' : 'Confirm Subscription'}
                             </button>
                         </div>

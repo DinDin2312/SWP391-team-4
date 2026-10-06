@@ -1,3 +1,4 @@
+import { formatDate as displayFormatDate } from '../../../utils/displayFormat';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search,
@@ -294,20 +295,7 @@ const MemberManagementView = () => {
       .toUpperCase();
   };
 
-    const formatDate = (dateStr) => {
-        if (!dateStr) return '—';
-        try {
-            const date = new Date(dateStr);
-            if (isNaN(date.getTime())) return dateStr;
-            return date.toLocaleDateString('en-US', {
-                month: 'short',
-                day: '2-digit',
-                year: 'numeric',
-            });
-        } catch {
-            return dateStr;
-        }
-    };
+    const formatDate = displayFormatDate;
 
   // Stats calculation
   const totalCount = members.length;
@@ -320,7 +308,7 @@ const MemberManagementView = () => {
       {/* ================= PAGE HEADER ================= */}
         <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f8fafc', margin: 0, letterSpacing: '-0.02em' }}>
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
                     Member Search & Directory
                 </h1>
                 <span
@@ -329,15 +317,15 @@ const MemberManagementView = () => {
                         fontWeight: 700,
                         padding: '0.2rem 0.65rem',
                         borderRadius: '9999px',
-                        backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                        color: '#38bdf8',
-                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                        backgroundColor: 'var(--primary-soft)',
+                        color: 'var(--primary)',
+                        border: '1px solid var(--border)',
                     }}
                 >
               Front Desk
             </span>
             </div>
-            <p style={{ margin: '0.4rem 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
+            <p style={{ margin: '0.4rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                 Search members by Name, Phone number, Email or Member ID (#MEM). View membership status and course history.
             </p>
         </div>
@@ -356,14 +344,14 @@ const MemberManagementView = () => {
         {/* Card 1: Tổng số hội viên */}
         <div
           style={{
-            backgroundColor: '#0a1224',
-            border: '1px solid #162444',
+            backgroundColor: 'var(--surface)',
+            border: '1px solid var(--border)',
             borderRadius: '1rem',
             padding: '1.25rem',
             display: 'flex',
             alignItems: 'center',
             gap: '1rem',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+            boxShadow: 'var(--shadow)',
           }}
         >
           <div
@@ -371,19 +359,19 @@ const MemberManagementView = () => {
               width: '48px',
               height: '48px',
               borderRadius: '0.75rem',
-              backgroundColor: 'rgba(59, 130, 246, 0.15)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
+              backgroundColor: 'var(--primary-soft)',
+              border: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#3b82f6',
+              color: 'var(--primary)',
             }}
           >
             <Users style={{ width: '24px', height: '24px' }} />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>Total Members</span>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.1rem' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>Total Members</span>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text)', marginTop: '0.1rem' }}>
               {totalCount}
             </div>
           </div>
@@ -392,14 +380,14 @@ const MemberManagementView = () => {
         {/* Card 2: Tài khoản hoạt động */}
         <div
           style={{
-            backgroundColor: '#0a1224',
-            border: '1px solid #162444',
+            backgroundColor: 'var(--surface)',
+            border: '1px solid var(--border)',
             borderRadius: '1rem',
             padding: '1.25rem',
             display: 'flex',
             alignItems: 'center',
             gap: '1rem',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+            boxShadow: 'var(--shadow)',
           }}
         >
           <div
@@ -407,19 +395,19 @@ const MemberManagementView = () => {
               width: '48px',
               height: '48px',
               borderRadius: '0.75rem',
-              backgroundColor: 'rgba(16, 185, 129, 0.15)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
+              backgroundColor: 'var(--success-soft)',
+              border: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#10b981',
+              color: 'var(--success-text)',
             }}
           >
             <UserCheck style={{ width: '24px', height: '24px' }} />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>Active Accounts</span>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#34d399', marginTop: '0.1rem' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>Active Accounts</span>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--success-text)', marginTop: '0.1rem' }}>
               {activeCount}
             </div>
           </div>
@@ -428,14 +416,14 @@ const MemberManagementView = () => {
         {/* Card 3: Có gói tập hiệu lực */}
         <div
           style={{
-            backgroundColor: '#0a1224',
-            border: '1px solid #162444',
+            backgroundColor: 'var(--surface)',
+            border: '1px solid var(--border)',
             borderRadius: '1rem',
             padding: '1.25rem',
             display: 'flex',
             alignItems: 'center',
             gap: '1rem',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+            boxShadow: 'var(--shadow)',
           }}
         >
           <div
@@ -443,19 +431,19 @@ const MemberManagementView = () => {
               width: '48px',
               height: '48px',
               borderRadius: '0.75rem',
-              backgroundColor: 'rgba(56, 189, 248, 0.15)',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
+              backgroundColor: 'var(--primary-soft)',
+              border: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#38bdf8',
+              color: 'var(--primary)',
             }}
           >
             <CreditCard style={{ width: '24px', height: '24px' }} />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>Active Packages</span>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#38bdf8', marginTop: '0.1rem' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>Active Packages</span>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.1rem' }}>
               {hasActivePackageCount}
             </div>
           </div>
@@ -464,14 +452,14 @@ const MemberManagementView = () => {
         {/* Card 4: Gói hết hạn */}
         <div
           style={{
-            backgroundColor: '#0a1224',
-            border: '1px solid #162444',
+            backgroundColor: 'var(--surface)',
+            border: '1px solid var(--border)',
             borderRadius: '1rem',
             padding: '1.25rem',
             display: 'flex',
             alignItems: 'center',
             gap: '1rem',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+            boxShadow: 'var(--shadow)',
           }}
         >
           <div
@@ -479,19 +467,19 @@ const MemberManagementView = () => {
               width: '48px',
               height: '48px',
               borderRadius: '0.75rem',
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
+              backgroundColor: 'var(--danger-soft)',
+              border: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#ef4444',
+              color: 'var(--danger-text)',
             }}
           >
             <AlertCircle style={{ width: '24px', height: '24px' }} />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>Expired Packages</span>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f87171', marginTop: '0.1rem' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>Expired Packages</span>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--danger-text)', marginTop: '0.1rem' }}>
               {expiredPackageCount}
             </div>
           </div>
@@ -501,8 +489,8 @@ const MemberManagementView = () => {
       {/* ================= SEARCH & FILTER CONTROL BAR ================= */}
       <div
         style={{
-          backgroundColor: '#091124',
-          border: '1px solid #162444',
+          backgroundColor: 'var(--surface)',
+          border: '1px solid var(--border)',
           borderRadius: '1rem',
           padding: '1.25rem',
           display: 'flex',
@@ -521,7 +509,7 @@ const MemberManagementView = () => {
                 transform: 'translateY(-50%)',
                 width: '18px',
                 height: '18px',
-                color: '#64748b',
+                color: 'var(--text-muted)',
               }}
             />
             <input
@@ -531,17 +519,17 @@ const MemberManagementView = () => {
               onChange={(e) => setSearchKeyword(e.target.value)}
               style={{
                 width: '100%',
-                backgroundColor: '#060b17',
-                border: '1px solid #1e293b',
+                backgroundColor: 'var(--surface)',
+                border: '1px solid var(--border)',
                 borderRadius: '0.75rem',
                 padding: '0.75rem 1rem 0.75rem 2.75rem',
-                color: '#f8fafc',
+                color: 'var(--text)',
                 fontSize: '0.875rem',
                 outline: 'none',
                 transition: 'border-color 0.2s',
               }}
-              onFocus={(e) => (e.target.style.borderColor = '#38bdf8')}
-              onBlur={(e) => (e.target.style.borderColor = '#1e293b')}
+              onFocus={(e) => (e.target.style.borderColor = 'var(--border)')}
+              onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
             />
             {searchKeyword && (
               <button
@@ -553,7 +541,7 @@ const MemberManagementView = () => {
                   transform: 'translateY(-50%)',
                   background: 'none',
                   border: 'none',
-                  color: '#64748b',
+                  color: 'var(--text-muted)',
                   cursor: 'pointer',
                   fontSize: '0.8rem',
                   padding: '0.2rem',
@@ -595,13 +583,13 @@ const MemberManagementView = () => {
         {/* Active Filter Chips indicator */}
         {(searchKeyword || selectedStatus !== 'ALL' || selectedPackageStatus !== 'ALL') && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '0.25rem' }}>
-            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Filtering by:</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Filtering by:</span>
             {searchKeyword && (
               <span
                 style={{
                   fontSize: '0.75rem',
-                  backgroundColor: '#1e293b',
-                  color: '#93c5fd',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--primary)',
                   padding: '0.2rem 0.6rem',
                   borderRadius: '9999px',
                   display: 'flex',
@@ -612,7 +600,7 @@ const MemberManagementView = () => {
                 Keyword: "${searchKeyword}"
                 <button
                   onClick={() => setSearchKeyword('')}
-                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
                 >
                   ✕
                 </button>
@@ -622,8 +610,8 @@ const MemberManagementView = () => {
               <span
                 style={{
                   fontSize: '0.75rem',
-                  backgroundColor: '#1e293b',
-                  color: '#34d399',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--success-text)',
                   padding: '0.2rem 0.6rem',
                   borderRadius: '9999px',
                   display: 'flex',
@@ -634,7 +622,7 @@ const MemberManagementView = () => {
                 Status: ${selectedStatus}
                 <button
                   onClick={() => setSelectedStatus('ALL')}
-                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
                 >
                   ✕
                 </button>
@@ -644,8 +632,8 @@ const MemberManagementView = () => {
               <span
                 style={{
                   fontSize: '0.75rem',
-                  backgroundColor: '#1e293b',
-                  color: '#38bdf8',
+                  backgroundColor: 'var(--surface)',
+                  color: 'var(--primary)',
                   padding: '0.2rem 0.6rem',
                   borderRadius: '9999px',
                   display: 'flex',
@@ -656,7 +644,7 @@ const MemberManagementView = () => {
                 Package: ${selectedPackageStatus}
                 <button
                   onClick={() => setSelectedPackageStatus('ALL')}
-                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
                 >
                   ✕
                 </button>
@@ -671,7 +659,7 @@ const MemberManagementView = () => {
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#f87171',
+                color: 'var(--danger-text)',
                 fontSize: '0.75rem',
                 cursor: 'pointer',
                 textDecoration: 'underline',
@@ -686,17 +674,17 @@ const MemberManagementView = () => {
       {/* ================= MEMBERS TABLE ================= */}
       <div
         style={{
-          backgroundColor: '#091124',
-          border: '1px solid #162444',
+          backgroundColor: 'var(--surface)',
+          border: '1px solid var(--border)',
           borderRadius: '1rem',
           overflow: 'hidden',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.25)',
+          boxShadow: 'var(--shadow)',
         }}
       >
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
             <thead>
-                <tr style={{ backgroundColor: '#0c1630', borderBottom: '1px solid #162444', color: '#94a3b8' }}>
+                <tr style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                     <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Member & Name</th>
                     <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Contact Info</th>
                     <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Current Package</th>
@@ -708,8 +696,8 @@ const MemberManagementView = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: '3.5rem', textAlign: 'center', color: '#94a3b8' }}>
-                    <div style={{ display: 'inline-block', width: '28px', height: '28px', border: '3px solid rgba(56, 189, 248, 0.2)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <td colSpan={6} style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <div style={{ display: 'inline-block', width: '28px', height: '28px', border: '3px solid var(--border)', borderTopColor: 'var(--border)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                     <p style={{ marginTop: '0.75rem', margin: '0.75rem 0 0', fontSize: '0.9rem' }}>Searching member records...</p>
                   </td>
                 </tr>
@@ -721,20 +709,20 @@ const MemberManagementView = () => {
                         width: '56px',
                         height: '56px',
                         borderRadius: '50%',
-                        backgroundColor: 'rgba(30, 41, 59, 0.5)',
+                        backgroundColor: 'var(--surface-hover)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         margin: '0 auto 1rem',
-                        color: '#64748b',
+                        color: 'var(--text-muted)',
                       }}
                     >
                       <UserX style={{ width: '28px', height: '28px' }} />
                     </div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f8fafc', margin: '0 0 0.4rem' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text)', margin: '0 0 0.4rem' }}>
                         No members found
                     </h3>
-                    <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: 0 }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
                         No results found matching keyword "${searchKeyword}". Please try other filters.
                     </p>
                   </td>
@@ -748,11 +736,11 @@ const MemberManagementView = () => {
                     <tr
                       key={member.userId}
                       style={{
-                        borderBottom: '1px solid #15203b',
+                        borderBottom: '1px solid var(--border)',
                         transition: 'background-color 0.15s ease',
                         cursor: 'pointer',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0d1833')}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--surface)')}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                       onClick={() => handleViewDetail(member.userId)}
                     >
@@ -764,23 +752,23 @@ const MemberManagementView = () => {
                               width: '40px',
                               height: '40px',
                               borderRadius: '0.65rem',
-                              background: 'linear-gradient(135deg, #1e40af, #0284c7)',
+                              background: 'linear-gradient(135deg, var(--primary-soft), var(--primary-soft))',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               fontWeight: 700,
                               fontSize: '0.85rem',
-                              color: '#ffffff',
+                              color: 'var(--text)',
                               flexShrink: 0,
                             }}
                           >
                             {getInitials(member.fullName)}
                           </div>
                           <div>
-                            <span style={{ fontSize: '0.75rem', color: '#64748b', fontFamily: 'monospace', display: 'block' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace', display: 'block' }}>
                               #MEM-{String(member.userId).padStart(4, '0')}
                             </span>
-                            <strong style={{ color: '#f8fafc', fontSize: '0.95rem' }}>
+                            <strong style={{ color: 'var(--text)', fontSize: '0.95rem' }}>
                               {member.fullName}
                             </strong>
                           </div>
@@ -790,12 +778,12 @@ const MemberManagementView = () => {
                       {/* Liên Hệ */}
                       <td style={{ padding: '1rem 1.25rem' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#cbd5e1', fontSize: '0.85rem' }}>
-                            <Phone style={{ width: '13px', height: '13px', color: '#38bdf8' }} />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text)', fontSize: '0.85rem' }}>
+                            <Phone style={{ width: '13px', height: '13px', color: 'var(--primary)' }} />
                             <span>{member.phone || 'No phone'}</span>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#64748b', fontSize: '0.775rem' }}>
-                            <Mail style={{ width: '13px', height: '13px', color: '#818cf8' }} />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.775rem' }}>
+                            <Mail style={{ width: '13px', height: '13px', color: 'var(--primary)' }} />
                             <span>{member.email}</span>
                           </div>
                         </div>
@@ -805,16 +793,16 @@ const MemberManagementView = () => {
                       <td style={{ padding: '1rem 1.25rem' }}>
                         {isCurrentActive ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                            <span style={{ fontWeight: 600, color: '#38bdf8' }}>{member.currentPackageName}</span>
-                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Type: ${member.currentPackageType || 'COMBO'}</span>
+                            <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{member.currentPackageName}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Type: {member.currentPackageType || 'COMBO'}</span>
                           </div>
                         ) : isExpired ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                            <span style={{ color: '#94a3b8', textDecoration: 'line-through' }}>{member.currentPackageName}</span>
-                            <span style={{ fontSize: '0.75rem', color: '#f87171' }}>Expired</span>
+                            <span style={{ color: 'var(--text-muted)', textDecoration: 'line-through' }}>{member.currentPackageName}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--danger-text)' }}>Expired</span>
                           </div>
                         ) : (
-                          <span style={{ color: '#64748b', fontStyle: 'italic', fontSize: '0.85rem' }}>No Package Enrolled</span>
+                          <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>No Package Enrolled</span>
                         )}
                       </td>
 
@@ -832,15 +820,15 @@ const MemberManagementView = () => {
                                 padding: '0.2rem 0.55rem',
                                 borderRadius: '9999px',
                                 width: 'fit-content',
-                                backgroundColor: member.daysRemaining > 7 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                                color: member.daysRemaining > 7 ? '#34d399' : '#fbbf24',
-                                border: `1px solid ${member.daysRemaining > 7 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                                backgroundColor: member.daysRemaining > 7 ? 'var(--success-soft)' : 'var(--warning-soft)',
+                                color: member.daysRemaining > 7 ? 'var(--success-text)' : 'var(--warning-text)',
+                                border: `1px solid ${member.daysRemaining > 7 ? 'var(--border)' : 'var(--border)'}`,
                               }}
                             >
                               <Clock style={{ width: '12px', height: '12px' }} />
                               {member.daysRemaining} days left
                             </span>
-                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                               Expires on: {formatDate(member.membershipEndDate)}
                             </span>
                           </div>
@@ -849,16 +837,16 @@ const MemberManagementView = () => {
                             style={{
                               fontSize: '0.75rem',
                               fontWeight: 600,
-                              color: '#f87171',
-                              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                              color: 'var(--danger-text)',
+                              backgroundColor: 'var(--danger-soft)',
                               padding: '0.2rem 0.5rem',
                               borderRadius: '0.35rem',
                             }}
                           >
-                            Expired since ${formatDate(member.membershipEndDate)}
+                            Expired since {formatDate(member.membershipEndDate)}
                           </span>
                         ) : (
-                          <span style={{ color: '#64748b', fontSize: '0.8rem' }}>—</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
                         )}
                       </td>
 
@@ -870,9 +858,9 @@ const MemberManagementView = () => {
                             fontWeight: 600,
                             padding: '0.25rem 0.65rem',
                             borderRadius: '9999px',
-                            backgroundColor: member.status === 'ACTIVE' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                            color: member.status === 'ACTIVE' ? '#34d399' : '#f87171',
-                            border: `1px solid ${member.status === 'ACTIVE' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                            backgroundColor: member.status === 'ACTIVE' ? 'var(--success-soft)' : 'var(--danger-soft)',
+                            color: member.status === 'ACTIVE' ? 'var(--success-text)' : 'var(--danger-text)',
+                            border: `1px solid ${member.status === 'ACTIVE' ? 'var(--border)' : 'var(--border)'}`,
                           }}
                         >
                           {member.status === 'ACTIVE' ? '● Active' : '● Inactive'}
@@ -891,9 +879,9 @@ const MemberManagementView = () => {
                             alignItems: 'center',
                             gap: '0.4rem',
                             padding: '0.5rem 0.85rem',
-                            backgroundColor: '#111d38',
-                            color: '#38bdf8',
-                            border: '1px solid rgba(56, 189, 248, 0.25)',
+                            backgroundColor: 'var(--surface)',
+                            color: 'var(--primary)',
+                            border: '1px solid var(--border)',
                             borderRadius: '0.5rem',
                             fontSize: '0.8rem',
                             fontWeight: 600,
@@ -901,12 +889,12 @@ const MemberManagementView = () => {
                             transition: 'all 0.2s',
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#182b52';
-                            e.currentTarget.style.borderColor = '#38bdf8';
+                            e.currentTarget.style.backgroundColor = 'var(--surface)';
+                            e.currentTarget.style.borderColor = 'var(--border)';
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#111d38';
-                            e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.25)';
+                            e.currentTarget.style.backgroundColor = 'var(--surface)';
+                            e.currentTarget.style.borderColor = 'var(--border)';
                           }}
                         >
                           <Eye style={{ width: '14px', height: '14px' }} />
@@ -925,13 +913,13 @@ const MemberManagementView = () => {
           <div
               style={{
                   padding: '0.85rem 1.25rem',
-                  backgroundColor: '#0c1630',
-                  borderTop: '1px solid #162444',
+                  backgroundColor: 'var(--surface)',
+                  borderTop: '1px solid var(--border)',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   fontSize: '0.8rem',
-                  color: '#64748b',
+                  color: 'var(--text-muted)',
               }}
           >
               <span>Showing {members.length} members</span>

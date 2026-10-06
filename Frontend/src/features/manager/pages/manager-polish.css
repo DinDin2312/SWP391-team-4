@@ -1,0 +1,79 @@
+/* Admin typography and spacing: keep dense data readable and actions distinct. */
+.manager-app {
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.manager-content { padding-top: 28px; }
+.manager-page-header { margin-bottom: 24px; }
+.manager-page-header h1 { font-size: clamp(24px, 2vw, 28px); font-weight: 700; letter-spacing: -.025em; line-height: 1.25; }
+.manager-page-header p { margin-top: 8px; font-size: 14px; line-height: 1.6; }
+.manager-breadcrumb { font-size: 13px; }
+.manager-breadcrumb strong { font-weight: 600; }
+.manager-sidebar nav button { min-height: 46px; font-size: 14px; font-weight: 500; }
+.manager-sidebar nav button.active { font-weight: 600; }
+.manager-brand > span { flex-shrink: 0; }
+.manager-role { font-size: 12px; font-weight: 600; }
+.manager-primary, .manager-secondary, .manager-add-account { font-size: 13px; font-weight: 600; min-height: 40px; border-radius: 8px; }
+.manager-primary { border-color: transparent; }
+.manager-stat-grid { gap: 16px; }
+.manager-staff-stats { margin-bottom: 20px; }
+.manager-stat { min-height: 104px; padding: 20px; border-radius: 10px; gap: 16px; }
+.manager-stat > span { flex: 0 0 40px; width: 40px; height: 40px; border: 0; border-radius: 10px; }
+.manager-stat small { font-size: 12px; font-weight: 500; }
+.manager-stat strong { margin-top: 4px; font-size: 28px; font-weight: 700; letter-spacing: -.025em; line-height: 1.2; }
+.manager-stat.is-active { border-color: color-mix(in srgb, var(--primary) 30%, var(--border)); box-shadow: none; }
+.manager-filterbar { padding: 14px; gap: 12px; border-radius: 10px; margin-bottom: 20px; }
+.manager-search { border-radius: 8px; min-width: 180px; }
+.manager-search input { min-width: 0; height: 40px; font-size: 14px; color: var(--text); padding: 0; }
+.manager-search input::placeholder { color: var(--text-muted); opacity: .85; }
+.manager-select select { min-height: 42px; font-size: 13px; border-radius: 8px; }
+.manager-filterbar > .manager-select select:focus,
+.manager-filterbar > .manager-select select:focus-visible { outline: none; box-shadow: none; border-color: var(--border); }
+.manager-clear-filter { font-size: 12px; font-weight: 600; }
+.manager-result-count { font-size: 12px; }
+.manager-staff-table { border-radius: 10px; }
+.manager-staff-table thead th { font-size: 11px; font-weight: 600; letter-spacing: .025em; background: var(--bg); }
+.manager-staff-table td { padding-block: 16px; font-size: 13px; vertical-align: middle; }
+.manager-phone-cell { white-space: nowrap; }
+.manager-staff-table td > strong, .manager-person strong { font-size: 13px; font-weight: 600; }
+.manager-cell-sub { font-size: 11px; line-height: 1.4; }
+.manager-cell-sub.is-empty { font-size: 12px; font-style: normal; }
+.manager-badge, .manager-staff-table .manager-badge { font-size: 11px; font-weight: 600; min-height: 28px; }
+.manager-staff-table .manager-role-badge.is-member,
+.manager-detail-drawer .manager-role-badge.is-member { color: var(--text-muted); background: var(--surface-hover); }
+.manager-staff-table .manager-status-badge.is-active,
+.manager-detail-drawer .manager-status-badge.is-active { background: var(--success-soft); border-color: transparent; }
+.manager-pagination { font-size: 12px; padding: 14px 16px; }
+.manager-panel { border-radius: 10px; }
+.manager-panel-heading span { font-size: 11px; font-weight: 600; letter-spacing: .04em; }
+.manager-panel-heading strong { font-size: 17px; font-weight: 600; }
+.manager-detail-drawer { font-size: 14px; }
+.manager-detail-identity h2 { font-size: 24px; font-weight: 700; }
+.manager-detail-identity > p { font-size: 13px; }
+.manager-detail-section { padding: 24px; }
+.manager-detail-section-title h3 { font-size: 15px; font-weight: 600; }
+.manager-detail-section-title p { font-size: 12px; line-height: 1.5; }
+.manager-contact-grid small, .manager-detail-summary span { font-size: 11px; }
+.manager-contact-grid strong, .manager-detail-summary strong { font-size: 13px; font-weight: 600; }
+.manager-detail-actions button { font-size: 12px; font-weight: 600; }
+.manager-plan-history article > div > strong { font-size: 15px; font-weight: 600; }
+.manager-plan-history dt { font-size: 10px; font-weight: 600; }
+.manager-plan-history dd { font-size: 13px; font-weight: 600; }
+.manager-detail-timeline strong { font-size: 13px; font-weight: 600; }
+.manager-detail-timeline span { font-size: 12px; }
+.ops-stat { border-radius: 10px; }
+.ops-stat strong { font-weight: 700; letter-spacing: -.025em; }
+@media (max-width: 1100px) {
+  .manager-filterbar { flex-wrap: wrap; }
+  .manager-search { flex-basis: 100%; }
+}
+@media (max-width: 520px) {
+  .manager-content { padding-top: 20px; }
+  .manager-page-header { gap: 12px; margin-bottom: 20px; }
+  .manager-page-header p { font-size: 13px; }
+  .manager-stat { padding: 16px; min-height: 90px; }
+  .manager-filterbar > .manager-select { flex: 1 1 140px; width: auto; }
+  .manager-detail-section { padding: 20px; }
+}

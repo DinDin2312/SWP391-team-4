@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/displayFormat';
 const daysAgo = (days) => {
   const date = new Date();
   date.setDate(date.getDate() - days);
@@ -32,7 +33,7 @@ export const isCurrentMonth = (value) => {
   return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
 };
 
-export const staffDate = (value) => value ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(value)) : '—';
+export const staffDate = formatDate;
 
 export const staffInitials = (name = '') => name.trim().split(/\s+/).filter(Boolean).slice(-2).map((part) => part[0]).join('').toUpperCase();
 

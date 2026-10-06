@@ -6,8 +6,6 @@ import {
   Menu, Package, Pencil, Plus, RefreshCw, ShieldCheck, Users, X,
 } from 'lucide-react';
 import { AuthContext } from '../../../context/AuthContext';
-import RoleThemeToggle from '../../../components/RoleThemeToggle';
-import { useRoleTheme } from '../../../hooks/useRoleTheme';
 import ManagerPageHeader from '../components/ManagerPageHeader';
 import managerService from '../services/managerService';
 import { isoDate, initialForm, apiError, reportCsv } from '../managerUtils';
@@ -19,6 +17,7 @@ import ManagerSelect from '../staff/ManagerSelect';
 import PasswordInput from '../staff/PasswordInput';
 import { validateAvatarFile } from '../staff/staffData';
 import './manager.css';
+import './manager-polish.css';
 
 const today = new Date();
 const initialFrom = isoDate(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -51,7 +50,6 @@ function Loading() {
 function ManagerDashboard() {
   const { userInfo, logout } = useContext(AuthContext);
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useRoleTheme();
   const [active, setActive] = useState('dashboard');
   const [mobileNav, setMobileNav] = useState(false);
   const [data, setData] = useState(null);
@@ -120,7 +118,7 @@ function ManagerDashboard() {
   const initialLoading = loading && data === null;
 
   return (
-    <div className={`manager-app ${theme === 'light' ? 'is-light' : 'is-dark'}`}>
+    <div className="manager-app">
       <aside className={`manager-sidebar ${mobileNav ? 'is-open' : ''}`}>
         <div className="manager-brand"><span><Dumbbell size={22} /></span><div><strong>NEXUS</strong><small>CENTER CONTROL</small></div><button className="manager-mobile-close" onClick={() => setMobileNav(false)} aria-label="Close menu"><X size={20} /></button></div>
         <div className="manager-role"><ShieldCheck size={16} /><span>Center Manager</span></div>
@@ -138,7 +136,6 @@ function ManagerDashboard() {
         <header className="manager-topbar">
           <button className="manager-menu-button" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu size={20} /></button>
           <nav className="manager-breadcrumb" aria-label="Breadcrumb"><span>Nexus Center</span><i aria-hidden="true">/</i><strong>{currentPage.title}</strong></nav>
-          <RoleThemeToggle theme={theme} onToggle={toggleTheme} />
           <button className={`manager-icon-button ${loading ? 'is-refreshing' : ''}`} onClick={load} title="Refresh" aria-label="Refresh data" aria-busy={loading} disabled={initialLoading}><RefreshCw size={18} /></button>
         </header>
 
