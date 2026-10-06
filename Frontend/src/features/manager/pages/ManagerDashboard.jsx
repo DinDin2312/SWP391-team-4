@@ -9,7 +9,10 @@ import { AuthContext } from '../../../context/AuthContext';
 import ManagerPageHeader from '../components/ManagerPageHeader';
 import managerService from '../services/managerService';
 import { isoDate, initialForm, apiError, reportCsv } from '../managerUtils';
+import { formatMoney, formatDate, formatDateTime } from '../../../utils/displayFormat';
 import StaffPage from '../staff/StaffPage';
+import OperationsPage, { OperationsSkeleton } from '../operations/OperationsPage';
+import { weekRange } from '../operations/operationsUtils';
 import ManagerToast from '../staff/ManagerToast';
 import StaffSkeleton from '../staff/StaffSkeleton';
 import StaffAvatar from '../staff/StaffAvatar';
@@ -22,9 +25,8 @@ import './manager-polish.css';
 const today = new Date();
 const initialFrom = isoDate(new Date(today.getFullYear(), today.getMonth(), 1));
 const initialTo = isoDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
-const money = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(Number(value || 0));
-const dateTime = (value) => value && !Number.isNaN(new Date(value).getTime()) ? new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) : '-';
-const statusLabel = { ACTIVE: 'Active', INACTIVE: 'Inactive', PENDING: 'Pending', SCHEDULED: 'Scheduled', COMPLETED: 'Completed', CANCELLED: 'Cancelled' };
+const money = formatMoney;
+const dateTime = formatDateTime;
 
 const adminPages = [
   { id: 'dashboard', title: 'Overview', description: 'Monitor center performance and recent operational activity.', icon: LayoutDashboard },
@@ -34,10 +36,6 @@ const adminPages = [
   { id: 'reports', title: 'Reports', description: 'Review financial and operational performance by date range.', icon: BarChart3 },
   { id: 'audit', title: 'System Audit Log', description: 'Review administrative changes and account activity.', icon: ClipboardList },
 ];
-
-function Status({ value }) {
-  return <span className={`manager-status is-${String(value).toLowerCase()}`}>{statusLabel[value] || value}</span>;
-}
 
 function EmptyState({ message = 'No matching data available.' }) {
   return <div className="manager-empty"><ClipboardList size={28} /><span>{message}</span></div>;
@@ -56,11 +54,11 @@ function ManagerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [modal, setModal] = useState(null);
-  const [operationTab, setOperationTab] = useState('classes');
+
   const [filters, setFilters] = useState({ keyword: '', role: 'ALL', status: 'ALL', from: initialFrom, to: initialTo });
   const [appliedFilters, setAppliedFilters] = useState(filters);
   const requestId = useRef(0);
-  const [roster, setRoster] = useState(null);
+
   const [notice, setNotice] = useState('');
   const invalidateRequest = useCallback(() => { requestId.current++; }, []);
 
@@ -89,7 +87,10 @@ function ManagerDashboard() {
       if (active === 'reports') publish(await managerService.reports(appliedFilters.from, appliedFilters.to));
       if (active === 'audit') publish(await managerService.auditLogs());
     } catch (err) {
-      if (currentRequest === requestId.current) setError(apiError(err, err.message || 'Unable to load data.'));
+      if (currentRequest === requestId.current) {
+        setError(apiError(err, err.message || 'Unable to load data.'));
+        if (active === 'operations') setData(null);
+      }
     } finally {
       if (currentRequest === requestId.current) setLoading(false);
     }
@@ -105,6 +106,10 @@ function ManagerDashboard() {
     requestId.current++;
     setLoading(true);
     setNotice('');
+    if (id === 'operations') {
+      const next = { ...filters, ...weekRange() };
+      setFilters(next); setAppliedFilters(next);
+    }
     setActive(id);
     setData(null);
     setMobileNav(false);
@@ -119,15 +124,15 @@ function ManagerDashboard() {
 
   return (
     <div className="manager-app">
-      <aside className={`manager-sidebar ${mobileNav ? 'is-open' : ''}`}>
+      <aside id="manager-sidebar" className={`manager-sidebar ${mobileNav ? 'is-open' : ''}`}>
         <div className="manager-brand"><span><Dumbbell size={22} /></span><div><strong>NEXUS</strong><small>CENTER CONTROL</small></div><button className="manager-mobile-close" onClick={() => setMobileNav(false)} aria-label="Close menu"><X size={20} /></button></div>
         <div className="manager-role"><ShieldCheck size={16} /><span>Center Manager</span></div>
         <nav>
-          {adminPages.map(({ id, title, icon: Icon }) => <button key={id} className={active === id ? 'active' : ''} onClick={() => selectPage(id)}><Icon size={18} /><span>{title}</span></button>)}
+          {adminPages.map(({ id, title, icon: Icon }) => <button key={id} title={title} aria-label={title} aria-current={active === id ? 'page' : undefined} className={active === id ? 'active' : ''} onClick={() => selectPage(id)}><Icon size={18} /><span>{title}</span></button>)}
         </nav>
         <div className="manager-profile">
           <div className="manager-avatar">{initials}</div><div><strong>{userInfo?.fullName || 'Center Manager'}</strong><small>{userInfo?.email || 'admin@sport.com'}</small></div>
-          <button onClick={handleLogout} title="Log out"><LogOut size={17} /></button>
+          <button onClick={handleLogout} title="Log out" aria-label="Log out"><LogOut size={17} /></button>
         </div>
       </aside>
       {mobileNav && <button className="manager-overlay" onClick={() => setMobileNav(false)} aria-label="Close menu" />}
@@ -141,12 +146,12 @@ function ManagerDashboard() {
 
         <section className="manager-content">
           {error && <div className="manager-alert" role="alert"><span>{error}</span><button onClick={load}>Retry</button></div>}
-          {initialLoading ? (active === 'people' ? <StaffSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={data} filters={filters} appliedFilters={appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} openRoster={setRoster} operationTab={operationTab} setOperationTab={setOperationTab} />}
+          {initialLoading ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={data} filters={filters} appliedFilters={appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={load} loading={loading} loadError={error} />}
         </section>
       </main>
       <ManagerToast message={notice} onClose={() => setNotice('')} />
       {modal && <EditorModal config={modal} dictionaries={active === 'people' || active === 'operations' ? data : null} onClose={() => setModal(null)} onSaved={handleSaved} />}
-      {roster && <RosterModal schedule={roster} onClose={() => setRoster(null)} />}
+
     </div>
   );
 }
@@ -154,7 +159,7 @@ function ManagerDashboard() {
 function ManagerView(props) {
   if (props.active === 'dashboard') return <DashboardView {...props} />;
   if (props.active === 'people') return <StaffPage {...props} />;
-  if (props.active === 'operations') return <OperationsView {...props} />;
+  if (props.active === 'operations') return <OperationsPage {...props} />;
   if (props.active === 'packages') return <PackagesView {...props} />;
   if (props.active === 'reports') return <ReportsView {...props} />;
   return <AuditView {...props} />;
@@ -170,34 +175,9 @@ function DashboardView({ data, page }) {
     <div className="manager-stat-grid">{stats.map(([label, value, Icon, tone]) => <div className={`manager-stat tone-${tone}`} key={label}><span><Icon size={20} /></span><div><small>{label}</small><strong>{value ?? 0}</strong></div></div>)}</div>
     <div className="manager-dashboard-grid">
       <section className="manager-panel manager-revenue"><div className="manager-panel-heading"><div><span>Revenue this month</span><strong>{money(data?.monthlyRevenue)}</strong></div><CircleDollarSign size={24} /></div><div className="manager-metric-row"><span>Sessions in the next 7 days</span><b>{data?.upcomingSchedules || 0} sessions</b></div></section>
-      <section className="manager-panel"><div className="manager-panel-heading"><div><span>Recent activity</span><strong>Operations feed</strong></div><Activity size={21} /></div><div className="manager-timeline">{data?.recentActivity?.length ? data.recentActivity.map((item, index) => <div key={`${item.type}-${index}`}><i /><div><strong>{item.title}</strong><span>{item.detail}</span></div><time>{dateTime(item.occurredAt)}</time></div>) : <EmptyState />}</div></section>
+      <section className="manager-panel"><div className="manager-panel-heading"><div><span>Recent activity</span><strong>Operations feed</strong></div><Activity size={21} /></div><div className="manager-timeline">{data?.recentActivity?.length ? data.recentActivity.map((item, index) => <div key={`${item.type}-${index}`}><i /><div><strong>{item.title}</strong><span>{item.type === 'PAYMENT' ? item.detail.replace(/^([\d,]+) VND/, (_, amount) => money(amount.replaceAll(',', ''))) : item.detail}</span></div><time>{dateTime(item.occurredAt)}</time></div>) : <EmptyState />}</div></section>
     </div>
   </>;
-}
-
-function OperationsView({ data, filters, setFilters, reload, openModal, openRoster, operationTab, setOperationTab, page }) {
-  const tabs = [['classes', 'Classes'], ['schedules', 'Schedules'], ['subjects', 'Subjects'], ['rooms', 'Rooms']];
-  const typeMap = { classes: 'class', schedules: 'schedule', subjects: 'subject', rooms: 'room' };
-  return <>
-    <ManagerPageHeader title={page.title} description={page.description} actions={<button className="manager-primary" onClick={() => openModal({ type: typeMap[operationTab] })}><Plus size={17} /> Create New</button>} />
-    <div className="manager-tabs">{tabs.map(([id, label]) => <button key={id} className={operationTab === id ? 'active' : ''} onClick={() => setOperationTab(id)}>{label}<span>{data?.[id]?.length || 0}</span></button>)}</div>
-    {operationTab === 'schedules' && <div className="manager-date-filter"><label>From<input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} /></label><label>To<input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} /></label><button className="manager-secondary" onClick={reload}>Apply</button></div>}
-    <OperationsTable type={operationTab} rows={data?.[operationTab] || []} edit={(item) => openModal({ type: typeMap[operationTab], item })} openRoster={openRoster} />
-  </>;
-}
-
-function OperationsTable({ type, rows, edit, openRoster }) {
-  const heads = {
-    classes: ['Class', 'Subject', 'Assignment', 'Maximum bookings/session', 'Fee', 'Status'],
-    schedules: ['Time', 'Class', 'Coach / Room', 'Booked', 'Status'],
-    subjects: ['Subject', 'Description', 'Classes'], rooms: ['Room', 'Capacity', 'Classes'],
-  }[type];
-  return <div className="manager-table-wrap"><table><thead><tr>{heads.map((head) => <th key={head}>{head}</th>)}<th /></tr></thead><tbody>{rows.map((row) => {
-    if (type === 'classes') return <tr key={row.classId}><td><strong>{row.className}</strong><small className="manager-cell-sub">CLS-{row.classId}</small></td><td>{row.subjectName}</td><td><strong>{row.coachName}</strong><small className="manager-cell-sub">{row.roomName}</small></td><td>{row.enrolled}/{row.maxSlots}</td><td>{money(row.price)}</td><td><Status value={row.status} /></td><td><button className="manager-edit" aria-label="Edit" onClick={() => edit(row)}><Pencil size={16} /></button></td></tr>;
-    if (type === 'schedules') return <tr key={row.scheduleId}><td><strong>{dateTime(row.startTime)}</strong><small className="manager-cell-sub">to {dateTime(row.endTime)}</small></td><td>{row.className}</td><td><strong>{row.coachName}</strong><small className="manager-cell-sub">{row.roomName}</small></td><td>{row.booked}/{row.maxSlots}</td><td><Status value={row.status} /></td><td><button className="manager-secondary" onClick={() => openRoster(row)}>Roster</button><button disabled={row.status !== 'SCHEDULED'} className="manager-edit" aria-label="Edit" onClick={() => edit(row)}><Pencil size={16} /></button></td></tr>;
-    if (type === 'subjects') return <tr key={row.subjectId}><td><strong>{row.subjectName}</strong></td><td>{row.description || '-'}</td><td>{row.classCount}</td><td><button className="manager-edit" aria-label="Edit" onClick={() => edit(row)}><Pencil size={16} /></button></td></tr>;
-    return <tr key={row.roomId}><td><strong>{row.roomName}</strong></td><td>{row.capacity} people</td><td>{row.classCount}</td><td><button className="manager-edit" aria-label="Edit" onClick={() => edit(row)}><Pencil size={16} /></button></td></tr>;
-  })}</tbody></table>{!rows.length && <EmptyState />}</div>;
 }
 
 function PackagesView({ data, openModal, page }) {
@@ -219,7 +199,7 @@ function ReportsView({ data, filters, appliedFilters, setFilters, reload, page }
   return <>
     <ManagerPageHeader title={page.title} description={page.description} actions={<div className="manager-report-range"><input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} /><span>to</span><input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} /><button className="manager-secondary" onClick={reload}>View</button><button className="manager-secondary" disabled={!data} onClick={exportReport}>Export CSV</button></div>} />
     <div className="manager-report-stats"><div><small>Revenue</small><strong>{money(summary.revenue)}</strong></div><div><small>Successful transactions</small><strong>{summary.successfulPayments || 0}</strong></div><div><small>Pending invoices</small><strong>{summary.pendingInvoices || 0}</strong></div><div><small>Class bookings</small><strong>{summary.confirmedBookings || 0}</strong></div></div>
-    <div className="manager-report-grid"><section className="manager-panel"><div className="manager-panel-heading"><div><span>Daily revenue</span><strong>Revenue trend</strong></div><BarChart3 size={20} /></div><div className="manager-bars">{data?.revenueByDay?.map((item) => <div key={item.label}><span>{new Date(item.label).toLocaleDateString('en-US')}</span><i><b style={{ width: `${(Number(item.value) / maxRevenue) * 100}%` }} /></i><strong>{money(item.value)}</strong></div>)}{!data?.revenueByDay?.length && <EmptyState />}</div></section><section className="manager-panel"><div className="manager-panel-heading"><div><span>Class performance</span><strong>Bookings / total session capacity</strong></div><Users size={20} /></div><div className="manager-occupancy">{data?.classOccupancy?.map((item) => <div key={item.classId}><div><span>{item.label}</span><strong>{item.value}/{item.capacity}</strong></div><i><b style={{ width: `${Math.min((Number(item.value) / Number(item.capacity || 1)) * 100, 100)}%` }} /></i></div>)}</div></section></div>
+    <div className="manager-report-grid"><section className="manager-panel"><div className="manager-panel-heading"><div><span>Daily revenue</span><strong>Revenue trend</strong></div><BarChart3 size={20} /></div><div className="manager-bars">{data?.revenueByDay?.map((item) => <div key={item.label}><span>{formatDate(item.label)}</span><i><b style={{ width: `${(Number(item.value) / maxRevenue) * 100}%` }} /></i><strong>{money(item.value)}</strong></div>)}{!data?.revenueByDay?.length && <EmptyState />}</div></section><section className="manager-panel"><div className="manager-panel-heading"><div><span>Class performance</span><strong>Bookings / total session capacity</strong></div><Users size={20} /></div><div className="manager-occupancy">{data?.classOccupancy?.map((item) => <div key={item.classId}><div><span>{item.label}</span><strong>{item.value}/{item.capacity}</strong></div><i><b style={{ width: `${Math.min((Number(item.value) / Number(item.capacity || 1)) * 100, 100)}%` }} /></i></div>)}</div></section></div>
   </>;
 }
 
@@ -377,27 +357,6 @@ function useDialog(onClose, busy = false) {
     return () => element?.removeEventListener('keydown', keyDown);
   }, [onClose, busy]);
   return ref;
-}
-
-function RosterModal({ schedule, onClose }) {
-  const [rows, setRows] = useState(null);
-  const [error, setError] = useState('');
-  const dialogRef = useDialog(onClose);
-  useEffect(() => {
-    let current = true;
-    managerService.scheduleBookings(schedule.scheduleId)
-      .then((result) => { if (current) setRows(result); })
-      .catch((err) => { if (current) setError(apiError(err, 'Unable to load the roster.')); });
-    return () => { current = false; };
-  }, [schedule.scheduleId]);
-  const attendance = { PRESENT: 'Present', ABSENT: 'Absent', NOT_YET: 'Not marked' };
-  return <div className="manager-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-    <section ref={dialogRef} className="manager-modal manager-roster" role="dialog" aria-modal="true" aria-labelledby="manager-roster-title" tabIndex={-1}>
-      <header><div><h3 id="manager-roster-title">Roster — {schedule.className}</h3><span>{dateTime(schedule.startTime)}</span></div><button onClick={onClose} aria-label="Close"><X size={20} /></button></header>
-      {error ? <div className="manager-alert" role="alert">{error}</div> : !rows ? <Loading /> : !rows.length ? <EmptyState message="No students have registered for this session." /> :
-        <div className="manager-table-wrap"><table><thead><tr><th>Student</th><th>Contact</th><th>Booking</th><th>Attendance</th></tr></thead><tbody>{rows.map((row) => <tr key={row.bookingId}><td>{row.fullName}</td><td>{row.email}<small className="manager-cell-sub">{row.phone || 'No phone number'}</small></td><td>{row.status === 'CONFIRMED' ? 'Confirmed' : row.status === 'PENDING' ? 'Pending' : 'Cancelled'}</td><td>{attendance[row.attendanceStatus] || 'Not marked'}</td></tr>)}</tbody></table></div>}
-    </section>
-  </div>;
 }
 
 export default ManagerDashboard;
