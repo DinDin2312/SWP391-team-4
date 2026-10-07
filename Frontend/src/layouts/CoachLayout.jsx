@@ -34,6 +34,7 @@ const CoachLayout = () => {
       case '/coach/dashboard': return 'Coach Dashboard';
       case '/coach/schedule': return 'Teaching Schedule & Trainees';
       case '/coach/students': return 'Assigned Trainees';
+      case '/coach/workouts': return 'Giao Bài Tập Cho Học Viên';
       case '/coach/settings': return 'Settings';
       default: return 'Coach Portal';
     }
@@ -94,6 +95,18 @@ const CoachLayout = () => {
             >
               <Users className="w-4 h-4" />
               <span>Assigned Trainees</span>
+            </button>
+
+            <button
+              onClick={() => navigate("/coach/workouts")}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                isActive('/coach/workouts')
+                  ? 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+              }`}
+            >
+              <Dumbbell className="w-4 h-4 text-[var(--primary)]" />
+              <span>Giao Bài Tập</span>
             </button>
 
             <button

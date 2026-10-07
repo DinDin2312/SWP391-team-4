@@ -28,6 +28,7 @@ import CoachLayout from '../layouts/CoachLayout';
 const CoachDashboard = lazy(() => import('../features/coach/pages/CoachDashboard'));
 const CoachSchedule = lazy(() => import('../features/coach/pages/CoachSchedule'));
 const CoachStudents = lazy(() => import('../features/coach/pages/CoachStudents'));
+const CoachWorkoutPlans = lazy(() => import('../features/coach/pages/CoachWorkoutPlans'));
 const ManagerDashboard = lazy(() => import('../features/manager/pages/ManagerDashboard'));
 const ReceptionistDashboard = lazy(() => import('../features/receptionist/pages/ReceptionistDashboard'));
 
@@ -68,6 +69,7 @@ function AppRoutes() {
         <Route path="dashboard" element={<CoachDashboard />} />
         <Route path="schedule" element={<CoachSchedule />} />
         <Route path="students" element={<CoachStudents />} />
+        <Route path="workouts" element={<CoachWorkoutPlans />} />
       </Route>
 
       {/* Legacy role path mappings */}

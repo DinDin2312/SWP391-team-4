@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
-  Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send
+  Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send, Dumbbell
 } from 'lucide-react';
 import SendNotificationModal from '../components/SendNotificationModal';
 
 const CoachStudents = () => {
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -225,17 +227,26 @@ const CoachStudents = () => {
                       <td className="px-4 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button 
+                            onClick={() => navigate('/coach/workouts')}
+                            title="Giao bài tập"
+                            className="px-3 py-1.5 rounded-lg bg-[var(--primary-soft)] hover:bg-[var(--primary)] hover:text-[color:var(--on-primary)] text-[var(--primary)] font-semibold text-xs border border-[var(--primary-soft)] flex items-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <Dumbbell className="w-3.5 h-3.5" />
+                            <span>Giao bài</span>
+                          </button>
+
+                          <button 
                             onClick={() => handleOpenIndividualNotif(st)}
                             title="Gửi thông báo riêng"
                             className="px-3 py-1.5 rounded-lg bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 hover:text-[var(--text)] font-semibold text-xs border border-blue-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
                           >
-                            <Send className="w-3.5 h-3.5 text-[var(--primary)]" />
+                            <Send className="w-3.5 h-3.5 text-blue-400" />
                             <span>Gửi tin</span>
                           </button>
 
                           <button 
                             onClick={() => setSelectedStudent(st)}
-                            className="px-3.5 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text)] hover:text-[var(--text)] font-semibold text-xs border border-slate-700/50 transition-all cursor-pointer"
+                            className="px-3.5 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text)] hover:text-[var(--text)] font-semibold text-xs border border-[var(--border)] transition-all cursor-pointer"
                           >
                             Chi tiết
                           </button>
