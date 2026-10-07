@@ -20,6 +20,8 @@ CREATE TABLE `NOTIFICATIONS` (`notification_id` int PRIMARY KEY AUTO_INCREMENT, 
 CREATE TABLE `AI_WORKOUT_PLANS` (`plan_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` int, `goal` varchar(255), `fitness_level` varchar(255), `created_at` datetime);
 CREATE TABLE `EXERCISES` (`exercise_id` int PRIMARY KEY AUTO_INCREMENT, `exercise_name` varchar(255), `muscle_group` varchar(255), `video_url` varchar(255));
 CREATE TABLE `AI_PLAN_DETAILS` (`detail_id` int PRIMARY KEY AUTO_INCREMENT, `plan_id` int, `exercise_id` int, `sets` int, `reps` int, `rest_seconds` int);
+CREATE TABLE `COACH_WORKOUT_PLANS` (`plan_id` int PRIMARY KEY AUTO_INCREMENT, `coach_id` int, `user_id` int, `title` varchar(255), `note` text, `status` varchar(50) DEFAULT 'ACTIVE', `created_at` datetime);
+CREATE TABLE `COACH_PLAN_DETAILS` (`detail_id` int PRIMARY KEY AUTO_INCREMENT, `plan_id` int, `exercise_id` int, `sets` int, `reps` int, `rest_seconds` int);
 CREATE TABLE `AUDIT_LOGS` (`audit_id` bigint PRIMARY KEY AUTO_INCREMENT, `actor_email` varchar(255) NOT NULL, `action` varchar(50) NOT NULL, `entity_type` varchar(100) NOT NULL, `entity_id` varchar(100), `details` text, `created_at` datetime NOT NULL);
 
 -- ================== 2. NỐI KHÓA NGOẠI ==================
@@ -44,6 +46,10 @@ ALTER TABLE `PAYMENTS` ADD FOREIGN KEY (`invoice_id`) REFERENCES `INVOICES` (`in
 ALTER TABLE `AI_WORKOUT_PLANS` ADD FOREIGN KEY (`user_id`) REFERENCES `USERS` (`user_id`);
 ALTER TABLE `AI_PLAN_DETAILS` ADD FOREIGN KEY (`plan_id`) REFERENCES `AI_WORKOUT_PLANS` (`plan_id`);
 ALTER TABLE `AI_PLAN_DETAILS` ADD FOREIGN KEY (`exercise_id`) REFERENCES `EXERCISES` (`exercise_id`);
+ALTER TABLE `COACH_WORKOUT_PLANS` ADD FOREIGN KEY (`coach_id`) REFERENCES `USERS` (`user_id`);
+ALTER TABLE `COACH_WORKOUT_PLANS` ADD FOREIGN KEY (`user_id`) REFERENCES `USERS` (`user_id`);
+ALTER TABLE `COACH_PLAN_DETAILS` ADD FOREIGN KEY (`plan_id`) REFERENCES `COACH_WORKOUT_PLANS` (`plan_id`) ON DELETE CASCADE;
+ALTER TABLE `COACH_PLAN_DETAILS` ADD FOREIGN KEY (`exercise_id`) REFERENCES `EXERCISES` (`exercise_id`);
 
 -- ================== 3. BƠM DỮ LIỆU MẪU (DUMMY DATA) ==================
 

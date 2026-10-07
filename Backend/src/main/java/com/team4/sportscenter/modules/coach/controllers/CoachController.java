@@ -1,13 +1,13 @@
 package com.team4.sportscenter.modules.coach.controllers;
 
+import com.team4.sportscenter.modules.coach.dtos.request.AssignWorkoutPlanRequest;
+import com.team4.sportscenter.modules.coach.dtos.request.CreateExerciseRequest;
 import com.team4.sportscenter.modules.coach.dtos.request.SendCoachNotificationRequest;
 import com.team4.sportscenter.modules.coach.dtos.request.UpdateAttendanceRequest;
-import com.team4.sportscenter.modules.coach.dtos.response.CoachClassResponse;
-import com.team4.sportscenter.modules.coach.dtos.response.CoachScheduleResponse;
-import com.team4.sportscenter.modules.coach.dtos.response.CoachStudentResponse;
-import com.team4.sportscenter.modules.coach.dtos.response.EnrolledStudentResponse;
+import com.team4.sportscenter.modules.coach.dtos.response.*;
 import com.team4.sportscenter.modules.coach.services.CoachNotificationService;
 import com.team4.sportscenter.modules.coach.services.CoachScheduleService;
+import com.team4.sportscenter.modules.coach.services.CoachWorkoutService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -24,6 +24,7 @@ public class CoachController {
 
     private final CoachScheduleService coachScheduleService;
     private final CoachNotificationService coachNotificationService;
+    private final CoachWorkoutService coachWorkoutService;
 
     @GetMapping("/schedules")
     public ResponseEntity<List<CoachScheduleResponse>> getCoachSchedules(Authentication authentication) {
@@ -73,5 +74,52 @@ public class CoachController {
         Map<String, Object> result = coachNotificationService.sendNotification(request, coachEmail);
         return ResponseEntity.ok(result);
     }
+
+    // ==================== BÀI TẬP & GIÁO ÁN HL ====================
+
+    @GetMapping("/exercises")
+    public ResponseEntity<List<ExerciseResponse>> getAllExercises() {
+        return ResponseEntity.ok(coachWorkoutService.getAllExercises());
+    }
+
+    @PostMapping("/exercises")
+    public ResponseEntity<ExerciseResponse> createExercise(@RequestBody CreateExerciseRequest request) {
+        return ResponseEntity.ok(coachWorkoutService.createExercise(request));
+    }
+
+    @PostMapping("/workouts/assign")
+    public ResponseEntity<?> assignWorkoutPlan(
+            @RequestBody AssignWorkoutPlanRequest request,
+            Authentication authentication) {
+        String coachEmail = authentication.getName();
+        Map<String, Object> result = coachWorkoutService.assignWorkoutPlan(request, coachEmail);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/workouts")
+    public ResponseEntity<List<CoachWorkoutPlanResponse>> getCoachWorkoutPlans(
+            @RequestParam(required = false) Integer studentUserId,
+            Authentication authentication) {
+        String coachEmail = authentication.getName();
+        return ResponseEntity.ok(coachWorkoutService.getCoachWorkoutPlans(coachEmail, studentUserId));
+    }
+
+    @GetMapping("/workouts/{planId}")
+    public ResponseEntity<CoachWorkoutPlanResponse> getWorkoutPlanById(
+            @PathVariable Integer planId,
+            Authentication authentication) {
+        String coachEmail = authentication.getName();
+        return ResponseEntity.ok(coachWorkoutService.getWorkoutPlanById(planId, coachEmail));
+    }
+
+    @DeleteMapping("/workouts/{planId}")
+    public ResponseEntity<?> deleteWorkoutPlan(
+            @PathVariable Integer planId,
+            Authentication authentication) {
+        String coachEmail = authentication.getName();
+        coachWorkoutService.deleteWorkoutPlan(planId, coachEmail);
+        return ResponseEntity.ok(Map.of("message", "Xóa giáo án bài tập thành công!"));
+    }
 }
+
 
