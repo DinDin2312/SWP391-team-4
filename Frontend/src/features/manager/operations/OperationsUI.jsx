@@ -1,9 +1,10 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { isOngoing, NEAR_FULL_THRESHOLD } from "./operationsUtils";
 
-export function OperationStatus({ status, row }) {
+export function OperationStatus({ status, row, hideScheduled = false }) {
   useLanguage();
   const ongoing = row && isOngoing(row);
+  if (hideScheduled && status === 'SCHEDULED' && !ongoing) return null;
   const label = ongoing
     ? "Ongoing"
     : {

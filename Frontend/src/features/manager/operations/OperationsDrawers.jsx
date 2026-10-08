@@ -106,6 +106,16 @@ function Drawer({ title, subtitle, onClose, busy = false, children }) {
   );
 }
 
+export function ClassDrawer({ row, upcomingInRange, onClose, edit, recurring }) {
+  useLanguage();
+  return <Drawer title={row.className} subtitle={row.subjectName} onClose={onClose}><div className="ops-drawer-body"><div className="ops-session-facts"><p>{t('Coach')}: {row.coachName}</p><p>{t('Room')}: {row.roomName}</p><p>{t('Capacity')}: {row.maxSlots}</p><p>{t('Tuition / class registration')}: {formatMoney(row.price)}</p><OperationStatus status={row.status}/></div>{upcomingInRange > 0 && <p className="ops-warning">{t('{0} upcoming sessions in the loaded range. Cancel these before deactivating.',[upcomingInRange])}</p>}<p className="ops-note">{t('Classes with future sessions cannot be deactivated; cancel those sessions first.')}</p><div className="ops-detail-actions"><button className="manager-secondary" onClick={edit}>{t('Edit')}</button><button className="manager-secondary" disabled={row.status!=='ACTIVE'} onClick={recurring}>{t('Create recurring sessions')}</button></div></div><footer><button className="manager-secondary" onClick={onClose}>{t('Close')}</button></footer></Drawer>;
+}
+export function SessionGroupDrawer({ cell, onClose, open }) {
+  useLanguage();
+  const [limit,setLimit]=useState(20);
+  return <Drawer title={cell.title} subtitle={formatDate(cell.day)} onClose={onClose}><div className="ops-drawer-body"><p>{t('{0} sessions',[cell.rows.length])}</p>{cell.rows.slice(0,limit).map(row=><button key={row.scheduleId} className="ops-cell-detail" onClick={()=>open(row)}><strong>{row.className}</strong><span>{formatDateTime(row.startTime)} – {formatDateTime(row.endTime)}</span></button>)}{limit<cell.rows.length && <button className="manager-secondary" onClick={()=>setLimit(n=>n+20)}>{t('Show next 20 sessions')}</button>}</div></Drawer>;
+}
+
 function Field({ label, name, error, children, help }) {
   useLanguage();
   const id = useId();
@@ -703,6 +713,7 @@ export function OperationConfirmation({ config, onClose, onSaved }) {
         <AlertTriangle size={26} />
         <h2 id={id}>{t(action)}?</h2>
         <strong>{config.item.className}</strong>
+        {deactivate && config.upcomingInRange > 0 && <p className="ops-warning">{t('{0} upcoming sessions in the loaded range. Cancel these before deactivating.',[config.upcomingInRange])}</p>}
         <p>
           {t(cancel
             ? t("All bookings for this session will be cancelled and members will receive a notification. The session cannot be reopened. This action does not issue a refund; contact reception about tuition.")
