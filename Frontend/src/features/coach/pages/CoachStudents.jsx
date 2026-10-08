@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { 
-  Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send, Dumbbell
+import {
+  Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send, Dumbbell, Target, Trophy, Activity
 } from 'lucide-react';
 import SendNotificationModal from '../components/SendNotificationModal';
 
@@ -226,7 +226,7 @@ const CoachStudents = () => {
 
                       <td className="px-4 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button 
+                          <button
                             onClick={() => navigate('/coach/workouts')}
                             title="Giao bài tập"
                             className="px-3 py-1.5 rounded-lg bg-[var(--primary-soft)] hover:bg-[var(--primary)] hover:text-[color:var(--on-primary)] text-[var(--primary)] font-semibold text-xs border border-[var(--primary-soft)] flex items-center gap-1.5 transition-all cursor-pointer"
@@ -235,7 +235,7 @@ const CoachStudents = () => {
                             <span>Giao bài</span>
                           </button>
 
-                          <button 
+                          <button
                             onClick={() => handleOpenIndividualNotif(st)}
                             title="Gửi thông báo riêng"
                             className="px-3 py-1.5 rounded-lg bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 hover:text-[var(--text)] font-semibold text-xs border border-blue-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
@@ -244,7 +244,7 @@ const CoachStudents = () => {
                             <span>Gửi tin</span>
                           </button>
 
-                          <button 
+                          <button
                             onClick={() => setSelectedStudent(st)}
                             className="px-3.5 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text)] hover:text-[var(--text)] font-semibold text-xs border border-[var(--border)] transition-all cursor-pointer"
                           >
@@ -299,6 +299,46 @@ const CoachStudents = () => {
                 </div>
               </div>
 
+              {/* Workout Goal & Fitness Level Section */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-900/30 via-[var(--surface)] to-purple-900/20 border border-indigo-500/30 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-indigo-400" />
+                    <h5 className="font-bold text-indigo-300 text-xs uppercase tracking-wider">Mục tiêu tập luyện & Thể lực</h5>
+                  </div>
+                  {selectedStudent.fitnessLevel && (
+                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold text-[11px] border border-indigo-500/30 flex items-center gap-1">
+                      <Activity className="w-3 h-3 text-indigo-400" />
+                      {selectedStudent.fitnessLevel}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  <div>
+                    <span className="text-[11px] text-[var(--text-muted)] block">Mục tiêu cá nhân:</span>
+                    <p className="text-sm font-semibold text-[var(--text)] mt-0.5 flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>{selectedStudent.workoutGoal || 'Chưa thiết lập mục tiêu tập luyện'}</span>
+                    </p>
+                  </div>
+
+                  {selectedStudent.assignedPlans && selectedStudent.assignedPlans.length > 0 && (
+                    <div className="pt-2 border-t border-indigo-500/10">
+                      <span className="text-[11px] text-[var(--text-muted)] block mb-1">Giáo án HLV đã giao:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedStudent.assignedPlans.map((planTitle, pIdx) => (
+                          <span key={pIdx} className="px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-300 font-medium text-[11px] border border-purple-500/30 flex items-center gap-1">
+                            <Dumbbell className="w-3 h-3 text-purple-400" />
+                            {planTitle}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-2">
                 <h5 className="font-bold text-[var(--text)] text-xs uppercase tracking-wider text-[var(--text-muted)]">Enrolled Classes Taught By You</h5>
                 <div className="flex flex-wrap gap-2 pt-1">
@@ -347,7 +387,7 @@ const CoachStudents = () => {
       )}
 
       {/* Send Notification Modal */}
-      <SendNotificationModal 
+      <SendNotificationModal
         isOpen={isNotifModalOpen}
         onClose={() => setIsNotifModalOpen(false)}
         initialTargetType={notifTargetType}

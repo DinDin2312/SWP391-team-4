@@ -4,6 +4,10 @@ import com.team4.sportscenter.modules.coach.dtos.request.UpdateAttendanceRequest
 import com.team4.sportscenter.modules.coach.dtos.response.CoachScheduleResponse;
 import com.team4.sportscenter.modules.coach.dtos.response.CoachStudentResponse;
 import com.team4.sportscenter.modules.coach.dtos.response.EnrolledStudentResponse;
+import com.team4.sportscenter.modules.coach.entities.AiWorkoutPlan;
+import com.team4.sportscenter.modules.coach.entities.CoachWorkoutPlan;
+import com.team4.sportscenter.modules.coach.repositories.AiWorkoutPlanRepository;
+import com.team4.sportscenter.modules.coach.repositories.CoachWorkoutPlanRepository;
 import com.team4.sportscenter.modules.coach.repositories.CoachScheduleRepository;
 import com.team4.sportscenter.modules.coach.services.CoachScheduleService;
 import com.team4.sportscenter.modules.auth.entities.User;
@@ -25,6 +29,8 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
     private final CoachScheduleRepository coachScheduleRepository;
     private final BookingRepository bookingRepository;
     private final com.team4.sportscenter.modules.auth.repositories.UserRepository userRepository;
+    private final AiWorkoutPlanRepository aiWorkoutPlanRepository;
+    private final CoachWorkoutPlanRepository coachWorkoutPlanRepository;
 
     @Override
     public List<CoachScheduleResponse> getCoachSchedules(String coachEmail) {
@@ -76,6 +82,17 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                     .map(b -> b.getSchedule().getGymClass().getClassName())
                     .collect(Collectors.toSet());
 
+            // Fetch student AI workout goal & fitness level
+            List<AiWorkoutPlan> aiPlans = aiWorkoutPlanRepository.findByUserIdOrderByCreatedAtDesc(user.getUserId());
+            String workoutGoal = (aiPlans != null && !aiPlans.isEmpty()) ? aiPlans.get(0).getGoal() : null;
+            String fitnessLevel = (aiPlans != null && !aiPlans.isEmpty()) ? aiPlans.get(0).getFitnessLevel() : null;
+
+            // Fetch coach assigned workout plans for this student
+            List<CoachWorkoutPlan> coachPlans = coachWorkoutPlanRepository.findByCoachEmailAndUserIdOrderByCreatedAtDesc(coachEmail, user.getUserId());
+            List<String> assignedPlans = (coachPlans != null) ? coachPlans.stream()
+                    .map(CoachWorkoutPlan::getTitle)
+                    .collect(Collectors.toList()) : Collections.emptyList();
+
             result.add(CoachStudentResponse.builder()
                     .userId(user.getUserId())
                     .fullName(user.getFullName())
@@ -84,6 +101,9 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                     .bio(user.getBio())
                     .totalBookings(userBookings.size())
                     .enrolledClasses(new ArrayList<>(enrolledClasses))
+                    .workoutGoal(workoutGoal)
+                    .fitnessLevel(fitnessLevel)
+                    .assignedPlans(assignedPlans)
                     .build());
         }
 
