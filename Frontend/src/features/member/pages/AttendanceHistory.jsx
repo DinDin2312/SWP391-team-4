@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import React from "react";
 import { CheckCircle, XCircle, Clock, Calendar, MapPin, User, Activity, Filter } from "lucide-react";
 import { useAttendanceHistory } from "../hooks/useAttendanceHistory";
@@ -5,32 +6,31 @@ import { TracingBeam } from "../../../components/ui/tracing-beam";
 
 // Extracted UI Component for Badges (React Modernization pattern)
 const StatusBadge = ({ status }) => {
+  useLanguage();
   if (status === "PRESENT") {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold uppercase tracking-wider">
-        <CheckCircle className="w-3.5 h-3.5" /> Present
-      </span>
+        <CheckCircle className="w-3.5 h-3.5" />{t("Present")}</span>
     );
   }
   if (status === "ABSENT") {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-semibold uppercase tracking-wider">
-        <XCircle className="w-3.5 h-3.5" /> Absent
-      </span>
+        <XCircle className="w-3.5 h-3.5" />{t("Absent")}</span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20 text-xs font-semibold uppercase tracking-wider">
-      <Clock className="w-3.5 h-3.5" /> Not Yet
-    </span>
+      <Clock className="w-3.5 h-3.5" />{t("Not Yet")}</span>
   );
 };
 
 const AttendanceHistory = () => {
+  useLanguage();
   // Logic extracted to custom hook (Frontend Developer pattern)
   const { loading, filterStatus, setFilterStatus, stats, filteredBookings } = useAttendanceHistory();
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-slate-400">Loading history...</div>;
+  if (loading) return <div className="flex items-center justify-center h-64 text-slate-400">{t("Loading history...")}</div>;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -38,10 +38,8 @@ const AttendanceHistory = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-              <Activity className="w-6 h-6 text-blue-500" />
-              Attendance History
-            </h1>
-            <p className="text-slate-400 text-sm mt-1">Your attendance history and participation rate.</p>
+              <Activity className="w-6 h-6 text-blue-500" />{t("Attendance History")}</h1>
+            <p className="text-slate-400 text-sm mt-1">{t("Your attendance history and participation rate.")}</p>
           </div>
         </div>
 
@@ -54,7 +52,7 @@ const AttendanceHistory = () => {
             <Activity className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Attendance Rate</p>
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">{t("Attendance Rate")}</p>
             <p className="text-2xl font-bold text-white">{stats.attendanceRate}%</p>
           </div>
         </div>
@@ -67,7 +65,7 @@ const AttendanceHistory = () => {
             <CheckCircle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Present Sessions</p>
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">{t("Present Sessions")}</p>
             <p className="text-2xl font-bold text-white">{stats.presentCount}</p>
           </div>
         </div>
@@ -80,7 +78,7 @@ const AttendanceHistory = () => {
             <XCircle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Absent Sessions</p>
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">{t("Absent Sessions")}</p>
             <p className="text-2xl font-bold text-white">{stats.absentCount}</p>
           </div>
         </div>
@@ -88,22 +86,20 @@ const AttendanceHistory = () => {
 
       <div className="bg-[#111d38] border border-slate-700/50 rounded-2xl overflow-hidden shadow-xl">
         <div className="p-5 border-b border-slate-700/50">
-          <h2 className="text-lg font-bold text-white">Session Details</h2>
+          <h2 className="text-lg font-bold text-white">{t("Session Details")}</h2>
         </div>
         
         {filteredBookings.length === 0 ? (
-          <div className="p-8 text-center text-slate-400">
-            No attendance records found matching your filter.
-          </div>
+          <div className="p-8 text-center text-slate-400">{t("No attendance records found matching your filter.")}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[#0f1b33] border-b border-slate-700/50 text-slate-400 text-xs uppercase tracking-wider">
-                  <th className="p-4 font-semibold">Date & Time</th>
-                  <th className="p-4 font-semibold">Course</th>
-                  <th className="p-4 font-semibold">Info</th>
-                  <th className="p-4 font-semibold text-right">Status</th>
+                  <th className="p-4 font-semibold">{t("Date & Time")}</th>
+                  <th className="p-4 font-semibold">{t("Course")}</th>
+                  <th className="p-4 font-semibold">{t("Info")}</th>
+                  <th className="p-4 font-semibold text-right">{t("Status")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
@@ -126,7 +122,7 @@ const AttendanceHistory = () => {
                       </td>
                       <td className="p-4">
                         <p className="text-white font-semibold">{booking.className}</p>
-                        <span className="inline-block mt-1 text-[10px] font-medium px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">Class ID: #{booking.bookingId}</span>
+                        <span className="inline-block mt-1 text-[10px] font-medium px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">{t("Class ID: #")}{booking.bookingId}</span>
                       </td>
                       <td className="p-4">
                         <div className="space-y-1.5">

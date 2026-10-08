@@ -1,8 +1,10 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDateTime } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const Notifications = () => {
+  useLanguage();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -82,9 +84,7 @@ const Notifications = () => {
     return (
       <div className="flex items-center justify-center w-full h-64">
         <div className="text-on-surface-variant flex items-center gap-2 font-semibold">
-          <span className="material-symbols-outlined animate-spin">sync</span>
-          Loading Notifications...
-        </div>
+          <span className="material-symbols-outlined animate-spin">sync</span>{t("Loading Notifications...")}</div>
       </div>
     );
   }
@@ -95,17 +95,12 @@ const Notifications = () => {
     <div className="flex flex-col w-full min-h-screen">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md pb-space-lg border-b border-surface-container mb-6">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl lg:text-4xl text-on-surface tracking-tight font-extrabold flex items-center gap-3">
-            Notifications
-            {unreadCount > 0 && (
+          <h1 className="text-3xl lg:text-4xl text-on-surface tracking-tight font-extrabold flex items-center gap-3">{t("Notifications")}{' '}{unreadCount > 0 && (
               <span className="px-3 py-1 rounded-full bg-primary-container text-on-primary-container text-sm font-bold shadow-[var(--shadow)]">
-                {unreadCount} NEW
-              </span>
+                {unreadCount}{' '}{t("NEW")}</span>
             )}
           </h1>
-          <p className="text-sm text-on-surface-variant mt-1">
-            Stay updated on your schedule, payments, and system alerts.
-          </p>
+          <p className="text-sm text-on-surface-variant mt-1">{t("Stay updated on your schedule, payments, and system alerts.")}</p>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap mt-4 lg:mt-0">
@@ -115,7 +110,7 @@ const Notifications = () => {
               className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-error-container text-on-error-container text-sm font-bold transition-all shadow-[var(--shadow)] active:scale-95 hover:brightness-95"
             >
               <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
-              <span>Clear All</span>
+              <span>{t("Clear All")}</span>
             </button>
           )}
 
@@ -125,7 +120,7 @@ const Notifications = () => {
               className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-sm font-bold transition-all shadow-[var(--shadow)] active:scale-95"
             >
               <span className="material-symbols-outlined text-[18px] text-[var(--success-text)]">done_all</span>
-              <span>Mark all as read</span>
+              <span>{t("Mark all as read")}</span>
             </button>
           )}
         </div>
@@ -135,8 +130,8 @@ const Notifications = () => {
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 bg-surface-container-lowest rounded-xl border border-surface-container text-center">
             <span className="material-symbols-outlined text-6xl text-on-surface-variant mb-4">notifications_off</span>
-            <h3 className="text-xl font-bold text-on-surface">No notifications yet</h3>
-            <p className="text-sm text-on-surface-variant mt-2">When you get updates, they'll show up here.</p>
+            <h3 className="text-xl font-bold text-on-surface">{t("No notifications yet")}</h3>
+            <p className="text-sm text-on-surface-variant mt-2">{t("When you get updates, they'll show up here.")}</p>
           </div>
         ) : (
           notifications.map((notification) => {
@@ -154,12 +149,12 @@ const Notifications = () => {
                 key={notification.id}
                 className={`relative flex gap-4 p-5 rounded-xl transition-all duration-200 border ${
                   isUnread
-                    ? 'bg-surface-container-low border-primary/20 shadow-[var(--shadow)]'
-                    : 'bg-surface-container-lowest border-surface-container opacity-70'
+                    ? t('bg-surface-container-low border-primary/20 shadow-[var(--shadow)]')
+                    : t('bg-surface-container-lowest border-surface-container opacity-70')
                 }`}
               >
                 <div className={`relative w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-                  isUnread ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container text-on-surface-variant'
+                  isUnread ? t('bg-primary-container text-on-primary-container') : t('bg-surface-container text-on-surface-variant')
                 }`}>
                   <span className="material-symbols-outlined text-2xl">{icon}</span>
                   {isUnread && (
@@ -169,7 +164,7 @@ const Notifications = () => {
 
                 <div className="flex flex-col gap-1 min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-4">
-                    <h3 className={`text-base pr-4 ${isUnread ? 'font-bold text-on-surface' : 'font-semibold text-on-surface-variant'}`}>
+                    <h3 className={`text-base pr-4 ${isUnread ? t('font-bold text-on-surface') : t('font-semibold text-on-surface-variant')}`}>
                       {notification.title}
                     </h3>
                     <div className="flex items-center gap-2 shrink-0">
@@ -179,15 +174,15 @@ const Notifications = () => {
                       <button
                         onClick={() => handleDelete(notification.id)}
                         className="text-on-surface-variant hover:text-error transition-colors p-1 rounded-md hover:bg-error-container/20"
-                        title="Delete notification"
+                        title={t("Delete notification")}
                       >
                         <span className="material-symbols-outlined text-[18px]">delete</span>
                       </button>
                     </div>
                   </div>
 
-                  <p className={`text-sm mt-1 leading-relaxed ${isUnread ? 'text-on-surface-variant' : 'text-on-surface-variant/80'}`}>
-                    {notification.message}
+                  <p className={`text-sm mt-1 leading-relaxed ${isUnread ? t('text-on-surface-variant') : t('text-on-surface-variant/80')}`}>
+                    {t(notification.message)}
                   </p>
 
                   {isUnread && (
@@ -196,9 +191,7 @@ const Notifications = () => {
                         onClick={() => handleMarkAsRead(notification.id)}
                         className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
                       >
-                        <span className="material-symbols-outlined text-[14px]">check</span>
-                        Mark as read
-                      </button>
+                        <span className="material-symbols-outlined text-[14px]">check</span>{t("Mark as read")}</button>
                     </div>
                   )}
                 </div>

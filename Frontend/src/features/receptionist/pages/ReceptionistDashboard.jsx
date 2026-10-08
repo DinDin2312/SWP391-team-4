@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 
 import React, { useState } from 'react';
 import ReceptionistLayout from '../../../layouts/ReceptionistLayout';
@@ -8,6 +9,7 @@ import ManageMembershipsView from '../components/ManageMembershipsView';
 
 
 const ReceptionistDashboard = () => {
+  useLanguage();
   const [activeFeature, setActiveFeature] = useState('search-members');
 
   const getFeatureTitle = (id) => {
@@ -68,9 +70,7 @@ const ReceptionistDashboard = () => {
                     {getFeatureTitle(activeFeature)}
                   </h1>
 
-                  <p style={{ maxWidth: '480px', color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.6', margin: '0 0 1.5rem' }}>
-                    This feature is currently under development for the Receptionist role. You can switch back to <strong>Search & View Member Information</strong> at any time.
-                  </p>
+                  <p style={{ maxWidth: '480px', color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.6', margin: '0 0 1.5rem' }}>{t("This feature is currently under development for the Receptionist role. You can switch back to")}<strong>{t("Search & View Member Information")}</strong>{t("at any time.")}</p>
 
                   <button
                       onClick={() => setActiveFeature('search-members')}
@@ -93,7 +93,7 @@ const ReceptionistDashboard = () => {
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--primary-soft)')}
                   >
                     <ArrowLeft style={{ width: '16px', height: '16px' }} />
-                    <span>Back to Member Search</span>
+                    <span>{t("Back to Member Search")}</span>
                   </button>
                 </div>
             )}

@@ -1,9 +1,12 @@
+import { locale } from '../../../i18n/languageStore.js';
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar } from 'lucide-react';
 
 const BookClass = () => {
+  useLanguage();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,12 +48,12 @@ const BookClass = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      setToast({ visible: true, type: 'success', title: 'Course Enrolled', message: 'All sessions synced to your schedule.' });
+      setToast({ visible: true, type: 'success', title: t('Course Enrolled'), message: t('All sessions synced to your schedule.') });
       setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 4000);
       fetchCourses();
       window.dispatchEvent(new Event('cartUpdated')); // Notify layout to update cart badge
     } catch (error) {
-      const errorMsg = error.response?.data?.message || error.response?.data || error.message || "Failed to enroll. Please try again."; setToast({ visible: true, type: 'error', title: 'Enrollment Failed', message: typeof errorMsg === 'string' ? errorMsg : 'Please try again.' }); setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 5000);
+      const errorMsg = error.response?.data?.message || error.response?.data || error.message || "Failed to enroll. Please try again."; setToast({ visible: true, type: 'error', title: t('Enrollment Failed'), message: typeof errorMsg === 'string' ? errorMsg : 'Please try again.' }); setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 5000);
     }
   };
 
@@ -63,11 +66,11 @@ const BookClass = () => {
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
-    let prefix = d.toLocaleDateString('en-US', { weekday: 'long' });
+    let prefix = d.toLocaleDateString(locale(), { weekday: 'long' });
     if (d.toDateString() === today.toDateString()) prefix = 'Today';
     if (d.toDateString() === tomorrow.toDateString()) prefix = 'Tomorrow';
 
-    const shortDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const shortDate = d.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
     return `${prefix} (${shortDate})`;
   };
 
@@ -86,16 +89,14 @@ const BookClass = () => {
           </div>
           <div className="flex flex-col">
             <span className={`font-bold text-sm ${toast.type === 'error' ? 'text-[var(--danger-text)]' : 'text-primary'}`}>{toast.title}</span>
-            <span className="text-xs text-on-surface-variant">{toast.message}</span>
+            <span className="text-xs text-on-surface-variant">{t(toast.message)}</span>
           </div>
         </div>
 
       <section className="flex flex-col justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-4xl font-extrabold text-on-surface tracking-tight">Book Courses</h1>
-          <p className="text-sm text-on-surface-variant mt-2 max-w-2xl">
-            Explore and enroll in high-performance courses and training packages.
-          </p>
+          <h1 className="text-4xl font-extrabold text-on-surface tracking-tight">{t("Book Courses")}</h1>
+          <p className="text-sm text-on-surface-variant mt-2 max-w-2xl">{t("Explore and enroll in high-performance courses and training packages.")}</p>
         </div>
       </section>
 
@@ -104,7 +105,7 @@ const BookClass = () => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant w-5 h-5" />
           <input
             className="w-full pl-12 pr-4 py-3 rounded-lg bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant text-sm focus:outline-none focus:ring-1 focus:ring-primary shadow-inner"
-            placeholder="Search classes, trainers..."
+            placeholder={t("Search classes, trainers...")}
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -114,8 +115,7 @@ const BookClass = () => {
         <div className="flex items-center gap-3 overflow-x-auto pb-4 scrollbar-none pt-5 border-t border-[var(--border)]">
           <div className="flex items-center gap-2 px-1">
             <span className="text-sm font-medium text-[var(--text-muted)] shrink-0 mr-3 flex items-center gap-2">
-              <Calendar className="w-4 h-4" /> Start Date
-            </span>
+              <Calendar className="w-4 h-4" />{t("Start Date")}</span>
             {availableDates.map(dateStr => {
               const isActive = selectedDate === dateStr;
               return (
@@ -142,15 +142,15 @@ const BookClass = () => {
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         <div className="xl:col-span-8 flex flex-col gap-5">
           {loading ? (
-            <div className="text-center py-10 text-on-surface-variant font-medium">Loading available courses...</div>
+            <div className="text-center py-10 text-on-surface-variant font-medium">{t("Loading available courses...")}</div>
           ) : filteredCourses.length === 0 ? (
             <div className="text-center py-12 bg-surface-container-low rounded-xl border border-surface-container-highest">
-              <span className="text-on-surface-variant font-medium">No courses found starting on this date.</span>
+              <span className="text-on-surface-variant font-medium">{t("No courses found starting on this date.")}</span>
             </div>
           ) : (
             filteredCourses.map((course, idx) => {
               const startTime = new Date(course.nextSessionTime);
-              const timeStr = startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+              const timeStr = startTime.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
 
               const spotsLeft = course.maxSlots - (course.bookedSlots || 0);
               const progressWidth = ((course.maxSlots - spotsLeft) / course.maxSlots) * 100;
@@ -160,16 +160,14 @@ const BookClass = () => {
               return (
                 <div key={idx} className="bg-surface-container-low border border-surface-container-highest hover:border-primary/50 transition-colors rounded-xl p-5 flex flex-col sm:flex-row gap-6 shadow-[var(--shadow)] group">
                   <div className="flex flex-col shrink-0 sm:w-24 text-left">
-                    <span className="text-xs font-bold text-on-surface-variant tracking-wider uppercase mb-1">First Session</span>
+                    <span className="text-xs font-bold text-on-surface-variant tracking-wider uppercase mb-1">{t("First Session")}</span>
                     <span className="text-2xl font-extrabold text-on-surface">{timeStr}</span>
-                    <span className="text-xs font-semibold text-on-surface-variant mt-1">{course.durationMinutes} min/session</span>
+                    <span className="text-xs font-semibold text-on-surface-variant mt-1">{course.durationMinutes}{' '}{t("min/session")}</span>
                   </div>
 
                   <div className="flex flex-col flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <span className="text-[11px] font-bold text-[var(--success-text)] uppercase tracking-wider bg-[var(--success-soft)] px-2 py-0.5 rounded">
-                        Full Course: {course.totalSessions} Sessions
-                      </span>
+                      <span className="text-[11px] font-bold text-[var(--success-text)] uppercase tracking-wider bg-[var(--success-soft)] px-2 py-0.5 rounded">{t("Full Course:")}{' '}{course.totalSessions}{' '}{t("Sessions")}</span>
                     </div>
 
                     <h3 className="text-xl font-bold text-on-surface leading-snug mb-2">{course.className}</h3>
@@ -177,7 +175,7 @@ const BookClass = () => {
                     <div className="flex flex-wrap items-center gap-4 text-sm text-on-surface-variant mb-4 font-medium">
                       <div className="flex items-center gap-1.5 text-primary">
                         <User className="w-4 h-4" />
-                        <span>Coach {course.coachName}</span>
+                        <span>{t("Coach")}{' '}{course.coachName}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <MapPin className="w-4 h-4" />
@@ -187,9 +185,8 @@ const BookClass = () => {
 
                                           <details className="text-xs text-[var(--text-muted)] mb-4 group cursor-pointer bg-[var(--surface)] p-2.5 rounded-lg border border-[var(--border)]">
                         <summary className="flex items-center gap-2 list-none outline-none">
-                          <Repeat className="w-4 h-4 text-[var(--violet)]" />
-                          Repeats on: <span className="text-[var(--text)] font-semibold">{course.schedulePattern || 'Custom'}</span>
-                          <span className="text-[10px] text-[var(--primary)] ml-auto group-open:hidden border border-[var(--primary-soft)] px-2 py-0.5 rounded-full hover:bg-[var(--primary-soft)] transition-colors">View all {course.totalSessions} dates</span>
+                          <Repeat className="w-4 h-4 text-[var(--violet)]" />{t("Repeats on:")}<span className="text-[var(--text)] font-semibold">{t(course.schedulePattern || 'Custom')}</span>
+                          <span className="text-[10px] text-[var(--primary)] ml-auto group-open:hidden border border-[var(--primary-soft)] px-2 py-0.5 rounded-full hover:bg-[var(--primary-soft)] transition-colors">{t("View all")}{' '}{course.totalSessions}{' '}{t("dates")}</span>
                         </summary>
                         <div className="mt-3 pl-6 pr-2 max-h-24 overflow-y-auto custom-scrollbar">
                           <ul className="list-disc space-y-1 text-[var(--text)] marker:text-[var(--violet)]">
@@ -203,24 +200,24 @@ const BookClass = () => {
                         <div className="bg-primary h-full rounded-full" style={{ width: `${progressWidth}%` }}></div>
                       </div>
                       <div className="flex justify-between items-center text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-                        <span>{course.maxSlots - spotsLeft}/{course.maxSlots} Students Enrolled</span>
-                        {spotsLeft <= 3 && spotsLeft > 0 && <span className="text-tertiary">Only {spotsLeft} spots left!</span>}
+                        <span>{course.maxSlots - spotsLeft}/{course.maxSlots}{' '}{t("Students Enrolled")}</span>
+                        {spotsLeft <= 3 && spotsLeft > 0 && <span className="text-tertiary">{t("Only")}{' '}{spotsLeft}{' '}{t("spots left!")}</span>}
                       </div>
                     </div>
                   </div>
 
                   <div className="flex flex-col justify-between shrink-0 sm:w-32 border-t sm:border-t-0 sm:border-l border-surface-container-highest pt-4 sm:pt-0 sm:pl-6">
                     <div className="flex flex-col gap-1 text-right sm:text-left">
-                      <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Course Fee</span>
+                      <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{t("Course Fee")}</span>
                       <span className="text-sm font-bold text-primary">{formatMoney(course.price)}</span>
                     </div>
 
                     <button
                       onClick={() => handleBook(course.classId)}
                       disabled={isBooked || isFull}
-                      className={`mt-4 sm:mt-auto w-full py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-[var(--shadow)] ${isBooked ? 'bg-surface-container-highest text-on-surface-variant cursor-not-allowed shadow-none' : isFull ? 'bg-[var(--danger-soft)] text-[var(--danger-text)] cursor-not-allowed shadow-none' : 'bg-primary text-on-primary hover:bg-primary/90 shadow-primary/20'}`}
+                      className={`mt-4 sm:mt-auto w-full py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-[var(--shadow)] ${isBooked ? t('bg-surface-container-highest text-on-surface-variant cursor-not-allowed shadow-none') : isFull ? t('bg-[var(--danger-soft)] text-[var(--danger-text)] cursor-not-allowed shadow-none') : t('bg-primary text-on-primary hover:bg-primary/90 shadow-primary/20')}`}
                     >
-                      {isBooked ? 'Enrolled' : isFull ? 'Full' : 'Enroll Now'}
+                      {t(isBooked ? t('Enrolled') : isFull ? t('Full') : t('Enroll Now'))}
                     </button>
                   </div>
                 </div>
@@ -234,41 +231,39 @@ const BookClass = () => {
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-surface-container-highest">
               <div className="flex items-center gap-2 text-on-surface">
                 <Info className="w-5 h-5 text-primary" />
-                <h3 className="font-bold text-base">Course Policy</h3>
+                <h3 className="font-bold text-base">{t("Course Policy")}</h3>
               </div>
-              <span className="text-xs font-bold text-tertiary tracking-wider uppercase">Nexus Pro</span>
+              <span className="text-xs font-bold text-tertiary tracking-wider uppercase">{t("Nexus Pro")}</span>
             </div>
 
             <div className="flex flex-col gap-5">
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-[var(--success-text)] shrink-0 mt-0.5" />
                 <div className="flex flex-col">
-                  <span className="font-bold text-sm text-on-surface mb-1">Full Package Enrollment</span>
-                  <span className="text-xs text-on-surface-variant leading-relaxed">Enrolling in a course automatically secures your spot for all scheduled sessions.</span>
+                  <span className="font-bold text-sm text-on-surface mb-1">{t("Full Package Enrollment")}</span>
+                  <span className="text-xs text-on-surface-variant leading-relaxed">{t("Enrolling in a course automatically secures your spot for all scheduled sessions.")}</span>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
                 <ShieldCheck className="w-5 h-5 text-[var(--primary)] shrink-0 mt-0.5" />
                 <div className="flex flex-col">
-                  <span className="font-bold text-sm text-on-surface mb-1">Express Check-in</span>
-                  <span className="text-xs text-on-surface-variant leading-relaxed">Scan your Nexus Pass QR code at the gate 10 minutes prior for automatic check-in.</span>
+                  <span className="font-bold text-sm text-on-surface mb-1">{t("Express Check-in")}</span>
+                  <span className="text-xs text-on-surface-variant leading-relaxed">{t("Scan your Nexus Pass QR code at the gate 10 minutes prior for automatic check-in.")}</span>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
                 <Fingerprint className="w-5 h-5 text-[var(--violet)] shrink-0 mt-0.5" />
                 <div className="flex flex-col">
-                  <span className="font-bold text-sm text-on-surface mb-1">Biometric Gear</span>
-                  <span className="text-xs text-on-surface-variant leading-relaxed">Chest heart rate monitors are provided for all performance sessions.</span>
+                  <span className="font-bold text-sm text-on-surface mb-1">{t("Biometric Gear")}</span>
+                  <span className="text-xs text-on-surface-variant leading-relaxed">{t("Chest heart rate monitors are provided for all performance sessions.")}</span>
                 </div>
               </div>
             </div>
 
             <div className="mt-8 pt-5 border-t border-surface-container-highest">
-              <p className="text-[10px] text-on-surface-variant uppercase tracking-wider text-center">
-                Questions? Contact Nexus Support at Desk 1.
-              </p>
+              <p className="text-[10px] text-on-surface-variant uppercase tracking-wider text-center">{t("Questions? Contact Nexus Support at Desk 1.")}</p>
             </div>
           </div>
         </div>

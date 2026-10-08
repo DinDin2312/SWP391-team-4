@@ -1,8 +1,10 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState } from 'react';
 import { UserPlus, User, Mail, Phone, Lock, FileText, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
 
 export default function RegisterMemberView({ onSuccess }) {
+  useLanguage();
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
@@ -26,7 +28,7 @@ export default function RegisterMemberView({ onSuccess }) {
 
         try {
             await receptionistService.registerMember(formData);
-            setFeedback({ type: 'success', message: 'New member account created successfully!' });
+            setFeedback({ type: 'success', message: t('New member account created successfully!') });
             setFormData({
                 fullName: '',
                 email: '',
@@ -70,10 +72,8 @@ export default function RegisterMemberView({ onSuccess }) {
                         <UserPlus style={{ width: '22px', height: '22px' }} />
                     </div>
                     <div>
-                        <h1 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Register New Member</h1>
-                        <p style={{ margin: '0.2rem 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                            Create an account for walk-in customers directly at the front desk.
-                        </p>
+                        <h1 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>{t("Register New Member")}</h1>
+                        <p style={{ margin: '0.2rem 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t("Create an account for walk-in customers directly at the front desk.")}</p>
                     </div>
                 </div>
 
@@ -92,23 +92,21 @@ export default function RegisterMemberView({ onSuccess }) {
                         fontSize: '0.875rem'
                     }}>
                         {feedback.type === 'success' ? <CheckCircle2 style={{ width: '18px', height: '18px', flexShrink: 0 }} /> : <AlertCircle style={{ width: '18px', height: '18px', flexShrink: 0 }} />}
-                        <span>{feedback.message}</span>
+                        <span>{t(feedback.message)}</span>
                     </div>
                 )}
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                     {/* Full Name */}
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>
-                            Full Name *
-                        </label>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>{t("Full Name *")}</label>
                         <div style={{ position: 'relative' }}>
                             <User style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-muted)' }} />
                             <input
                                 type="text"
                                 name="fullName"
                                 required
-                                placeholder="e.g. John Doe"
+                                placeholder={t("e.g. John Doe")}
                                 value={formData.fullName}
                                 onChange={handleChange}
                                 style={{
@@ -127,16 +125,14 @@ export default function RegisterMemberView({ onSuccess }) {
 
                     {/* Email */}
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>
-                            Email Address *
-                        </label>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>{t("Email Address *")}</label>
                         <div style={{ position: 'relative' }}>
                             <Mail style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-muted)' }} />
                             <input
                                 type="email"
                                 name="email"
                                 required
-                                placeholder="member@example.com"
+                                placeholder={t("member@example.com")}
                                 value={formData.email}
                                 onChange={handleChange}
                                 style={{
@@ -155,16 +151,14 @@ export default function RegisterMemberView({ onSuccess }) {
 
                     {/* Phone */}
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>
-                            Phone Number *
-                        </label>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>{t("Phone Number *")}</label>
                         <div style={{ position: 'relative' }}>
                             <Phone style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-muted)' }} />
                             <input
                                 type="tel"
                                 name="phone"
                                 required
-                                placeholder="09xxxxxxxx"
+                                placeholder={t("09xxxxxxxx")}
                                 value={formData.phone}
                                 onChange={handleChange}
                                 style={{
@@ -183,16 +177,14 @@ export default function RegisterMemberView({ onSuccess }) {
 
                     {/* Password */}
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>
-                            Default Password *
-                        </label>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>{t("Default Password *")}</label>
                         <div style={{ position: 'relative' }}>
                             <Lock style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-muted)' }} />
                             <input
                                 type="password"
                                 name="defaultPassword"
                                 required
-                                placeholder="Create initial password for member"
+                                placeholder={t("Create initial password for member")}
                                 value={formData.defaultPassword}
                                 onChange={handleChange}
                                 style={{
@@ -211,15 +203,13 @@ export default function RegisterMemberView({ onSuccess }) {
 
                     {/* Bio / Medical Notes */}
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>
-                            Notes / Sports Interests (Optional)
-                        </label>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.4rem' }}>{t("Notes / Sports Interests (Optional)")}</label>
                         <div style={{ position: 'relative' }}>
                             <FileText style={{ position: 'absolute', left: '0.85rem', top: '0.85rem', width: '16px', height: '16px', color: 'var(--text-muted)' }} />
                             <textarea
                                 name="bio"
                                 rows={3}
-                                placeholder="e.g. Interested in Basketball & Badminton classes..."
+                                placeholder={t("e.g. Interested in Basketball & Badminton classes...")}
                                 value={formData.bio}
                                 onChange={handleChange}
                                 style={{
@@ -260,7 +250,7 @@ export default function RegisterMemberView({ onSuccess }) {
                         }}
                     >
                         {loading ? <RefreshCw style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} /> : <UserPlus style={{ width: '16px', height: '16px' }} />}
-                        <span>{loading ? 'Registering...' : 'Complete Registration'}</span>
+                        <span>{t(loading ? t('Registering...') : t('Complete Registration'))}</span>
                     </button>
                 </form>
             </div>

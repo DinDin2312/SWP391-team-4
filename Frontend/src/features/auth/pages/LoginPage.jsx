@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dumbbell, LockKeyhole, Eye, EyeOff } from 'lucide-react';
@@ -17,6 +18,7 @@ const ROLE_ROUTES = {
 };
 
 function LoginPage() {
+  useLanguage();
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
@@ -91,7 +93,7 @@ function LoginPage() {
       transition={{ duration: 0.4 }}
     >
       <motion.section 
-        className="hero-panel" aria-label="Nexus Sports Center introduction"
+        className="hero-panel" aria-label={t("Nexus Sports Center introduction")}
         initial={{ x: -50, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
@@ -100,7 +102,7 @@ function LoginPage() {
         <div className="hero-streak hero-streak-one" aria-hidden="true" />
         <div className="hero-streak hero-streak-two" aria-hidden="true" />
         <div className="hero-copy">
-          <div className="hero-kicker"><span /> Performance, connected</div>
+          <div className="hero-kicker"><span />{t("Performance, connected")}</div>
           <motion.h2 
             className="text-4xl lg:text-5xl font-bold text-white mb-4"
             initial="hidden"
@@ -113,14 +115,14 @@ function LoginPage() {
               }
             }}
           >
-            <motion.span variants={{ hidden: { opacity: 0, filter: "blur(10px)" }, visible: { opacity: 1, filter: "blur(0px)" } }}>NEXUS:</motion.span><br />
-            <motion.em variants={{ hidden: { opacity: 0, filter: "blur(10px)" }, visible: { opacity: 1, filter: "blur(0px)" } }}>Redefining</motion.em><br />
-            <motion.span variants={{ hidden: { opacity: 0, filter: "blur(10px)" }, visible: { opacity: 1, filter: "blur(0px)" } }}>Sports Center</motion.span><br />
-            <motion.span variants={{ hidden: { opacity: 0, filter: "blur(10px)" }, visible: { opacity: 1, filter: "blur(0px)" } }}>Management.</motion.span>
+            <motion.span variants={{ hidden: { opacity: 0, filter: "blur(10px)" }, visible: { opacity: 1, filter: "blur(0px)" } }}>{t("NEXUS:")}</motion.span><br />
+            <motion.em variants={{ hidden: { opacity: 0, filter: "blur(10px)" }, visible: { opacity: 1, filter: "blur(0px)" } }}>{t("Redefining")}</motion.em><br />
+            <motion.span variants={{ hidden: { opacity: 0, filter: "blur(10px)" }, visible: { opacity: 1, filter: "blur(0px)" } }}>{t("Sports Center")}</motion.span><br />
+            <motion.span variants={{ hidden: { opacity: 0, filter: "blur(10px)" }, visible: { opacity: 1, filter: "blur(0px)" } }}>{t("Management.")}</motion.span>
           </motion.h2>
-          <p>One intelligent space for every athlete, coach, and team.</p>
+          <p>{t("One intelligent space for every athlete, coach, and team.")}</p>
         </div>
-        <div className="hero-footer"><span>01</span><i /><span>MOVE WITH PURPOSE</span></div>
+        <div className="hero-footer"><span>01</span><i /><span>{t("MOVE WITH PURPOSE")}</span></div>
       </motion.section>
 
       <motion.section 
@@ -138,24 +140,24 @@ function LoginPage() {
             <Dumbbell size={25} strokeWidth={2.3} />
           </div>
           <div>
-            <p className="brand-name">NEXUS</p>
-            <p className="brand-subtitle">SPORTS CENTER</p>
+            <p className="brand-name">{t("NEXUS")}</p>
+            <p className="brand-subtitle">{t("SPORTS CENTER")}</p>
           </div>
         </header>
 
         <div className="login-card">
           <div className="login-heading">
-            <h1 id="login-title">Welcome back</h1>
-            <p>Sign in to your account to continue.</p>
+            <h1 id="login-title">{t("Welcome back")}</h1>
+            <p>{t("Sign in to your account to continue.")}</p>
           </div>
 
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="field-group">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">{t("Email")}</label>
               <input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
+                placeholder={t("Enter your email")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -163,14 +165,14 @@ function LoginPage() {
             </div>
             <div className="field-group">
               <div className="field-label-row">
-                <label htmlFor="password">Password</label>
-                <button type="button" className="text-link" onClick={() => navigate('/forgot-password')}>Forgot password?</button>
+                <label htmlFor="password">{t("Password")}</label>
+                <button type="button" className="text-link" onClick={() => navigate('/forgot-password')}>{t("Forgot password?")}</button>
               </div>
               <div style={{ position: 'relative' }}>
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
+                  placeholder={t("Enter your password")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -178,7 +180,7 @@ function LoginPage() {
                 />
                 <button
                   type="button"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={t(showPassword ? 'Hide password' : 'Show password')}
                   onClick={() => setShowPassword(!showPassword)}
                   style={{
                     position: 'absolute',
@@ -213,17 +215,17 @@ function LoginPage() {
                 gap: '8px'
               }}>
                 <LockKeyhole size={14} />
-                <span>{error}</span>
+                <span>{t(error)}</span>
               </div>
             )}
 
             <button type="submit" className="sign-in-button" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
+              {t(loading ? t('Signing in...') : t('Sign in'))}
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
               <div style={{ flex: 1, height: '1px', background: 'var(--surface)' }}></div>
-              <span style={{ padding: '0 10px', fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>or</span>
+              <span style={{ padding: '0 10px', fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>{t("or")}</span>
               <div style={{ flex: 1, height: '1px', background: 'var(--surface)' }}></div>
             </div>
 
@@ -233,26 +235,24 @@ function LoginPage() {
                 <path fill="var(--google-green)" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
                 <path fill="var(--google-yellow)" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                 <path fill="var(--google-red)" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-              </svg>
-              Sign in with Google
-            </button>
+              </svg>{t("Sign in with Google")}</button>
           </form>
 
           <div className="auth-links">
-            <span>New to Nexus?</span>
-            <button type="button" className="text-link" onClick={() => navigate('/register')}>Sign up</button>
+            <span>{t("New to Nexus?")}</span>
+            <button type="button" className="text-link" onClick={() => navigate('/register')}>{t("Sign up")}</button>
           </div>
 
-          <div className="or-divider"><span>or</span></div>
+          <div className="or-divider"><span>{t("or")}</span></div>
 
-          <div className="section-divider"><span>Continue demo as</span></div>
+          <div className="section-divider"><span>{t("Continue demo as")}</span></div>
 
           <div className="role-grid">
             {[
-              { id: 'Member', label: 'Customer', description: 'Book & manage activities', route: '/customer/dashboard' },
-              { id: 'Receptionist', label: 'Staff', description: 'Operate the sports center', route: '/staff/dashboard' },
-              { id: 'Coach', label: 'Trainer', description: 'Coach & track members', route: '/coach/dashboard' },
-              { id: 'Center Manager', label: 'Center Manager', description: 'Manage center operations', route: '/admin/dashboard' },
+              { id: 'Member', label: t('Customer'), description: t('Book & manage activities'), route: '/customer/dashboard' },
+              { id: 'Receptionist', label: t('Staff'), description: t('Operate the sports center'), route: '/staff/dashboard' },
+              { id: 'Coach', label: t('Trainer'), description: t('Coach & track members'), route: '/coach/dashboard' },
+              { id: 'Center Manager', label: t('Center Manager'), description: t('Manage center operations'), route: '/admin/dashboard' },
             ].map(({ id, label, description, route }) => (
               <button
                 key={id}
@@ -262,11 +262,11 @@ function LoginPage() {
                   login({ token: 'demo', role: id, email: 'demo@nexus.com', fullName: `Demo ${label}` });
                   navigate(route);
                 }}
-                aria-label={`Continue as ${label}`}
+                aria-label={t("Continue as {0}",[t(label)])}
               >
                 <span className="role-copy">
-                  <strong>{label}</strong>
-                  <small>{description}</small>
+                  <strong>{t(label)}</strong>
+                  <small>{t(description)}</small>
                 </span>
               </button>
             ))}
@@ -274,7 +274,7 @@ function LoginPage() {
         </div>
 
         <footer className="login-footer">
-          <span>Secure access</span><i aria-hidden="true" /><span>Nexus Sports Center</span>
+          <span>{t("Secure access")}</span><i aria-hidden="true" /><span>{t("Nexus Sports Center")}</span>
         </footer>
         </div>
       </motion.section>

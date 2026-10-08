@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDateTime as displayFormatDateTime, formatMoney } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
 import {
@@ -14,6 +15,7 @@ import {
 import receptionistService from '../services/receptionistService';
 
 export default function ManageMembershipsView() {
+  useLanguage();
     // Package Subscription States
     const [packagesList, setPackagesList] = useState([]);
     const [packageModalOpen, setPackageModalOpen] = useState(false);
@@ -129,7 +131,7 @@ export default function ManageMembershipsView() {
                 previousBookingId: suggestedClass.currentBookingId,
             });
 
-            setFeedback({ type: 'success', message: 'Successfully renewed and enrolled into the next class!' });
+            setFeedback({ type: 'success', message: t('Successfully renewed and enrolled into the next class!') });
             setTimeout(() => {
                 setRenewalModalOpen(false);
                 setSuggestedClass(null);
@@ -165,7 +167,7 @@ export default function ManageMembershipsView() {
                 packageId: Number(selectedPackageId),
                 startDate: startDateInput,
             });
-            setPkgFeedback({ type: 'success', message: 'Combo Package subscribed successfully!' });
+            setPkgFeedback({ type: 'success', message: t('Combo Package subscribed successfully!') });
             setTimeout(() => {
                 setPackageModalOpen(false);
                 handleSelectMember(selectedMember);
@@ -186,12 +188,8 @@ export default function ManageMembershipsView() {
         <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Header */}
             <div>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>
-                    Course & Membership Renewal
-                </h1>
-                <p style={{ margin: '0.4rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                    Select a member to view active course enrolments and automatically book next recurring classes.
-                </p>
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>{t("Course & Membership Renewal")}</h1>
+                <p style={{ margin: '0.4rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>{t("Select a member to view active course enrolments and automatically book next recurring classes.")}</p>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '1.5rem', alignItems: 'flex-start' }}>
@@ -202,20 +200,18 @@ export default function ManageMembershipsView() {
                             <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '15px', height: '15px', color: 'var(--text-muted)' }} />
                             <input
                                 type="text"
-                                placeholder="Search member name / phone..."
+                                placeholder={t("Search member name / phone...")}
                                 value={keyword}
                                 onChange={(e) => setKeyword(e.target.value)}
                                 style={{ width: '100%', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.6rem 0.75rem 0.6rem 2.2rem', color: 'var(--text)', fontSize: '0.85rem', outline: 'none' }}
                             />
                         </div>
-                        <button type="submit" style={{ padding: '0.6rem 0.9rem', backgroundColor: 'var(--primary)', color: 'var(--on-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>
-                            Find
-                        </button>
+                        <button type="submit" style={{ padding: '0.6rem 0.9rem', backgroundColor: 'var(--primary)', color: 'var(--on-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>{t("Find")}</button>
                     </form>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '520px', overflowY: 'auto' }}>
-                        {loading && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', margin: '1rem 0' }}>Loading members...</p>}
-                        {!loading && members.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', margin: '1rem 0' }}>No active members found.</p>}
+                        {loading && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', margin: '1rem 0' }}>{t("Loading members...")}</p>}
+                        {!loading && members.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', margin: '1rem 0' }}>{t("No active members found.")}</p>}
                         {members.map((m) => {
                             const isSelected = selectedMember?.userId === m.userId;
                             return (
@@ -233,7 +229,7 @@ export default function ManageMembershipsView() {
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <strong style={{ color: 'var(--text)', fontSize: '0.9rem' }}>{m.fullName}</strong>
-                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>#MEM-{String(m.userId).padStart(4, '0')}</span>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{t("#MEM-")}{String(m.userId).padStart(4, '0')}</span>
                                     </div>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
                                         {m.phone || m.email}
@@ -249,8 +245,8 @@ export default function ManageMembershipsView() {
                     {!selectedMember ? (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '350px', textAlign: 'center', color: 'var(--text-muted)' }}>
                             <Layers style={{ width: '48px', height: '48px', marginBottom: '1rem', opacity: 0.4 }} />
-                            <h3 style={{ margin: '0 0 0.35rem', color: 'var(--text-muted)', fontSize: '1.1rem' }}>No Member Selected</h3>
-                            <p style={{ margin: 0, fontSize: '0.85rem' }}>Select a member from the left list to review their classes and process renewal.</p>
+                            <h3 style={{ margin: '0 0 0.35rem', color: 'var(--text-muted)', fontSize: '1.1rem' }}>{t("No Member Selected")}</h3>
+                            <p style={{ margin: 0, fontSize: '0.85rem' }}>{t("Select a member from the left list to review their classes and process renewal.")}</p>
                         </div>
                     ) : (
                         <div>
@@ -259,8 +255,7 @@ export default function ManageMembershipsView() {
                                     <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
                                         {selectedMember.fullName}
                                     </h2>
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>
-                                        Member ID: #MEM-{String(selectedMember.userId).padStart(4, '0')} • {selectedMember.phone || selectedMember.email}
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>{t("Member ID: #MEM-")}{String(selectedMember.userId).padStart(4, '0')} • {selectedMember.phone || selectedMember.email}
                                     </span>
                                 </div>
 
@@ -281,9 +276,7 @@ export default function ManageMembershipsView() {
                                             fontWeight: 600,
                                             cursor: 'pointer'
                                         }}
-                                    >
-                                        + Subscribe Combo Package
-                                    </button>
+                                    >{t("+ Subscribe Combo Package")}</button>
 
                                     <button
                                         onClick={() => handleSelectMember(selectedMember)}
@@ -301,31 +294,30 @@ export default function ManageMembershipsView() {
                                             cursor: 'pointer'
                                         }}
                                     >
-                                        <RefreshCw style={{ width: '13px', height: '13px', animation: loadingBookings ? 'spin 1s linear infinite' : 'none' }} />
-                                        <span>Reload Classes</span>
+                                        <RefreshCw style={{ width: '13px', height: '13px', animation: loadingBookings ? t('spin 1s linear infinite') : t('none') }} />
+                                        <span>{t("Reload Classes")}</span>
                                     </button>
                                 </div>
                             </div>
 
-                            <h4 style={{ fontSize: '0.9rem', color: 'var(--text)', marginBottom: '0.85rem', fontWeight: 600 }}>
-                                Enrolled Courses ({memberBookings.length})
+                            <h4 style={{ fontSize: '0.9rem', color: 'var(--text)', marginBottom: '0.85rem', fontWeight: 600 }}>{t("Enrolled Courses (")}{' '}{memberBookings.length})
                             </h4>
 
                             {loadingBookings ? (
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading course enrolments...</p>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t("Loading course enrolments...")}</p>
                             ) : memberBookings.length === 0 ? (
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>This member has no past or current course enrolments.</p>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t("This member has no past or current course enrolments.")}</p>
                             ) : (
                                 <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '0.75rem' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                                         <thead>
                                             <tr style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                                                <th style={{ padding: '0.75rem 1rem' }}>Course Name</th>
-                                                <th style={{ padding: '0.75rem 1rem' }}>Coach</th>
-                                                <th style={{ padding: '0.75rem 1rem' }}>Room</th>
-                                                <th style={{ padding: '0.75rem 1rem' }}>Course Timeline</th>
-                                                <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Total Sessions</th>
-                                                <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Action</th>
+                                                <th style={{ padding: '0.75rem 1rem' }}>{t("Course Name")}</th>
+                                                <th style={{ padding: '0.75rem 1rem' }}>{t("Coach")}</th>
+                                                <th style={{ padding: '0.75rem 1rem' }}>{t("Room")}</th>
+                                                <th style={{ padding: '0.75rem 1rem' }}>{t("Course Timeline")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{t("Total Sessions")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{t("Action")}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -338,8 +330,7 @@ export default function ManageMembershipsView() {
                                                         {formatDateTime(c.firstSessionDate)} → {formatDateTime(c.lastSessionDate)}
                                                     </td>
                                                     <td style={{ padding: '0.85rem 1rem', textAlign: 'center', color: 'var(--primary)', fontWeight: 600 }}>
-                                                        {c.sessionsCount} sessions
-                                                    </td>
+                                                        {c.sessionsCount}{' '}{t("sessions")}</td>
                                                     <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
                                                         <button
                                                             onClick={() => handleFindRenewal(c.sampleBookingId)}
@@ -358,7 +349,7 @@ export default function ManageMembershipsView() {
                                                             }}
                                                         >
                                                             <RotateCw style={{ width: '12px', height: '12px' }} />
-                                                            <span>Renew Course</span>
+                                                            <span>{t("Renew Course")}</span>
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -377,7 +368,7 @@ export default function ManageMembershipsView() {
                 <div style={{ position: 'fixed', inset: 0, zIndex: 10000, backgroundColor: 'var(--surface-hover)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
                     <div style={{ width: '100%', maxWidth: '500px', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
-                            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Enroll Next Recurring Course</h3>
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>{t("Enroll Next Recurring Course")}</h3>
                             <button onClick={() => setRenewalModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                                 <X style={{ width: '18px', height: '18px' }} />
                             </button>
@@ -385,23 +376,23 @@ export default function ManageMembershipsView() {
 
                         {feedback && (
                             <div style={{ padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', backgroundColor: feedback.type === 'success' ? 'var(--success-soft)' : 'var(--danger-soft)', color: feedback.type === 'success' ? 'var(--success-text)' : 'var(--danger-text)', fontSize: '0.85rem' }}>
-                                {feedback.message}
+                                {t(feedback.message)}
                             </div>
                         )}
 
                         <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Target Course:</span><strong style={{ color: 'var(--text)' }}>{suggestedClass.className}</strong></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Coach:</span><span style={{ color: 'var(--text)' }}>{suggestedClass.coachName}</span></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Room:</span><span style={{ color: 'var(--text)' }}>{suggestedClass.roomName}</span></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Next Session Starts:</span><strong style={{ color: 'var(--primary)' }}>{formatDateTime(suggestedClass.startTime)}</strong></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Course Fee:</span><strong style={{ color: 'var(--success-text)' }}>{formatCurrency(suggestedClass.price)}</strong></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Availability:</span><span style={{ color: 'var(--text)' }}>{suggestedClass.availableSlots} / {suggestedClass.maxSlots} slots</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>{t("Target Course:")}</span><strong style={{ color: 'var(--text)' }}>{suggestedClass.className}</strong></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>{t("Coach:")}</span><span style={{ color: 'var(--text)' }}>{suggestedClass.coachName}</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>{t("Room:")}</span><span style={{ color: 'var(--text)' }}>{suggestedClass.roomName}</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>{t("Next Session Starts:")}</span><strong style={{ color: 'var(--primary)' }}>{formatDateTime(suggestedClass.startTime)}</strong></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>{t("Course Fee:")}</span><strong style={{ color: 'var(--success-text)' }}>{formatCurrency(suggestedClass.price)}</strong></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>{t("Availability:")}</span><span style={{ color: 'var(--text)' }}>{suggestedClass.availableSlots} / {suggestedClass.maxSlots}{' '}{t("slots")}</span></div>
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>
-                            <button onClick={() => setRenewalModalOpen(false)} disabled={confirming} style={{ padding: '0.55rem 1rem', backgroundColor: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>Cancel</button>
+                            <button onClick={() => setRenewalModalOpen(false)} disabled={confirming} style={{ padding: '0.55rem 1rem', backgroundColor: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>{t("Cancel")}</button>
                             <button onClick={handleConfirmEnrollment} disabled={confirming} style={{ padding: '0.55rem 1.25rem', backgroundColor: 'var(--primary)', color: 'var(--on-primary)', border: 'none', borderRadius: '0.5rem', fontSize: '0.85rem', fontWeight: 600, cursor: confirming ? 'not-allowed' : 'pointer' }}>
-                                {confirming ? 'Enrolling...' : 'Confirm & Enroll'}
+                                {t(confirming ? t('Enrolling...') : t('Confirm & Enroll'))}
                             </button>
                         </div>
                     </div>
@@ -413,19 +404,19 @@ export default function ManageMembershipsView() {
                 <div style={{ position: 'fixed', inset: 0, zIndex: 10000, backgroundColor: 'var(--surface-hover)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
                     <div style={{ width: '100%', maxWidth: '480px', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
-                            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Subscribe Combo Package</h3>
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>{t("Subscribe Combo Package")}</h3>
                             <button onClick={() => setPackageModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
                         </div>
 
                         {pkgFeedback && (
                             <div style={{ padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', backgroundColor: pkgFeedback.type === 'success' ? 'var(--success-soft)' : 'var(--danger-soft)', color: pkgFeedback.type === 'success' ? 'var(--success-text)' : 'var(--danger-text)', fontSize: '0.85rem' }}>
-                                {pkgFeedback.message}
+                                {t(pkgFeedback.message)}
                             </div>
                         )}
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem' }}>
                             <div>
-                                <label style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Select Combo Package</label>
+                                <label style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>{t("Select Combo Package")}</label>
                                 <select
                                     value={selectedPackageId}
                                     onChange={(e) => setSelectedPackageId(e.target.value)}
@@ -433,14 +424,14 @@ export default function ManageMembershipsView() {
                                 >
                                     {packagesList.map(p => (
                                         <option key={p.packageId} value={p.packageId}>
-                                            {p.packageName} ({p.durationDays} days) - {formatCurrency(p.price)}
+                                            {p.packageName} ({p.durationDays}{' '}{t("days) -")}{formatCurrency(p.price)}
                                         </option>
                                     ))}
                                 </select>
                             </div>
 
                             <div>
-                                <label style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Activation Date</label>
+                                <label style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>{t("Activation Date")}</label>
                                 <input
                                     type="date"
                                     value={startDateInput}
@@ -451,9 +442,9 @@ export default function ManageMembershipsView() {
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-                            <button onClick={() => setPackageModalOpen(false)} disabled={subscribing} style={{ padding: '0.55rem 1rem', backgroundColor: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancel</button>
+                            <button onClick={() => setPackageModalOpen(false)} disabled={subscribing} style={{ padding: '0.55rem 1rem', backgroundColor: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '0.5rem', cursor: 'pointer' }}>{t("Cancel")}</button>
                             <button onClick={handleConfirmSubscribe} disabled={subscribing} style={{ padding: '0.55rem 1.25rem', backgroundColor: 'var(--success-hover)', color: 'var(--on-primary)', border: 'none', borderRadius: '0.5rem', fontWeight: 600, cursor: subscribing ? 'not-allowed' : 'pointer' }}>
-                                {subscribing ? 'Subscribing...' : 'Confirm Subscription'}
+                                {t(subscribing ? t('Subscribing...') : t('Confirm Subscription'))}
                             </button>
                         </div>
                     </div>

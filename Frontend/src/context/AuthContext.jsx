@@ -1,8 +1,10 @@
+import { useLanguage } from '../i18n/useLanguage';
 import React, { createContext, useState } from 'react';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  useLanguage();
   const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole'));
   const [userInfo, setUserInfo] = useState(() => {
     const stored = localStorage.getItem('userInfo');

@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDate as displayFormatDate, formatDateTime as displayFormatDateTime, formatMoney } from '../../../utils/displayFormat';
 import React, { useState } from 'react';
 import {
@@ -25,6 +26,7 @@ import {
 import receptionistService from '../services/receptionistService';
 
 const MemberDetailModal = ({ member, onClose }) => {
+  useLanguage();
     const [activeTab, setActiveTab] = useState('packages'); // 'packages' | 'bookings' | 'profile'
     const [copiedPhone, setCopiedPhone] = useState(false);
 
@@ -128,7 +130,7 @@ const MemberDetailModal = ({ member, onClose }) => {
 
             setRenewalFeedback({
                 type: 'success',
-                message: 'Successfully enrolled into the next recurring class!'
+                message: t('Successfully enrolled into the next recurring class!')
             });
 
             setTimeout(() => {
@@ -225,7 +227,7 @@ const MemberDetailModal = ({ member, onClose }) => {
                                         border: `1px solid ${member.status === 'ACTIVE' ? 'var(--border)' : 'var(--border)'}`,
                                     }}
                                 >
-                  {member.status === 'ACTIVE' ? '● Active' : '● Inactive'}
+                  {t(member.status === 'ACTIVE' ? t('● Active') : t('● Inactive'))}
                 </span>
                                 <span
                                     style={{
@@ -236,8 +238,7 @@ const MemberDetailModal = ({ member, onClose }) => {
                                         borderRadius: '0.375rem',
                                         fontFamily: 'monospace',
                                     }}
-                                >
-                  #MEM-{String(member.userId).padStart(4, '0')}
+                                >{t("#MEM-")}{String(member.userId).padStart(4, '0')}
                 </span>
                             </div>
 
@@ -245,7 +246,7 @@ const MemberDetailModal = ({ member, onClose }) => {
                                 {member.phone && (
                                     <button
                                         onClick={handleCopyPhone}
-                                        title="Click to copy phone number"
+                                        title={t("Click to copy phone number")}
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -303,28 +304,26 @@ const MemberDetailModal = ({ member, onClose }) => {
                     }}
                 >
                     <div style={{ backgroundColor: 'var(--surface)', padding: '0.875rem 1.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Active Package</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>{t("Active Package")}</span>
                         <div style={{ fontWeight: 600, fontSize: '0.95rem', color: member.currentMembershipStatus === 'ACTIVE' ? 'var(--primary)' : 'var(--text-muted)', marginTop: '0.2rem' }}>
-                            {member.currentPackageName || 'No Active Package'}
+                            {t(member.currentPackageName || 'No Active Package')}
                         </div>
                     </div>
                     <div style={{ backgroundColor: 'var(--surface)', padding: '0.875rem 1.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Days Remaining</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>{t("Days Remaining")}</span>
                         <div style={{ fontWeight: 600, fontSize: '0.95rem', color: member.daysRemaining > 0 ? 'var(--success-text)' : 'var(--danger-text)', marginTop: '0.2rem' }}>
-                            {member.currentMembershipStatus === 'ACTIVE' ? `${member.daysRemaining} days` : 'Expired / None'}
+                            {t(member.currentMembershipStatus === 'ACTIVE' ? `${member.daysRemaining} days` : t('Expired / None'))}
                         </div>
                     </div>
                     <div style={{ backgroundColor: 'var(--surface)', padding: '0.875rem 1.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Total Enrolled Classes</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>{t("Total Enrolled Classes")}</span>
                         <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text)', marginTop: '0.2rem' }}>
-                            {member.totalBookingsCount ?? member.bookings?.length ?? 0} sessions
-                        </div>
+                            {member.totalBookingsCount ?? member.bookings?.length ?? 0}{' '}{t("sessions")}</div>
                     </div>
                     <div style={{ backgroundColor: 'var(--surface)', padding: '0.875rem 1.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Attendance</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>{t("Attendance")}</span>
                         <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--violet)', marginTop: '0.2rem' }}>
-                            {member.attendedCount ?? 0} present / {member.absentCount ?? 0} absent
-                        </div>
+                            {member.attendedCount ?? 0}{' '}{t("present /")}{member.absentCount ?? 0}{' '}{t("absent")}</div>
                     </div>
                 </div>
 
@@ -355,7 +354,7 @@ const MemberDetailModal = ({ member, onClose }) => {
                         }}
                     >
                         <CreditCard style={{ width: '16px', height: '16px' }} />
-                        <span>Packages & Passes ({member.memberships?.length || 0})</span>
+                        <span>{t("Packages & Passes (")}{' '}{member.memberships?.length || 0})</span>
                     </button>
 
                     <button
@@ -375,7 +374,7 @@ const MemberDetailModal = ({ member, onClose }) => {
                         }}
                     >
                         <CalendarDays style={{ width: '16px', height: '16px' }} />
-                        <span>Classes & Attendance ({member.bookings?.length || 0})</span>
+                        <span>{t("Classes & Attendance (")}{' '}{member.bookings?.length || 0})</span>
                     </button>
 
                     <button
@@ -395,7 +394,7 @@ const MemberDetailModal = ({ member, onClose }) => {
                         }}
                     >
                         <User style={{ width: '16px', height: '16px' }} />
-                        <span>Profile & Notes</span>
+                        <span>{t("Profile & Notes")}</span>
                     </button>
                 </div>
 
@@ -417,15 +416,12 @@ const MemberDetailModal = ({ member, onClose }) => {
                                         <div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                 <Award style={{ width: '20px', height: '20px', color: 'var(--primary)' }} />
-                                                <span style={{ fontSize: '0.8rem', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
-                          Currently Active Package
-                        </span>
+                                                <span style={{ fontSize: '0.8rem', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{t("Currently Active Package")}</span>
                                             </div>
                                             <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text)', margin: '0.4rem 0 0.2rem' }}>
                                                 {member.currentPackageName}
                                             </h3>
-                                            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                                                Type: <strong style={{ color: 'var(--text)' }}>{member.currentPackageType || 'COMBO_PROMO'}</strong>
+                                            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t("Type:")}<strong style={{ color: 'var(--text)' }}>{t(member.currentPackageType || 'COMBO_PROMO')}</strong>
                                             </p>
                                         </div>
 
@@ -444,47 +440,44 @@ const MemberDetailModal = ({ member, onClose }) => {
                                             }}
                                         >
                       <Clock style={{ width: '14px', height: '14px' }} />
-                                            {member.daysRemaining} days left
-                    </span>
+                                            {member.daysRemaining}{' '}{t("days left")}</span>
                                     </div>
                                 </div>
                             )}
 
                             {/* Package History */}
                             <div>
-                                <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.75rem' }}>
-                                    Package History
-                                </h4>
+                                <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.75rem' }}>{t("Package History")}</h4>
 
                                 {(!member.memberships || member.memberships.length === 0) ? (
                                     <div style={{ padding: '2rem', textAlign: 'center', backgroundColor: 'var(--surface-hover)', borderRadius: '0.75rem', border: '1px dashed var(--border)', color: 'var(--text-muted)' }}>
                                         <CreditCard style={{ width: '32px', height: '32px', margin: '0 auto 0.5rem', opacity: 0.5 }} />
-                                        <p style={{ margin: 0 }}>No package history found for this member.</p>
+                                        <p style={{ margin: 0 }}>{t("No package history found for this member.")}</p>
                                     </div>
                                 ) : (
                                     <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '0.75rem' }}>
                                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem', textAlign: 'left' }}>
                                             <thead>
                                             <tr style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Package Name</th>
-                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Type</th>
-                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Price</th>
-                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Start Date</th>
-                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>End Date</th>
-                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Status</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Package Name")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Type")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Price")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Start Date")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("End Date")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Status")}</th>
                                             </tr>
                                             </thead>
                                             <tbody>
                                             {member.memberships.map((pkg, idx) => (
                                                 <tr key={pkg.membershipId || idx} style={{ borderBottom: '1px solid var(--border)' }}>
                                                     <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: 'var(--text)' }}>{pkg.packageName}</td>
-                                                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)' }}>{pkg.packageType || 'COMBO'}</td>
+                                                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)' }}>{t(pkg.packageType || 'COMBO')}</td>
                                                     <td style={{ padding: '0.85rem 1rem', color: 'var(--text)' }}>{formatCurrency(pkg.price)}</td>
                                                     <td style={{ padding: '0.85rem 1rem', color: 'var(--text)' }}>{formatDate(pkg.startDate)}</td>
                                                     <td style={{ padding: '0.85rem 1rem', color: 'var(--text)' }}>{formatDate(pkg.endDate)}</td>
                                                     <td style={{ padding: '0.85rem 1rem' }}>
-                              <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '9999px', backgroundColor: pkg.active ? 'var(--success-soft)' : 'var(--primary-soft)', color: pkg.active ? 'var(--success-text)' : 'var(--text-muted)' }}>
-                                {pkg.active ? 'Active' : 'Expired'}
+                              <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '9999px', backgroundColor: pkg.active ? t('var(--success-soft)') : t('var(--primary-soft)'), color: pkg.active ? t('var(--success-text)') : t('var(--text-muted)') }}>
+                                {t(pkg.active ? t('Active') : t('Expired'))}
                               </span>
                                                     </td>
                                                 </tr>
@@ -501,30 +494,26 @@ const MemberDetailModal = ({ member, onClose }) => {
                     {activeTab === 'bookings' && (
                         <div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
-                                    Course Schedule & Attendance Records
-                                </h4>
-                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Click "Renew Course" to enroll member into the next upcoming session.
-                </span>
+                                <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{t("Course Schedule & Attendance Records")}</h4>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t("Click \"Renew Course\" to enroll member into the next upcoming session.")}</span>
                             </div>
 
                             {(!member.bookings || member.bookings.length === 0) ? (
                                 <div style={{ padding: '2.5rem', textAlign: 'center', backgroundColor: 'var(--surface-hover)', borderRadius: '0.75rem', border: '1px dashed var(--border)', color: 'var(--text-muted)' }}>
                                     <CalendarDays style={{ width: '32px', height: '32px', margin: '0 auto 0.5rem', opacity: 0.5 }} />
-                                    <p style={{ margin: 0 }}>No course bookings found for this member.</p>
+                                    <p style={{ margin: 0 }}>{t("No course bookings found for this member.")}</p>
                                 </div>
                             ) : (
                                 <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '0.75rem' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem', textAlign: 'left' }}>
                                         <thead>
                                         <tr style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                                            <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Course Name</th>
-                                            <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Coach</th>
-                                            <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Room</th>
-                                            <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Course Timeline</th>
-                                            <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Attendance Summary</th>
-                                            <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'center' }}>Action</th>
+                                            <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Course Name")}</th>
+                                            <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Coach")}</th>
+                                            <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Room")}</th>
+                                            <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Course Timeline")}</th>
+                                            <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Attendance Summary")}</th>
+                                            <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'center' }}>{t("Action")}</th>
                                         </tr>
                                         </thead>
                                         <tbody>
@@ -544,13 +533,13 @@ const MemberDetailModal = ({ member, onClose }) => {
                                                 </td>
                                                 <td style={{ padding: '0.85rem 1rem' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
-                                                        <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{course.sessionsCount} sessions</span>
+                                                        <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{course.sessionsCount}{' '}{t("sessions")}</span>
                                                         <span style={{ color: 'var(--text-muted)' }}>•</span>
-                                                        <span style={{ color: 'var(--success-text)' }}>{course.attendedCount} present</span>
+                                                        <span style={{ color: 'var(--success-text)' }}>{course.attendedCount}{' '}{t("present")}</span>
                                                         {course.absentCount > 0 && (
                                                             <>
                                                                 <span style={{ color: 'var(--text-muted)' }}>•</span>
-                                                                <span style={{ color: 'var(--danger-text)' }}>{course.absentCount} absent</span>
+                                                                <span style={{ color: 'var(--danger-text)' }}>{course.absentCount}{' '}{t("absent")}</span>
                                                             </>
                                                         )}
                                                     </div>
@@ -559,7 +548,7 @@ const MemberDetailModal = ({ member, onClose }) => {
                                                     <button
                                                         onClick={() => handleOpenRenewal(course.sampleBookingId)}
                                                         disabled={renewalLoading}
-                                                        title="Find and enroll into next recurring course"
+                                                        title={t("Find and enroll into next recurring course")}
                                                         style={{
                                                             display: 'inline-flex',
                                                             alignItems: 'center',
@@ -578,7 +567,7 @@ const MemberDetailModal = ({ member, onClose }) => {
                                                         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--primary-soft)')}
                                                     >
                                                         <RotateCw style={{ width: '13px', height: '13px' }} />
-                                                        <span>Renew Course</span>
+                                                        <span>{t("Renew Course")}</span>
                                                     </button>
                                                 </td>
                                             </tr>
@@ -595,23 +584,21 @@ const MemberDetailModal = ({ member, onClose }) => {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                             <div style={{ backgroundColor: 'var(--surface-hover)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '1.25rem' }}>
                                 <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <User style={{ width: '18px', height: '18px' }} /> Account Information
-                                </h4>
+                                    <User style={{ width: '18px', height: '18px' }} />{t("Account Information")}</h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.875rem' }}>
-                                    <div><span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Full Name</span><strong style={{ color: 'var(--text)' }}>{member.fullName}</strong></div>
-                                    <div><span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Member ID</span><strong style={{ color: 'var(--text)', fontFamily: 'monospace' }}>#MEM-{String(member.userId).padStart(4, '0')}</strong></div>
-                                    <div><span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Phone</span><strong style={{ color: 'var(--text)' }}>{member.phone || 'N/A'}</strong></div>
-                                    <div><span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Email</span><strong style={{ color: 'var(--text)' }}>{member.email || 'N/A'}</strong></div>
-                                    <div><span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>System Role</span><strong style={{ color: 'var(--primary)' }}>{member.roleName || 'Member'}</strong></div>
+                                    <div><span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>{t("Full Name")}</span><strong style={{ color: 'var(--text)' }}>{member.fullName}</strong></div>
+                                    <div><span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>{t("Member ID")}</span><strong style={{ color: 'var(--text)', fontFamily: 'monospace' }}>{t("#MEM-")}{String(member.userId).padStart(4, '0')}</strong></div>
+                                    <div><span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>{t("Phone")}</span><strong style={{ color: 'var(--text)' }}>{t(member.phone || 'N/A')}</strong></div>
+                                    <div><span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>{t("Email")}</span><strong style={{ color: 'var(--text)' }}>{t(member.email || 'N/A')}</strong></div>
+                                    <div><span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>{t("System Role")}</span><strong style={{ color: 'var(--primary)' }}>{t(member.roleName || 'Member')}</strong></div>
                                 </div>
                             </div>
 
                             <div style={{ backgroundColor: 'var(--surface-hover)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '1.25rem' }}>
                                 <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <FileText style={{ width: '18px', height: '18px' }} /> Sports Interests & Notes
-                                </h4>
+                                    <FileText style={{ width: '18px', height: '18px' }} />{t("Sports Interests & Notes")}</h4>
                                 <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1rem', minHeight: '140px', color: member.bio ? 'var(--text-muted)' : 'var(--text-muted)', fontSize: '0.875rem', lineHeight: '1.5' }}>
-                                    {member.bio || 'No notes or sports interests recorded for this member.'}
+                                    {t(member.bio || 'No notes or sports interests recorded for this member.')}
                                 </div>
                             </div>
                         </div>
@@ -620,15 +607,11 @@ const MemberDetailModal = ({ member, onClose }) => {
 
                 {/* ================= MODAL FOOTER ================= */}
                 <div style={{ padding: '1rem 1.75rem', borderTop: '1px solid var(--border)', backgroundColor: 'var(--surface)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                        NEXUS Sports Center Receptionist Portal
-                    </div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{t("NEXUS Sports Center Receptionist Portal")}</div>
                     <button
                         onClick={onClose}
                         style={{ padding: '0.5rem 1.25rem', backgroundColor: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}
-                    >
-                        Close
-                    </button>
+                    >{t("Close")}</button>
                 </div>
 
                 {/* ================= RENEWAL CONFIRMATION POPUP MODAL ================= */}
@@ -660,9 +643,7 @@ const MemberDetailModal = ({ member, onClose }) => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <RotateCw style={{ width: '20px', height: '20px', color: 'var(--primary)' }} />
-                                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
-                                        Confirm Next Course Renewal
-                                    </h3>
+                                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>{t("Confirm Next Course Renewal")}</h3>
                                 </div>
                                 <button
                                     onClick={() => setRenewalModalOpen(false)}
@@ -682,38 +663,37 @@ const MemberDetailModal = ({ member, onClose }) => {
                                     color: renewalFeedback.type === 'success' ? 'var(--success-text)' : 'var(--danger-text)',
                                     fontSize: '0.85rem'
                                 }}>
-                                    {renewalFeedback.message}
+                                    {t(renewalFeedback.message)}
                                 </div>
                             )}
 
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 1rem' }}>
-                                System automatically found the closest recurring session for member <strong>{member.fullName}</strong>:
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 1rem' }}>{t("System automatically found the closest recurring session for member")}<strong>{member.fullName}</strong>:
                             </p>
 
                             <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.875rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>Course:</span>
+                                    <span style={{ color: 'var(--text-muted)' }}>{t("Course:")}</span>
                                     <strong style={{ color: 'var(--text)' }}>{suggestedClass.className}</strong>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>Coach:</span>
+                                    <span style={{ color: 'var(--text-muted)' }}>{t("Coach:")}</span>
                                     <span style={{ color: 'var(--text)' }}>{suggestedClass.coachName}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>Room:</span>
+                                    <span style={{ color: 'var(--text-muted)' }}>{t("Room:")}</span>
                                     <span style={{ color: 'var(--text)' }}>{suggestedClass.roomName}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>Starts On:</span>
+                                    <span style={{ color: 'var(--text-muted)' }}>{t("Starts On:")}</span>
                                     <strong style={{ color: 'var(--primary)' }}>{formatDateTime(suggestedClass.startTime)}</strong>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>Course Fee:</span>
+                                    <span style={{ color: 'var(--text-muted)' }}>{t("Course Fee:")}</span>
                                     <strong style={{ color: 'var(--success-text)' }}>{formatCurrency(suggestedClass.price)}</strong>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>Available Slots:</span>
-                                    <span style={{ color: 'var(--text)' }}>{suggestedClass.availableSlots} / {suggestedClass.maxSlots} slots left</span>
+                                    <span style={{ color: 'var(--text-muted)' }}>{t("Available Slots:")}</span>
+                                    <span style={{ color: 'var(--text)' }}>{suggestedClass.availableSlots} / {suggestedClass.maxSlots}{' '}{t("slots left")}</span>
                                 </div>
                             </div>
 
@@ -730,9 +710,7 @@ const MemberDetailModal = ({ member, onClose }) => {
                                         fontSize: '0.85rem',
                                         cursor: 'pointer'
                                     }}
-                                >
-                                    Cancel
-                                </button>
+                                >{t("Cancel")}</button>
                                 <button
                                     onClick={handleConfirmRenewal}
                                     disabled={confirmingRenewal}
@@ -751,7 +729,7 @@ const MemberDetailModal = ({ member, onClose }) => {
                                     }}
                                 >
                                     {confirmingRenewal ? <RefreshCw style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 style={{ width: '14px', height: '14px' }} />}
-                                    <span>{confirmingRenewal ? 'Enrolling...' : 'Confirm & Enroll'}</span>
+                                    <span>{t(confirmingRenewal ? t('Enrolling...') : t('Confirm & Enroll'))}</span>
                                 </button>
                             </div>
                         </div>

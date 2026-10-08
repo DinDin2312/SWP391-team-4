@@ -1,3 +1,5 @@
+import { locale } from '../../../i18n/languageStore.js';
+import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 ﻿import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +10,7 @@ import {
 } from 'lucide-react';
 
 const MySchedule = () => {
+  useLanguage();
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -98,10 +101,8 @@ const MySchedule = () => {
       <div className="flex flex-col gap-2 mb-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
-            <h1 className="text-3xl font-bold text-[var(--text)] tracking-tight">Nexus Sports Calendar</h1>
-            <p className="text-sm text-[var(--text-muted)] max-w-3xl">
-              Manage your athletic coaching, group fitness classes, and digitized court bookings.
-            </p>
+            <h1 className="text-3xl font-bold text-[var(--text)] tracking-tight">{t("Nexus Sports Calendar")}</h1>
+            <p className="text-sm text-[var(--text-muted)] max-w-3xl">{t("Manage your athletic coaching, group fitness classes, and digitized court bookings.")}</p>
           </div>
         </div>
 
@@ -109,7 +110,7 @@ const MySchedule = () => {
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mt-6 border-t border-[var(--border)] pt-4">
           <div className="flex items-center gap-2 overflow-x-auto pb-1 xl:pb-0 scrollbar-none">
             <button className="px-4 py-2 rounded-lg bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold text-xs flex items-center gap-1.5 shrink-0 transition-all">
-              <span>All Sessions</span>
+              <span>{t("All Sessions")}</span>
               <span className="px-1.5 py-0.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-[10px]">{bookings.length}</span>
             </button>
           </div>
@@ -120,18 +121,16 @@ const MySchedule = () => {
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <span className="font-semibold text-sm px-4 text-[var(--text)]">
-                {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                {currentDate.toLocaleDateString(locale(), { month: 'long', year: 'numeric' })}
               </span>
               <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-all">
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
-            <button onClick={goToToday} className="px-4 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:text-[var(--text)] hover:border-[var(--border)] font-semibold text-xs transition-all">
-              Today
-            </button>
+            <button onClick={goToToday} className="px-4 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:text-[var(--text)] hover:border-[var(--border)] font-semibold text-xs transition-all">{t("Today")}</button>
             <button onClick={() => navigate('/member/book-class')} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--primary)] text-[color:var(--on-primary)] font-semibold text-sm hover:bg-[var(--primary)] transition-all shadow-[var(--shadow)]">
               <Plus className="w-4 h-4" />
-              <span>Book New Session</span>
+              <span>{t("Book New Session")}</span>
             </button>
           </div>
         </div>
@@ -144,13 +143,13 @@ const MySchedule = () => {
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 shadow-[var(--shadow)] flex flex-col min-h-[600px]">
             {/* Days Header */}
             <div className="grid grid-cols-7 gap-1 pb-3 mb-2 text-center font-bold text-xs text-[var(--text-muted)] tracking-wider uppercase border-b border-[var(--border)]">
-              <div className="py-1">Mon</div>
-              <div className="py-1">Tue</div>
-              <div className="py-1">Wed</div>
-              <div className="py-1">Thu</div>
-              <div className="py-1">Fri</div>
-              <div className="py-1 text-[var(--success-text)]">Sat</div>
-              <div className="py-1 text-[var(--success-text)]">Sun</div>
+              <div className="py-1">{t("Mon")}</div>
+              <div className="py-1">{t("Tue")}</div>
+              <div className="py-1">{t("Wed")}</div>
+              <div className="py-1">{t("Thu")}</div>
+              <div className="py-1">{t("Fri")}</div>
+              <div className="py-1 text-[var(--success-text)]">{t("Sat")}</div>
+              <div className="py-1 text-[var(--success-text)]">{t("Sun")}</div>
             </div>
 
             {/* Grid */}
@@ -186,7 +185,7 @@ const MySchedule = () => {
 
                     <div className="flex flex-col gap-1 mt-1 overflow-y-auto scrollbar-none">
                       {dayBookings.map((b, bIdx) => {
-                        const time = new Date(b.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+                        const time = new Date(b.startTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
                         return (
                           <div key={bIdx} className="w-full text-left truncate px-1.5 py-1 rounded bg-[var(--primary-soft)] text-[var(--primary)] text-[9px] font-semibold">
                             {time} - {b.className}
@@ -206,30 +205,29 @@ const MySchedule = () => {
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 shadow-[var(--shadow)] flex flex-col sticky top-28">
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-[var(--border)]">
               <div className="flex flex-col">
-                <span className="font-bold text-[10px] text-[var(--text-muted)] uppercase tracking-widest">Session Details</span>
+                <span className="font-bold text-[10px] text-[var(--text-muted)] uppercase tracking-widest">{t("Session Details")}</span>
                 <span className="font-bold text-lg text-[var(--text)]">
-                  {selectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  {selectedDate.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' })}
                 </span>
               </div>
               <span className="px-2.5 py-1 rounded bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] text-xs font-bold">
-                {selectedDateBookings.length} Sessions
-              </span>
+                {selectedDateBookings.length}{' '}{t("Sessions")}</span>
             </div>
 
             <div className="flex flex-col gap-4 max-h-[500px] overflow-y-auto scrollbar-none pr-1">
               {loading ? (
-                <div className="text-center py-10 text-[var(--text-muted)]">Loading...</div>
+                <div className="text-center py-10 text-[var(--text-muted)]">{t("Loading...")}</div>
               ) : selectedDateBookings.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 gap-2">
                   <div className="w-12 h-12 rounded-full bg-[var(--surface)] flex items-center justify-center text-[var(--text-muted)]">
                     <Clock className="w-6 h-6" />
                   </div>
-                  <span className="text-sm text-[var(--text-muted)] font-medium">No sessions scheduled</span>
+                  <span className="text-sm text-[var(--text-muted)] font-medium">{t("No sessions scheduled")}</span>
                 </div>
               ) : (
                 selectedDateBookings.map((b, idx) => {
-                  const startTime = new Date(b.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
-                  const endTime = new Date(b.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+                  const startTime = new Date(b.startTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
+                  const endTime = new Date(b.endTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
                   const isConfirmed = b.status === 'CONFIRMED';
 
                   return (
@@ -240,9 +238,9 @@ const MySchedule = () => {
                           <span>{startTime} - {endTime}</span>
                         </div>
                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider flex items-center gap-1
-                          ${isConfirmed ? 'bg-[var(--success-soft)] text-[var(--success-text)]' : 'bg-[var(--surface)] text-[var(--text-muted)]'}`}>
+                          ${isConfirmed ? t('bg-[var(--success-soft)] text-[var(--success-text)]') : t('bg-[var(--surface)] text-[var(--text-muted)]')}`}>
                           {isConfirmed ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                          {b.status}
+                          {codeLabel(b.status)}
                         </span>
                       </div>
 
@@ -263,22 +261,20 @@ const MySchedule = () => {
 
                       {/* Attendance Status */}
                       <div className="mt-2 pt-2 border-t border-[var(--border)] flex items-center justify-between">
-                        <span className="text-xs text-[var(--text-muted)] font-medium">Attendance:</span>
+                        <span className="text-xs text-[var(--text-muted)] font-medium">{t("Attendance:")}</span>
                         {b.attendanceStatus === 'PRESENT' ? (
-                          <span className="text-xs font-bold text-[var(--success-text)] flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5"/> Present</span>
+                          <span className="text-xs font-bold text-[var(--success-text)] flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5"/>{t("Present")}</span>
                         ) : b.attendanceStatus === 'ABSENT' ? (
-                          <span className="text-xs font-bold text-[var(--rose)] flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[var(--rose)]"></span> Absent</span>
+                          <span className="text-xs font-bold text-[var(--rose)] flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[var(--rose)]"></span>{t("Absent")}</span>
                         ) : (
-                          <span className="text-xs font-medium text-[var(--text-muted)]">Not yet</span>
+                          <span className="text-xs font-medium text-[var(--text-muted)]">{t("Not yet")}</span>
                         )}
                       </div>
 
                       {isConfirmed && (
                         <div className="flex items-center gap-2 mt-2 pt-3 border-t border-[var(--border)]">
-                          <button className="flex-1 py-1.5 rounded-lg bg-[var(--primary)] text-[color:var(--on-primary)] hover:bg-[var(--primary)] text-xs font-bold transition-colors">
-                            Check-in QR
-                          </button>
-                          <button onClick={() => setCancelModal({ isOpen: true, classId: b.classId })} className="px-3 py-1.5 rounded-lg bg-[var(--surface)] text-[var(--text)] hover:text-[var(--danger-text)] text-xs font-medium transition-colors"> Cancel </button>
+                          <button className="flex-1 py-1.5 rounded-lg bg-[var(--primary)] text-[color:var(--on-primary)] hover:bg-[var(--primary)] text-xs font-bold transition-colors">{t("Check-in QR")}</button>
+                          <button onClick={() => setCancelModal({ isOpen: true, classId: b.classId })} className="px-3 py-1.5 rounded-lg bg-[var(--surface)] text-[var(--text)] hover:text-[var(--danger-text)] text-xs font-medium transition-colors">{t("Cancel")}</button>
                         </div>
                       )}
                     </div>
@@ -299,9 +295,9 @@ const MySchedule = () => {
             window.location.reload();
           }).catch(err => alert(err.response?.data || 'Failed to cancel class'));
         }}
-        title="Cancel Class Registration"
-        message="Are you sure you want to cancel this class? All future sessions of this class will be dropped from your schedule. This action cannot be undone."
-        confirmText="Yes, Cancel Class"
+        title={t("Cancel Class Registration")}
+        message={t("Are you sure you want to cancel this class? All future sessions of this class will be dropped from your schedule. This action cannot be undone.")}
+        confirmText={t("Yes, Cancel Class")}
       />
     </div>
   );
