@@ -55,6 +55,14 @@ public class User implements UserDetails {
     @Column(name = "loyalty_points")
     private Integer loyaltyPoints;
 
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "USER_SUBJECTS",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "subject_id")
+    )
+    private List<com.team4.sportscenter.modules.member.entities.Subject> specialties;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.getRoleName().toUpperCase().replace(" ", "_")));

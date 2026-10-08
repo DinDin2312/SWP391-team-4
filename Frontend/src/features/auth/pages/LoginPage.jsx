@@ -1,7 +1,7 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dumbbell, LockKeyhole, Eye, EyeOff } from 'lucide-react';
+import { Dumbbell, LockKeyhole, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { AuthContext } from '../../../context/AuthContext';
@@ -86,12 +86,20 @@ function LoginPage() {
 
   return (
     <motion.main 
-      className="login-page"
+      className="login-page relative"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
     >
+      <button 
+        onClick={() => navigate('/')} 
+        className="absolute top-6 left-6 z-50 flex items-center gap-2 text-white/70 hover:text-white bg-black/20 hover:bg-black/40 backdrop-blur-md px-4 py-2 rounded-full transition-all duration-300"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span className="text-sm font-medium">{t("Back to Home")}</span>
+      </button>
+
       <motion.section 
         className="hero-panel" aria-label={t("Nexus Sports Center introduction")}
         initial={{ x: -50, opacity: 0 }}

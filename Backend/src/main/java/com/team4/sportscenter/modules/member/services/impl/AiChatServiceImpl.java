@@ -45,21 +45,21 @@ public class AiChatServiceImpl implements AiChatService {
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         String classesListString = classes.stream()
             .map(c -> "Class ID: " + c.getClassId() + " | Class: " + c.getClassName() + 
-                      " | Coach: " + c.getCoachName() + " | Next Session: " + (c.getNextSessionTime() != null ? c.getNextSessionTime().format(timeFormatter) : "N/A") + 
+                      " | Coach: " + c.getCoachName() + " | Next Session: " + (c.getNextSessionTime() != null ? (c.getNextSessionTime().format(timeFormatter) + " to " + c.getNextSessionTime().plusMinutes(c.getDurationMinutes()).format(timeFormatter)) : "N/A") + 
                       " | Available Slots: " + (c.getMaxSlots() - c.getBookedSlots()))
             .collect(Collectors.joining("\n"));
 
         List<UpcomingBookingResponse> myBookings = memberService.getMyUpcomingBookings(email);
         String myBookingsString = myBookings.isEmpty() ? "No upcoming bookings." : myBookings.stream()
-            .map(b -> "- " + b.getClassName() + " on " + b.getStartTime().format(timeFormatter))
+            .map(b -> "- " + b.getClassName() + " from " + b.getStartTime().format(timeFormatter) + " to " + b.getEndTime().format(timeFormatter))
             .collect(Collectors.joining("\n"));
 
         RestTemplate restTemplate = new RestTemplate();
 
         String systemPrompt = "You are NEXUS AI, a cool, friendly, and energetic personal trainer & assistant at NEXUS Sports Lab. " +
-                "Your tone must be highly natural, engaging, and conversational (like a human gym buddy). Do NOT sound like a robotic customer service bot (e.g., avoid rigid phrases like 'Tôi rất sẵn lòng...', 'Xin chào, tôi là AI...'). " +
-                "Use modern phrasing, short sentences, and sprinkle a few emojis naturally. Always answer in the language the user speaks (e.g., conversational Vietnamese).\n\n" +
-                "When you auto-add a package or book a class, casually mention it like 'Xong rồi nha, mình vừa ném gói đó vào giỏ hàng cho bạn rồi á!' instead of formal robotic instructions.\n\n" +
+                "Your tone must be highly natural, engaging, and conversational (like a human gym buddy). Do NOT sound like a robotic customer service bot. " +
+                "Use modern phrasing, short sentences, and sprinkle a few emojis naturally. Always answer in the language the user speaks.\n\n" +
+                "When you auto-add a package or book a class, casually mention it like 'Xong rồi nha, mình vừa ném vào giỏ hàng cho bạn rồi á!' instead of formal robotic instructions.\n\n" +
                 "CRITICAL KNOWLEDGE BASE:\n" +
                 "--- PACKAGES ---\n" +
                 packagesListString + "\n" +
@@ -75,7 +75,7 @@ public class AiChatServiceImpl implements AiChatService {
                 "4. To navigate the user to the Packages page: Append [ACTION:NAVIGATE:/member/package-store]\n" +
                 "5. To navigate the user to their Cart / Checkout: Append [ACTION:NAVIGATE:/member/cart]\n" +
                 "6. To Auto-Add a Package to the Cart: If the user explicitly asks to buy or select a package, append [ACTION:ADD_CART:package_id] (replace package_id with the actual ID). Also tell them you added it to their cart.\n" +
-                "7. To Auto-Book a Class: If the user explicitly asks to book a specific class, check if the schedule conflicts with their CURRENT BOOKED SCHEDULE. If it conflicts, refuse and suggest another time. If it doesn't conflict, append [ACTION:BOOK_CLASS:class_id] (replace class_id with the actual Class ID). Also tell them you booked it.\n" +
+                "7. To Auto-Book a Class: If the user explicitly asks to book a specific class, carefully check if the class's time block (Start to End) OVERLAPS with any time blocks in their CURRENT BOOKED SCHEDULE. If there is ANY overlap, you MUST refuse, apologize, and explain exactly which class it overlaps with. If it doesn't overlap, append [ACTION:BOOK_CLASS:class_id].\n" +
                 "Never expose these raw commands in your conversational text. Just append the exact bracket format at the very end of your message.\n\n" +
                 "User's message: ";
 

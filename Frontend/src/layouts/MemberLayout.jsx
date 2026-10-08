@@ -154,12 +154,12 @@ const MemberLayout = () => {
               <span>{t("Billing & Invoices")}</span>
             </button>
 
-            <button onClick={() => navigate("/member/attendance")} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/attendance') ? 'bg-blue-600/15 border border-blue-500/30 text-[var(--primary)] font-semibold' : 'text-[var(--text-muted)] hover:text-slate-200 hover:bg-[var(--surface)]'}`}>
+            <button onClick={() => navigate("/member/attendance")} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/attendance') ? 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'}`}>
               <ClipboardList className="w-4 h-4" />
               <span>{t("Attendance History")}</span>
             </button>
 
-            <button onClick={() => navigate("/member/settings")} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/settings') ? 'bg-blue-600/15 border border-blue-500/30 text-[var(--primary)] font-semibold' : 'text-[var(--text-muted)] hover:text-slate-200 hover:bg-[var(--surface)]'}`}>
+            <button onClick={() => navigate("/member/settings")} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/settings') ? 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'}`}>
                 <Settings className="w-4 h-4" />
                 <span>{t("Settings")}</span>
               </button>
@@ -234,7 +234,7 @@ const MemberLayout = () => {
           </AnimatePresence>
         </div>
       {toast.visible && (
-        <div className="fixed bottom-4 right-4 z-50 bg-[var(--surface)] text-[var(--text)] px-4 py-3 rounded-lg shadow-[var(--shadow)] border border-[var(--border)] flex items-center gap-3 animate-fade-in">
+        <div className="fixed bottom-6 left-6 z-50 bg-[var(--surface)] text-[var(--text)] px-4 py-3 rounded-lg shadow-[var(--shadow)] border border-[var(--border)] flex items-center gap-3 animate-fade-in">
           <div className="w-8 h-8 rounded-full bg-[var(--primary-soft)] flex items-center justify-center">
             <Bot className="w-4 h-4 text-[var(--primary)]" />
           </div>

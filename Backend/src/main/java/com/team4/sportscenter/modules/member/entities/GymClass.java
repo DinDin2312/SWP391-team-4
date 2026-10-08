@@ -22,6 +22,10 @@ public class GymClass {
     private String className;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subject_id")
+    private Subject subject;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "coach_id")
     private User coach;
 
