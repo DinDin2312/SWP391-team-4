@@ -1,4 +1,4 @@
-# NEXUS — Báo cáo refactor giao diện
+    # NEXUS — Báo cáo refactor giao diện
 
 Ngày kiểm tra: 03/10/2026. Đã triển khai đợt 1 (light theme) và đợt 2 (Center Operations với API hiện có). Backend, schema, phân quyền, routing và các service gọi API không thay đổi. Không thêm dependency frontend; chỉ bổ sung test vào script `test:manager`.
 

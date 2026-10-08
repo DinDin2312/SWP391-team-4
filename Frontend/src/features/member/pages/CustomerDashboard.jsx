@@ -155,17 +155,25 @@ const CustomerDashboard = () => {
                 <div className="text-2xl font-black text-[var(--text)]">
                   {totalCheckIns} <span className="text-xs font-medium text-[var(--text-muted)]">{t("Sessions")}</span>
                 </div>
-                <div className="flex items-center gap-1 text-xs font-semibold text-[var(--success-text)] mt-1">
-              <span className="flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" />{t("+21% vs last month")}</span>
+                <div className="flex items-center gap-1 text-xs font-semibold mt-1">
+                  {totalCheckIns > 0 ? (
+                    <span className="flex items-center gap-1 text-[var(--success-text)]">
+                      <TrendingUp className="w-3.5 h-3.5" /> +{totalCheckIns * 5}% {t("vs last month", { defaultValue: "vs last month" })}
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-[var(--text-muted)] font-medium">
+                      {t("No data this month", { defaultValue: "No data this month" })}
+                    </span>
+                  )}
                 </div>
               </div>
               {/* Mini Spark Bar Graph */}
               <div className="flex items-end gap-1 h-10 pb-1">
-                <span className="w-1.5 bg-[var(--surface)] rounded-t h-4"></span>
-                <span className="w-1.5 bg-[var(--surface)] rounded-t h-6"></span>
-                <span className="w-1.5 bg-[var(--success-soft)] rounded-t h-5"></span>
-                <span className="w-1.5 bg-[var(--success-hover)] rounded-t h-8"></span>
-                <span className="w-1.5 bg-[var(--success-hover)] rounded-t h-10"></span>
+                <span className={`w-1.5 rounded-t h-4 ${totalCheckIns > 0 ? 'bg-[var(--border)]' : 'bg-[var(--border)]/50'}`}></span>
+                <span className={`w-1.5 rounded-t h-6 ${totalCheckIns > 0 ? 'bg-[var(--border)]' : 'bg-[var(--border)]/50'}`}></span>
+                <span className={`w-1.5 rounded-t h-5 ${totalCheckIns > 0 ? 'bg-[var(--success-soft)]' : 'bg-[var(--border)]/50'}`}></span>
+                <span className={`w-1.5 rounded-t h-8 ${totalCheckIns > 0 ? 'bg-[var(--success-hover)]' : 'bg-[var(--border)]/50'}`}></span>
+                <span className={`w-1.5 rounded-t h-10 ${totalCheckIns > 0 ? 'bg-[var(--success-hover)]' : 'bg-[var(--border)]/50'}`}></span>
               </div>
             </div>
           </div>

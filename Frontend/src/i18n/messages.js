@@ -1184,4 +1184,6 @@ Object.assign(translations, {
   Physical: ['Physical', 'thể chất'],
   'Potential.': ['Potential.', 'của bạn.'],
   'Gain full access for ': ['Gain full access for ', 'Sử dụng toàn bộ dịch vụ trong '],
+  'Back to Home': ['Back to Home', 'Quay lại trang chủ'],
+  'NEXUS AI can make mistakes. Verify before buying.': ['NEXUS AI can make mistakes. Verify before buying.', 'NEXUS AI có thể mắc lỗi. Vui lòng kiểm tra kỹ trước khi mua.'],
 });
