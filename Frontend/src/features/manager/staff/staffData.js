@@ -1,3 +1,4 @@
+import { locale } from '../../../i18n/languageStore.js';
 import { formatDate } from '../../../utils/displayFormat';
 const daysAgo = (days) => {
   const date = new Date();
@@ -45,7 +46,7 @@ export const relativeDate = (value) => {
   const absolute = Math.abs(difference);
   const units = [[86400000, 'day'], [3600000, 'hour'], [60000, 'minute']];
   const [duration, unit] = units.find(([size]) => absolute >= size) || [1000, 'second'];
-  return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(Math.round(difference / duration), unit);
+  return new Intl.RelativeTimeFormat(locale(), { numeric: 'auto' }).format(Math.round(difference / duration), unit);
 };
 
 export const staffAvatarTone = (user = {}) => {

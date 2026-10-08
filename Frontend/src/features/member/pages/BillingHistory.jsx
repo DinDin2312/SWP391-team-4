@@ -1,8 +1,10 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDateTime } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const BillingHistory = () => {
+  useLanguage();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -29,9 +31,7 @@ const BillingHistory = () => {
     return (
       <div className="flex items-center justify-center w-full h-64">
         <div className="text-on-surface-variant flex items-center gap-2 font-semibold">
-          <span className="material-symbols-outlined animate-spin">sync</span>
-          Loading Billing History...
-        </div>
+          <span className="material-symbols-outlined animate-spin">sync</span>{t("Loading Billing History...")}</div>
       </div>
     );
   }
@@ -59,23 +59,19 @@ const BillingHistory = () => {
   return (
     <div className="flex flex-col w-full min-h-screen">
       <div className="flex flex-col gap-1 pb-6 border-b border-surface-container mb-6">
-        <h1 className="text-3xl lg:text-4xl text-on-surface tracking-tight font-extrabold flex items-center gap-3">
-          Billing & Invoices
-        </h1>
-        <p className="text-sm text-on-surface-variant mt-1">
-          View your purchase history, membership payments, and class bookings.
-        </p>
+        <h1 className="text-3xl lg:text-4xl text-on-surface tracking-tight font-extrabold flex items-center gap-3">{t("Billing & Invoices")}</h1>
+        <p className="text-sm text-on-surface-variant mt-1">{t("View your purchase history, membership payments, and class bookings.")}</p>
       </div>
 
       {error ? (
         <div className="p-4 bg-error-container text-on-error-container rounded-xl text-sm font-bold">
-          {error}
+          {t(error)}
         </div>
       ) : invoices.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 bg-surface-container-lowest rounded-xl border border-surface-container text-center">
           <span className="material-symbols-outlined text-6xl text-on-surface-variant mb-4">receipt_long</span>
-          <h3 className="text-xl font-bold text-on-surface">No invoices found</h3>
-          <p className="text-sm text-on-surface-variant mt-2">You haven't made any purchases yet.</p>
+          <h3 className="text-xl font-bold text-on-surface">{t("No invoices found")}</h3>
+          <p className="text-sm text-on-surface-variant mt-2">{t("You haven't made any purchases yet.")}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-6 max-w-5xl">
@@ -88,10 +84,9 @@ const BillingHistory = () => {
                     <span className="material-symbols-outlined text-[24px]">receipt_long</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-on-surface flex items-center gap-2">
-                      Invoice #{invoice.invoiceId.toString().padStart(6, '0')}
+                    <span className="text-sm font-bold text-on-surface flex items-center gap-2">{t("Invoice #")}{invoice.invoiceId.toString().padStart(6, '0')}
                       <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold tracking-wider uppercase ${getStatusColor(invoice.status)}`}>
-                        {invoice.status || 'UNKNOWN'}
+                        {t(invoice.status || 'UNKNOWN')}
                       </span>
                     </span>
                     <span className="text-xs text-on-surface-variant mt-1">
@@ -100,7 +95,7 @@ const BillingHistory = () => {
                   </div>
                 </div>
                 <div className="flex flex-col sm:items-end">
-                  <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Total Amount</span>
+                  <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">{t("Total Amount")}</span>
                   <span className="text-lg font-black text-primary">{formatCurrency(invoice.totalAmount)}</span>
                 </div>
               </div>
@@ -110,13 +105,13 @@ const BillingHistory = () => {
 
                 {/* Details List */}
                 <div className="flex flex-col gap-3">
-                  <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Purchased Items</h4>
+                  <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">{t("Purchased Items")}</h4>
                   {invoice.details && invoice.details.length > 0 ? (
                     invoice.details.map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-surface-container-lowest border border-surface-container-high/50">
                         <div className="flex items-center gap-3">
                           <span className="material-symbols-outlined text-tertiary text-[20px]">
-                            {item.itemType === 'CLASS' || item.itemType === 'CLASS_SCHEDULE' ? 'fitness_center' : 'card_membership'}
+                            {t(item.itemType === 'CLASS' || item.itemType === 'CLASS_SCHEDULE' ? t('fitness_center') : t('card_membership'))}
                           </span>
                           <span className="text-sm font-bold text-on-surface">{item.itemName}</span>
                         </div>
@@ -124,7 +119,7 @@ const BillingHistory = () => {
                       </div>
                     ))
                   ) : (
-                    <span className="text-sm text-on-surface-variant">No detailed items found for this invoice.</span>
+                    <span className="text-sm text-on-surface-variant">{t("No detailed items found for this invoice.")}</span>
                   )}
                 </div>
 
@@ -133,19 +128,19 @@ const BillingHistory = () => {
                   <div className="flex flex-col sm:flex-row gap-6 p-4 rounded-xl bg-surface-container-high/30">
                     {invoice.paymentMethod && (
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Payment Method</span>
+                        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{t("Payment Method")}</span>
                         <span className="text-sm font-semibold text-on-surface mt-1">{invoice.paymentMethod}</span>
                       </div>
                     )}
                     {invoice.transactionNo && (
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Transaction ID</span>
+                        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{t("Transaction ID")}</span>
                         <span className="text-sm font-mono font-semibold text-on-surface mt-1">{invoice.transactionNo}</span>
                       </div>
                     )}
                     {invoice.paymentDate && (
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Payment Date</span>
+                        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{t("Payment Date")}</span>
                         <span className="text-sm font-semibold text-on-surface mt-1">{formatDateTime(invoice.paymentDate)}</span>
                       </div>
                     )}

@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDate as displayFormatDate } from '../../../utils/displayFormat';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -156,6 +157,7 @@ const FALLBACK_MEMBERS = [
 ];
 
 const MemberManagementView = () => {
+  useLanguage();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -308,9 +310,7 @@ const MemberManagementView = () => {
       {/* ================= PAGE HEADER ================= */}
         <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
-                    Member Search & Directory
-                </h1>
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>{t("Member Search & Directory")}</h1>
                 <span
                     style={{
                         fontSize: '0.75rem',
@@ -321,13 +321,9 @@ const MemberManagementView = () => {
                         color: 'var(--primary)',
                         border: '1px solid var(--border)',
                     }}
-                >
-              Front Desk
-            </span>
+                >{t("Front Desk")}</span>
             </div>
-            <p style={{ margin: '0.4rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                Search members by Name, Phone number, Email or Member ID (#MEM). View membership status and course history.
-            </p>
+            <p style={{ margin: '0.4rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>{t("Search members by Name, Phone number, Email or Member ID (#MEM). View membership status and course history.")}</p>
         </div>
 
         <button
@@ -336,7 +332,7 @@ const MemberManagementView = () => {
             // ...style giữ nguyên...
         >
             <RefreshCw style={{ width: '15px', height: '15px', animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-            <span>Refresh List</span>
+            <span>{t("Refresh List")}</span>
         </button>
 
       {/* ================= STATS OVERVIEW CARDS ================= */}
@@ -370,7 +366,7 @@ const MemberManagementView = () => {
             <Users style={{ width: '24px', height: '24px' }} />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>Total Members</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>{t("Total Members")}</span>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text)', marginTop: '0.1rem' }}>
               {totalCount}
             </div>
@@ -406,7 +402,7 @@ const MemberManagementView = () => {
             <UserCheck style={{ width: '24px', height: '24px' }} />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>Active Accounts</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>{t("Active Accounts")}</span>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--success-text)', marginTop: '0.1rem' }}>
               {activeCount}
             </div>
@@ -442,7 +438,7 @@ const MemberManagementView = () => {
             <CreditCard style={{ width: '24px', height: '24px' }} />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>Active Packages</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>{t("Active Packages")}</span>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.1rem' }}>
               {hasActivePackageCount}
             </div>
@@ -478,7 +474,7 @@ const MemberManagementView = () => {
             <AlertCircle style={{ width: '24px', height: '24px' }} />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>Expired Packages</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>{t("Expired Packages")}</span>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--danger-text)', marginTop: '0.1rem' }}>
               {expiredPackageCount}
             </div>
@@ -514,7 +510,7 @@ const MemberManagementView = () => {
             />
             <input
               type="text"
-              placeholder="Search by Member Name, Phone (09xx), Email or ID (#MEM)..."
+              placeholder={t("Search by Member Name, Phone (09xx), Email or ID (#MEM)...")}
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               style={{
@@ -559,9 +555,9 @@ const MemberManagementView = () => {
                     onChange={(e) => setSelectedStatus(e.target.value)}
                     // ...style giữ nguyên...
                 >
-                    <option value="ALL">All Account Status</option>
-                    <option value="ACTIVE">● Active</option>
-                    <option value="INACTIVE">● Inactive</option>
+                    <option value="ALL">{t("All Account Status")}</option>
+                    <option value="ACTIVE">{t("● Active")}</option>
+                    <option value="INACTIVE">{t("● Inactive")}</option>
                 </select>
             </div>
 
@@ -572,10 +568,10 @@ const MemberManagementView = () => {
                     onChange={(e) => setSelectedPackageStatus(e.target.value)}
                     // ...style giữ nguyên...
                 >
-                    <option value="ALL">All Package Status</option>
-                    <option value="ACTIVE">🟢 Active Package</option>
-                    <option value="EXPIRED">🔴 Expired Package</option>
-                    <option value="NO_MEMBERSHIP">⚪ No Package</option>
+                    <option value="ALL">{t("All Package Status")}</option>
+                    <option value="ACTIVE">{t("🟢 Active Package")}</option>
+                    <option value="EXPIRED">{t("🔴 Expired Package")}</option>
+                    <option value="NO_MEMBERSHIP">{t("⚪ No Package")}</option>
                 </select>
             </div>
         </div>
@@ -583,7 +579,7 @@ const MemberManagementView = () => {
         {/* Active Filter Chips indicator */}
         {(searchKeyword || selectedStatus !== 'ALL' || selectedPackageStatus !== 'ALL') && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '0.25rem' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Filtering by:</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t("Filtering by:")}</span>
             {searchKeyword && (
               <span
                 style={{
@@ -596,8 +592,7 @@ const MemberManagementView = () => {
                   alignItems: 'center',
                   gap: '0.35rem',
                 }}
-              >
-                Keyword: "${searchKeyword}"
+              >{t("Keyword: \"$")}{' '}{searchKeyword}"
                 <button
                   onClick={() => setSearchKeyword('')}
                   style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
@@ -618,8 +613,7 @@ const MemberManagementView = () => {
                   alignItems: 'center',
                   gap: '0.35rem',
                 }}
-              >
-                Status: ${selectedStatus}
+              >{t("Status: $")}{' '}{selectedStatus}
                 <button
                   onClick={() => setSelectedStatus('ALL')}
                   style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
@@ -640,8 +634,7 @@ const MemberManagementView = () => {
                   alignItems: 'center',
                   gap: '0.35rem',
                 }}
-              >
-                Package: ${selectedPackageStatus}
+              >{t("Package: $")}{' '}{selectedPackageStatus}
                 <button
                   onClick={() => setSelectedPackageStatus('ALL')}
                   style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
@@ -664,9 +657,7 @@ const MemberManagementView = () => {
                 cursor: 'pointer',
                 textDecoration: 'underline',
               }}
-            >
-                Clear Filters
-            </button>
+            >{t("Clear Filters")}</button>
           </div>
         )}
       </div>
@@ -685,12 +676,12 @@ const MemberManagementView = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
             <thead>
                 <tr style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Member & Name</th>
-                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Contact Info</th>
-                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Current Package</th>
-                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Validity & Days</th>
-                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>Account Status</th>
-                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600, textAlign: 'center' }}>Action</th>
+                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>{t("Member & Name")}</th>
+                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>{t("Contact Info")}</th>
+                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>{t("Current Package")}</th>
+                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>{t("Validity & Days")}</th>
+                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>{t("Account Status")}</th>
+                    <th style={{ padding: '1rem 1.25rem', fontWeight: 600, textAlign: 'center' }}>{t("Action")}</th>
                 </tr>
             </thead>
             <tbody>
@@ -698,7 +689,7 @@ const MemberManagementView = () => {
                 <tr>
                   <td colSpan={6} style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     <div style={{ display: 'inline-block', width: '28px', height: '28px', border: '3px solid var(--border)', borderTopColor: 'var(--border)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    <p style={{ marginTop: '0.75rem', margin: '0.75rem 0 0', fontSize: '0.9rem' }}>Searching member records...</p>
+                    <p style={{ marginTop: '0.75rem', margin: '0.75rem 0 0', fontSize: '0.9rem' }}>{t("Searching member records...")}</p>
                   </td>
                 </tr>
               ) : members.length === 0 ? (
@@ -719,12 +710,8 @@ const MemberManagementView = () => {
                     >
                       <UserX style={{ width: '28px', height: '28px' }} />
                     </div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text)', margin: '0 0 0.4rem' }}>
-                        No members found
-                    </h3>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
-                        No results found matching keyword "${searchKeyword}". Please try other filters.
-                    </p>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text)', margin: '0 0 0.4rem' }}>{t("No members found")}</h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>{t("No results found matching keyword \"$")}{' '}{searchKeyword}{' '}{t("\". Please try other filters.")}</p>
                   </td>
                 </tr>
               ) : (
@@ -765,8 +752,7 @@ const MemberManagementView = () => {
                             {getInitials(member.fullName)}
                           </div>
                           <div>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace', display: 'block' }}>
-                              #MEM-{String(member.userId).padStart(4, '0')}
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace', display: 'block' }}>{t("#MEM-")}{String(member.userId).padStart(4, '0')}
                             </span>
                             <strong style={{ color: 'var(--text)', fontSize: '0.95rem' }}>
                               {member.fullName}
@@ -780,7 +766,7 @@ const MemberManagementView = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text)', fontSize: '0.85rem' }}>
                             <Phone style={{ width: '13px', height: '13px', color: 'var(--primary)' }} />
-                            <span>{member.phone || 'No phone'}</span>
+                            <span>{t(member.phone || 'No phone')}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.775rem' }}>
                             <Mail style={{ width: '13px', height: '13px', color: 'var(--primary)' }} />
@@ -794,15 +780,15 @@ const MemberManagementView = () => {
                         {isCurrentActive ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                             <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{member.currentPackageName}</span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Type: {member.currentPackageType || 'COMBO'}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t("Type:")}{' '}{t(member.currentPackageType || 'COMBO')}</span>
                           </div>
                         ) : isExpired ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                             <span style={{ color: 'var(--text-muted)', textDecoration: 'line-through' }}>{member.currentPackageName}</span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--danger-text)' }}>Expired</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--danger-text)' }}>{t("Expired")}</span>
                           </div>
                         ) : (
-                          <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>No Package Enrolled</span>
+                          <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>{t("No Package Enrolled")}</span>
                         )}
                       </td>
 
@@ -820,16 +806,14 @@ const MemberManagementView = () => {
                                 padding: '0.2rem 0.55rem',
                                 borderRadius: '9999px',
                                 width: 'fit-content',
-                                backgroundColor: member.daysRemaining > 7 ? 'var(--success-soft)' : 'var(--warning-soft)',
-                                color: member.daysRemaining > 7 ? 'var(--success-text)' : 'var(--warning-text)',
-                                border: `1px solid ${member.daysRemaining > 7 ? 'var(--border)' : 'var(--border)'}`,
+                                backgroundColor: member.daysRemaining > 7 ? t('var(--success-soft)') : t('var(--warning-soft)'),
+                                color: member.daysRemaining > 7 ? t('var(--success-text)') : t('var(--warning-text)'),
+                                border: `1px solid ${member.daysRemaining > 7 ? t('var(--border)') : t('var(--border)')}`,
                               }}
                             >
                               <Clock style={{ width: '12px', height: '12px' }} />
-                              {member.daysRemaining} days left
-                            </span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                              Expires on: {formatDate(member.membershipEndDate)}
+                              {member.daysRemaining}{' '}{t("days left")}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t("Expires on:")}{' '}{formatDate(member.membershipEndDate)}
                             </span>
                           </div>
                         ) : isExpired ? (
@@ -842,8 +826,7 @@ const MemberManagementView = () => {
                               padding: '0.2rem 0.5rem',
                               borderRadius: '0.35rem',
                             }}
-                          >
-                            Expired since {formatDate(member.membershipEndDate)}
+                          >{t("Expired since")}{' '}{formatDate(member.membershipEndDate)}
                           </span>
                         ) : (
                           <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>
@@ -858,12 +841,12 @@ const MemberManagementView = () => {
                             fontWeight: 600,
                             padding: '0.25rem 0.65rem',
                             borderRadius: '9999px',
-                            backgroundColor: member.status === 'ACTIVE' ? 'var(--success-soft)' : 'var(--danger-soft)',
-                            color: member.status === 'ACTIVE' ? 'var(--success-text)' : 'var(--danger-text)',
-                            border: `1px solid ${member.status === 'ACTIVE' ? 'var(--border)' : 'var(--border)'}`,
+                            backgroundColor: member.status === 'ACTIVE' ? t('var(--success-soft)') : t('var(--danger-soft)'),
+                            color: member.status === 'ACTIVE' ? t('var(--success-text)') : t('var(--danger-text)'),
+                            border: `1px solid ${member.status === 'ACTIVE' ? t('var(--border)') : t('var(--border)')}`,
                           }}
                         >
-                          {member.status === 'ACTIVE' ? '● Active' : '● Inactive'}
+                          {t(member.status === 'ACTIVE' ? t('● Active') : t('● Inactive'))}
                         </span>
                       </td>
 
@@ -898,7 +881,7 @@ const MemberManagementView = () => {
                           }}
                         >
                           <Eye style={{ width: '14px', height: '14px' }} />
-                          <span>View Details</span>
+                          <span>{t("View Details")}</span>
                         </button>
                       </td>
                     </tr>
@@ -922,8 +905,8 @@ const MemberManagementView = () => {
                   color: 'var(--text-muted)',
               }}
           >
-              <span>Showing {members.length} members</span>
-              <span>Click any row to view complete member profile</span>
+              <span>{t("Showing")}{' '}{members.length}{' '}{t("members")}</span>
+              <span>{t("Click any row to view complete member profile")}</span>
           </div>
       </div>
 

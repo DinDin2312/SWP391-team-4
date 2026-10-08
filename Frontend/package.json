@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:manager": "node --test src/features/manager/managerUtils.test.js src/features/manager/operations/operationsUtils.test.js"
+    "test:manager": "node --test src/features/manager/managerUtils.test.js src/features/manager/operations/operationsUtils.test.js",
+    "test:i18n": "node --test src/i18n/languageStore.test.js src/i18n/adminLanguage.test.js"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",

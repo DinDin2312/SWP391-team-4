@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import React from 'react';
 
 import { useNavigate } from 'react-router-dom';
@@ -5,6 +6,7 @@ import { CalendarDays, Users, Dumbbell, Award, ArrowRight } from 'lucide-react';
 
 
 const CoachDashboard = () => {
+  useLanguage();
   const navigate = useNavigate();
 
   return (
@@ -14,19 +16,17 @@ const CoachDashboard = () => {
         <div className="relative z-10 flex flex-col gap-2 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] text-xs font-semibold w-fit">
             <Award className="w-3.5 h-3.5" />
-            <span>Nexus Certified Athletic Coach</span>
+            <span>{t("Nexus Certified Athletic Coach")}</span>
           </div>
-          <h1 className="text-3xl font-extrabold text-[var(--text)] tracking-tight">Coach Command Center</h1>
-          <p className="text-sm text-[var(--text)] leading-relaxed">
-            Welcome to your teaching dashboard. Easily manage your upcoming group fitness sessions, inspect enrolled trainee rosters, and track class schedules.
-          </p>
+          <h1 className="text-3xl font-extrabold text-[var(--text)] tracking-tight">{t("Coach Command Center")}</h1>
+          <p className="text-sm text-[var(--text)] leading-relaxed">{t("Welcome to your teaching dashboard. Easily manage your upcoming group fitness sessions, inspect enrolled trainee rosters, and track class schedules.")}</p>
           <div className="pt-4 flex items-center gap-3">
             <button
               onClick={() => navigate('/coach/schedule')}
               className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary)] text-[color:var(--on-primary)] font-semibold text-sm flex items-center gap-2 shadow-[var(--shadow)] transition-all"
             >
               <CalendarDays className="w-4 h-4" />
-              <span>View Teaching Schedule</span>
+              <span>{t("View Teaching Schedule")}</span>
               <ArrowRight className="w-4 h-4 ml-1" />
             </button>
           </div>
@@ -40,8 +40,8 @@ const CoachDashboard = () => {
             <CalendarDays className="w-6 h-6" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-[var(--text-muted)] font-medium">Assigned Classes</span>
-            <span className="text-2xl font-bold text-[var(--text)]">Active</span>
+            <span className="text-xs text-[var(--text-muted)] font-medium">{t("Assigned Classes")}</span>
+            <span className="text-2xl font-bold text-[var(--text)]">{t("Active")}</span>
           </div>
         </div>
 
@@ -50,8 +50,8 @@ const CoachDashboard = () => {
             <Users className="w-6 h-6" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-[var(--text-muted)] font-medium">Enrolled Trainees</span>
-            <span className="text-2xl font-bold text-[var(--text)]">Synced</span>
+            <span className="text-xs text-[var(--text-muted)] font-medium">{t("Enrolled Trainees")}</span>
+            <span className="text-2xl font-bold text-[var(--text)]">{t("Synced")}</span>
           </div>
         </div>
 
@@ -60,8 +60,8 @@ const CoachDashboard = () => {
             <Dumbbell className="w-6 h-6" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-[var(--text-muted)] font-medium">Status</span>
-            <span className="text-2xl font-bold text-[var(--text)]">Ready</span>
+            <span className="text-xs text-[var(--text-muted)] font-medium">{t("Status")}</span>
+            <span className="text-2xl font-bold text-[var(--text)]">{t("Ready")}</span>
           </div>
         </div>
       </div>

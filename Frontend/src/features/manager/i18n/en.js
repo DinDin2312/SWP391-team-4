@@ -1,3 +1,4 @@
+import { localizedCopy } from '../../../i18n/languageStore';
 const managerEn = {
   staff: {
     addAccount: 'Add Account',
@@ -99,4 +100,4 @@ const managerEn = {
   },
 };
 
-export default managerEn;
+export default localizedCopy(managerEn);

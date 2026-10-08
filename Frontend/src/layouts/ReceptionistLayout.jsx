@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../i18n/useLanguage';
 import AutoSidebar from '../components/AutoSidebar';
 import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 
 const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSelectFeature }) => {
+  useLanguage();
   const navigate = useNavigate();
   const { userInfo, logout } = useContext(AuthContext);
 
@@ -36,49 +38,49 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
   const navItems = [
     {
       id: 'search-members',
-      label: 'Search & View Members',
+      label: t('Search & View Members'),
       icon: Users,
       badge: 'Primary',
       isReady: true,
     },
     {
       id: 'register-member',
-      label: 'Register New Member',
+      label: t('Register New Member'),
       icon: UserPlus,
       badge: '',
       isReady: false,
     },
     {
       id: 'manage-memberships',
-      label: 'Packages & Renewals',
+      label: t('Packages & Renewals'),
       icon: CreditCard,
       badge: '',
       isReady: false,
     },
     {
       id: 'check-validity',
-      label: 'Package Status',
+      label: t('Package Status'),
       icon: Clock,
       badge: '',
       isReady: false,
     },
     {
       id: 'class-bookings',
-      label: 'Class Bookings',
+      label: t('Class Bookings'),
       icon: Dumbbell,
       badge: '',
       isReady: false,
     },
     {
       id: 'invoices-payment',
-      label: 'Billing & Invoices',
+      label: t('Billing & Invoices'),
       icon: Receipt,
       badge: '',
       isReady: false,
     },
     {
       id: 'support-requests',
-      label: 'Customer Support',
+      label: t('Customer Support'),
       icon: Headphones,
       badge: '',
       isReady: false,
@@ -119,12 +121,10 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <span style={{ fontWeight: 800, letterSpacing: '0.05em', fontSize: '1.1rem', color: 'var(--text)' }}>NEXUS</span>
+                <span style={{ fontWeight: 800, letterSpacing: '0.05em', fontSize: '1.1rem', color: 'var(--text)' }}>{t("NEXUS")}</span>
                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--primary-soft)' }}></span>
               </div>
-              <p style={{ margin: 0, fontSize: '0.65rem', letterSpacing: '0.12em', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-                FRONT DESK PORTAL
-              </p>
+              <p style={{ margin: 0, fontSize: '0.65rem', letterSpacing: '0.12em', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>{t("FRONT DESK PORTAL")}</p>
             </div>
           </div>
 
@@ -143,17 +143,15 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
             >
               <ShieldCheck style={{ width: '16px', height: '16px', color: 'var(--primary)' }} />
               <div style={{ fontSize: '0.75rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Role: </span>
-                <strong style={{ color: 'var(--primary)' }}>Front Desk Receptionist</strong>
+                <span style={{ color: 'var(--text-muted)' }}>{t("Role:")}</span>
+                <strong style={{ color: 'var(--primary)' }}>{t("Front Desk Receptionist")}</strong>
               </div>
             </div>
           </div>
 
           {/* Navigation Links */}
           <div className="auto-sidebar-nav" style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0.5rem 0.75rem' }}>
-              RECEPTIONIST FEATURES
-            </span>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0.5rem 0.75rem' }}>{t("RECEPTIONIST FEATURES")}</span>
 
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -162,8 +160,8 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
               return (
                 <button
                   key={item.id}
-                  aria-label={item.label}
-                  title={item.label}
+                  aria-label={t(item.label)}
+                  title={t(item.label)}
                   onClick={() => {
                     if (onSelectFeature) {
                       onSelectFeature(item.id);
@@ -200,7 +198,7 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <Icon style={{ width: '18px', height: '18px', color: isSelected ? 'var(--primary)' : 'var(--text-muted)' }} />
-                    <span>{item.label}</span>
+                    <span>{t(item.label)}</span>
                   </div>
 
                   {item.badge && (
@@ -256,7 +254,7 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
 
             <button
               onClick={handleLogout}
-              title="Đăng xuất"
+              title={t("Đăng xuất")}
               style={{
                 width: '34px',
                 height: '34px',

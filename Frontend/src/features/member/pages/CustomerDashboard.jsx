@@ -1,3 +1,5 @@
+import { locale } from '../../../i18n/languageStore.js';
+import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import { formatDate } from '../../../utils/displayFormat';
 import React, { useState, useContext } from 'react';
@@ -21,6 +23,7 @@ import {
 } from 'lucide-react';
 
 const CustomerDashboard = () => {
+  useLanguage();
   const navigate = useNavigate();
   const { userInfo } = useContext(AuthContext);
 
@@ -95,7 +98,7 @@ const CustomerDashboard = () => {
   const dynamicMemberId = getMemberId(userInfo?.email);
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-[var(--text)]">Member Dashboard</h1>
+      <h1 className="text-3xl font-bold text-[var(--text)]">{t("Member Dashboard")}</h1>
 
 
         {/* ================= ROW 1: 4 STAT CARDS ================= */}
@@ -104,26 +107,26 @@ const CustomerDashboard = () => {
           <div className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] relative overflow-hidden flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Active Package</span>
+                <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{t("Active Package")}</span>
                 <div className="w-7 h-7 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
                   <ShieldCheck className="w-4 h-4" />
                 </div>
               </div>
               {loadingMembership ? (
-                <h3 className="text-lg font-bold text-[var(--text-muted)] leading-snug animate-pulse">Loading...</h3>
+                <h3 className="text-lg font-bold text-[var(--text-muted)] leading-snug animate-pulse">{t("Loading...")}</h3>
               ) : membership ? (
                 <h3 className="text-lg font-bold text-[var(--text)] leading-snug">{membership.packageName}</h3>
               ) : (
-                <h3 className="text-lg font-bold text-[var(--danger-text)] leading-snug">No Active Package</h3>
+                <h3 className="text-lg font-bold text-[var(--danger-text)] leading-snug">{t("No Active Package")}</h3>
               )}
             </div>
             <div className="mt-5">
               <div className="flex items-baseline justify-between mb-2">
                 <span className="text-2xl font-black text-[var(--text)]">
-                  {membership ? membership.remainingDays : 0} <span className="text-xs font-medium text-[var(--text-muted)]">days left</span>
+                  {t(membership ? membership.remainingDays : 0)} <span className="text-xs font-medium text-[var(--text-muted)]">{t("days left")}</span>
                 </span>
                 <span className={`text-xs font-bold ${membership && membership.remainingDays > 0 ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]'}`}>
-                  {membership ? membership.status : 'N/A'}
+                  {membership ? codeLabel(membership.status) : t('N/A')}
                 </span>
               </div>
               <div className="w-full h-1.5 bg-[var(--surface)] rounded-full overflow-hidden">
@@ -131,7 +134,7 @@ const CustomerDashboard = () => {
               </div>
               <div className="flex items-center gap-1.5 mt-3 text-[10px] text-[var(--text-muted)]">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)]"></span>
-                <span>Valid till: {membership?.endDate ? formatDate(membership.endDate) : 'Unknown'}</span>
+                <span>{t("Valid till:")}{' '}{t(membership?.endDate ? formatDate(membership.endDate) : t('Unknown'))}</span>
               </div>
             </div>
           </div>
@@ -140,20 +143,20 @@ const CustomerDashboard = () => {
           <div className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Classes Attended</span>
+                <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{t("Classes Attended")}</span>
                 <div className="w-7 h-7 rounded-lg bg-[var(--success-soft)] text-[var(--success-text)] flex items-center justify-center">
                   <Dumbbell className="w-4 h-4" />
                 </div>
               </div>
-              <h3 className="text-lg font-bold text-[var(--text)]">Monthly Cycle</h3>
+              <h3 className="text-lg font-bold text-[var(--text)]">{t("Monthly Cycle")}</h3>
             </div>
             <div className="mt-4 flex items-end justify-between">
               <div>
                 <div className="text-2xl font-black text-[var(--text)]">
-                  {totalCheckIns} <span className="text-xs font-medium text-[var(--text-muted)]">Sessions</span>
+                  {totalCheckIns} <span className="text-xs font-medium text-[var(--text-muted)]">{t("Sessions")}</span>
                 </div>
                 <div className="flex items-center gap-1 text-xs font-semibold text-[var(--success-text)] mt-1">
-              <span className="flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> +21% vs last month</span>
+              <span className="flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" />{t("+21% vs last month")}</span>
                 </div>
               </div>
               {/* Mini Spark Bar Graph */}
@@ -171,20 +174,20 @@ const CustomerDashboard = () => {
           <div className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Bookings</span>
+                <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{t("Bookings")}</span>
                 <div className="w-7 h-7 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
                   <Calendar className="w-4 h-4" />
                 </div>
               </div>
-              <h3 className="text-lg font-bold text-[var(--text)]">Upcoming Classes</h3>
+              <h3 className="text-lg font-bold text-[var(--text)]">{t("Upcoming Classes")}</h3>
             </div>
             <div className="mt-4">
               <div className="text-2xl font-black text-[var(--text)]">
-                {upcomingBookings.length} <span className="text-xs font-medium text-[var(--text-muted)]">Reserved</span>
+                {upcomingBookings.length} <span className="text-xs font-medium text-[var(--text-muted)]">{t("Reserved")}</span>
               </div>
               <div className="flex items-center gap-1.5 mt-2 text-xs text-[var(--text-muted)]">
                 <Search className="w-3 h-3 text-[var(--primary)]" />
-                <span className="truncate">Check schedule below</span>
+                <span className="truncate">{t("Check schedule below")}</span>
               </div>
             </div>
           </div>
@@ -193,25 +196,25 @@ const CustomerDashboard = () => {
             <div className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Loyalty Program</span>
+                  <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{t("Loyalty Program")}</span>
                   <div className="w-7 h-7 rounded-lg bg-[var(--warning-soft)] text-[var(--warning-text)] flex items-center justify-center">
                     <Flame className="w-4 h-4" />
                   </div>
                 </div>
-                <h3 className="text-lg font-bold text-[var(--text)]">Nexus Rewards</h3>
+                <h3 className="text-lg font-bold text-[var(--text)]">{t("Nexus Rewards")}</h3>
               </div>
               <div className="mt-4 flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-black text-[var(--text)]">
-                    {loyaltyPoints} <span className="text-xs font-medium text-[var(--text-muted)]">Pts</span>
+                    {loyaltyPoints} <span className="text-xs font-medium text-[var(--text-muted)]">{t("Pts")}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-[var(--warning-text)] mt-1 font-semibold">
-                    <span>{memberTier === 'PLATINUM' ? '15% Off all purchases' : memberTier === 'GOLD' ? '10% Off all purchases' : memberTier === 'SILVER' ? '5% Off all purchases' : 'Reach 500 Pts for 5% Off'}</span>
+                    <span>{t(memberTier === 'PLATINUM' ? t('15% Off all purchases') : memberTier === 'GOLD' ? t('10% Off all purchases') : memberTier === 'SILVER' ? t('5% Off all purchases') : t('Reach 500 Pts for 5% Off'))}</span>
                   </div>
                 </div>
                 {/* Circular Indicator */}
                 <div className="w-11 h-11 rounded-full border-2 border-amber-500/30 flex items-center justify-center font-bold text-[10px] text-[var(--warning-text)] shadow-lg shadow-amber-500/10">
-                  {memberTier === 'PLATINUM' ? 'PLAT' : memberTier === 'MEMBER' ? 'NEW' : memberTier}
+                  {t(memberTier === 'PLATINUM' ? t('PLAT') : memberTier === 'MEMBER' ? t('NEW') : memberTier)}
                 </div>
               </div>
             </div>
@@ -225,16 +228,16 @@ const CustomerDashboard = () => {
               {/* Header & Filter Tabs */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-bold text-[var(--text)]">Upcoming Schedule</h2>
-                  <span className="px-2.5 py-0.5 rounded-full bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] text-xs font-bold">{upcomingBookings.length} Active</span>
+                  <h2 className="text-xl font-bold text-[var(--text)]">{t("Upcoming Schedule")}</h2>
+                  <span className="px-2.5 py-0.5 rounded-full bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] text-xs font-bold">{upcomingBookings.length}{' '}{t("Active")}</span>
                 </div>
 
                 <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs font-semibold">
                   {[
                     { key: 'all', label: `All (${upcomingBookings.length})` },
-                    { key: 'group', label: 'Group Classes' },
-                    { key: 'courts', label: 'Smart Courts' },
-                    { key: 'recovery', label: 'Recovery' },
+                    { key: 'group', label: t('Group Classes') },
+                    { key: 'courts', label: t('Smart Courts') },
+                    { key: 'recovery', label: t('Recovery') },
                   ].map((tab) => (
                     <button
                       key={tab.key}
@@ -245,7 +248,7 @@ const CustomerDashboard = () => {
                           : 'text-[var(--text-muted)] hover:text-[var(--text)]'
                       }`}
                     >
-                      {tab.label}
+                      {t(tab.label)}
                     </button>
                   ))}
                 </div>
@@ -254,22 +257,22 @@ const CustomerDashboard = () => {
                 {/* List of training sessions */}
               <div className="space-y-3">
                 {loadingBookings ? (
-    <div className="text-[var(--text-muted)] text-sm py-4 text-center animate-pulse">Loading upcoming classes...</div>
+    <div className="text-[var(--text-muted)] text-sm py-4 text-center animate-pulse">{t("Loading upcoming classes...")}</div>
   ) : upcomingBookings.length === 0 ? (
-    <div className="text-[var(--text-muted)] text-sm py-4 text-center">No upcoming classes scheduled.</div>
+    <div className="text-[var(--text-muted)] text-sm py-4 text-center">{t("No upcoming classes scheduled.")}</div>
   ) : (
     upcomingBookings.filter(item => {
       if (activeTab === 'all') return true;
       const name = item.className.toLowerCase();
-      if (activeTab === 'group') return name.includes('yoga') || name.includes('gym') || name.includes('cÄ‚â€ Ă‚Â¡');
+      if (activeTab === 'group') return name.includes('yoga') || name.includes('gym') || name.includes('cÄ‚â€ Ă‚Â¡');
       if (activeTab === 'courts') return name.includes('court') || name.includes('sĂ„â€Ă‚Â¢n');
       if (activeTab === 'recovery') return name.includes('recovery') || name.includes('hÄ‚Â¡Ă‚Â»Ă¢â‚¬Å“i phÄ‚Â¡Ă‚Â»Ă‚Â¥c');
       return true;
     }).map((item) => {
       const dateObj = new Date(item.startTime);
       const isToday = new Date().toDateString() === dateObj.toDateString();
-      const badge = isToday ? "TODAY" : dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).toUpperCase();
-      const time = dateObj.toLocaleTimeString('en-GB', { hour: "2-digit", minute: "2-digit", hour12: false });
+      const badge = isToday ? t("TODAY") : dateObj.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' }).toUpperCase();
+      const time = dateObj.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", hour12: false });
 
       return (
         <div
@@ -287,8 +290,7 @@ const CustomerDashboard = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-bold text-[var(--text)]">{item.className}</h4>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--success-soft)] text-[var(--success-text)] border border-[var(--success-soft)]">
-                  &bull; {item.status}
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--success-soft)] text-[var(--success-text)] border border-[var(--success-soft)]">{t("&bull;")}{' '}{codeLabel(item.status)}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)] mt-1">
@@ -296,15 +298,15 @@ const CustomerDashboard = () => {
                   <User className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                   <span>{item.coachName}</span>
                 </div>
-                <span>&bull;</span>
+                <span>{t("&bull;")}</span>
                 <div className="flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                   <span>{item.roomName}</span>
                 </div>
-                <span>&bull;</span>
+                <span>{t("&bull;")}</span>
                 <div className="flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                  <span>{item.durationMinutes} min</span>
+                  <span>{item.durationMinutes}{' '}{t("min")}</span>
                 </div>
               </div>
             </div>
@@ -313,10 +315,8 @@ const CustomerDashboard = () => {
                     {/* Action Buttons */}
           <div className="flex items-center gap-2 mt-2 sm:mt-0">
             <button className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary)] text-[color:var(--on-primary)] text-xs font-bold transition-colors">
-              <QrCode className="w-3.5 h-3.5" />
-              Check-in
-            </button>
-            <button onClick={() => setCancelModal({ isOpen: true, classId: item.classId })} className="px-3 py-1.5 rounded-lg bg-transparent hover:bg-red-500/10 text-[var(--text-muted)] hover:text-[var(--danger-text)] text-xs font-semibold transition-colors"> Cancel </button>
+              <QrCode className="w-3.5 h-3.5" />{t("Check-in")}</button>
+            <button onClick={() => setCancelModal({ isOpen: true, classId: item.classId })} className="px-3 py-1.5 rounded-lg bg-transparent hover:bg-red-500/10 text-[var(--text-muted)] hover:text-[var(--danger-text)] text-xs font-semibold transition-colors">{t("Cancel")}</button>
           </div>
         </div>
       );
@@ -328,11 +328,8 @@ const CustomerDashboard = () => {
             {/* Footer - Telemetry Sync */}
             <div className="pt-4 mt-6 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--text-muted)]">
               <span className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)]"></span>
-                Telemetry synchronization: Connected to Nexus Core
-              </span>
-              <a href="/member/schedule" onClick={(e) => { e.preventDefault(); navigate('/member/schedule'); }} className="text-[var(--primary)] hover:text-[var(--primary)] font-semibold flex items-center gap-1">
-                View Full Calendar <ChevronRight className="w-3.5 h-3.5" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)]"></span>{t("Telemetry synchronization: Connected to Nexus Core")}</span>
+              <a href="/member/schedule" onClick={(e) => { e.preventDefault(); navigate('/member/schedule'); }} className="text-[var(--primary)] hover:text-[var(--primary)] font-semibold flex items-center gap-1">{t("View Full Calendar")}<ChevronRight className="w-3.5 h-3.5" />
               </a>
             </div>
           </div>
@@ -346,16 +343,14 @@ const CustomerDashboard = () => {
                   <div className="w-6 h-6 rounded-md bg-[var(--primary)] flex items-center justify-center text-[color:var(--on-primary)]">
                     <ShieldCheck className="w-3.5 h-3.5" />
                   </div>
-                  <span className="font-bold text-sm text-[var(--text)] uppercase tracking-wider">NEXUS PASS</span>
+                  <span className="font-bold text-sm text-[var(--text)] uppercase tracking-wider">{t("NEXUS PASS")}</span>
                 </div>
-                <span className="text-[10px] font-bold text-[var(--cyan)] bg-[var(--cyan-soft)] border border-[var(--cyan-soft)] px-2 py-0.5 rounded">
-                  NFC READY
-                </span>
+                <span className="text-[10px] font-bold text-[var(--cyan)] bg-[var(--cyan-soft)] border border-[var(--cyan-soft)] px-2 py-0.5 rounded">{t("NFC READY")}</span>
               </div>
 
               <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mb-2">
-                <span>MEMBER ID</span>
-                <span className="font-mono font-bold text-[var(--text)] tracking-widest">#NX-{dynamicMemberId}</span>
+                <span>{t("MEMBER ID")}</span>
+                <span className="font-mono font-bold text-[var(--text)] tracking-widest">{t("#NX-")}{dynamicMemberId}</span>
               </div>
 
                 {/* Simulated Modern Barcode */}
@@ -369,22 +364,21 @@ const CustomerDashboard = () => {
               </div>
 
               <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] pt-1">
-                <span>Hold near turnstile optical scanner</span>
+                <span>{t("Hold near turnstile optical scanner")}</span>
                 <span className="text-[var(--cyan)] font-semibold flex items-center gap-1">
-                  <Radio className="w-3.5 h-3.5 animate-pulse" /> Simulate Tap
-                </span>
+                  <Radio className="w-3.5 h-3.5 animate-pulse" />{t("Simulate Tap")}</span>
               </div>
             </div>
 
             {/* Express Actions List */}
             <div className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)]">
-              <h3 className="text-sm font-bold text-[var(--text)] mb-3">Express Actions</h3>
+              <h3 className="text-sm font-bold text-[var(--text)] mb-3">{t("Express Actions")}</h3>
               <div className="space-y-2">
                 {[
-                  { title: "Book PT Session", subtitle: "Consult biomechanics coaches", icon: User, TrendingUp, onClick: () => alert("System is matching you with an available trainer...") },
-                  { title: "Reserve Smart Court", subtitle: "Tennis, Basketball & Padel", icon: Search, onClick: () => alert("Loading Smart Court layout...") },
-                  { title: "Biometric Telemetry", subtitle: "VO2 Max & recovery index", icon: Activity, onClick: () => alert("Syncing data with your Apple Watch/Garmin...") },
-                  { title: "Locker & Facility Access", subtitle: "Manage digital locker keys", icon: Dumbbell, onClick: () => alert("Connecting NFC to unlock locker #42...") },
+                  { title: t("Book PT Session"), subtitle: t("Consult biomechanics coaches"), icon: User, TrendingUp, onClick: () => alert("System is matching you with an available trainer...") },
+                  { title: t("Reserve Smart Court"), subtitle: t("Tennis, Basketball & Padel"), icon: Search, onClick: () => alert("Loading Smart Court layout...") },
+                  { title: t("Biometric Telemetry"), subtitle: t("VO2 Max & recovery index"), icon: Activity, onClick: () => alert("Syncing data with your Apple Watch/Garmin...") },
+                  { title: t("Locker & Facility Access"), subtitle: t("Manage digital locker keys"), icon: Dumbbell, onClick: () => alert("Connecting NFC to unlock locker #42...") },
                 ].map((action, idx) => {
                   const Icon = action.icon;
                   return (
@@ -398,8 +392,8 @@ const CustomerDashboard = () => {
                           <Icon className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-[var(--text)]">{action.title}</p>
-                          <p className="text-[10px] text-[var(--text-muted)]">{action.subtitle}</p>
+                          <p className="text-xs font-bold text-[var(--text)]">{t(action.title)}</p>
+                          <p className="text-[10px] text-[var(--text-muted)]">{t(action.subtitle)}</p>
                         </div>
                       </div>
                       <ChevronRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--text)] transition-colors" />
@@ -415,10 +409,8 @@ const CustomerDashboard = () => {
         <div className="p-6 rounded-2xl bg-[var(--surface)] border border-[var(--border)]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h3 className="text-lg font-bold text-[var(--text)]">Recent Activity & Check-in Log</h3>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Verified turnstile entries and biometric session outputs
-              </p>
+              <h3 className="text-lg font-bold text-[var(--text)]">{t("Recent Activity & Check-in Log")}</h3>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">{t("Verified turnstile entries and biometric session outputs")}</p>
             </div>
 
             <div className="flex items-center gap-3">
@@ -428,14 +420,14 @@ const CustomerDashboard = () => {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search facility, date..."
+                  placeholder={t("Search facility, date...")}
                   className="bg-[var(--surface)] border border-[var(--border)] rounded-xl pl-9 pr-4 py-2 text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] w-52 transition-colors"
                 />
               </div>
 
               <button className="px-3.5 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-xs font-semibold text-[var(--text)] flex items-center gap-2 transition-colors">
                 <Download className="w-3.5 h-3.5" />
-                <span>Export CSV</span>
+                <span>{t("Export CSV")}</span>
               </button>
             </div>
           </div>
@@ -445,27 +437,25 @@ const CustomerDashboard = () => {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-[var(--border)] text-[var(--text-muted)] uppercase tracking-wider text-[10px]">
-                    <th className="pb-3 font-semibold">Date & Time</th>
-                    <th className="pb-3 font-semibold">Activity / Facility</th>
-                    <th className="pb-3 font-semibold">Trainer / Zone</th>
-                    <th className="pb-3 font-semibold">Duration</th>
-                    <th className="pb-3 font-semibold">Status</th>
-                    <th className="pb-3 font-semibold text-right">Telemetry Metrics</th>
+                    <th className="pb-3 font-semibold">{t("Date & Time")}</th>
+                    <th className="pb-3 font-semibold">{t("Activity / Facility")}</th>
+                    <th className="pb-3 font-semibold">{t("Trainer / Zone")}</th>
+                    <th className="pb-3 font-semibold">{t("Duration")}</th>
+                    <th className="pb-3 font-semibold">{t("Status")}</th>
+                    <th className="pb-3 font-semibold text-right">{t("Telemetry Metrics")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
                   {recentActivities.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="py-8 text-center text-[var(--text-muted)] font-medium">
-                        No recent activities found. Start booking classes to see your logs!
-                      </td>
+                      <td colSpan="6" className="py-8 text-center text-[var(--text-muted)] font-medium">{t("No recent activities found. Start booking classes to see your logs!")}</td>
                     </tr>
                   ) : (
                     recentActivities.slice((currentPage - 1) * 3, currentPage * 3).map((log) => {
                       const dateObj = new Date(log.startTime);
                       const isYesterday = new Date(new Date().setDate(new Date().getDate()-1)).toDateString() === dateObj.toDateString();
-                      const dateStr = isYesterday ? 'Yesterday' : dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                      const timeStr = dateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+                      const dateStr = isYesterday ? t('Yesterday') : dateObj.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
+                      const timeStr = dateObj.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
 
                       return (
                         <tr key={log.bookingId} className="hover:bg-[var(--surface-hover)] transition-colors">
@@ -479,15 +469,15 @@ const CustomerDashboard = () => {
                             </div>
                           </td>
                           <td className="py-4 text-[var(--text)]">{log.coachName}</td>
-                          <td className="py-4 text-[var(--text)]">{log.durationMinutes}m</td>
+                          <td className="py-4 text-[var(--text)]">{log.durationMinutes}{' '}{t("m")}</td>
                           <td className="py-4">
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--success-soft)] text-[var(--success-text)] border border-[var(--success-soft)]">
-                              {log.status}
+                              {codeLabel(log.status)}
                             </span>
                           </td>
                           <td className="py-4 text-right">
-                            <div className="font-bold text-[var(--text)]">{log.calories} kcal</div>
-                            <div className="text-[10px] text-[var(--text-muted)] mt-0.5">Avg HR {log.avgHr} bpm</div>
+                            <div className="font-bold text-[var(--text)]">{log.calories}{' '}{t("kcal")}</div>
+                            <div className="text-[10px] text-[var(--text-muted)] mt-0.5">{t("Avg HR")}{' '}{log.avgHr}{' '}{t("bpm")}</div>
                           </td>
                         </tr>
                       );
@@ -499,7 +489,7 @@ const CustomerDashboard = () => {
 
           {/* Table Pagination */}
           <div className="pt-4 mt-2 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--text-muted)]">
-            <span>Showing {recentActivities.slice((currentPage - 1) * 3, currentPage * 3).length} of {recentActivities.length} recorded sessions</span>
+            <span>{t("Showing")}{' '}{recentActivities.slice((currentPage - 1) * 3, currentPage * 3).length}{' '}{t("of")}{' '}{recentActivities.length}{' '}{t("recorded sessions")}</span>
             <div className="flex items-center gap-1.5">
               <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -534,9 +524,9 @@ const CustomerDashboard = () => {
             window.location.reload();
           }).catch(err => alert(err.response?.data || 'Failed to cancel class'));
         }}
-        title="Cancel Class Registration"
-        message="Are you sure you want to cancel this class? All future sessions of this class will be dropped from your schedule. This action cannot be undone."
-        confirmText="Yes, Cancel Class"
+        title={t("Cancel Class Registration")}
+        message={t("Are you sure you want to cancel this class? All future sessions of this class will be dropped from your schedule. This action cannot be undone.")}
+        confirmText={t("Yes, Cancel Class")}
       />
     </div>
   );

@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import { useState, useSyncExternalStore } from "react";
 import {
   CalendarDays,
@@ -48,10 +49,11 @@ const emptyData = {
 };
 
 export function OperationsSkeleton() {
+  useLanguage();
   return (
     <div
       className="ops-skeleton"
-      aria-label="Loading Center Operations"
+      aria-label={t("Loading Center Operations")}
       aria-busy="true"
     >
       <div />
@@ -67,11 +69,12 @@ export function OperationsSkeleton() {
 }
 
 function Empty({ children }) {
+  useLanguage();
   return (
     <div className="ops-empty">
       <CalendarDays size={28} />
-      <strong>No matching results</strong>
-      <p>{children}</p>
+      <strong>{t("No matching results")}</strong>
+      <p>{t(children)}</p>
     </div>
   );
 }
@@ -88,6 +91,7 @@ export default function OperationsPage({
   loadError,
   notify,
 }) {
+  useLanguage();
   const records = data || emptyData;
   const [tab, setTab] = useState("schedules");
   const [view, setView] = useState("calendar");
@@ -170,7 +174,7 @@ export default function OperationsPage({
           onClick={() => setEditor({ type: "subject" })}
         >
           <Plus size={16} />
-          Add subject
+          {t("Add subject")}
         </button>
         <button
           className="manager-primary"
@@ -178,7 +182,7 @@ export default function OperationsPage({
           onClick={() => setEditor({ type: "room" })}
         >
           <Plus size={16} />
-          Add room
+          {t("Add room")}
         </button>
       </>
     ) : (
@@ -190,7 +194,7 @@ export default function OperationsPage({
         }
       >
         <Plus size={16} />
-        {tab === "classes" ? "Create class" : "Create session"}
+        {tab === "classes" ? t("Create class") : t("Create session")}
       </button>
     );
 
@@ -198,13 +202,13 @@ export default function OperationsPage({
     <div className="ops-page" aria-busy={loading}>
       <ManagerPageHeader
         title={page.title}
-        description="Plan the week, manage classes and keep resources coordinated."
+        description={t("Plan the week, manage classes and keep resources coordinated.")}
         actions={actions}
       />
       <div
         className="manager-tabs"
         role="tablist"
-        aria-label="Operations sections"
+        aria-label={t("Operations sections")}
       >
         {[
           ["schedules", "Schedules", records.schedules.length],
@@ -243,7 +247,7 @@ export default function OperationsPage({
               }
             }}
           >
-            {name}
+            {t(name)}
             <span>{count}</span>
           </button>
         ))}
@@ -256,41 +260,40 @@ export default function OperationsPage({
         {loadError ? (
           <div className="ops-empty">
             <p>
-              Operations data could not be loaded. Retry using the error message
-              above.
+              {t("Operations data could not be loaded. Retry using the error message above.")}
             </p>
-            <button className="manager-secondary" onClick={() => changeRange(weekRange())}>Return to this week</button>
+            <button className="manager-secondary" onClick={() => changeRange(weekRange())}>{t("Return to this week")}</button>
           </div>
         ) : (
           tab === "schedules" && (
             <>
               <div className="ops-stat-grid">
                 <Metric
-                  label="Sessions today"
+                  label={t("Sessions today")}
                   value={metrics.today}
-                  description="Non-cancelled sessions starting today within the current filters."
+                  description={t("Non-cancelled sessions starting today within the current filters.")}
                 />
                 <Metric
-                  label="Sessions in range"
+                  label={t("Sessions in range")}
                   value={metrics.sessions}
-                  description="Scheduled and completed sessions within the current filters."
+                  description={t("Scheduled and completed sessions within the current filters.")}
                 />
                 <Metric
-                  label="Seat occupancy"
+                  label={t("Seat occupancy")}
                   value={`${Math.round(metrics.occupancy * 100)}%`}
                   description={`CONFIRMED + PENDING bookings / capacity of non-cancelled sessions (${metrics.booked}/${metrics.capacity}).`}
                 />
                 <Metric
-                  label="Low registrations"
+                  label={t("Low registrations")}
                   value={metrics.low}
-                  description="Scheduled sessions with less than 25% of seats booked. Completed and cancelled sessions are excluded."
+                  description={t("Scheduled sessions with less than 25% of seats booked. Completed and cancelled sessions are excluded.")}
                 />
               </div>
               <div className="ops-toolbar">
                 <div className="ops-week-nav">
                   <button
                     className="manager-icon-button"
-                    aria-label="Previous week"
+                    aria-label={t("Previous week")}
                     disabled={loading}
                     onClick={() => moveWeek(-1)}
                   >
@@ -301,34 +304,34 @@ export default function OperationsPage({
                     disabled={loading}
                     onClick={() => changeRange(weekRange())}
                   >
-                    Today
+                    {t("Today")}
                   </button>
                   <button
                     className="manager-icon-button"
-                    aria-label="Next week"
+                    aria-label={t("Next week")}
                     disabled={loading}
                     onClick={() => moveWeek(1)}
                   >
                     <ChevronRight size={18} />
                   </button>
                   <strong>
-                    {formatDate(displayedRange.from)} –{" "}
+                    {formatDate(displayedRange.from)} {t("–")}{" "}
                     {formatDate(displayedRange.to)}
                   </strong>
                 </div>
                 <div className="ops-view-controls">
                   <label>
-                    Group by
+                    {t("Group by")}
                     <select
                       value={group}
                       onChange={(e) => setGroup(e.target.value)}
                     >
-                      <option value="room">Room</option>
-                      <option value="coach">Coach</option>
+                      <option value="room">{t("Room")}</option>
+                      <option value="coach">{t("Coach")}</option>
                     </select>
                   </label>
                   {!mobile && (
-                    <div className="ops-segment" aria-label="Schedule view">
+                    <div className="ops-segment" aria-label={t("Schedule view")}>
                       <button
                         aria-pressed={!listView}
                         onClick={() => {
@@ -337,14 +340,14 @@ export default function OperationsPage({
                         }}
                       >
                         <CalendarDays size={16} />
-                        Week
+                        {t("Week")}
                       </button>
                       <button
                         aria-pressed={listView}
                         onClick={() => setView("list")}
                       >
                         <List size={16} />
-                        List
+                        {t("List")}
                       </button>
                     </div>
                   )}
@@ -353,11 +356,11 @@ export default function OperationsPage({
               <details className="ops-filters" open>
                 <summary>
                   <SlidersHorizontal size={16} />
-                  Filters <span>{rows.length} sessions</span>
+                  {t("Filters")} <span>{rows.length} {t("sessions")}</span>
                 </summary>
                 <div className="ops-filter-grid">
                   <label>
-                    From
+                    {t("From")}
                     <input
                       type="date"
                       value={filters.from}
@@ -367,7 +370,7 @@ export default function OperationsPage({
                     />
                   </label>
                   <label>
-                    To
+                    {t("To")}
                     <input
                       type="date"
                       value={filters.to}
@@ -377,7 +380,7 @@ export default function OperationsPage({
                     />
                   </label>
                   <Filter
-                    label="Subject"
+                    label={t("Subject")}
                     value={selection.subject}
                     options={records.subjects.map((row) => [
                       row.subjectId,
@@ -388,7 +391,7 @@ export default function OperationsPage({
                     }
                   />
                   <Filter
-                    label="Coach"
+                    label={t("Coach")}
                     value={selection.coach}
                     options={coachOptions.map((row) => [
                       row.userId,
@@ -399,7 +402,7 @@ export default function OperationsPage({
                     }
                   />
                   <Filter
-                    label="Room"
+                    label={t("Room")}
                     value={selection.room}
                     options={records.rooms.map((row) => [
                       row.roomId,
@@ -410,7 +413,7 @@ export default function OperationsPage({
                     }
                   />
                   <Filter
-                    label="Status"
+                    label={t("Status")}
                     value={selection.status}
                     options={["SCHEDULED", "COMPLETED", "CANCELLED"].map(
                       (status) => [
@@ -435,7 +438,7 @@ export default function OperationsPage({
                       changeRange({ from: filters.from, to: filters.to });
                     }}
                   >
-                    Apply dates
+                    {t("Apply dates")}
                   </button>
                   <button
                     className="manager-secondary"
@@ -448,12 +451,12 @@ export default function OperationsPage({
                       })
                     }
                   >
-                    Clear filters
+                    {t("Clear filters")}
                   </button>
                 </div>
                 {filters.from > filters.to && (
                   <p className="manager-field-error" role="alert">
-                    The start date must be before the end date.
+                    {t("The start date must be before the end date.")}
                   </p>
                 )}
               </details>
@@ -473,9 +476,7 @@ export default function OperationsPage({
                 />
               )}
               <p className="ops-note">
-                Seat counts include confirmed bookings and pending holds.
-                Colours identify subjects; “Ongoing” is derived from time.
-                Select a session to view its roster or change its time.
+                {t("Seat counts include confirmed bookings and pending holds. Colours identify subjects; “Ongoing” is derived from time. Select a session to view its roster or change its time.")}
               </p>
             </>
           )
@@ -486,14 +487,14 @@ export default function OperationsPage({
               <label className="ops-search">
                 <Search size={16} />
                 <input
-                  aria-label="Search classes"
-                  placeholder="Search class, subject, coach or room…"
+                  aria-label={t("Search classes")}
+                  placeholder={t("Search class, subject, coach or room…")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </label>
               <Filter
-                label="Status"
+                label={t("Status")}
                 value={classStatus}
                 options={[
                   ["ACTIVE", "Active"],
@@ -506,12 +507,12 @@ export default function OperationsPage({
               <table>
                 <thead>
                   <tr>
-                    <th>Class / subject</th>
-                    <th>Coach / room</th>
-                    <th>Capacity / session</th>
-                    <th>Class tuition</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>{t("Class / subject")}</th>
+                    <th>{t("Coach / room")}</th>
+                    <th>{t("Capacity / session")}</th>
+                    <th>{t("Class tuition")}</th>
+                    <th>{t("Status")}</th>
+                    <th>{t("Actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -530,18 +531,18 @@ export default function OperationsPage({
                         </small>
                       </td>
                       <td>
-                        {row.maxSlots} seats
+                        {row.maxSlots} {t("seats")}
                         <small
                           className="manager-cell-sub"
-                          title="Highest confirmed + pending booking count of any non-cancelled session."
+                          title={t("Highest confirmed + pending booking count of any non-cancelled session.")}
                         >
-                          Peak booked: {row.enrolled || 0}
+                          {t("Peak booked:")} {row.enrolled || 0}
                         </small>
                       </td>
                       <td>
                         {formatMoney(row.price)}
                         <small className="manager-cell-sub">
-                          per class registration
+                          {t("per class registration")}
                         </small>
                       </td>
                       <td>
@@ -555,7 +556,7 @@ export default function OperationsPage({
                               setEditor({ type: "class", item: row })
                             }
                           >
-                            Edit
+                            {t("Edit")}
                           </button>
                           <button
                             className="manager-secondary"
@@ -567,7 +568,7 @@ export default function OperationsPage({
                               })
                             }
                           >
-                            Repeat sessions
+                            {t("Repeat sessions")}
                           </button>
                           <button
                             className="ops-text-danger"
@@ -576,7 +577,7 @@ export default function OperationsPage({
                               setConfirmation({ type: "deactivate", item: row })
                             }
                           >
-                            Deactivate
+                            {t("Deactivate")}
                           </button>
                         </div>
                       </td>
@@ -586,14 +587,12 @@ export default function OperationsPage({
               </table>
               {!classes.length && (
                 <Empty>
-                  Create a class or adjust the search and status filter.
+                  {t("Create a class or adjust the search and status filter.")}
                 </Empty>
               )}
             </div>
             <p className="ops-note">
-              A class owns its coach, room and capacity for every session.
-              Classes with future sessions cannot be deactivated; cancel those
-              sessions first.
+              {t("A class owns its coach, room and capacity for every session. Classes with future sessions cannot be deactivated; cancel those sessions first.")}
             </p>
           </>
         )}
@@ -643,21 +642,23 @@ export default function OperationsPage({
 }
 
 function Metric({ label, value, description }) {
+  useLanguage();
   return (
     <article className="ops-stat" title={description}>
-      <small>{label}</small>
+      <small>{t(label)}</small>
       <strong>{value}</strong>
-      <p>{description}</p>
+      <p>{t(description)}</p>
     </article>
   );
 }
 function Filter({ label, value, options, onChange }) {
+  useLanguage();
   return (
     <label>
-      {label}
+      {t(label)}
       <select value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">
-          All{" "}
+          {t("All")}{" "}
           {{ Coach: "coaches", Status: "statuses" }[label] ||
             label.toLowerCase() + "s"}
         </option>
@@ -672,10 +673,11 @@ function Filter({ label, value, options, onChange }) {
 }
 
 function ScheduleList({ rows, group, open }) {
+  useLanguage();
   if (!rows.length)
     return (
       <Empty>
-        Adjust your filters or create a session for this date range.
+        {t("Adjust your filters or create a session for this date range.")}
       </Empty>
     );
   const groups = [
@@ -699,7 +701,7 @@ function ScheduleList({ rows, group, open }) {
                 <div className="ops-session-time">
                   <strong>{formatDate(row.startTime)}</strong>
                   <span>
-                    {formatTime(row.startTime)} – {formatTime(row.endTime)}
+                    {formatTime(row.startTime)} {t("–")} {formatTime(row.endTime)}
                     {sessionDay(row.startTime) !== sessionDay(row.endTime)
                       ? ` (+ ${formatDate(row.endTime)})`
                       : ""}
@@ -708,7 +710,7 @@ function ScheduleList({ rows, group, open }) {
                 <div>
                   <strong>{row.className}</strong>
                   <span>
-                    {row.coachName} · {row.roomName}
+                    {row.coachName} {t("·")} {row.roomName}
                   </span>
                 </div>
                 <Occupancy row={row} />
@@ -723,6 +725,7 @@ function ScheduleList({ rows, group, open }) {
 }
 
 function WeekCalendar({ rows, data, week, group, selection, open, create }) {
+  useLanguage();
   const days = Array.from({ length: 7 }, (_, i) => addDays(week.from, i));
   const resources =
     group === "room"
@@ -758,11 +761,11 @@ function WeekCalendar({ rows, data, week, group, selection, open, create }) {
         className="ops-calendar-scroll"
         tabIndex={0}
         role="region"
-        aria-label="Weekly schedule by resource"
+        aria-label={t("Weekly schedule by resource")}
       >
         <div className="ops-calendar">
           <div className="ops-calendar-heading">
-            <strong>{group === "room" ? "Rooms" : "Coaches"}</strong>
+            <strong>{group === "room" ? t("Rooms") : t("Coaches")}</strong>
             {days.map((day) => (
               <div
                 className={day === isoDate(new Date()) ? "is-today" : ""}
@@ -788,7 +791,7 @@ function WeekCalendar({ rows, data, week, group, selection, open, create }) {
                         String(row[`${group}Id`]) === String(resource.id),
                     ).length
                   }{" "}
-                  sessions
+                  {t("sessions")}
                 </small>
               </div>
               {days.map((day) => {
@@ -812,10 +815,10 @@ function WeekCalendar({ rows, data, week, group, selection, open, create }) {
                         onClick={() => open(row)}
                       >
                         <span>
-                          {formatTime(row.startTime)} –{" "}
+                          {formatTime(row.startTime)} {t("–")}{" "}
                           {formatTime(row.endTime)}
                         </span>
-                        {sessionDay(row.startTime) !== sessionDay(row.endTime) && <small>Ends {formatDate(row.endTime)}</small>}
+                        {sessionDay(row.startTime) !== sessionDay(row.endTime) && <small>{t("Ends")} {formatDate(row.endTime)}</small>}
                         <strong>{row.className}</strong>
                         <small>{row.coachName}</small>
                         <small>{row.roomName}</small>
@@ -835,7 +838,7 @@ function WeekCalendar({ rows, data, week, group, selection, open, create }) {
                       onClick={() => create(day, resourceFilter)}
                     >
                       <Plus size={14} />
-                      {sessions.length ? "Session" : "09:00 · Session"}
+                      {sessions.length ? t("Session") : t("09:00 · Session")}
                     </button>
                   </div>
                 );
@@ -846,37 +849,36 @@ function WeekCalendar({ rows, data, week, group, selection, open, create }) {
       </div>
       {!groups.length && (
         <Empty>
-          Add a resource and assign an active class to start scheduling.
+          {t("Add a resource and assign an active class to start scheduling.")}
         </Empty>
       )}
       <p className="ops-note">
-        Sessions are stacked in time order to keep dense schedules readable.
-        Empty cells start at 09:00; choose the exact time in the drawer. Room
-        and coach come from the selected class.
+        {t("Sessions are stacked in time order to keep dense schedules readable. Empty cells start at 09:00; choose the exact time in the drawer. Room and coach come from the selected class.")}
       </p>
     </>
   );
 }
 
 function Catalog({ type, rows, edit, create }) {
+  useLanguage();
   const subject = type === "subject";
   return (
     <section className="manager-panel">
       <div className="ops-catalog-heading">
         <div>
-          <h2>{subject ? "Subjects" : "Rooms"}</h2>
-          <span>{rows.length} entries</span>
+          <h2>{subject ? t("Subjects") : t("Rooms")}</h2>
+          <span>{rows.length} {t("entries")}</span>
         </div>
         <button className="manager-secondary" onClick={create}>
           <Plus size={16} />
-          Add {type}
+          {t("Add")} {type}
         </button>
       </div>
       {!rows.length ? (
         <Empty>
           {subject
-            ? "Add a subject before creating a class."
-            : "Add a room with its capacity, then assign a class."}
+            ? t("Add a subject before creating a class.")
+            : t("Add a room with its capacity, then assign a class.")}
         </Empty>
       ) : (
         <div className="ops-catalog-list">
@@ -886,12 +888,12 @@ function Catalog({ type, rows, edit, create }) {
                 <strong>{row[`${type}Name`]}</strong>
                 <p>
                   {subject
-                    ? row.description || "No description"
+                    ? row.description || t("No description")
                     : `${row.capacity} seats`}
                 </p>
                 <small>
                   <Users size={14} />
-                  {row.classCount || 0} classes
+                  {row.classCount || 0} {t("classes")}
                 </small>
               </div>
               <button
@@ -899,7 +901,7 @@ function Catalog({ type, rows, edit, create }) {
                 aria-label={`Edit ${row[`${type}Name`]}`}
                 onClick={() => edit(row)}
               >
-                Edit
+                {t("Edit")}
               </button>
             </article>
           ))}

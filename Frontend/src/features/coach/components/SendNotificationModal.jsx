@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
@@ -5,6 +6,7 @@ import {
 } from 'lucide-react';
 
 const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', initialStudent = null, initialClassId = null, onSuccess }) => {
+  useLanguage();
   const [targetType, setTargetType] = useState(initialTargetType);
   const [selectedClassId, setSelectedClassId] = useState(initialClassId || '');
   const [selectedStudentId, setSelectedStudentId] = useState(initialStudent ? initialStudent.userId : '');
@@ -151,8 +153,8 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
               <Bell className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <h3 className="text-lg font-bold text-white tracking-tight">Gửi Thông Báo Cho Học Viên</h3>
-              <p className="text-xs text-slate-400">Tạo & truyền tải thông báo trực tiếp đến học viên</p>
+              <h3 className="text-lg font-bold text-white tracking-tight">{t("Gửi Thông Báo Cho Học Viên")}</h3>
+              <p className="text-xs text-slate-400">{t("Tạo & truyền tải thông báo trực tiếp đến học viên")}</p>
             </div>
           </div>
 
@@ -171,7 +173,7 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
           {errorMsg && (
             <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 flex items-center gap-2.5 animate-shake">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-              <span>{errorMsg}</span>
+              <span>{t(errorMsg)}</span>
             </div>
           )}
 
@@ -185,9 +187,7 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
 
           {/* 1. Recipient Scope Selection */}
           <div className="space-y-2">
-            <label className="block text-slate-300 font-bold uppercase tracking-wider text-[11px]">
-              1. Phạm vi người nhận thông báo
-            </label>
+            <label className="block text-slate-300 font-bold uppercase tracking-wider text-[11px]">{t("1. Phạm vi người nhận thông báo")}</label>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
@@ -198,7 +198,7 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
                   }`}
               >
                 <Users className="w-5 h-5 text-blue-400" />
-                <span className="text-center text-[11px]">Tất cả học viên</span>
+                <span className="text-center text-[11px]">{t("Tất cả học viên")}</span>
               </button>
 
               <button
@@ -210,7 +210,7 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
                   }`}
               >
                 <School className="w-5 h-5 text-emerald-400" />
-                <span className="text-center text-[11px]">Theo lớp học</span>
+                <span className="text-center text-[11px]">{t("Theo lớp học")}</span>
               </button>
 
               <button
@@ -222,7 +222,7 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
                   }`}
               >
                 <User className="w-5 h-5 text-amber-400" />
-                <span className="text-center text-[11px]">Học viên cá nhân</span>
+                <span className="text-center text-[11px]">{t("Học viên cá nhân")}</span>
               </button>
             </div>
           </div>
@@ -230,18 +230,18 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
           {/* Conditional Input: Select Class */}
           {targetType === 'CLASS' && (
             <div className="space-y-1.5 animate-fade-in">
-              <label className="block text-slate-400 font-semibold">Chọn lớp học:</label>
+              <label className="block text-slate-400 font-semibold">{t("Chọn lớp học:")}</label>
               <select
                 value={selectedClassId}
                 onChange={(e) => setSelectedClassId(e.target.value)}
                 className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
               >
                 {classes.length === 0 ? (
-                  <option value="">-- Chưa có lớp học nào --</option>
+                  <option value="">{t("-- Chưa có lớp học nào --")}</option>
                 ) : (
                   classes.map((cls) => (
                     <option key={cls.classId} value={cls.classId}>
-                      {cls.className} ({cls.enrolledCount} học viên | Phòng: {cls.roomName})
+                      {cls.className} ({cls.enrolledCount}{' '}{t("học viên | Phòng:")}{' '}{cls.roomName})
                     </option>
                   ))
                 )}
@@ -252,14 +252,14 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
           {/* Conditional Input: Select Individual Student */}
           {targetType === 'INDIVIDUAL' && (
             <div className="space-y-1.5 animate-fade-in">
-              <label className="block text-slate-400 font-semibold">Chọn học viên nhận thông báo:</label>
+              <label className="block text-slate-400 font-semibold">{t("Chọn học viên nhận thông báo:")}</label>
               <select
                 value={selectedStudentId}
                 onChange={(e) => setSelectedStudentId(e.target.value)}
                 className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
               >
                 {students.length === 0 ? (
-                  <option value="">-- Chưa có học viên nào --</option>
+                  <option value="">{t("-- Chưa có học viên nào --")}</option>
                 ) : (
                   students.map((st) => (
                     <option key={st.userId} value={st.userId}>
@@ -274,30 +274,27 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
           {/* 2. Notification Category & Title */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
             <div className="space-y-1.5 sm:col-span-1">
-              <label className="block text-slate-300 font-bold uppercase tracking-wider text-[11px]">
-                Loại thông báo
-              </label>
+              <label className="block text-slate-300 font-bold uppercase tracking-wider text-[11px]">{t("Loại thông báo")}</label>
               <select
                 value={notificationType}
                 onChange={(e) => setNotificationType(e.target.value)}
                 className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
               >
-                <option value="COACH">💬 Lời nhắn HLV</option>
-                <option value="ANNOUNCEMENT">📢 Thông báo chung</option>
-                <option value="SCHEDULE">📅 Nhắc lịch học</option>
-                <option value="URGENT">⚠️ Thông báo khẩn</option>
+                <option value="COACH">{t("💬 Lời nhắn HLV")}</option>
+                <option value="ANNOUNCEMENT">{t("📢 Thông báo chung")}</option>
+                <option value="SCHEDULE">{t("📅 Nhắc lịch học")}</option>
+                <option value="URGENT">{t("⚠️ Thông báo khẩn")}</option>
               </select>
             </div>
 
             <div className="space-y-1.5 sm:col-span-2">
-              <label className="block text-slate-300 font-bold uppercase tracking-wider text-[11px]">
-                Tiêu đề thông báo <span className="text-red-400">*</span>
+              <label className="block text-slate-300 font-bold uppercase tracking-wider text-[11px]">{t("Tiêu đề thông báo")}<span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="VD: Thay đổi lịch tập tuần tới / Nhắc nhở bài tập..."
+                placeholder={t("VD: Thay đổi lịch tập tuần tới / Nhắc nhở bài tập...")}
                 className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -305,14 +302,13 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
 
           {/* 3. Notification Message Content */}
           <div className="space-y-1.5">
-            <label className="block text-slate-300 font-bold uppercase tracking-wider text-[11px]">
-              Nội dung thông báo <span className="text-red-400">*</span>
+            <label className="block text-slate-300 font-bold uppercase tracking-wider text-[11px]">{t("Nội dung thông báo")}<span className="text-red-400">*</span>
             </label>
             <textarea
               rows={4}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Nhập nội dung chi tiết muốn truyền tải tới học viên..."
+              placeholder={t("Nhập nội dung chi tiết muốn truyền tải tới học viên...")}
               className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl p-3.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none leading-relaxed"
             />
           </div>
@@ -321,7 +317,7 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
           <div className="p-3 rounded-xl bg-[#0e172a] border border-[#1b2b4f] flex items-center justify-between text-[11px] text-slate-400">
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-blue-400" />
-              <span>{getRecipientSummary()}</span>
+              <span>{t(getRecipientSummary())}</span>
             </div>
           </div>
 
@@ -331,9 +327,7 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
               type="button"
               onClick={onClose}
               className="px-4 py-2.5 rounded-xl bg-[#111d38] hover:bg-[#1a2947] text-slate-300 hover:text-white font-semibold text-xs transition-all cursor-pointer"
-            >
-              Hủy
-            </button>
+            >{t("Hủy")}</button>
 
             <button
               type="submit"
@@ -343,12 +337,12 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
               {sending ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Đang gửi...</span>
+                  <span>{t("Đang gửi...")}</span>
                 </>
               ) : (
                 <>
                   <Send className="w-4 h-4" />
-                  <span>Gửi thông báo</span>
+                  <span>{t("Gửi thông báo")}</span>
                 </>
               )}
             </button>

@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Send, X, Bot, User, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,8 +7,9 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 
 const NexusAiChat = ({ isOpen, onClose }) => {
+  useLanguage();
   const [messages, setMessages] = useState([
-    { id: 1, sender: 'bot', text: 'Hello! I am NEXUS AI. How can I assist you with your fitness journey today? (e.g. "I want to lose 5kg", "Which yoga class is good?")' }
+    { id: 1, sender: 'bot', text: t('Hello! I am NEXUS AI. How can I assist you with your fitness journey today? (e.g. "I want to lose 5kg", "Which yoga class is good?")') }
   ]);
   const [input, setInput] = useState('');
   const [isDragging, setIsDragging] = useState(false);
@@ -108,7 +110,7 @@ const NexusAiChat = ({ isOpen, onClose }) => {
 
       setMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'bot', text: rawText }]);
     } catch (err) {
-      setMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'bot', text: 'Sorry, the AI system is currently busy. Please try again later.' }]);
+      setMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'bot', text: t('Sorry, the AI system is currently busy. Please try again later.') }]);
     } finally {
       setIsLoading(false);
     }
@@ -141,18 +143,18 @@ const NexusAiChat = ({ isOpen, onClose }) => {
             <Bot className="w-4 h-4 text-[var(--text)]" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-[var(--text)] leading-tight">NEXUS AI</h3>
-            <p className="text-[10px] text-[var(--primary)]">Agentic Assistant</p>
+            <h3 className="text-sm font-bold text-[var(--text)] leading-tight">{t("NEXUS AI")}</h3>
+            <p className="text-[10px] text-[var(--primary)]">{t("Agentic Assistant")}</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={onClose} className="p-1.5 text-[var(--primary)] hover:text-[var(--text)] transition-colors" title="Minimize (Keep history)">
+          <button onClick={onClose} className="p-1.5 text-[var(--primary)] hover:text-[var(--text)] transition-colors" title={t("Minimize (Keep history)")}>
             <Minus className="w-4 h-4" />
           </button>
           <button onClick={() => {
-            setMessages([{ id: 1, sender: "bot", text: "Hello! I am NEXUS AI. How can I assist you with your fitness journey today? (e.g. \"I want to lose 5kg\", \"Which yoga class is good?\")" }]);
+            setMessages([{ id: 1, sender: "bot", text: t("Hello! I am NEXUS AI. How can I assist you with your fitness journey today? (e.g. \"I want to lose 5kg\", \"Which yoga class is good?\")") }]);
             onClose();
-          }} className="p-1.5 text-[var(--primary)] hover:text-[var(--rose)] transition-colors" title="Close (Clear history)">
+          }} className="p-1.5 text-[var(--primary)] hover:text-[var(--rose)] transition-colors" title={t("Close (Clear history)")}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -199,7 +201,7 @@ const NexusAiChat = ({ isOpen, onClose }) => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Ask anything..."
+            placeholder={t("Ask anything...")}
             disabled={isLoading}
             className="w-full bg-[var(--surface)] text-[var(--text)] text-sm rounded-xl pl-4 pr-12 py-3 border border-[var(--border)] focus:border-[var(--primary)] focus:outline-none transition-colors placeholder-[var(--text-muted)] disabled:opacity-50"
           />
@@ -212,7 +214,7 @@ const NexusAiChat = ({ isOpen, onClose }) => {
           </button>
         </div>
         <div className="text-center mt-2">
-          <span className="text-[9px] text-[var(--text-muted)]">NEXUS AI can make mistakes. Verify before buying.</span>
+          <span className="text-[9px] text-[var(--text-muted)]">{t("NEXUS AI can make mistakes. Verify before buying.")}</span>
         </div>
             </div>
           </motion.div>

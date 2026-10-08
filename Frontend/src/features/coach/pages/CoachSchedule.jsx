@@ -1,3 +1,5 @@
+import { locale } from '../../../i18n/languageStore.js';
+import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
@@ -8,6 +10,7 @@ import {
 import SendNotificationModal from '../components/SendNotificationModal';
 
 const CoachSchedule = () => {
+  useLanguage();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [schedules, setSchedules] = useState([]);
@@ -71,10 +74,10 @@ const CoachSchedule = () => {
     today.setHours(0, 0, 0, 0);
 
     if (sessionDate > today) {
-      return `Chưa đến ngày học (${sessionDate.toLocaleDateString('vi-VN')}). Điểm danh chỉ được phép thực hiện vào đúng ngày học.`;
+      return `Chưa đến ngày học (${sessionDate.toLocaleDateString(locale())}). Điểm danh chỉ được phép thực hiện vào đúng ngày học.`;
     }
     if (sessionDate < today) {
-      return `Buổi học đã trôi qua (${sessionDate.toLocaleDateString('vi-VN')}). Không thể điểm danh hoặc thay đổi điểm danh sau khi ngày học đã trôi qua.`;
+      return `Buổi học đã trôi qua (${sessionDate.toLocaleDateString(locale())}). Không thể điểm danh hoặc thay đổi điểm danh sau khi ngày học đã trôi qua.`;
     }
     return null;
   };
@@ -236,10 +239,8 @@ const CoachSchedule = () => {
       <div className="flex flex-col gap-2 mb-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
-            <h1 className="text-3xl font-bold text-[var(--text)] tracking-tight">Coach Schedule & Trainee Enrolment</h1>
-            <p className="text-sm text-[var(--text-muted)] max-w-3xl">
-              Select a date on the calendar grid to inspect scheduled sessions, then click to view registered trainees and mark attendance for each class.
-            </p>
+            <h1 className="text-3xl font-bold text-[var(--text)] tracking-tight">{t("Coach Schedule & Trainee Enrolment")}</h1>
+            <p className="text-sm text-[var(--text-muted)] max-w-3xl">{t("Select a date on the calendar grid to inspect scheduled sessions, then click to view registered trainees and mark attendance for each class.")}</p>
           </div>
         </div>
 
@@ -248,12 +249,12 @@ const CoachSchedule = () => {
           <div className="flex items-center gap-3 overflow-x-auto pb-1 xl:pb-0 scrollbar-none">
             <button className="px-4 py-2 rounded-lg bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold text-xs flex items-center gap-1.5 shrink-0 transition-all">
               <BookOpen className="w-3.5 h-3.5" />
-              <span>Total Classes</span>
+              <span>{t("Total Classes")}</span>
               <span className="px-1.5 py-0.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-[10px]">{totalSchedules}</span>
             </button>
             <button className="px-4 py-2 rounded-lg bg-[var(--success-soft)] border border-[var(--success-soft)] text-[var(--success-text)] font-semibold text-xs flex items-center gap-1.5 shrink-0 transition-all">
               <Users className="w-3.5 h-3.5" />
-              <span>Total Trainees Enrolled</span>
+              <span>{t("Total Trainees Enrolled")}</span>
               <span className="px-1.5 py-0.5 rounded-full bg-[var(--success-soft)] text-[var(--success-text)] font-bold text-[10px]">{totalEnrolledStudents}</span>
             </button>
           </div>
@@ -264,15 +265,13 @@ const CoachSchedule = () => {
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <span className="font-semibold text-sm px-4 text-[var(--text)]">
-                {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                {currentDate.toLocaleDateString(locale(), { month: 'long', year: 'numeric' })}
               </span>
               <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-all">
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
-            <button onClick={goToToday} className="px-4 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:text-[var(--text)] hover:border-[var(--border)] font-semibold text-xs transition-all">
-              Today
-            </button>
+            <button onClick={goToToday} className="px-4 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:text-[var(--text)] hover:border-[var(--border)] font-semibold text-xs transition-all">{t("Today")}</button>
           </div>
         </div>
       </div>
@@ -284,13 +283,13 @@ const CoachSchedule = () => {
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 shadow-[var(--shadow)] flex flex-col min-h-[600px]">
             {/* Days Header */}
             <div className="grid grid-cols-7 gap-1 pb-3 mb-2 text-center font-bold text-xs text-[var(--text-muted)] tracking-wider uppercase border-b border-[var(--border)]">
-              <div className="py-1">Mon</div>
-              <div className="py-1">Tue</div>
-              <div className="py-1">Wed</div>
-              <div className="py-1">Thu</div>
-              <div className="py-1">Fri</div>
-              <div className="py-1 text-[var(--success-text)]">Sat</div>
-              <div className="py-1 text-[var(--success-text)]">Sun</div>
+              <div className="py-1">{t("Mon")}</div>
+              <div className="py-1">{t("Tue")}</div>
+              <div className="py-1">{t("Wed")}</div>
+              <div className="py-1">{t("Thu")}</div>
+              <div className="py-1">{t("Fri")}</div>
+              <div className="py-1 text-[var(--success-text)]">{t("Sat")}</div>
+              <div className="py-1 text-[var(--success-text)]">{t("Sun")}</div>
             </div>
 
             {/* Grid */}
@@ -326,7 +325,7 @@ const CoachSchedule = () => {
 
                     <div className="flex flex-col gap-1 mt-1 overflow-y-auto scrollbar-none">
                       {daySchedules.map((s, sIdx) => {
-                        const time = new Date(s.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+                        const time = new Date(s.startTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
                         return (
                           <div key={sIdx} className="w-full text-left truncate px-1.5 py-1 rounded bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] text-[9px] font-semibold">
                             {time} - {s.className}
@@ -346,30 +345,29 @@ const CoachSchedule = () => {
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 shadow-[var(--shadow)] flex flex-col sticky top-28">
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-[var(--border)]">
               <div className="flex flex-col">
-                <span className="font-bold text-[10px] text-[var(--text-muted)] uppercase tracking-widest">Teaching Agenda</span>
+                <span className="font-bold text-[10px] text-[var(--text-muted)] uppercase tracking-widest">{t("Teaching Agenda")}</span>
                 <span className="font-bold text-lg text-[var(--text)]">
-                  {selectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  {selectedDate.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' })}
                 </span>
               </div>
               <span className="px-2.5 py-1 rounded bg-[var(--surface)] border border-[var(--border)] text-[var(--primary)] text-xs font-bold">
-                {selectedDateSchedules.length} Sessions
-              </span>
+                {selectedDateSchedules.length}{' '}{t("Sessions")}</span>
             </div>
 
             <div className="flex flex-col gap-4 max-h-[550px] overflow-y-auto scrollbar-none pr-1">
               {loading ? (
-                <div className="text-center py-10 text-[var(--text-muted)]">Loading class schedules...</div>
+                <div className="text-center py-10 text-[var(--text-muted)]">{t("Loading class schedules...")}</div>
               ) : selectedDateSchedules.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 gap-2">
                   <div className="w-12 h-12 rounded-full bg-[var(--surface)] flex items-center justify-center text-[var(--text-muted)]">
                     <Clock className="w-6 h-6" />
                   </div>
-                  <span className="text-sm text-[var(--text-muted)] font-medium">No teaching sessions on this date</span>
+                  <span className="text-sm text-[var(--text-muted)] font-medium">{t("No teaching sessions on this date")}</span>
                 </div>
               ) : (
                 selectedDateSchedules.map((s, idx) => {
-                  const startTime = new Date(s.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
-                  const endTime = new Date(s.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+                  const startTime = new Date(s.startTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
+                  const endTime = new Date(s.endTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
                   const isExpanded = expandedScheduleId === s.scheduleId;
                   const canMark = canTakeAttendance(s.startTime);
 
@@ -381,7 +379,7 @@ const CoachSchedule = () => {
                           <span>{startTime} - {endTime}</span>
                         </div>
                         <span className="px-2 py-0.5 rounded bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] text-[10px] font-bold">
-                          {s.status}
+                          {codeLabel(s.status)}
                         </span>
                       </div>
 
@@ -392,13 +390,11 @@ const CoachSchedule = () => {
                       <div className="grid grid-cols-1 gap-2 text-xs text-[var(--text-muted)] mt-1">
                         <div className="flex items-center gap-2">
                           <MapPin className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                          <span className="truncate">Room: <strong className="text-[var(--text)]">{s.roomName}</strong></span>
+                          <span className="truncate">{t("Room:")}<strong className="text-[var(--text)]">{s.roomName}</strong></span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Users className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                          <span className="font-medium text-[var(--text)]">
-                            Enrolled: <strong className="text-[var(--success-text)]">{s.enrolledCount}</strong> / {s.maxSlots} Trainees
-                          </span>
+                          <span className="font-medium text-[var(--text)]">{t("Enrolled:")}<strong className="text-[var(--success-text)]">{s.enrolledCount}</strong> / {s.maxSlots}{' '}{t("Trainees")}</span>
                         </div>
                       </div>
 
@@ -410,7 +406,7 @@ const CoachSchedule = () => {
                             className="py-2 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-[var(--text)] font-semibold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
                           >
                             <Users className="w-3.5 h-3.5" />
-                            <span>Học viên ({s.enrolledCount})</span>
+                            <span>{t("Học viên (")}{' '}{s.enrolledCount})</span>
                           </button>
 
                           <button
@@ -418,7 +414,7 @@ const CoachSchedule = () => {
                             className="py-2 px-3 rounded-xl bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 hover:text-[var(--text)] font-semibold text-xs border border-blue-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                           >
                             <Bell className="w-3.5 h-3.5 text-[var(--primary)]" />
-                            <span>Báo tin lớp</span>
+                            <span>{t("Báo tin lớp")}</span>
                           </button>
                         </div>
 
@@ -426,7 +422,7 @@ const CoachSchedule = () => {
                           onClick={() => toggleExpandSchedule(s.scheduleId)}
                           className="w-full py-1.5 px-3 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text)] text-[11px] font-medium flex items-center justify-between transition-colors"
                         >
-                          <span>Toggle quick roster list below</span>
+                          <span>{t("Toggle quick roster list below")}</span>
                           {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                         </button>
                       </div>
@@ -436,7 +432,7 @@ const CoachSchedule = () => {
                       {isExpanded && (
                         <div className="mt-2 space-y-2 max-h-48 overflow-y-auto scrollbar-none pr-1">
                           {(!s.enrolledStudents || s.enrolledStudents.length === 0) ? (
-                            <p className="text-[11px] text-[var(--text-muted)] italic py-2 text-center">No trainees registered for this session yet</p>
+                            <p className="text-[11px] text-[var(--text-muted)] italic py-2 text-center">{t("No trainees registered for this session yet")}</p>
                           ) : (
                             s.enrolledStudents.map((st, stIdx) => (
                               <div key={stIdx} className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between text-xs">
@@ -452,12 +448,12 @@ const CoachSchedule = () => {
                                   </div>
                                 </div>
                                 <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${st.attendanceStatus === 'PRESENT'
-                                    ? 'bg-[var(--success-soft)] text-[var(--success-text)] border border-[var(--success-soft)]'
+                                    ? t('bg-[var(--success-soft)] text-[var(--success-text)] border border-[var(--success-soft)]')
                                     : st.attendanceStatus === 'ABSENT'
-                                      ? 'bg-[var(--rose-soft)] text-[var(--rose)] border border-[var(--rose-soft)]'
-                                      : 'bg-[var(--warning-soft)] text-[var(--warning-text)] border border-[var(--warning-soft)]'
+                                      ? t('bg-[var(--rose-soft)] text-[var(--rose)] border border-[var(--rose-soft)]')
+                                      : t('bg-[var(--warning-soft)] text-[var(--warning-text)] border border-[var(--warning-soft)]')
                                   }`}>
-                                  {st.attendanceStatus || 'NOT_YET'}
+                                  {t(st.attendanceStatus || 'NOT_YET')}
                                 </span>
                               </div>
                             ))
@@ -483,7 +479,7 @@ const CoachSchedule = () => {
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 text-[var(--primary)] text-xs font-semibold">
                   <Sparkles className="w-4 h-4" />
-                  <span>Class Trainee Roster & Attendance</span>
+                  <span>{t("Class Trainee Roster & Attendance")}</span>
                 </div>
                 <h3 className="text-xl font-bold text-[var(--text)] leading-snug">
                   {activeModalSchedule.className}
@@ -491,7 +487,7 @@ const CoachSchedule = () => {
                 <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text)] mt-1">
                   <span className="flex items-center gap-1 text-[var(--text-muted)]">
                     <Clock className="w-3.5 h-3.5 text-[var(--primary)]" />
-                    {new Date(activeModalSchedule.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })} - {new Date(activeModalSchedule.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                    {new Date(activeModalSchedule.startTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false })} - {new Date(activeModalSchedule.endTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false })}
                   </span>
                   <span className="text-[var(--text-muted)]">•</span>
                   <span className="flex items-center gap-1 text-[var(--text-muted)]">
@@ -527,15 +523,13 @@ const CoachSchedule = () => {
                   type="text"
                   value={searchModalQuery}
                   onChange={(e) => setSearchModalQuery(e.target.value)}
-                  placeholder="Search trainees by name, email, phone..."
+                  placeholder={t("Search trainees by name, email, phone...")}
                   className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl pl-9 pr-4 py-2 text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition-colors"
                 />
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1.5 rounded-lg bg-[var(--success-soft)] border border-[var(--success-soft)] text-[var(--success-text)] text-xs font-bold">
-                  Capacity: {activeModalSchedule.enrolledCount} / {activeModalSchedule.maxSlots} Trainees
-                </span>
+                <span className="px-3 py-1.5 rounded-lg bg-[var(--success-soft)] border border-[var(--success-soft)] text-[var(--success-text)] text-xs font-bold">{t("Capacity:")}{' '}{activeModalSchedule.enrolledCount} / {activeModalSchedule.maxSlots}{' '}{t("Trainees")}</span>
               </div>
             </div>
 
@@ -544,12 +538,12 @@ const CoachSchedule = () => {
               {modalTrainees.length === 0 ? (
                 <div className="py-12 flex flex-col items-center justify-center text-center">
                   <Users className="w-12 h-12 text-[var(--text-muted)] mb-2" />
-                  <p className="text-sm font-semibold text-[var(--text)]">No trainees found</p>
-                  <p className="text-xs text-[var(--text-muted)] mt-1">No registered trainees or search query doesn't match</p>
+                  <p className="text-sm font-semibold text-[var(--text)]">{t("No trainees found")}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">{t("No registered trainees or search query doesn't match")}</p>
                 </div>
               ) : (
                 modalTrainees.map((st, stIdx) => {
-                  const initials = st.fullName ? st.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'TR';
+                  const initials = st.fullName ? st.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : t('TR');
                   const key = st.bookingId || st.userId;
                   const currentStatus = attendanceMap[key] || 'NOT_YET';
                   const isAllowed = canTakeAttendance(activeModalSchedule.startTime);
@@ -567,7 +561,7 @@ const CoachSchedule = () => {
                           <div className="flex items-center gap-2">
                             <h5 className="font-bold text-[var(--text)] text-sm">{st.fullName}</h5>
                             <span className="px-2 py-0.5 rounded bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] text-[10px] font-semibold">
-                              {st.bookingStatus || 'CONFIRMED'}
+                              {t(st.bookingStatus || 'CONFIRMED')}
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
@@ -594,39 +588,33 @@ const CoachSchedule = () => {
                           disabled={!isAllowed}
                           onClick={() => handleStatusChange(key, 'NOT_YET')}
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${currentStatus === 'NOT_YET'
-                              ? 'bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--border)] shadow'
-                              : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
-                            } ${!isAllowed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                          title={!isAllowed ? 'Chưa đến ngày học' : 'Đặt trạng thái Chưa điểm danh'}
-                        >
-                          NOT YET
-                        </button>
+                              ? t('bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--border)] shadow')
+                              : t('text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]')
+                            } ${!isAllowed ? t('opacity-50 cursor-not-allowed') : t('cursor-pointer')}`}
+                          title={t(!isAllowed ? t('Chưa đến ngày học') : t('Đặt trạng thái Chưa điểm danh'))}
+                        >{t("NOT YET")}</button>
                         <button
                           type="button"
                           disabled={!isAllowed}
                           onClick={() => handleStatusChange(key, 'PRESENT')}
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${currentStatus === 'PRESENT'
-                              ? 'bg-[var(--success-hover)] text-[color:var(--on-primary)] border border-[var(--success-soft)] shadow shadow-[var(--shadow)]'
-                              : 'text-[var(--text-muted)] hover:text-[var(--success-text)] hover:bg-[var(--success-soft)]'
-                            } ${!isAllowed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                          title={!isAllowed ? 'Chưa đến ngày học' : 'Điểm danh Có Mặt'}
+                              ? t('bg-[var(--success-hover)] text-[color:var(--on-primary)] border border-[var(--success-soft)] shadow shadow-[var(--shadow)]')
+                              : t('text-[var(--text-muted)] hover:text-[var(--success-text)] hover:bg-[var(--success-soft)]')
+                            } ${!isAllowed ? t('opacity-50 cursor-not-allowed') : t('cursor-pointer')}`}
+                          title={t(!isAllowed ? t('Chưa đến ngày học') : t('Điểm danh Có Mặt'))}
                         >
-                          <Check className="w-3.5 h-3.5" />
-                          Present
-                        </button>
+                          <Check className="w-3.5 h-3.5" />{t("Present")}</button>
                         <button
                           type="button"
                           disabled={!isAllowed}
                           onClick={() => handleStatusChange(key, 'ABSENT')}
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${currentStatus === 'ABSENT'
-                              ? 'bg-[var(--rose)] text-[color:var(--on-primary)] border border-[var(--rose-soft)] shadow shadow-[var(--shadow)]'
-                              : 'text-[var(--text-muted)] hover:text-[var(--rose)] hover:bg-[var(--rose-soft)]'
-                            } ${!isAllowed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                          title={!isAllowed ? 'Chưa đến ngày học' : 'Điểm danh Vắng Mặt'}
+                              ? t('bg-[var(--rose)] text-[color:var(--on-primary)] border border-[var(--rose-soft)] shadow shadow-[var(--shadow)]')
+                              : t('text-[var(--text-muted)] hover:text-[var(--rose)] hover:bg-[var(--rose-soft)]')
+                            } ${!isAllowed ? t('opacity-50 cursor-not-allowed') : t('cursor-pointer')}`}
+                          title={t(!isAllowed ? t('Chưa đến ngày học') : t('Điểm danh Vắng Mặt'))}
                         >
-                          <X className="w-3.5 h-3.5" />
-                          Absent
-                        </button>
+                          <X className="w-3.5 h-3.5" />{t("Absent")}</button>
                       </div>
                     </div>
                   );
@@ -647,7 +635,7 @@ const CoachSchedule = () => {
                   className="px-4 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 font-semibold text-xs border border-blue-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <Bell className="w-3.5 h-3.5 text-[var(--primary)]" />
-                  <span>Gửi thông báo cho lớp này</span>
+                  <span>{t("Gửi thông báo cho lớp này")}</span>
                 </button>
                 {saveSuccessMsg && <span className="text-[var(--success-text)] text-xs font-semibold">{saveSuccessMsg}</span>}
                 {saveErrorMsg && <span className="text-[var(--danger-text)] text-xs font-semibold">{saveErrorMsg}</span>}
@@ -657,9 +645,7 @@ const CoachSchedule = () => {
                 <button
                   onClick={() => setActiveModalSchedule(null)}
                   className="px-4 py-2 rounded-xl bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text)] hover:text-[var(--text)] font-semibold text-xs transition-all cursor-pointer"
-                >
-                  Close
-                </button>
+                >{t("Close")}</button>
                 <button
                   disabled={!canTakeAttendance(activeModalSchedule.startTime) || savingAttendance}
                   onClick={handleSaveAttendance}
@@ -669,7 +655,7 @@ const CoachSchedule = () => {
                     }`}
                 >
                   <Save className="w-4 h-4" />
-                  <span>{savingAttendance ? 'Saving...' : 'Save Attendance'}</span>
+                  <span>{t(savingAttendance ? t('Saving...') : t('Save Attendance'))}</span>
                 </button>
               </div>
             </div>

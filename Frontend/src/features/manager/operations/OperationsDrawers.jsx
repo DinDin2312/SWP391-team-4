@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import { useEffect, useId, useRef, useState } from "react";
 import { AlertTriangle, CalendarDays, MapPin, Users, X } from "lucide-react";
 import managerService from "../services/managerService";
@@ -67,6 +68,7 @@ function useOperationDialog(onClose, busy) {
 }
 
 function Drawer({ title, subtitle, onClose, busy = false, children }) {
+  useLanguage();
   const dialog = useOperationDialog(onClose, busy);
   const id = useId();
   return (
@@ -86,12 +88,12 @@ function Drawer({ title, subtitle, onClose, busy = false, children }) {
       >
         <header>
           <div>
-            <h2 id={id}>{title}</h2>
+            <h2 id={id}>{t(title)}</h2>
             {subtitle && <p>{subtitle}</p>}
           </div>
           <button
             className="manager-icon-button"
-            aria-label="Close drawer"
+            aria-label={t("Close drawer")}
             disabled={busy}
             onClick={onClose}
           >
@@ -105,10 +107,11 @@ function Drawer({ title, subtitle, onClose, busy = false, children }) {
 }
 
 function Field({ label, name, error, children, help }) {
+  useLanguage();
   const id = useId();
   return (
     <div className="ops-field">
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{t(label)}</label>
       {children(id, {
         name,
         "aria-invalid": Boolean(error),
@@ -202,6 +205,7 @@ function validate(type, form) {
 }
 
 export function OperationEditor({ config, data, onClose, onSaved }) {
+  useLanguage();
   const { type } = config;
   const [form, setForm] = useState(() => ({
     ...initialForm(type, config.item),
@@ -235,7 +239,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
       fullName: `${config.item.coachName} (inactive; reassign before saving)`,
     });
   const input = (key, label, attrs = {}, help) => (
-    <Field key={key} name={key} label={label} error={errors[key]} help={help}>
+    <Field key={key} name={key} label={t(label)} error={errors[key]} help={help}>
       {(id, aria) => (
         <input
           id={id}
@@ -248,7 +252,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
     </Field>
   );
   const select = (key, label, options, disabled = false, help) => (
-    <Field key={key} name={key} label={label} error={errors[key]} help={help}>
+    <Field key={key} name={key} label={t(label)} error={errors[key]} help={help}>
       {(id, aria) => (
         <select
           id={id}
@@ -257,7 +261,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
           disabled={disabled}
           onChange={(event) => set(key, event.target.value)}
         >
-          <option value="">Select {label.toLowerCase()}</option>
+          <option value="">{t("Select")}{' '}{label.toLowerCase()}</option>
           {options.map(([value, name]) => (
             <option key={value} value={value}>
               {name}
@@ -307,11 +311,11 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
   };
   return (
     <Drawer
-      title={title}
+      title={t(title)}
       subtitle={
-        editing
+        t(editing
           ? "Existing bookings and resource conflicts are checked when saving."
-          : "Use the existing center resources."
+          : "Use the existing center resources.")
       }
       onClose={onClose}
       busy={saving}
@@ -320,7 +324,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
         <div className="ops-drawer-body">
           {error && (
             <div className="manager-alert" role="alert">
-              {error}
+              {t(error)}
             </div>
           )}
           <fieldset disabled={saving}>
@@ -329,7 +333,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                 {input("subjectName", "Subject name", { maxLength: 255 })}
                 <Field
                   name="description"
-                  label="Description"
+                  label={t("Description")}
                   error={errors.description}
                 >
                   {(id, aria) => (
@@ -402,10 +406,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                   "Cancel all future sessions before deactivating a class.",
                 )}
                 <p className="ops-warning">
-                  <AlertTriangle size={18} />
-                  Changing a class’s room, coach or capacity affects all its
-                  sessions.
-                </p>
+                  <AlertTriangle size={18} />{t("Changing a class’s room, coach or capacity affects all its sessions.")}</p>
               </>
             )}
             {(type === "schedule" || type === "series") && (
@@ -423,10 +424,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                     : "Room and coach are inherited from the class.",
                 )}
                 {!editing && !candidates.length && (
-                  <p className="ops-warning">
-                    No active class matches. Create or activate a class with the
-                    required resource first.
-                  </p>
+                  <p className="ops-warning">{t("No active class matches. Create or activate a class with the required resource first.")}</p>
                 )}
                 {selectedClass && (
                   <div className="ops-assignment">
@@ -439,9 +437,8 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                       {selectedClass.roomName}
                     </span>
                     <span>
-                      {selectedClass.maxSlots} seats ·{" "}
-                      {formatMoney(selectedClass.price)} / class
-                    </span>
+                      {selectedClass.maxSlots}{' '}{t("seats ·")}{' '}{t(" ")}
+                      {formatMoney(selectedClass.price)}{' '}{t("/ class")}</span>
                   </div>
                 )}
                 {input("startTime", "Start time", {
@@ -453,10 +450,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                   step: 60,
                 })}
                 {editing && (
-                  <p className="ops-note">
-                    Moving the session sends a notification to its booked
-                    members. The backend also checks their timetable.
-                  </p>
+                  <p className="ops-note">{t("Moving the session sends a notification to its booked members. The backend also checks their timetable.")}</p>
                 )}
                 {type === "series" && (
                   <>
@@ -472,8 +466,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                       step: 1,
                     })}
                     {form.startTime && (
-                      <p className="ops-note">
-                        Same weekday and time. Last start date:{" "}
+                      <p className="ops-note">{t("Same weekday and time. Last start date:")}{' '}{t(" ")}
                         {formatDate(
                           addDays(
                             sessionDay(form.startTime),
@@ -486,11 +479,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                       </p>
                     )}
                     <p className="ops-warning">
-                      <AlertTriangle size={18} />
-                      Existing class members are not automatically booked into
-                      newly created sessions. One conflict rejects the entire
-                      series.
-                    </p>
+                      <AlertTriangle size={18} />{t("Existing class members are not automatically booked into newly created sessions. One conflict rejects the entire series.")}</p>
                   </>
                 )}
               </>
@@ -503,9 +492,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
             type="button"
             onClick={onClose}
             disabled={saving}
-          >
-            Cancel
-          </button>
+          >{t("Cancel")}</button>
           <button
             className="manager-primary"
             disabled={
@@ -515,11 +502,11 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                 !candidates.length)
             }
           >
-            {saving
-              ? "Saving…"
+            {t(saving
+              ? t("Saving…")
               : type === "series"
-                ? "Create series"
-                : "Save changes"}
+                ? t("Create series")
+                : t("Save changes"))}
           </button>
         </footer>
       </form>
@@ -528,6 +515,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
 }
 
 export function SessionDrawer({ schedule, onClose, edit, confirm }) {
+  useLanguage();
   const [rows, setRows] = useState(null);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
@@ -555,8 +543,8 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
   };
   return (
     <Drawer
-      title={schedule.className}
-      subtitle={`Session #${schedule.scheduleId}`}
+      title={t(schedule.className)}
+      subtitle={t("Session #{0}",[schedule.scheduleId])}
       onClose={onClose}
     >
       <div className="ops-drawer-body">
@@ -564,7 +552,7 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
         <div className="ops-session-facts">
           <p>
             <CalendarDays size={18} />
-            {formatDateTime(schedule.startTime)} →{" "}
+            {formatDateTime(schedule.startTime)} →{t(" ")}
             {formatDateTime(schedule.endTime)}
           </p>
           <p>
@@ -582,58 +570,45 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
             className="manager-secondary"
             disabled={!scheduled}
             onClick={() => edit(schedule)}
-          >
-            Change time
-          </button>
+          >{t("Change time")}</button>
           <button
             className="manager-secondary"
             disabled={!canComplete}
             title={
-              canComplete
+              t(canComplete
                 ? "Mark this ended session completed"
-                : "Only scheduled sessions that have ended can be completed."
+                : "Only scheduled sessions that have ended can be completed.")
             }
             onClick={() => confirm("complete", schedule)}
-          >
-            Complete
-          </button>
+          >{t("Complete")}</button>
           <button
             className="ops-text-danger"
             disabled={!scheduled}
             onClick={() => confirm("cancel", schedule)}
-          >
-            Cancel session
-          </button>
+          >{t("Cancel session")}</button>
         </div>
         {!scheduled && (
-          <p className="ops-note">
-            Completed and cancelled sessions cannot be edited or reopened.
-          </p>
+          <p className="ops-note">{t("Completed and cancelled sessions cannot be edited or reopened.")}</p>
         )}
-        <h3>Roster · read only</h3>
-        <p className="ops-note">
-          Only the assigned coach can record attendance. Pending bookings hold a
-          seat.
-        </p>
+        <h3>{t("Roster · read only")}</h3>
+        <p className="ops-note">{t("Only the assigned coach can record attendance. Pending bookings hold a seat.")}</p>
         {error ? (
           <div className="manager-alert" role="alert">
-            <span>{error}</span>
+            <span>{t(error)}</span>
             <button
               onClick={() => {
                 setError("");
                 setRows(null);
                 setRetry((value) => value + 1);
               }}
-            >
-              Retry
-            </button>
+            >{t("Retry")}</button>
           </div>
         ) : !rows ? (
-          <p role="status">Loading roster…</p>
+          <p role="status">{t("Loading roster…")}</p>
         ) : !rows.length ? (
           <div className="ops-empty">
             <Users size={24} />
-            <p>No bookings for this session.</p>
+            <p>{t("No bookings for this session.")}</p>
           </div>
         ) : (
           <div className="ops-roster-list">
@@ -641,17 +616,17 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
               <article key={row.bookingId}>
                 <strong>{row.fullName}</strong>
                 <span>{row.email}</span>
-                <span>{row.phone || "No phone number"}</span>
+                <span>{t(row.phone || "No phone number")}</span>
                 <div>
                   <span>
-                    {row.status === "CONFIRMED"
-                      ? "Confirmed"
+                    {t(row.status === "CONFIRMED"
+                      ? t("Confirmed")
                       : row.status === "PENDING"
-                        ? "Pending"
-                        : "Cancelled"}
+                        ? t("Pending")
+                        : t("Cancelled"))}
                   </span>
                   <span>
-                    {attendance[row.attendanceStatus] || "Not marked"}
+                    {t(attendance[row.attendanceStatus] || "Not marked")}
                   </span>
                 </div>
               </article>
@@ -660,15 +635,14 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
         )}
       </div>
       <footer>
-        <button className="manager-secondary" onClick={onClose}>
-          Close
-        </button>
+        <button className="manager-secondary" onClick={onClose}>{t("Close")}</button>
       </footer>
     </Drawer>
   );
 }
 
 export function OperationConfirmation({ config, onClose, onSaved }) {
+  useLanguage();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const dialog = useOperationDialog(onClose, saving);
@@ -727,18 +701,18 @@ export function OperationConfirmation({ config, onClose, onSaved }) {
         tabIndex={-1}
       >
         <AlertTriangle size={26} />
-        <h2 id={id}>{action}?</h2>
+        <h2 id={id}>{t(action)}?</h2>
         <strong>{config.item.className}</strong>
         <p>
-          {cancel
-            ? "All bookings for this session will be cancelled and members will receive a notification. The session cannot be reopened. This action does not issue a refund; contact reception about tuition."
+          {t(cancel
+            ? t("All bookings for this session will be cancelled and members will receive a notification. The session cannot be reopened. This action does not issue a refund; contact reception about tuition.")
             : deactivate
-              ? "The backend will reject this change if the class has any future sessions. Cancel them first. Room and coach assignments are kept."
-              : "This ended session will be marked completed and can no longer be edited."}
+              ? t("The backend will reject this change if the class has any future sessions. Cancel them first. Room and coach assignments are kept.")
+              : t("This ended session will be marked completed and can no longer be edited."))}
         </p>
         {error && (
           <div className="manager-alert" role="alert">
-            {error}
+            {t(error)}
           </div>
         )}
         <footer>
@@ -746,9 +720,7 @@ export function OperationConfirmation({ config, onClose, onSaved }) {
             className="manager-secondary"
             disabled={saving}
             onClick={onClose}
-          >
-            Back
-          </button>
+          >{t("Back")}</button>
           <button
             className={
               cancel || deactivate ? "ops-danger-button" : "manager-primary"
@@ -756,7 +728,7 @@ export function OperationConfirmation({ config, onClose, onSaved }) {
             disabled={saving}
             onClick={save}
           >
-            {saving ? "Saving…" : action}
+            {t(saving ? t("Saving…") : action)}
           </button>
         </footer>
       </section>

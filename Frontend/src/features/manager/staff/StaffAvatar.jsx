@@ -1,8 +1,10 @@
+import { useLanguage } from '../../../i18n/useLanguage';
 import { UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { staffAvatarTone, staffAvatarUrl, staffInitials } from './staffData';
 
 function StaffAvatar({ user, source, className = '' }) {
+  useLanguage();
   const imageSource = source || staffAvatarUrl(user?.avatarPath);
   const [failedSource, setFailedSource] = useState('');
   const imageAvailable = Boolean(imageSource) && failedSource !== imageSource;

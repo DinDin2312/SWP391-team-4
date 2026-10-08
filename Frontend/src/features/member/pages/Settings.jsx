@@ -1,7 +1,9 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const Settings = () => {
+  useLanguage();
   const [profile, setProfile] = useState({
     fullName: '',
     email: '',
@@ -109,9 +111,7 @@ const Settings = () => {
     return (
       <div className="flex items-center justify-center w-full h-64">
         <div className="text-on-surface-variant flex items-center gap-2 font-semibold">
-          <span className="material-symbols-outlined animate-spin">sync</span>
-          Loading Profile...
-        </div>
+          <span className="material-symbols-outlined animate-spin">sync</span>{t("Loading Profile...")}</div>
       </div>
     );
   }
@@ -122,12 +122,12 @@ const Settings = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md pb-space-lg">
         <div className="flex flex-col">
           <div className="flex items-center gap-space-xs mb-1">
-            <span className="font-label-sm text-[11px] text-tertiary uppercase tracking-widest font-bold">System Configuration</span>
+            <span className="font-label-sm text-[11px] text-tertiary uppercase tracking-widest font-bold">{t("System Configuration")}</span>
             <span className="w-1.5 h-1.5 rounded-full bg-surface-container-highest"></span>
-            <span className="font-label-sm text-[11px] text-on-surface-variant font-bold">UID: {profile.userId ? `NX-0${profile.userId}-VN` : 'NX-88071-VN'}</span>
+            <span className="font-label-sm text-[11px] text-on-surface-variant font-bold">{t("UID:")}{' '}{t(profile.userId ? `NX-0${profile.userId}-VN` : t('NX-88071-VN'))}</span>
           </div>
-          <h1 className="text-3xl lg:text-4xl text-on-surface tracking-tight font-extrabold mt-2">Personal Profile</h1>
-          <p className="text-sm text-on-surface-variant mt-1">Manage athlete profile and personal details.</p>
+          <h1 className="text-3xl lg:text-4xl text-on-surface tracking-tight font-extrabold mt-2">{t("Personal Profile")}</h1>
+          <p className="text-sm text-on-surface-variant mt-1">{t("Manage athlete profile and personal details.")}</p>
         </div>
       </div>
 
@@ -135,7 +135,7 @@ const Settings = () => {
       <div className="w-full bg-surface-container-lowest rounded-xl p-1.5 mb-space-lg shadow-[var(--shadow)] flex items-center gap-1 overflow-x-auto">
         <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap bg-primary-container text-on-primary-container font-semibold shadow-[var(--shadow)]">
           <span className="material-symbols-outlined text-[18px]">badge</span>
-          <span>Personal Profile</span>
+          <span>{t("Personal Profile")}</span>
         </button>
       </div>
 
@@ -148,33 +148,31 @@ const Settings = () => {
 
             <div className="relative mb-space-md">
               <div className="w-24 h-24 rounded-full bg-secondary-container text-on-secondary-container text-3xl flex items-center justify-center font-bold shadow-[var(--shadow)]">
-                {profile.fullName ? profile.fullName.substring(0, 2).toUpperCase() : 'U'}
+                {profile.fullName ? profile.fullName.substring(0, 2).toUpperCase() : t('U')}
               </div>
-              <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center hover:bg-inverse-primary hover:text-surface transition-all shadow-[var(--shadow)]" title="Upload new photo">
+              <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center hover:bg-inverse-primary hover:text-surface transition-all shadow-[var(--shadow)]" title={t("Upload new photo")}>
                 <span className="material-symbols-outlined text-[16px]">photo_camera</span>
               </button>
             </div>
 
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-tertiary/15 text-tertiary text-[10px] mb-2 font-bold tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
-              <span>VERIFIED ATHLETE</span>
+              <span>{t("VERIFIED ATHLETE")}</span>
             </div>
 
-            <h3 className="text-xl text-on-surface font-bold">{profile.fullName || 'User'}</h3>
+            <h3 className="text-xl text-on-surface font-bold">{t(profile.fullName || 'User')}</h3>
             <p className="text-xs text-on-surface-variant mb-space-md mt-1">{profile.email}</p>
 
             {/* Mini Telemetry Strip */}
             <div className="w-full grid grid-cols-2 gap-2 p-3 rounded-lg bg-surface-container text-left border border-surface-container-high">
               <div className="flex flex-col">
-                <span className="text-[11px] font-bold text-on-surface-variant uppercase">Nexus Points</span>
+                <span className="text-[11px] font-bold text-on-surface-variant uppercase">{t("Nexus Points")}</span>
                 <span className="text-lg text-primary font-extrabold">{profile.loyaltyPoints || 0}</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[11px] font-bold text-on-surface-variant uppercase">Status</span>
+                <span className="text-[11px] font-bold text-on-surface-variant uppercase">{t("Status")}</span>
                 <span className="text-sm mt-1 text-[var(--success-text)] font-bold flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                  Active
-                </span>
+                  <span className="material-symbols-outlined text-[14px]">check_circle</span>{t("Active")}</span>
               </div>
             </div>
           </div>
@@ -189,15 +187,15 @@ const Settings = () => {
                   <span className="material-symbols-outlined text-[20px]">person</span>
                 </div>
                 <div>
-                  <h2 className="text-lg text-on-surface font-bold">Personal Details</h2>
-                  <p className="text-xs text-on-surface-variant mt-0.5">Manage your core identity</p>
+                  <h2 className="text-lg text-on-surface font-bold">{t("Personal Details")}</h2>
+                  <p className="text-xs text-on-surface-variant mt-0.5">{t("Manage your core identity")}</p>
                 </div>
               </div>
             </div>
 
             <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-on-surface-variant">Full Legal Name</label>
+                <label className="text-sm font-semibold text-on-surface-variant">{t("Full Legal Name")}</label>
                 <div className="relative">
                   <input
                     name="fullName"
@@ -205,56 +203,54 @@ const Settings = () => {
                     onChange={handleChange}
                     className="w-full bg-surface-container-lowest text-on-surface text-sm font-medium rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-primary shadow-[var(--shadow)] border border-transparent focus:border-primary/50 transition-colors"
                     type="text"
-                    placeholder="Enter your full name"
+                    placeholder={t("Enter your full name")}
                   />
                   <span className="material-symbols-outlined absolute right-3 top-3 text-on-surface-variant text-[18px]">badge</span>
                 </div>
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-on-surface-variant flex justify-between items-center">
-                  Linked Email Address
-                  {!showEmailModal && (
-                    <button onClick={() => setShowEmailModal(true)} className="text-xs text-primary font-bold hover:underline">Change Email</button>
+                <label className="text-sm font-semibold text-on-surface-variant flex justify-between items-center">{t("Linked Email Address")}{' '}{!showEmailModal && (
+                    <button onClick={() => setShowEmailModal(true)} className="text-xs text-primary font-bold hover:underline">{t("Change Email")}</button>
                   )}
                 </label>
 
                 {showEmailModal ? (
                   <div className="p-4 rounded-lg bg-surface-container border border-primary/30 flex flex-col gap-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-on-surface">Update Email</span>
+                      <span className="text-sm font-bold text-on-surface">{t("Update Email")}</span>
                       <button onClick={() => {setShowEmailModal(false); setEmailStep(1);}} className="text-xs text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[16px]">close</span></button>
                     </div>
-                    {emailError && <div className="text-xs text-[var(--rose)] bg-[var(--rose-soft)] p-2 rounded">{emailError}</div>}
+                    {emailError && <div className="text-xs text-[var(--rose)] bg-[var(--rose-soft)] p-2 rounded">{t(emailError)}</div>}
 
                     {emailStep === 1 && (
                       <>
                         <input
                           value={newEmail}
                           onChange={(e) => setNewEmail(e.target.value)}
-                          placeholder="Enter new email address"
+                          placeholder={t("Enter new email address")}
                           className="w-full bg-surface-container-lowest text-on-surface text-sm font-medium rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary shadow-[var(--shadow)]"
                           type="email"
                         />
                         <button onClick={handleSendOtp} disabled={emailLoading || !newEmail} className="mt-1 w-full py-2 rounded bg-primary text-on-primary text-xs font-bold disabled:opacity-50">
-                          {emailLoading ? 'Sending...' : 'Send Verification OTP'}
+                          {t(emailLoading ? t('Sending...') : t('Send Verification OTP'))}
                         </button>
                       </>
                     )}
 
                     {emailStep === 2 && (
                       <>
-                        <p className="text-xs text-on-surface-variant">Enter the 6-digit code sent to {newEmail}</p>
+                        <p className="text-xs text-on-surface-variant">{t("Enter the 6-digit code sent to")}{' '}{newEmail}</p>
                         <input
                           value={otp}
                           onChange={(e) => setOtp(e.target.value)}
-                          placeholder="000000"
+                          placeholder={t("000000")}
                           className="w-full bg-surface-container-lowest text-on-surface text-center tracking-widest text-lg font-bold rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary shadow-[var(--shadow)]"
                           type="text"
                           maxLength={6}
                         />
                         <button onClick={handleVerifyOtp} disabled={emailLoading || otp.length < 6} className="mt-1 w-full py-2 rounded bg-[var(--success-hover)] text-[color:var(--on-primary)] text-xs font-bold disabled:opacity-50">
-                          {emailLoading ? 'Verifying...' : 'Verify & Change'}
+                          {t(emailLoading ? t('Verifying...') : t('Verify & Change'))}
                         </button>
                       </>
                     )}
@@ -262,8 +258,8 @@ const Settings = () => {
                     {emailStep === 3 && (
                       <div className="flex flex-col items-center justify-center p-4 text-center">
                         <span className="material-symbols-outlined text-4xl text-[var(--success-text)] mb-2">check_circle</span>
-                        <span className="text-sm font-bold text-on-surface">Email Updated!</span>
-                        <span className="text-xs text-on-surface-variant mt-1">Logging you out for security...</span>
+                        <span className="text-sm font-bold text-on-surface">{t("Email Updated!")}</span>
+                        <span className="text-xs text-on-surface-variant mt-1">{t("Logging you out for security...")}</span>
                       </div>
                     )}
                   </div>
@@ -279,13 +275,11 @@ const Settings = () => {
                   </div>
                 )}
                 <p className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-1">
-                  <span className="material-symbols-outlined text-[12px]">security</span>
-                  Email updates require OTP verification. Changing it will log you out.
-                </p>
+                  <span className="material-symbols-outlined text-[12px]">security</span>{t("Email updates require OTP verification. Changing it will log you out.")}</p>
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-on-surface-variant">Phone Number</label>
+                <label className="text-sm font-semibold text-on-surface-variant">{t("Phone Number")}</label>
                 <div className="relative">
                   <input
                     name="phone"
@@ -293,7 +287,7 @@ const Settings = () => {
                     onChange={handleChange}
                     className="w-full bg-surface-container-lowest text-on-surface text-sm font-medium rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-primary shadow-[var(--shadow)] border border-transparent focus:border-primary/50 transition-colors"
                     type="tel"
-                    placeholder="Enter phone number"
+                    placeholder={t("Enter phone number")}
                   />
                   <span className="material-symbols-outlined absolute right-3 top-3 text-on-surface-variant text-[18px]">phone_iphone</span>
                 </div>
@@ -307,12 +301,10 @@ const Settings = () => {
       <div className="sticky bottom-6 z-30 w-full p-4 rounded-xl bg-surface-container-high/90 backdrop-blur-xl shadow-[var(--shadow)] flex flex-col sm:flex-row items-center justify-between gap-4 border border-surface-container-highest">
         <div className="flex items-center gap-2 text-on-surface-variant hidden sm:flex">
           <span className="material-symbols-outlined text-tertiary text-[20px]">info</span>
-          <span className="text-xs">Your profile data is encrypted.</span>
+          <span className="text-xs">{t("Your profile data is encrypted.")}</span>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-          <button className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-highest transition-all text-sm font-semibold" type="button">
-            Cancel
-          </button>
+          <button className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-highest transition-all text-sm font-semibold" type="button">{t("Cancel")}</button>
           <button
             onClick={handleSave}
             disabled={saving}
@@ -324,7 +316,7 @@ const Settings = () => {
             ) : (
               <span className="material-symbols-outlined text-[18px]">check_circle</span>
             )}
-            <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+            <span>{t(saving ? t('Saving...') : t('Save Changes'))}</span>
           </button>
         </div>
       </div>
@@ -335,8 +327,8 @@ const Settings = () => {
           <span className="material-symbols-outlined text-[18px]">done_all</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-bold text-on-surface">Saved Successfully!</span>
-          <span className="text-xs text-on-surface-variant">Your profile has been updated.</span>
+          <span className="text-sm font-bold text-on-surface">{t("Saved Successfully!")}</span>
+          <span className="text-xs text-on-surface-variant">{t("Your profile has been updated.")}</span>
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -12,6 +13,7 @@ import {
 import { Meteors } from '../../../components/ui/meteors';
 
 const PackageStore = () => {
+  useLanguage();
   const navigate = useNavigate();
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -132,12 +134,12 @@ const PackageStore = () => {
       fetchCart();
       window.dispatchEvent(new Event('cartUpdated'));
 
-      setToast({ visible: true, message: 'Cart cleared successfully', type: 'success' });
+      setToast({ visible: true, message: t('Cart cleared successfully'), type: 'success' });
       setTimeout(() => {
         setToast({ visible: false, message: '', type: 'success' });
       }, 2800);
     } catch (err) {
-      setToast({ visible: true, message: 'Failed to clear cart', type: 'error' });
+      setToast({ visible: true, message: t('Failed to clear cart'), type: 'error' });
       setTimeout(() => {
         setToast({ visible: false, message: '', type: 'error' });
       }, 3000);
@@ -157,19 +159,19 @@ const PackageStore = () => {
           <div className="flex flex-wrap items-center justify-between gap-space-md">
             <div className="flex items-center gap-space-xs">
               <span className="w-2.5 h-2.5 rounded-full bg-tertiary animate-pulse"></span>
-              <span className="text-[11px] font-semibold tracking-widest text-tertiary uppercase">Performance Protocol Access</span>
-              <span className="text-on-surface-variant mx-1">&bull;</span>
-              <span className="text-[11px] font-semibold text-on-surface-variant uppercase">Q3 Optimization Windows Open</span>
+              <span className="text-[11px] font-semibold tracking-widest text-tertiary uppercase">{t("Performance Protocol Access")}</span>
+              <span className="text-on-surface-variant mx-1">{t("&bull;")}</span>
+              <span className="text-[11px] font-semibold text-on-surface-variant uppercase">{t("Q3 Optimization Windows Open")}</span>
             </div>
             <div className="flex items-center gap-space-sm">
               <div className="flex items-center gap-1.5 px-space-sm py-1 rounded bg-surface-container-high text-on-surface text-[12px] font-semibold">
                 <DollarSign className="w-4 h-4 text-tertiary" />
-                <span>STORE CURRENCY:</span>
-                <span className="font-bold text-primary">VND</span>
+                <span>{t("STORE CURRENCY:")}</span>
+                <span className="font-bold text-primary">{t("VND")}</span>
               </div>
               <div className="hidden sm:flex items-center gap-1.5 px-space-sm py-1 rounded bg-surface-container-high text-on-surface text-[12px] font-semibold">
                 <ShieldCheck className="w-4 h-4 text-primary" />
-                <span>NEXUS LAB SECURE</span>
+                <span>{t("NEXUS LAB SECURE")}</span>
               </div>
             </div>
           </div>
@@ -179,12 +181,10 @@ const PackageStore = () => {
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-space-xs px-space-sm py-1 rounded-full bg-primary-container/20 text-primary text-[11px] font-bold mb-space-sm">
                 <Tag className="w-3.5 h-3.5" />
-                <span>DIGITAL CREDENTIAL STORE</span>
+                <span>{t("DIGITAL CREDENTIAL STORE")}</span>
               </div>
-              <h1 className="text-4xl lg:text-5xl font-extrabold text-on-surface tracking-tight">NEXUS Package Store</h1>
-              <p className="text-base lg:text-lg text-on-surface-variant mt-2 leading-relaxed">
-                Upgrade your athletic journey with sports-science grade memberships, specialized recovery combos, and bio-tech lab privileges.
-              </p>
+              <h1 className="text-4xl lg:text-5xl font-extrabold text-on-surface tracking-tight">{t("NEXUS Package Store")}</h1>
+              <p className="text-base lg:text-lg text-on-surface-variant mt-2 leading-relaxed">{t("Upgrade your athletic journey with sports-science grade memberships, specialized recovery combos, and bio-tech lab privileges.")}</p>
             </div>
 
             {/* Header Actions: Search & Cart Button */}
@@ -195,7 +195,7 @@ const PackageStore = () => {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search tiers, cryo, passes..."
+                  placeholder={t("Search tiers, cryo, passes...")}
                   className="w-full bg-surface-container-highest text-on-surface placeholder:text-on-surface-variant text-sm pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary border-none shadow-[var(--shadow)]"
                 />
               </div>
@@ -212,7 +212,7 @@ const PackageStore = () => {
                   )}
                 </div>
                 <div className="flex flex-col text-left">
-                  <span className="text-[11px] font-semibold text-on-surface-variant uppercase leading-none">Cart Vault</span>
+                  <span className="text-[11px] font-semibold text-on-surface-variant uppercase leading-none">{t("Cart Vault")}</span>
                   <span className="text-[14px] text-on-surface leading-tight font-bold">
                     {formatMoney(cartTotal)}
                   </span>
@@ -228,8 +228,8 @@ const PackageStore = () => {
                 <Percent className="w-4 h-4" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[12px] text-on-surface font-semibold">Active Member Privilege</span>
-                <span className="text-[11px] text-on-surface-variant">Instant 15% discount applied at checkout</span>
+                <span className="text-[12px] text-on-surface font-semibold">{t("Active Member Privilege")}</span>
+                <span className="text-[11px] text-on-surface-variant">{t("Instant 15% discount applied at checkout")}</span>
               </div>
             </div>
             <div className="flex items-center gap-space-sm p-space-sm rounded-lg bg-surface-container-highest/50">
@@ -237,8 +237,8 @@ const PackageStore = () => {
                 <Smartphone className="w-4 h-4" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[12px] text-on-surface font-semibold">Instant NFC Band Sync</span>
-                <span className="text-[11px] text-on-surface-variant">Digital wristband credentials activate instantly</span>
+                <span className="text-[12px] text-on-surface font-semibold">{t("Instant NFC Band Sync")}</span>
+                <span className="text-[11px] text-on-surface-variant">{t("Digital wristband credentials activate instantly")}</span>
               </div>
             </div>
             <div className="flex items-center gap-space-sm p-space-sm rounded-lg bg-surface-container-highest/50 sm:col-span-2 lg:col-span-1">
@@ -246,8 +246,8 @@ const PackageStore = () => {
                 <RefreshCw className="w-4 h-4" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[12px] text-on-surface font-semibold">Flexible Carry-Over</span>
-                <span className="text-[11px] text-on-surface-variant">Unused bio-lab sessions rollover up to 60 days</span>
+                <span className="text-[12px] text-on-surface font-semibold">{t("Flexible Carry-Over")}</span>
+                <span className="text-[11px] text-on-surface-variant">{t("Unused bio-lab sessions rollover up to 60 days")}</span>
               </div>
             </div>
           </div>
@@ -259,11 +259,11 @@ const PackageStore = () => {
         {/* Category Tabs */}
         <div className="flex items-center gap-1.5 p-1 rounded-xl bg-surface-container-low overflow-x-auto max-w-full">
           {[
-            { id: 'all',        label: 'All Packages',     count: packages.length },
-            { id: 'gym_access', label: 'Gym Access',        count: packages.filter(p => p.packageType?.toUpperCase() === 'GYM_ACCESS').length },
-            { id: 'ai_access',  label: 'AI Access',         count: packages.filter(p => p.packageType?.toUpperCase() === 'AI_ACCESS').length },
-            { id: 'combo',      label: 'Combo (Gym + AI)',  count: packages.filter(p => p.packageType?.toUpperCase() === 'COMBO').length },
-            { id: 'premium',    label: 'Premium',           count: packages.filter(p => p.packageType?.toUpperCase() === 'PREMIUM').length },
+            { id: 'all',        label: t('All Packages'),     count: packages.length },
+            { id: 'gym_access', label: t('Gym Access'),        count: packages.filter(p => p.packageType?.toUpperCase() === 'GYM_ACCESS').length },
+            { id: 'ai_access',  label: t('AI Access'),         count: packages.filter(p => p.packageType?.toUpperCase() === 'AI_ACCESS').length },
+            { id: 'combo',      label: t('Combo (Gym + AI)'),  count: packages.filter(p => p.packageType?.toUpperCase() === 'COMBO').length },
+            { id: 'premium',    label: t('Premium'),           count: packages.filter(p => p.packageType?.toUpperCase() === 'PREMIUM').length },
           ].map(tab => {
             const isActive = activeCategory === tab.id;
             return (
@@ -276,7 +276,7 @@ const PackageStore = () => {
                     : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
                 }`}
               >
-                <span>{tab.label}</span>
+                <span>{t(tab.label)}</span>
                 <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
                   isActive ? 'bg-on-primary-container/20' : 'bg-surface-container-high'
                 }`}>
@@ -289,16 +289,14 @@ const PackageStore = () => {
 
         {/* Right Controls / Sort */}
         <div className="flex items-center gap-space-sm w-full md:w-auto justify-between md:justify-end">
-          <span className="text-[13px] text-on-surface-variant hidden xl:inline">
-            Showing {filteredPackages.length} verified packages
-          </span>
+          <span className="text-[13px] text-on-surface-variant hidden xl:inline">{t("Showing")}{' '}{filteredPackages.length}{' '}{t("verified packages")}</span>
           <div className="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-lg">
-            <span className="text-[11px] font-semibold text-on-surface-variant px-2">SORT:</span>
+            <span className="text-[11px] font-semibold text-on-surface-variant px-2">{t("SORT:")}</span>
             <select className="bg-transparent text-on-surface text-[12px] font-semibold focus:outline-none cursor-pointer pr-2 border-none">
-              <option className="bg-surface-container" value="featured">Featured Lab Packs</option>
-              <option className="bg-surface-container" value="low">Price: Low to High</option>
-              <option className="bg-surface-container" value="high">Price: High to Low</option>
-              <option className="bg-surface-container" value="duration">Validity Duration</option>
+              <option className="bg-surface-container" value="featured">{t("Featured Lab Packs")}</option>
+              <option className="bg-surface-container" value="low">{t("Price: Low to High")}</option>
+              <option className="bg-surface-container" value="high">{t("Price: High to Low")}</option>
+              <option className="bg-surface-container" value="duration">{t("Validity Duration")}</option>
             </select>
           </div>
         </div>
@@ -309,17 +307,17 @@ const PackageStore = () => {
         {loading ? (
           <div className="col-span-full flex flex-col justify-center items-center py-20 text-on-surface-variant">
             <RefreshCw className="w-10 h-10 animate-spin mb-4 text-primary" />
-            <span className="text-sm font-semibold">Syncing packages from backend...</span>
+            <span className="text-sm font-semibold">{t("Syncing packages from backend...")}</span>
           </div>
         ) : error ? (
           <div className="col-span-full flex flex-col justify-center items-center py-20 text-error">
             <AlertCircle className="w-10 h-10 mb-4" />
-            <span className="text-sm font-semibold">{error}</span>
+            <span className="text-sm font-semibold">{t(error)}</span>
           </div>
         ) : filteredPackages.length === 0 ? (
           <div className="col-span-full flex flex-col justify-center items-center py-20 text-on-surface-variant">
             <ShoppingBag className="w-10 h-10 mb-4 opacity-50" />
-            <span className="text-sm font-semibold">No packages available for this category.</span>
+            <span className="text-sm font-semibold">{t("No packages available for this category.")}</span>
           </div>
         ) : filteredPackages.map((pkg) => {
           const Icon = getPackageIcon(pkg.packageType);
@@ -331,7 +329,7 @@ const PackageStore = () => {
               key={pkg.packageId} 
               className={`flex flex-col justify-between rounded-2xl p-6 transition-all duration-300 group relative overflow-hidden ${
                 isPopular 
-                  ? 'bg-surface-container-high/90 shadow-xl shadow-primary-container/10 border border-blue-500/30' 
+                  ? 'bg-surface-container-high/90 shadow-xl shadow-primary-container/10 border border-blue-500/30'
                   : 'bg-surface-container-low hover:bg-surface-container shadow-md'
               }`}
             >
@@ -341,7 +339,7 @@ const PackageStore = () => {
                   <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-blue-500/10 to-teal-500/10 blur-xl pointer-events-none -z-0"></div>
                   <div className="mb-3 px-4 py-1.5 rounded-full bg-primary-container text-on-primary-container text-[11px] font-bold tracking-widest uppercase shadow-md flex items-center gap-1 z-20 w-fit">
                     <Flame className="w-3.5 h-3.5" />
-                    <span>Most Popular</span>
+                    <span>{t("Most Popular")}</span>
                   </div>
                 </>
               )}
@@ -352,36 +350,31 @@ const PackageStore = () => {
                     <Icon className="w-7 h-7" />
                   </div>
                   <span className={`px-2 py-1 rounded text-[11px] font-bold tracking-wider uppercase bg-surface-variant text-on-surface-variant`}>
-                    {pkg.durationDays} Days
-                  </span>
+                    {pkg.durationDays}{' '}{t("Days")}</span>
                 </div>
 
                 <div className="mb-4">
                   {pkg.packageType && (
                     <div className="flex items-center gap-1.5 mb-1">
-                      <span className="text-[11px] font-bold text-primary uppercase">{pkg.packageType}</span>
+                      <span className="text-[11px] font-bold text-primary uppercase">{codeLabel(pkg.packageType)}</span>
                     </div>
                   )}
                   <h3 className="text-xl font-bold text-on-surface mb-2">{pkg.packageName}</h3>
                   <p className="text-sm text-on-surface-variant min-h-[40px] leading-relaxed">
-                    {pkg.description || ("Gain full access for " + pkg.durationDays + " days. Upgrade your fitness routine today.")}
+                    {t(pkg.description || ("Gain full access for " + pkg.durationDays + " days. Upgrade your fitness routine today."))}
                   </p>
                 </div>
 
                 <div className="flex items-center justify-between mb-2">
-                  <span className={`text-[11px] font-bold tracking-wider uppercase ${isPopular ? 'text-primary' : 'text-on-surface-variant'}`}>
-                    Membership Fee
-                  </span>
+                  <span className={`text-[11px] font-bold tracking-wider uppercase ${isPopular ? t('text-primary') : t('text-on-surface-variant')}`}>{t("Membership Fee")}</span>
                 </div>
                 <div className="flex items-baseline gap-1 mt-0.5 mb-5">
                   <span className="text-2xl font-extrabold text-on-surface">{formatMoney(pkg.price)}</span>
-                  <span className="text-[12px] text-on-surface-variant ml-1">/ {pkg.durationDays} days</span>
+                  <span className="text-[12px] text-on-surface-variant ml-1">/ {pkg.durationDays}{' '}{t("days")}</span>
                 </div>
 
                 <div className="flex flex-col gap-3 mb-6">
-                  <span className={`text-[11px] uppercase tracking-wider font-semibold ${isPopular ? 'text-primary' : 'text-on-surface-variant'}`}>
-                    Included Privileges
-                  </span>
+                  <span className={`text-[11px] uppercase tracking-wider font-semibold ${isPopular ? t('text-primary') : t('text-on-surface-variant')}`}>{t("Included Privileges")}</span>
                   {['Full facility access', 'Smart locker usage', 'App telemetry sync'].map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-3">
                       <CheckCircle2 className="w-4 h-4 text-tertiary shrink-0 mt-0.5" />
@@ -396,21 +389,21 @@ const PackageStore = () => {
                 disabled={isAdded}
                 className={`relative z-10 w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-semibold text-[14px] transition-all active:scale-[0.99] ${
                   isAdded
-                    ? 'bg-surface-container-highest text-on-surface-variant cursor-not-allowed border border-surface-container-highest'
+                    ? t('bg-surface-container-highest text-on-surface-variant cursor-not-allowed border border-surface-container-highest')
                     : isPopular
-                      ? 'bg-primary-container hover:bg-inverse-primary text-on-primary-container hover:text-surface shadow-[var(--shadow)] shadow-primary-container/20'
-                      : 'bg-surface-container-high hover:bg-primary text-on-surface hover:text-on-primary shadow-[var(--shadow)]'
+                      ? t('bg-primary-container hover:bg-inverse-primary text-on-primary-container hover:text-surface shadow-[var(--shadow)] shadow-primary-container/20')
+                      : t('bg-surface-container-high hover:bg-primary text-on-surface hover:text-on-primary shadow-[var(--shadow)]')
                 }`}
               >
                 {isAdded ? (
                   <>
                     <Check className="w-5 h-5 text-tertiary" />
-                    <span className="text-tertiary">Added to Cart</span>
+                    <span className="text-tertiary">{t("Added to Cart")}</span>
                   </>
                 ) : (
                   <>
                     <ShoppingCart className="w-5 h-5" />
-                    <span>{isPopular ? 'Claim Pro Access' : 'Add to Cart'}</span>
+                    <span>{t(isPopular ? t('Claim Pro Access') : t('Add to Cart'))}</span>
                   </>
                 )}
               </button>
@@ -427,19 +420,13 @@ const PackageStore = () => {
             <Building2 className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-[16px] font-bold text-on-surface">Athletic Squads & Enterprise Corporate Plans</h3>
-            <p className="text-[14px] text-on-surface-variant max-w-xl mt-1">
-              Equip your company or semi-pro sports franchise with pooled court access, biomechanical telemetry passes, and private training bookings.
-            </p>
+            <h3 className="text-[16px] font-bold text-on-surface">{t("Athletic Squads & Enterprise Corporate Plans")}</h3>
+            <p className="text-[14px] text-on-surface-variant max-w-xl mt-1">{t("Equip your company or semi-pro sports franchise with pooled court access, biomechanical telemetry passes, and private training bookings.")}</p>
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0 w-full md:w-auto z-10">
-          <button className="w-full md:w-auto px-6 py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-[13px] font-semibold transition-all">
-            Corporate Inquiry
-          </button>
-          <button className="w-full md:w-auto px-6 py-2.5 rounded-lg bg-primary text-on-primary text-[13px] font-bold hover:bg-primary-container transition-all">
-            Book Facility Tour
-          </button>
+          <button className="w-full md:w-auto px-6 py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-[13px] font-semibold transition-all">{t("Corporate Inquiry")}</button>
+          <button className="w-full md:w-auto px-6 py-2.5 rounded-lg bg-primary text-on-primary text-[13px] font-bold hover:bg-primary-container transition-all">{t("Book Facility Tour")}</button>
         </div>
       </div>
 
@@ -447,15 +434,15 @@ const PackageStore = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 py-4 px-2 text-center">
         <div className="flex items-center justify-center gap-2 text-on-surface-variant">
           <Lock className="w-5 h-5 text-tertiary" />
-          <span className="text-[11px] font-bold tracking-wide uppercase">256-Bit SSL Encrypted Checkout</span>
+          <span className="text-[11px] font-bold tracking-wide uppercase">{t("256-Bit SSL Encrypted Checkout")}</span>
         </div>
         <div className="flex items-center justify-center gap-2 text-on-surface-variant">
           <QrCode className="w-5 h-5 text-primary" />
-          <span className="text-[11px] font-bold tracking-wide uppercase">Instant NFC & QR Pass Provisioning</span>
+          <span className="text-[11px] font-bold tracking-wide uppercase">{t("Instant NFC & QR Pass Provisioning")}</span>
         </div>
         <div className="flex items-center justify-center gap-2 text-on-surface-variant">
           <FileCheck className="w-5 h-5 text-secondary" />
-          <span className="text-[11px] font-bold tracking-wide uppercase">Zero Setup Fees &bull; Cancel Anytime</span>
+          <span className="text-[11px] font-bold tracking-wide uppercase">{t("Zero Setup Fees &bull; Cancel Anytime")}</span>
         </div>
       </div>
 
@@ -471,14 +458,14 @@ const PackageStore = () => {
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <span className="text-[13px] text-on-surface font-semibold">Active Cart Allocation:</span>
-                <span className="text-[11px] text-tertiary font-bold uppercase">{cartCount} items selected</span>
+                <span className="text-[13px] text-on-surface font-semibold">{t("Active Cart Allocation:")}</span>
+                <span className="text-[11px] text-tertiary font-bold uppercase">{cartCount}{' '}{t("items selected")}</span>
               </div>
               <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-[12px] text-on-surface-variant">Subtotal:</span>
+                <span className="text-[12px] text-on-surface-variant">{t("Subtotal:")}</span>
                 <span className="text-xl font-bold text-on-surface">{formatMoney(cartTotal)}</span>
-                <span className="text-[12px] text-primary font-bold">VND</span>
-                <span className="text-[11px] text-on-surface-variant hidden md:inline ml-1">(15% Member Rebate Calculated)</span>
+                <span className="text-[12px] text-primary font-bold">{t("VND")}</span>
+                <span className="text-[11px] text-on-surface-variant hidden md:inline ml-1">{t("(15% Member Rebate Calculated)")}</span>
               </div>
             </div>
           </div>
@@ -489,13 +476,13 @@ const PackageStore = () => {
               className="hidden md:flex items-center gap-1 px-4 py-3 rounded-xl bg-surface-container text-on-surface-variant hover:text-on-surface text-[13px] font-semibold transition-all"
             >
               <Trash2 className="w-4 h-4" />
-              <span>Clear</span>
+              <span>{t("Clear")}</span>
             </button>
             <button
               onClick={() => navigate('/member/cart')}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-primary-container hover:bg-inverse-primary text-on-primary-container hover:text-surface text-[14px] font-bold transition-all shadow-[var(--shadow)] shadow-primary-container/20 active:scale-95"
             >
-              <span>Proceed to Checkout</span>
+              <span>{t("Proceed to Checkout")}</span>
               <ArrowRight className="w-5 h-5" />
             </button>
           </div>
@@ -515,7 +502,7 @@ const PackageStore = () => {
             {toast.type === 'error' ? <AlertCircle className="w-4 h-4 text-[var(--text)]" /> : <Check className="w-4 h-4 text-on-primary" />}
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-[13px] font-semibold">{toast.message}</span>
+            <span className="text-[13px] font-semibold">{t(toast.message)}</span>
           </div>
         </div>
       </div>

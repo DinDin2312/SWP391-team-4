@@ -1,5 +1,7 @@
+import { t, useLanguage } from '../i18n/useLanguage';
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import LanguageSwitcher from '../i18n/LanguageSwitcher';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { ROLE_ROUTES } from '../config/roles';
 
@@ -33,8 +35,10 @@ const ManagerDashboard = lazy(() => import('../features/manager/pages/ManagerDas
 const ReceptionistDashboard = lazy(() => import('../features/receptionist/pages/ReceptionistDashboard'));
 
 function AppRoutes() {
+  useLanguage();
+  const { pathname } = useLocation();
   return (
-    <Suspense fallback={<div role="status" style={{ padding: 32 }}>Loading Nexus...</div>}><Routes>
+    <>{pathname !== ROLE_ROUTES.admin && <LanguageSwitcher floating />}<Suspense fallback={<div role="status" style={{ padding: 32 }}>{t("Loading Nexus...")}</div>}><Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<Register />} />
@@ -79,7 +83,7 @@ function AppRoutes() {
       <Route path={ROLE_ROUTES.admin} element={<ProtectedRoute allowedRoles={['Center Manager']}><ManagerDashboard /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes></Suspense>
+    </Routes></Suspense></>
   );
 }
 

@@ -1,3 +1,4 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import managerEn from '../i18n/en';
@@ -10,12 +11,14 @@ import { displayStaffName } from './staffData';
 const valueFor = (user, key) => ({ member: user.fullName, contact: user.email, phone: user.phone, role: user.roleName, status: user.status }[key] || '');
 
 function SortHeader({ column, sort, setSort }) {
+  useLanguage();
   const label = managerEn.staff.table.columns[column];
   const active = sort.key === column;
-  return <th><button type="button" className="manager-sort" aria-label={managerEn.staff.table.sortBy(label)} onClick={() => setSort({ key: column, direction: active && sort.direction === 'asc' ? 'desc' : 'asc' })}>{label}{active ? <ChevronDown className={sort.direction === 'asc' ? 'is-asc' : ''} size={13} /> : <ChevronsUpDown size={13} />}</button></th>;
+  return <th><button type="button" className="manager-sort" aria-label={t(managerEn.staff.table.sortBy(label))} onClick={() => setSort({ key: column, direction: active && sort.direction === 'asc' ? 'desc' : 'asc' })}>{t(label)}{active ? <ChevronDown className={sort.direction === 'asc' ? t('is-asc') : t('')} size={13} /> : <ChevronsUpDown size={13} />}</button></th>;
 }
 
 function StaffTable({ users, selected, setSelected, pending, protectedIds, onDetails, onEdit, onResetPassword, onToggleLock, onViewLogs, onRowClick }) {
+  useLanguage();
   const [sort, setSort] = useState({ key: 'member', direction: 'asc' });
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
@@ -33,16 +36,16 @@ function StaffTable({ users, selected, setSelected, pending, protectedIds, onDet
   const columns = ['member', 'contact', 'phone', 'role', 'status'];
 
   return <div className="manager-staff-table">
-    <table><thead><tr><th className="manager-check-cell"><input type="checkbox" checked={pageSelected} aria-label={managerEn.staff.table.selectAll} onChange={togglePage} /></th>{columns.map((column) => <SortHeader key={column} column={column} sort={sort} setSort={setSort} />)}<th><span className="sr-only">{managerEn.staff.table.columns.actions}</span></th></tr></thead><tbody>{pageRows.map((user) => <tr key={user.userId} onClick={() => onRowClick(user)} tabIndex="0" onKeyDown={(event) => { if (event.key === 'Enter') onRowClick(user); }}>
-      <td className="manager-check-cell"><input type="checkbox" checked={selected.has(user.userId)} aria-label={managerEn.staff.table.selectUser(user.fullName)} onClick={(event) => event.stopPropagation()} onChange={() => toggleOne(user.userId)} /></td>
-      <td><div className="manager-person"><StaffAvatar user={user} className="manager-table-avatar" /><div><strong>{displayStaffName(user.fullName)}</strong><small>UID-{String(user.userId).padStart(4, '0')}</small></div></div></td>
+    <table><thead><tr><th className="manager-check-cell"><input type="checkbox" checked={pageSelected} aria-label={t(managerEn.staff.table.selectAll)} onChange={togglePage} /></th>{columns.map((column) => <SortHeader key={column} column={column} sort={sort} setSort={setSort} />)}<th><span className="sr-only">{t(managerEn.staff.table.columns.actions)}</span></th></tr></thead><tbody>{pageRows.map((user) => <tr key={user.userId} onClick={() => onRowClick(user)} tabIndex="0" onKeyDown={(event) => { if (event.key === 'Enter') onRowClick(user); }}>
+      <td className="manager-check-cell"><input type="checkbox" checked={selected.has(user.userId)} aria-label={t(managerEn.staff.table.selectUser(user.fullName))} onClick={(event) => event.stopPropagation()} onChange={() => toggleOne(user.userId)} /></td>
+      <td><div className="manager-person"><StaffAvatar user={user} className="manager-table-avatar" /><div><strong>{displayStaffName(user.fullName)}</strong><small>{t("UID-")}{String(user.userId).padStart(4, '0')}</small></div></div></td>
       <td>{user.email}</td>
-      <td className={user.phone ? 'manager-phone-cell' : 'manager-phone-cell manager-empty-value'}>{user.phone || '—'}</td>
+      <td className={user.phone ? 'manager-phone-cell' : 'manager-phone-cell manager-empty-value'}>{t(user.phone || '—')}</td>
       <td><RoleBadge role={user.roleName} /></td>
       <td><StatusBadge status={user.status} /></td>
       <td><StaffActionsMenu user={user} disabled={pending} lockDisabled={protectedIds.has(user.userId)} onDetails={onDetails} onEdit={onEdit} onResetPassword={onResetPassword} onToggleLock={onToggleLock} onViewLogs={onViewLogs} /></td>
-    </tr>)}{pageRows.length === 0 && <tr><td colSpan={columns.length + 2}><div className="manager-empty"><strong>{managerEn.staff.feedback.emptyTitle}</strong><span>{managerEn.staff.feedback.emptyBody}</span></div></td></tr>}</tbody></table>
-    <div className="manager-pagination"><label>{managerEn.staff.table.rowsPerPage}<ManagerSelect value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>{[10, 20, 50].map((size) => <option key={size} value={size}>{size}</option>)}</ManagerSelect></label><span>{managerEn.staff.table.page(currentPage, totalPages)}</span><button type="button" title={managerEn.staff.table.previous} aria-label={managerEn.staff.table.previous} disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={16} /></button><button type="button" title={managerEn.staff.table.next} aria-label={managerEn.staff.table.next} disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)}><ChevronRight size={16} /></button></div>
+    </tr>)}{pageRows.length === 0 && <tr><td colSpan={columns.length + 2}><div className="manager-empty"><strong>{t(managerEn.staff.feedback.emptyTitle)}</strong><span>{t(managerEn.staff.feedback.emptyBody)}</span></div></td></tr>}</tbody></table>
+    <div className="manager-pagination"><label>{t(managerEn.staff.table.rowsPerPage)}<ManagerSelect value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>{[10, 20, 50].map((size) => <option key={size} value={size}>{size}</option>)}</ManagerSelect></label><span>{managerEn.staff.table.page(currentPage, totalPages)}</span><button type="button" title={t(managerEn.staff.table.previous)} aria-label={t(managerEn.staff.table.previous)} disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={16} /></button><button type="button" title={t(managerEn.staff.table.next)} aria-label={t(managerEn.staff.table.next)} disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)}><ChevronRight size={16} /></button></div>
   </div>;
 }
 

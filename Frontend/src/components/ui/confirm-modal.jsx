@@ -1,8 +1,10 @@
+import { t, useLanguage } from '../../i18n/useLanguage';
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 
 export function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confirmText = 'Confirm', cancelText = 'Cancel', isDestructive = true }) {
+  useLanguage();
   return (
     <AnimatePresence>
       {isOpen && (
@@ -28,9 +30,9 @@ export function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confi
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
+                <h3 className="text-lg font-bold text-white mb-2">{t(title)}</h3>
                 <p className="text-sm text-slate-400 leading-relaxed mb-6">
-                  {message}
+                  {t(message)}
                 </p>
               </div>
             </div>
@@ -40,7 +42,7 @@ export function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confi
                 onClick={onClose}
                 className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
               >
-                {cancelText}
+                {t(cancelText)}
               </button>
               <button
                 onClick={() => {
@@ -53,7 +55,7 @@ export function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confi
                     : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/20 hover:shadow-blue-500/40'
                 }`}
               >
-                {confirmText}
+                {t(confirmText)}
               </button>
             </div>
           </motion.div>

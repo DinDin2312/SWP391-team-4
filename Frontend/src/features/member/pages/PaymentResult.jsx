@@ -1,9 +1,11 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CheckCircle2, XCircle, Loader2, ArrowRight } from 'lucide-react';
 
 const PaymentResult = () => {
+  useLanguage();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState('processing');
@@ -47,21 +49,20 @@ const PaymentResult = () => {
         {status === 'processing' && (
           <>
             <Loader2 className="w-20 h-20 text-[var(--success-text)] animate-spin mb-6" />
-            <h1 className="text-3xl font-black text-[var(--text)] mb-2">Processing Payment</h1>
-            <p className="text-[var(--text-muted)]">Please do not close this window...</p>
+            <h1 className="text-3xl font-black text-[var(--text)] mb-2">{t("Processing Payment")}</h1>
+            <p className="text-[var(--text-muted)]">{t("Please do not close this window...")}</p>
           </>
         )}
 
         {status === 'success' && (
           <>
             <CheckCircle2 className="w-20 h-20 text-[var(--success-text)] mb-6" />
-            <h1 className="text-3xl font-black text-[var(--text)] mb-2">Payment Successful!</h1>
-            <p className="text-[var(--success-text)] mb-8">{message}</p>
+            <h1 className="text-3xl font-black text-[var(--text)] mb-2">{t("Payment Successful!")}</h1>
+            <p className="text-[var(--success-text)] mb-8">{t(message)}</p>
             <button
               onClick={() => navigate('/member/schedule')}
               className="px-8 py-4 bg-[var(--success-hover)] hover:bg-[var(--success-hover)] text-[color:var(--on-primary)] rounded-xl font-bold transition-all shadow-[var(--shadow)] flex items-center justify-center gap-2"
-            >
-              Go to My Schedule <ArrowRight className="w-5 h-5" />
+            >{t("Go to My Schedule")}<ArrowRight className="w-5 h-5" />
             </button>
           </>
         )}
@@ -69,13 +70,12 @@ const PaymentResult = () => {
         {status === 'error' && (
           <>
             <XCircle className="w-20 h-20 text-[var(--danger-text)] mb-6" />
-            <h1 className="text-3xl font-black text-[var(--text)] mb-2">Payment Failed</h1>
-            <p className="text-[var(--danger-text)] mb-8">{message}</p>
+            <h1 className="text-3xl font-black text-[var(--text)] mb-2">{t("Payment Failed")}</h1>
+            <p className="text-[var(--danger-text)] mb-8">{t(message)}</p>
             <button
               onClick={() => navigate('/member/cart')}
               className="px-8 py-4 bg-[var(--surface-hover)] hover:bg-[var(--surface-hover)] text-[var(--text)] rounded-xl font-bold transition-all flex items-center justify-center gap-2"
-            >
-              Back to Cart <ArrowRight className="w-5 h-5" />
+            >{t("Back to Cart")}<ArrowRight className="w-5 h-5" />
             </button>
           </>
         )}

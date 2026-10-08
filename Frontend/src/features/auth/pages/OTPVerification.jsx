@@ -1,8 +1,10 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 export default function OTPVerification() {
+  useLanguage();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
@@ -99,7 +101,7 @@ export default function OTPVerification() {
     e.preventDefault();
     const otpCode = otp.join('');
     if (otpCode.length < 6) {
-      setToastMessage({ type: 'error', text: 'Please enter all 6 digits of the OTP code!' });
+      setToastMessage({ type: 'error', text: t('Please enter all 6 digits of the OTP code!') });
       setTimeout(() => setToastMessage(null), 3000);
       return;
     }
@@ -139,8 +141,8 @@ export default function OTPVerification() {
                 </svg>
               </div>
               <div>
-                <span className="block text-base font-extrabold tracking-wider text-[var(--hero-text)]">NEXUS</span>
-                <span className="block text-[10px] font-semibold tracking-widest text-[var(--hero-text)] uppercase">Performance Lab</span>
+                <span className="block text-base font-extrabold tracking-wider text-[var(--hero-text)]">{t("NEXUS")}</span>
+                <span className="block text-[10px] font-semibold tracking-widest text-[var(--hero-text)] uppercase">{t("Performance Lab")}</span>
               </div>
             </div>
             <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--hero-overlay)] border border-[var(--hero-line)] backdrop-blur-md">
@@ -148,7 +150,7 @@ export default function OTPVerification() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--primary)] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--primary)]"></span>
               </span>
-              <span className="text-xs font-semibold tracking-wider text-[var(--hero-text)] uppercase">Sports Center</span>
+              <span className="text-xs font-semibold tracking-wider text-[var(--hero-text)] uppercase">{t("Sports Center")}</span>
             </div>
           </header>
 
@@ -157,31 +159,28 @@ export default function OTPVerification() {
               <svg className="w-3.5 h-3.5 text-[var(--primary)]" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
                 <path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" strokeLinecap="round" strokeLinejoin="round"></path>
               </svg>
-              <span className="text-xs font-bold tracking-wide text-[var(--hero-text)] uppercase">Security Protocol</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--primary-soft)] text-[var(--primary)] font-mono font-medium">STEP 2 OF 3</span>
+              <span className="text-xs font-bold tracking-wide text-[var(--hero-text)] uppercase">{t("Security Protocol")}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--primary-soft)] text-[var(--primary)] font-mono font-medium">{t("STEP 2 OF 3")}</span>
             </div>
 
-            <h2 className="text-4xl sm:text-5xl font-extrabold text-[var(--hero-text)] tracking-tight leading-[1.15]">
-              Verify Your <span className="text-[var(--hero-accent)]">Identity</span>.
+            <h2 className="text-4xl sm:text-5xl font-extrabold text-[var(--hero-text)] tracking-tight leading-[1.15]">{t("Verify Your")}<span className="text-[var(--hero-accent)]">{t("Identity")}</span>.
             </h2>
-            <p className="mt-4 text-base sm:text-lg text-[var(--hero-text)] font-normal max-w-xl leading-relaxed">
-              Protecting your personal athletic metrics, biometric data, and facility access reservations across our network.
-            </p>
+            <p className="mt-4 text-base sm:text-lg text-[var(--hero-text)] font-normal max-w-xl leading-relaxed">{t("Protecting your personal athletic metrics, biometric data, and facility access reservations across our network.")}</p>
 
             <div className="w-full h-px bg-[var(--surface)] my-8"></div>
 
             <div className="grid grid-cols-3 gap-4 text-left">
               <div>
-                <div className="text-2xl font-bold tracking-tight text-[var(--hero-text)] font-mono">256-Bit</div>
-                <div className="text-xs text-[var(--hero-text)] font-medium mt-0.5">SSL Encrypted</div>
+                <div className="text-2xl font-bold tracking-tight text-[var(--hero-text)] font-mono">{t("256-Bit")}</div>
+                <div className="text-xs text-[var(--hero-text)] font-medium mt-0.5">{t("SSL Encrypted")}</div>
               </div>
               <div>
-                <div className="text-2xl font-bold tracking-tight text-[var(--hero-text)] font-mono">Live Sync</div>
-                <div className="text-xs text-[var(--hero-text)] font-medium mt-0.5">Instant Access</div>
+                <div className="text-2xl font-bold tracking-tight text-[var(--hero-text)] font-mono">{t("Live Sync")}</div>
+                <div className="text-xs text-[var(--hero-text)] font-medium mt-0.5">{t("Instant Access")}</div>
               </div>
               <div>
-                <div className="text-2xl font-bold tracking-tight text-[var(--hero-text)] font-mono">Biometric</div>
-                <div className="text-xs text-[var(--hero-text)] font-medium mt-0.5">ID Protected</div>
+                <div className="text-2xl font-bold tracking-tight text-[var(--hero-text)] font-mono">{t("Biometric")}</div>
+                <div className="text-xs text-[var(--hero-text)] font-medium mt-0.5">{t("ID Protected")}</div>
               </div>
             </div>
           </div>
@@ -189,10 +188,8 @@ export default function OTPVerification() {
 
         <section className="w-full lg:w-1/2 flex flex-col justify-between p-6 sm:p-12 lg:p-16 bg-[var(--surface)] relative z-10">
           <nav className="flex items-center justify-between sm:justify-end gap-3 w-full pb-8 sm:pb-0">
-            <span className="text-sm text-[var(--text-muted)]">Already verified?</span>
-            <button onClick={() => navigate('/login')} className="inline-flex items-center text-sm font-semibold text-[var(--primary)] hover:text-[var(--primary)] transition-colors gap-1 group">
-              Sign in
-              <svg className="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <span className="text-sm text-[var(--text-muted)]">{t("Already verified?")}</span>
+            <button onClick={() => navigate('/login')} className="inline-flex items-center text-sm font-semibold text-[var(--primary)] hover:text-[var(--primary)] transition-colors gap-1 group">{t("Sign in")}<svg className="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" strokeLinecap="round" strokeLinejoin="round"></path>
               </svg>
             </button>
@@ -206,23 +203,21 @@ export default function OTPVerification() {
                 </svg>
               </div>
               <div className="flex items-center justify-center sm:justify-start gap-2.5">
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-[var(--text)] tracking-tight">Check your email</h1>
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-[var(--text)] tracking-tight">{t("Check your email")}</h1>
                 <span className="text-[var(--primary)] inline-block">
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
                   </svg>
                 </span>
               </div>
-              <p className="mt-3 text-[var(--text-muted)] text-sm leading-relaxed">
-                We sent a 6-digit verification code to <span className="text-[var(--text)] font-medium">{email}</span>. Enter the code below to confirm your account.
-              </p>
+              <p className="mt-3 text-[var(--text-muted)] text-sm leading-relaxed">{t("We sent a 6-digit verification code to")}<span className="text-[var(--text)] font-medium">{email}</span>{t(". Enter the code below to confirm your account.")}</p>
             </div>
 
             <form onSubmit={handleVerify} className="space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-[var(--text)]">Security PIN Code</label>
-                  <button type="button" className="text-xs text-[var(--primary)] hover:text-[var(--primary)] font-medium">Change email</button>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-[var(--text)]">{t("Security PIN Code")}</label>
+                  <button type="button" className="text-xs text-[var(--primary)] hover:text-[var(--primary)] font-medium">{t("Change email")}</button>
                 </div>
 
                 <div className="grid grid-cols-6 gap-2 sm:gap-3">
@@ -246,18 +241,18 @@ export default function OTPVerification() {
                     <svg className="w-3.5 h-3.5 text-[var(--text-muted)]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"></path>
                     </svg>
-                    <span>Code expires in <span className={`font-mono font-medium ${timeLeft < 60 ? 'text-[var(--danger-text)]' : 'text-[var(--text)]'}`}>{formatTime(timeLeft)}</span></span>
+                    <span>{t("Code expires in")}<span className={`font-mono font-medium ${timeLeft < 60 ? 'text-[var(--danger-text)]' : 'text-[var(--text)]'}`}>{formatTime(timeLeft)}</span></span>
                   </div>
-                  <span className="text-[var(--primary)] font-medium">Secure Delivery</span>
+                  <span className="text-[var(--primary)] font-medium">{t("Secure Delivery")}</span>
                 </div>
               </div>
 
               <button disabled={loading} type="submit" className="w-full py-3.5 px-4 bg-[var(--primary)] hover:bg-[var(--primary)] active:scale-[0.99] text-[color:var(--on-primary)] font-bold rounded-xl shadow-[var(--shadow)] transition-all duration-150 flex items-center justify-center gap-2 group text-base disabled:opacity-70">
                 {loading ? (
-                  <><span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span><span>Verifying...</span></>
+                  <><span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span><span>{t("Verifying...")}</span></>
                 ) : (
                   <>
-                    <span>Verify Account</span>
+                    <span>{t("Verify Account")}</span>
                     <svg className="w-4 h-4 text-[var(--text)] transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                       <path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" strokeLinecap="round" strokeLinejoin="round"></path>
                     </svg>
@@ -265,11 +260,7 @@ export default function OTPVerification() {
                 )}
               </button>
 
-              <div className="text-center pt-1 text-sm text-[var(--text-muted)]">
-                Didn't receive the code?
-                <button type="button" className="text-[var(--primary)] hover:text-[var(--primary)] font-semibold transition-colors focus:underline ml-1">
-                  Resend Code
-                </button>
+              <div className="text-center pt-1 text-sm text-[var(--text-muted)]">{t("Didn't receive the code?")}<button type="button" className="text-[var(--primary)] hover:text-[var(--primary)] font-semibold transition-colors focus:underline ml-1">{t("Resend Code")}</button>
               </div>
             </form>
 
@@ -281,22 +272,20 @@ export default function OTPVerification() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-[var(--text)]">Instant Access Portal</p>
-                  <p className="text-[11px] text-[var(--text-muted)]">Synchronizes with your smart sports membership.</p>
+                  <p className="text-xs font-semibold text-[var(--text)]">{t("Instant Access Portal")}</p>
+                  <p className="text-[11px] text-[var(--text-muted)]">{t("Synchronizes with your smart sports membership.")}</p>
                 </div>
               </div>
-              <span className="text-[10px] font-mono font-bold text-[var(--primary)] bg-[var(--primary-soft)] border border-[var(--primary-soft)] px-2 py-0.5 rounded tracking-wider uppercase">
-                PENDING
-              </span>
+              <span className="text-[10px] font-mono font-bold text-[var(--primary)] bg-[var(--primary-soft)] border border-[var(--primary-soft)] px-2 py-0.5 rounded tracking-wider uppercase">{t("PENDING")}</span>
             </div>
           </div>
 
           <footer className="pt-8 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
-            <div>Â© 2026 NEXUS Sports Technology Inc.</div>
+            <div>{t("Â© 2026 NEXUS Sports Technology Inc.")}</div>
             <div className="flex items-center gap-4">
-              <button className="hover:text-[var(--text)] transition-colors">Privacy Policy</button>
-              <button className="hover:text-[var(--text)] transition-colors">Safety Code</button>
-              <button className="hover:text-[var(--text)] transition-colors">Contact</button>
+              <button className="hover:text-[var(--text)] transition-colors">{t("Privacy Policy")}</button>
+              <button className="hover:text-[var(--text)] transition-colors">{t("Safety Code")}</button>
+              <button className="hover:text-[var(--text)] transition-colors">{t("Contact")}</button>
             </div>
           </footer>
         </section>
@@ -305,10 +294,10 @@ export default function OTPVerification() {
       {toastMessage && (
         <div className={`fixed bottom-8 right-8 z-50 bg-[var(--surface)] border ${toastMessage.type === 'error' ? 'border-[var(--danger-soft)]' : 'border-[var(--primary-soft)]'} text-[var(--text)] rounded-xl p-4 shadow-[var(--shadow)] animate-fade-in-up flex items-center gap-3.5 max-w-sm`}>
           <div className={`w-9 h-9 rounded-full ${toastMessage.type === 'error' ? 'bg-[var(--danger)]' : 'bg-[var(--primary)]'} flex items-center justify-center text-[var(--text)]`}>
-            <span className="material-symbols-outlined text-[20px]">{toastMessage.type === 'error' ? 'close' : 'check'}</span>
+            <span className="material-symbols-outlined text-[20px]">{t(toastMessage.type === 'error' ? t('close') : t('check'))}</span>
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-semibold text-[var(--text)]">{toastMessage.type === 'error' ? 'Error!' : 'Success!'}</span>
+            <span className="text-sm font-semibold text-[var(--text)]">{t(toastMessage.type === 'error' ? t('Error!') : t('Success!'))}</span>
             <span className="text-xs text-[var(--text-muted)]">{toastMessage.text}</span>
           </div>
         </div>
