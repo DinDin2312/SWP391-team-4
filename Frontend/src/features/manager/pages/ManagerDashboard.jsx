@@ -69,6 +69,7 @@ function ManagerDashboard() {
   const [filters, setFilters] = useState({ keyword: '', role: 'ALL', status: 'ALL', from: initialFrom, to: initialTo });
   const [appliedFilters, setAppliedFilters] = useState(filters);
   const requestId = useRef(0);
+  const operationLookups = useRef(null);
   const opsFrom=query.get('from') || (active==='operations'?weekRange().from:appliedFilters.from);
   const opsTo=query.get('to') || (active==='operations'?weekRange().to:appliedFilters.to);
   const opsLow=query.get('lowRegistration')==='true', opsStatus=query.get('status') || undefined, opsExclude=query.get('excludeUrgent')==='true';
@@ -91,11 +92,12 @@ function ManagerDashboard() {
         publish({ users, roles });
       }
       if (active === 'operations') {
-        const [subjects, rooms, classes, schedules, coaches] = await Promise.all([
-          managerService.subjects(), managerService.rooms(), managerService.classes(),
+        const [lookups,schedules] = await Promise.all([
+          operationLookups.current || Promise.all([managerService.subjects(),managerService.rooms(),managerService.classes(),managerService.users({role:'Coach',status:'ACTIVE'})]),
           managerService.schedules(opsFrom,opsTo,{lowRegistration:opsLow,status:opsStatus,excludeUrgent:opsExclude}),
-          managerService.users({ role: 'Coach', status: 'ACTIVE' }),
         ]);
+        const [subjects,rooms,classes,coaches]=lookups;
+        if(currentRequest===requestId.current) operationLookups.current=lookups;
         publish({ subjects, rooms, classes, schedules, coaches });
       }
       if (active === 'packages') publish(await managerService.packages());
@@ -111,7 +113,11 @@ function ManagerDashboard() {
       if (currentRequest === requestId.current) setLoading(false);
     }
   }, [active, appliedFilters, opsFrom, opsTo, opsLow, opsStatus, opsExclude]);
-  const refreshAll = load;
+  const refreshAll = () => { operationLookups.current=null; return load(); };
+
+  useEffect(() => {
+    if (active !== 'operations') operationLookups.current = null;
+  }, [active]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => { if (active === 'operations' && query.has('from') && query.has('to')) setFilters(current => ({ ...current, from: query.get('from'), to: query.get('to') })); }, 0);
@@ -138,7 +144,7 @@ function ManagerDashboard() {
   };
 
   const handleLogout = () => { logout(); navigate('/'); };
-  const handleSaved = async (message = 'Changes saved.') => { setModal(null); setNotice(message); await load(); };
+  const handleSaved = async (message = 'Changes saved.') => { setModal(null); setNotice(message); await refreshAll(); };
   const applyFilters = (nextFilters = filters) => { setAppliedFilters({ ...nextFilters }); if (active === 'operations') { const next = new URLSearchParams(query); next.set('from', nextFilters.from); next.set('to', nextFilters.to); setQuery(next); } };
   const initials = (userInfo?.fullName || 'Center Manager').split(' ').filter(Boolean).slice(-2).map((part) => part[0]).join('').toUpperCase();
   const operationFilters = { ...appliedFilters, from: opsFrom, to: opsTo };
