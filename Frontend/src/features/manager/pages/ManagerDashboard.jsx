@@ -1,10 +1,12 @@
+import { locale } from '../../../i18n/languageStore.js';
 import LanguageSwitcher from '../../../i18n/LanguageSwitcher';
 import { t, useLanguage } from '../../../i18n/useLanguage';
+import OperationalOverview from '../components/OperationalOverview';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Activity, BarChart3, BookOpen, CalendarDays, Camera,
-  CircleDollarSign, ClipboardList, Dumbbell, LayoutDashboard, LogOut,
+  BarChart3, CalendarDays, Camera,
+  ClipboardList, Dumbbell, LayoutDashboard, LogOut,
   Menu, Package, Pencil, Plus, RefreshCw, ShieldCheck, Users, X,
 } from 'lucide-react';
 import { AuthContext } from '../../../context/AuthContext';
@@ -53,10 +55,13 @@ function ManagerDashboard() {
   useLanguage();
   const { userInfo, logout } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [active, setActive] = useState('dashboard');
+  const [query, setQuery] = useSearchParams();
+  const active = adminPages.some((p) => p.id === query.get('view')) ? query.get('view') : 'dashboard';
+  const [updatedAt, setUpdatedAt] = useState(null);
   const [mobileNav, setMobileNav] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [data, setData] = useState(null);
+  const [dataView, setDataView] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [modal, setModal] = useState(null);
@@ -64,6 +69,9 @@ function ManagerDashboard() {
   const [filters, setFilters] = useState({ keyword: '', role: 'ALL', status: 'ALL', from: initialFrom, to: initialTo });
   const [appliedFilters, setAppliedFilters] = useState(filters);
   const requestId = useRef(0);
+  const opsFrom=query.get('from') || (active==='operations'?weekRange().from:appliedFilters.from);
+  const opsTo=query.get('to') || (active==='operations'?weekRange().to:appliedFilters.to);
+  const opsLow=query.get('lowRegistration')==='true', opsStatus=query.get('status') || undefined, opsExclude=query.get('excludeUrgent')==='true';
 
   const [notice, setNotice] = useState('');
   const invalidateRequest = useCallback(() => { requestId.current++; }, []);
@@ -72,7 +80,7 @@ function ManagerDashboard() {
     const currentRequest = ++requestId.current;
     setLoading(true);
     setError('');
-    const publish = (result) => { if (currentRequest === requestId.current) setData(result); };
+    const publish = (result) => { if (currentRequest === requestId.current) { setData(result); setDataView(active); setUpdatedAt(new Date()); } };
     try {
       if (['operations', 'reports'].includes(active) && (!appliedFilters.from || !appliedFilters.to || appliedFilters.from > appliedFilters.to)) {
         throw new Error('Select a valid date range: the start date cannot be after the end date.');
@@ -85,7 +93,8 @@ function ManagerDashboard() {
       if (active === 'operations') {
         const [subjects, rooms, classes, schedules, coaches] = await Promise.all([
           managerService.subjects(), managerService.rooms(), managerService.classes(),
-          managerService.schedules(appliedFilters.from, appliedFilters.to), managerService.users({ role: 'Coach', status: 'ACTIVE' }),
+          managerService.schedules(opsFrom,opsTo,{lowRegistration:opsLow,status:opsStatus,excludeUrgent:opsExclude}),
+          managerService.users({ role: 'Coach', status: 'ACTIVE' }),
         ]);
         publish({ subjects, rooms, classes, schedules, coaches });
       }
@@ -96,11 +105,18 @@ function ManagerDashboard() {
       if (currentRequest === requestId.current) {
         setError(apiError(err, err.message || 'Unable to load data.'));
         if (active === 'operations') setData(null);
+        setDataView(active);
       }
     } finally {
       if (currentRequest === requestId.current) setLoading(false);
     }
-  }, [active, appliedFilters]);
+  }, [active, appliedFilters, opsFrom, opsTo, opsLow, opsStatus, opsExclude]);
+  const refreshAll = load;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => { if (active === 'operations' && query.has('from') && query.has('to')) setFilters(current => ({ ...current, from: query.get('from'), to: query.get('to') })); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [active, query]);
 
   useEffect(() => {
     const refreshTimer = window.setTimeout(load, 0);
@@ -116,17 +132,18 @@ function ManagerDashboard() {
       const next = { ...filters, ...weekRange() };
       setFilters(next); setAppliedFilters(next);
     }
-    setActive(id);
+    setQuery(id === 'dashboard' ? {} : { view: id });
     setData(null);
     setMobileNav(false);
   };
 
   const handleLogout = () => { logout(); navigate('/'); };
   const handleSaved = async (message = 'Changes saved.') => { setModal(null); setNotice(message); await load(); };
-  const applyFilters = (nextFilters = filters) => setAppliedFilters({ ...nextFilters });
+  const applyFilters = (nextFilters = filters) => { setAppliedFilters({ ...nextFilters }); if (active === 'operations') { const next = new URLSearchParams(query); next.set('from', nextFilters.from); next.set('to', nextFilters.to); setQuery(next); } };
   const initials = (userInfo?.fullName || 'Center Manager').split(' ').filter(Boolean).slice(-2).map((part) => part[0]).join('').toUpperCase();
+  const operationFilters = { ...appliedFilters, from: opsFrom, to: opsTo };
   const currentPage = adminPages.find((item) => item.id === active) || adminPages[0];
-  const initialLoading = loading && data === null;
+  const initialLoading = dataView !== active || (loading && data === null);
 
   return (
     <div className={`manager-app ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}`}>
@@ -152,13 +169,14 @@ function ManagerDashboard() {
           <button type="button" className="manager-sidebar-toggle" onClick={() => setSidebarCollapsed((value) => !value)} aria-controls="manager-sidebar" aria-expanded={!sidebarCollapsed} aria-label={t(sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')} title={t(sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}><Menu size={20} /></button>
           <button className="manager-menu-button" onClick={() => setMobileNav(true)} aria-label={t("Open menu")} title={t("Open menu")}><Menu size={20} /></button>
           <nav className="manager-breadcrumb" aria-label={t("Breadcrumb")}><span>{t("Nexus Center")}</span><i aria-hidden="true">/</i><strong>{t(currentPage.title)}</strong></nav>
+          <span className="overview-updated" role="status">{t(updatedAt ? t(`Updated ${new Intl.DateTimeFormat(locale(), { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', hour12: false }).format(updatedAt)}`) : t('Loading…'))}</span>
           <LanguageSwitcher />
-          <button className={`manager-icon-button ${loading ? 'is-refreshing' : ''}`} onClick={load} title={t("Refresh")} aria-label={t("Refresh data")} aria-busy={loading} disabled={initialLoading}><RefreshCw size={18} /></button>
+          <button className={`manager-icon-button ${loading ? 'is-refreshing' : ''}`} onClick={refreshAll} title={t("Refresh")} aria-label={t("Refresh data")} aria-busy={loading} disabled={initialLoading}><RefreshCw size={18} /></button>
         </header>
 
         <section className="manager-content">
           {error && <div className="manager-alert" role="alert"><span>{t(error)}</span><button onClick={load}>{t("Retry")}</button></div>}
-          {initialLoading ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={data} filters={filters} appliedFilters={appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={load} loading={loading} loadError={error} />}
+          {initialLoading && active !== 'dashboard' ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={dataView === active ? data : null} filters={filters} appliedFilters={active === 'operations' ? operationFilters : appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={refreshAll} loading={loading || dataView !== active} loadError={error} updatedAt={updatedAt} />}
         </section>
       </main>
       <ManagerToast message={t(notice)} onClose={() => setNotice('')} />
@@ -169,28 +187,13 @@ function ManagerDashboard() {
 }
 
 function ManagerView(props) {
-  if (props.active === 'dashboard') return <DashboardView {...props} />;
+  useLanguage();
+  if (props.active === 'dashboard') return <OperationalOverview {...props} />;
   if (props.active === 'people') return <StaffPage {...props} />;
   if (props.active === 'operations') return <OperationsPage {...props} />;
   if (props.active === 'packages') return <PackagesView {...props} />;
   if (props.active === 'reports') return <ReportsView {...props} />;
   return <AuditView {...props} />;
-}
-
-function DashboardView({ data, page }) {
-  useLanguage();
-  const stats = [
-    ['Members', data?.totalMembers, Users, 'blue'], ['Active coaches', data?.activeCoaches, Dumbbell, 'green'],
-    ['Active classes', data?.activeClasses, BookOpen, 'amber'], ['Active memberships', data?.activeMemberships, ShieldCheck, 'cyan'],
-  ];
-  return <>
-    <ManagerPageHeader title={page.title} description={page.description} />
-    <div className="manager-stat-grid">{stats.map(([label, value, Icon, tone]) => <div className={`manager-stat tone-${tone}`} key={label}><span><Icon size={20} /></span><div><small>{t(label)}</small><strong>{value ?? 0}</strong></div></div>)}</div>
-    <div className="manager-dashboard-grid">
-      <section className="manager-panel manager-revenue"><div className="manager-panel-heading"><div><span>{t("Revenue this month")}</span><strong>{money(data?.monthlyRevenue)}</strong></div><CircleDollarSign size={24} /></div><div className="manager-metric-row"><span>{t("Sessions in the next 7 days")}</span><b>{data?.upcomingSchedules || 0} {t("sessions")}</b></div></section>
-      <section className="manager-panel"><div className="manager-panel-heading"><div><span>{t("Recent activity")}</span><strong>{t("Operations feed")}</strong></div><Activity size={21} /></div><div className="manager-timeline">{data?.recentActivity?.length ? data.recentActivity.map((item, index) => <div key={`${item.type}-${index}`}><i /><div><strong>{item.title}</strong><span>{item.type === 'PAYMENT' ? item.detail.replace(/^([\d,]+) VND/, (_, amount) => money(amount.replaceAll(',', ''))) : item.detail}</span></div><time>{dateTime(item.occurredAt)}</time></div>) : <EmptyState />}</div></section>
-    </div>
-  </>;
 }
 
 function PackagesView({ data, openModal, page }) {

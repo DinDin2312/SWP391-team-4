@@ -45,6 +45,9 @@ public class ManagerService {
     public Map<String, Object> dashboard() {
         Map<String, Object> result = new LinkedHashMap<>(managerRepository.dashboard());
         result.put("recentActivity", managerRepository.recentActivity());
+        result.putAll(managerRepository.operationalOverview());
+        result.put("lowRegistrationList", managerRepository.lowRegistrationSessions());
+        result.put("expiringMembershipList", managerRepository.expiringMemberships());
         return result;
     }
 
@@ -226,6 +229,19 @@ public class ManagerService {
     public List<Map<String, Object>> schedules(LocalDate from, LocalDate to) {
         validateDateRange(from, to);
         return managerRepository.schedules(from, to);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String,Object> overviewPage(String block,int page,int size) {
+        if(page<0 || page>100000 || size<1 || size>50) throw new IllegalArgumentException("Invalid page or size");
+        return block.equals("attention") ? managerRepository.attentionPage(page,size) : managerRepository.renewalPage(page,size);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String,Object>> filteredSchedules(LocalDate from,LocalDate to,boolean low,String status,boolean excludeUrgent) {
+        validateDateRange(from,to);
+        if(status!=null && !status.isBlank()) validateStatus(status,SCHEDULE_STATUSES);
+        return managerRepository.filteredSchedules(from,to,low,status,excludeUrgent);
     }
 
     public int saveSchedule(Integer id, ManagerRequests.ScheduleRequest request, String actor) {

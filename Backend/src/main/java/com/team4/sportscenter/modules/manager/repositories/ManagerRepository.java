@@ -18,6 +18,67 @@ import java.util.Map;
 @Repository
 @RequiredArgsConstructor
 public class ManagerRepository {
+    public static final double LOW_REGISTRATION_THRESHOLD = 0.25;
+    public static final int URGENT_WINDOW_HOURS = 6;
+    private static final java.time.ZoneId CENTER_ZONE = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+    private LocalDateTime centerNow() { return LocalDateTime.now(CENTER_ZONE); }
+
+    // Pending and confirmed bookings both reserve seats; the threshold is strictly below 25%.
+    private static final String BOOKED_SQL = "(SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id=s.schedule_id AND b.status IN ('CONFIRMED','PENDING'))";
+    private static final String SESSION_SQL = "SELECT s.schedule_id scheduleId,s.class_id classId,c.class_name className,u.full_name coachName,r.room_name roomName,s.start_time startTime,s.end_time endTime,s.status," + BOOKED_SQL + " booked,c.max_slots maxSlots FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id JOIN USERS u ON u.user_id=c.coach_id JOIN ROOMS r ON r.room_id=c.room_id ";
+
+    public Map<String, Object> operationalOverview() {
+        LocalDateTime now = centerNow();
+        LocalDate today = now.toLocalDate();
+        String low = "s.status='SCHEDULED' AND c.max_slots>0 AND " + BOOKED_SQL + "<c.max_slots*?";
+        String future = "s.start_time>=? AND s.start_time<? AND " + low;
+        List<Map<String, Object>> todayRows = jdbc.queryForList(SESSION_SQL + "WHERE s.start_time>=? AND s.start_time<? AND s.status<>'CANCELLED' ORDER BY s.start_time,s.schedule_id", today.atStartOfDay(),today.plusDays(1).atStartOfDay()).stream().map(this::localTimes).toList();
+        List<Map<String, Object>> urgent = jdbc.queryForList(SESSION_SQL + "WHERE " + future + " ORDER BY s.start_time,s.schedule_id", now,now.plusHours(URGENT_WINDOW_HOURS),LOW_REGISTRATION_THRESHOLD).stream().map(this::localTimes).toList();
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("sessionsToday", todayRows.size());
+        result.put("todaySessions", todayRows);
+        result.put("urgentSessions", urgent);
+        result.put("urgentCount", urgent.size());
+        result.put("lowRegistrationSessions", jdbc.queryForObject("SELECT COUNT(*) FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id WHERE " + future, Integer.class,now,today.plusDays(8).atStartOfDay(),LOW_REGISTRATION_THRESHOLD));
+        result.put("attentionPage", attentionPage(0,6));
+        Map<String,Object> renewals = renewalPage(0,6);
+        result.put("renewalPage",renewals);
+        result.put("expiringMemberships",renewals.get("total"));
+        result.put("centerDate",today.toString());
+        result.put("serverNow", now.toString());
+        result.put("lowRegistrationThreshold",LOW_REGISTRATION_THRESHOLD);
+        result.put("urgentWindowHours",URGENT_WINDOW_HOURS);
+        return result;
+    }
+
+    public Map<String,Object> attentionPage(int page,int size) {
+        LocalDateTime now = centerNow();
+        LocalDate today = now.toLocalDate();
+        String where = "WHERE s.start_time>=? AND s.start_time<? AND s.status='SCHEDULED' AND c.max_slots>0 AND " + BOOKED_SQL + "<c.max_slots*? AND NOT(s.start_time>=? AND s.start_time<?)";
+        Object[] args = {today.plusDays(1).atStartOfDay(),today.plusDays(8).atStartOfDay(),LOW_REGISTRATION_THRESHOLD,now,now.plusHours(URGENT_WINDOW_HOURS)};
+        int total = jdbc.queryForObject("SELECT COUNT(*) FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id " + where,Integer.class,args);
+        java.util.List<Object> params = new java.util.ArrayList<>(java.util.Arrays.asList(args)); params.add(size); params.add(page*size);
+        List<Map<String,Object>> items = jdbc.queryForList(SESSION_SQL + where + " ORDER BY s.start_time,s.schedule_id LIMIT ? OFFSET ?",params.toArray()).stream().map(this::localTimes).toList();
+        return Map.of("items",items,"total",total,"page",page,"size",size);
+    }
+
+    public Map<String,Object> renewalPage(int page,int size) {
+        LocalDate today = centerNow().toLocalDate();
+        String where = "FROM USER_MEMBERSHIPS um JOIN USERS u ON u.user_id=um.user_id JOIN PACKAGES p ON p.package_id=um.package_id WHERE um.status='ACTIVE' AND um.start_date<=? AND um.end_date>=? AND um.end_date<=?";
+        int total = jdbc.queryForObject("SELECT COUNT(*) " + where,Integer.class,today,today,today.plusDays(7));
+        List<Map<String,Object>> items = jdbc.queryForList("SELECT um.membership_id membershipId,u.full_name fullName,u.phone,p.package_name packageName,um.end_date endDate " + where + " ORDER BY um.end_date,um.membership_id LIMIT ? OFFSET ?",today,today,today.plusDays(7),size,page*size);
+        return Map.of("items",items,"total",total,"page",page,"size",size);
+    }
+
+    public List<Map<String,Object>> filteredSchedules(LocalDate from,LocalDate to,boolean lowRegistration,String status,boolean excludeUrgent) {
+        String where = "WHERE s.start_time>=? AND s.start_time<?";
+        java.util.List<Object> args = new java.util.ArrayList<>(List.of(from.atStartOfDay(),to.plusDays(1).atStartOfDay()));
+        if(status!=null && !status.isBlank()) { where += " AND s.status=?";args.add(status); }
+        if(lowRegistration) { where += " AND s.status='SCHEDULED' AND s.start_time>=? AND c.max_slots>0 AND " + BOOKED_SQL + "<c.max_slots*?"; args.add(centerNow());args.add(LOW_REGISTRATION_THRESHOLD); }
+        if(excludeUrgent) { LocalDateTime now=centerNow();where += " AND NOT(s.start_time>=? AND s.start_time<?)";args.add(now);args.add(now.plusHours(URGENT_WINDOW_HOURS)); }
+        return jdbc.queryForList(SESSION_SQL + where + " ORDER BY s.start_time,s.schedule_id",args.toArray()).stream().map(this::localTimes).toList();
+    }
+
     private final JdbcTemplate jdbc;
 
     // Serialize manager assignment/capacity changes, including requests on different server instances.
@@ -119,7 +180,45 @@ public class ManagerRepository {
                   (SELECT COUNT(*) FROM CLASSES WHERE status='ACTIVE') activeClasses,
                   (SELECT COUNT(*) FROM USER_MEMBERSHIPS WHERE status='ACTIVE' AND start_date<=CURDATE() AND end_date >= CURDATE()) activeMemberships,
                   (SELECT COALESCE(SUM(amount),0) FROM PAYMENTS WHERE status='SUCCESS' AND YEAR(payment_date)=YEAR(CURDATE()) AND MONTH(payment_date)=MONTH(CURDATE())) monthlyRevenue,
-                  (SELECT COUNT(*) FROM SCHEDULES WHERE status='SCHEDULED' AND start_time BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)) upcomingSchedules
+                  (SELECT COUNT(*) FROM SCHEDULES WHERE status='SCHEDULED' AND start_time BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)) upcomingSchedules,
+                  (SELECT COUNT(*) FROM SCHEDULES WHERE status<>'CANCELLED' AND start_time>=CURDATE() AND start_time<DATE_ADD(CURDATE(), INTERVAL 1 DAY)) sessionsToday,
+                  (SELECT COUNT(*) FROM USER_MEMBERSHIPS WHERE status='ACTIVE' AND start_date<=CURDATE() AND end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)) expiringMemberships,
+                  (SELECT COUNT(*) FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id
+                   WHERE s.status='SCHEDULED' AND s.start_time>=NOW() AND s.start_time<DATE_ADD(CURDATE(), INTERVAL 8 DAY)
+                   AND c.max_slots>0 AND (SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id=s.schedule_id AND b.status IN ('CONFIRMED','PENDING'))<c.max_slots*0.25) lowRegistrationSessions
+                """);
+    }
+
+    public List<Map<String, Object>> todaySessions() {
+        return jdbc.queryForList("""
+                SELECT s.schedule_id scheduleId,c.class_name className,u.full_name coachName,r.room_name roomName,
+                       s.start_time startTime,s.end_time endTime,s.status,
+                       (SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id=s.schedule_id AND b.status IN ('CONFIRMED','PENDING')) booked,c.max_slots maxSlots
+                FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id
+                JOIN USERS u ON u.user_id=c.coach_id JOIN ROOMS r ON r.room_id=c.room_id
+                WHERE s.status<>'CANCELLED' AND s.start_time>=CURDATE() AND s.start_time<DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+                ORDER BY CASE WHEN s.end_time>NOW() THEN 0 ELSE 1 END,s.start_time,s.schedule_id LIMIT 6
+                """).stream().map(this::localTimes).toList();
+    }
+
+    public List<Map<String, Object>> lowRegistrationSessions() {
+        return jdbc.queryForList("""
+                SELECT s.schedule_id scheduleId,c.class_name className,s.start_time startTime,r.room_name roomName,
+                       (SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id=s.schedule_id AND b.status IN ('CONFIRMED','PENDING')) booked,c.max_slots maxSlots
+                FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id JOIN ROOMS r ON r.room_id=c.room_id
+                WHERE s.status='SCHEDULED' AND s.start_time>=NOW() AND s.start_time<DATE_ADD(CURDATE(), INTERVAL 8 DAY)
+                  AND c.max_slots>0
+                  AND (SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id=s.schedule_id AND b.status IN ('CONFIRMED','PENDING'))<c.max_slots*0.25
+                ORDER BY s.start_time,s.schedule_id LIMIT 6
+                """).stream().map(this::localTimes).toList();
+    }
+
+    public List<Map<String, Object>> expiringMemberships() {
+        return jdbc.queryForList("""
+                SELECT um.membership_id membershipId,u.full_name fullName,u.phone,p.package_name packageName,um.end_date endDate
+                FROM USER_MEMBERSHIPS um JOIN USERS u ON u.user_id=um.user_id JOIN PACKAGES p ON p.package_id=um.package_id
+                WHERE um.status='ACTIVE' AND um.start_date<=CURDATE() AND um.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+                ORDER BY um.end_date,um.membership_id LIMIT 6
                 """);
     }
 

@@ -1,5 +1,6 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { useState, useSyncExternalStore } from "react";
+import { useSearchParams } from 'react-router-dom';
 import {
   CalendarDays,
   ChevronLeft,
@@ -93,10 +94,11 @@ export default function OperationsPage({
 }) {
   useLanguage();
   const records = data || emptyData;
+  const [query, setQuery] = useSearchParams();
   const [tab, setTab] = useState("schedules");
   const [view, setView] = useState("calendar");
   const mobile = useSyncExternalStore(listenMobile, mobileSnapshot);
-  const listView = mobile || view === "list";
+  const listView = mobile || view === "list" || query.has('lowRegistration') || query.has('excludeCancelled');
   const [group, setGroup] = useState("room");
   const [selection, setSelection] = useState({
     subject: "",
@@ -109,7 +111,23 @@ export default function OperationsPage({
   const [editor, setEditor] = useState(null);
   const [detail, setDetail] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
-  const rows = filterSchedules(records.schedules, records.classes, selection);
+  const rows = filterSchedules(records.schedules, records.classes, selection)
+    .filter(row => query.get('excludeCancelled') !== 'true' || row.status !== 'CANCELLED');
+  const linkedSchedule = records.schedules.find(row => String(row.scheduleId) === query.get('editSchedule'));
+  const activeEditor = editor || (linkedSchedule ? { type: 'schedule', item: linkedSchedule } : null);
+  const closeEditor = () => {
+    setEditor(null);
+    if (query.has('editSchedule')) {
+      const next = new URLSearchParams(query);
+      next.delete('editSchedule');
+      setQuery(next, { replace: true });
+    }
+  };
+  const clearOverviewFilters = () => {
+    const next = new URLSearchParams(query);
+    ['lowRegistration', 'excludeCancelled', 'excludeUrgent', 'status'].forEach(key => next.delete(key));
+    setQuery(next);
+  };
   const metrics = scheduleMetrics(rows);
   const displayedRange = appliedFilters;
   const selectedWeek = weekRange(displayedRange.from);
@@ -159,7 +177,7 @@ export default function OperationsPage({
     });
   };
   const saved = async (message) => {
-    setEditor(null);
+    closeEditor();
     setConfirmation(null);
     setDetail(null);
     notify(message);
@@ -205,6 +223,10 @@ export default function OperationsPage({
         description={t("Plan the week, manage classes and keep resources coordinated.")}
         actions={actions}
       />
+      {(query.has('lowRegistration') || query.has('excludeCancelled')) && <div className="manager-alert">
+        <span>{t(query.has('lowRegistration') ? 'Low bookings · upcoming scheduled sessions below 25% capacity' : 'Today’s sessions · cancellations excluded')}</span>
+        <button onClick={clearOverviewFilters}>{t('Clear filter')}</button>
+      </div>}
       <div
         className="manager-tabs"
         role="tablist"
@@ -610,15 +632,15 @@ export default function OperationsPage({
           </div>
         )}
       </section>
-      {editor && (
+      {activeEditor && (
         <OperationEditor
-          config={editor}
+          config={activeEditor}
           data={records}
-          onClose={() => setEditor(null)}
+          onClose={closeEditor}
           onSaved={saved}
         />
       )}
-      {detail && !editor && !confirmation && (
+      {detail && !activeEditor && !confirmation && (
         <SessionDrawer
           schedule={
             records.schedules.find(
