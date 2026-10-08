@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:manager": "node --test src/features/manager/managerUtils.test.js src/features/manager/operations/operationsUtils.test.js",
+    "test:manager": "node --test src/features/manager/managerUtils.test.js src/features/manager/operations/operationsUtils.test.js src/features/manager/components/overviewUtils.test.js src/features/manager/components/overviewRendering.test.js",
     "test:i18n": "node --test src/i18n/languageStore.test.js src/i18n/adminLanguage.test.js"
   },
   "dependencies": {

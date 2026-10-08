@@ -1,5 +1,10 @@
 import { localizedCopy } from '../../../i18n/languageStore';
 const managerEn = {
+  overview: {
+    low: 'Low', empty: 'Empty', noBookings: 'No bookings',
+    renewalRange: 'Today through 7 days', upcomingRange: 'After today · next 7 days',
+    noExpiringPlans: 'No active plans expire in the next 7 days.',
+  },
   staff: {
     addAccount: 'Add Account',
     stats: {
