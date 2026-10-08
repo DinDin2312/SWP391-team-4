@@ -1,3 +1,4 @@
+import { locale } from '../i18n/languageStore.js';
 // Format presentation only. API dates and datetime-local values keep their original contracts.
 export const formatMoney = (value) => new Intl.NumberFormat('vi-VN', {
   style: 'currency', currency: 'VND', maximumFractionDigits: 0,
@@ -12,14 +13,14 @@ function asDate(value) {
 
 export function formatDate(value) {
   const date = asDate(value);
-  return date ? new Intl.DateTimeFormat('en-GB', {
+  return date ? new Intl.DateTimeFormat(locale(), {
     day: '2-digit', month: '2-digit', year: 'numeric',
   }).format(date) : '—';
 }
 
 export function formatTime(value) {
   const date = asDate(value);
-  return date ? new Intl.DateTimeFormat('en-GB', {
+  return date ? new Intl.DateTimeFormat(locale(), {
     hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
   }).format(date) : '—';
 }

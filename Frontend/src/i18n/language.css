@@ -1,0 +1,6 @@
+.language-switcher { display:flex; flex-shrink:0; padding:4px; gap:3px; border:1px solid var(--border); border-radius:9px; background:var(--surface); }
+.language-switcher.is-floating { position:fixed; right:16px; bottom:16px; box-shadow:0 2px 8px var(--border); z-index:100; }
+.language-switcher button { border:0; border-radius:5px; padding:7px 10px; font-size:12px; font-weight:600; color:var(--text); background:transparent; cursor:pointer; }
+.language-switcher button[aria-pressed=true] { background:var(--primary); color:var(--on-primary); }
+.language-switcher button:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+@media(max-width:600px) { .language-switcher.is-floating { right:10px; bottom:10px; } }
