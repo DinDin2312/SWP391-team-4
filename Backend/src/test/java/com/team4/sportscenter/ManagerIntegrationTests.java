@@ -90,6 +90,87 @@ class ManagerIntegrationTests {
         jdbc.update("DELETE FROM AUDIT_LOGS WHERE actor_email=? OR actor_email=?", actor, "admin" + actor);
     }
 
+    @Test void overviewDoesNotCapTotalsOrDropUrgentItemsAndFiltersMatch() {
+        LocalDateTime now = LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        java.time.LocalDate today = now.toLocalDate();
+        for(int i=0;i<10;i++) {
+            LocalDateTime urgent = now.plusMinutes(10+i*10);
+            jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,'SCHEDULED')",course,urgent,urgent.plusHours(1));
+            LocalDateTime later = today.plusDays(2).atTime(8,0).plusMinutes(i*10);
+            jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,'SCHEDULED')",course,later,later.plusHours(1));
+        }
+        Map<String,Object> overview = service.dashboard();
+        List<Map<String,Object>> urgentRows = (List<Map<String,Object>>) overview.get("urgentSessions");
+        assertEquals(10,urgentRows.stream().filter(r -> ((Number)r.get("classId")).intValue()==course).count());
+        assertTrue(((Number)overview.get("urgentCount")).intValue()>=10);
+        assertEquals(10,repository.filteredSchedules(today,today.plusDays(7),true,"SCHEDULED",false).stream().filter(r -> ((Number)r.get("classId")).intValue()==course && ((LocalDateTime)r.get("startTime")).toLocalDate().equals(today.plusDays(2))).count());
+        Map<String,Object> attention = (Map<String,Object>) overview.get("attentionPage");
+        assertTrue(((Number)attention.get("total")).intValue()>=10);
+        assertEquals(6,((List<?>)attention.get("items")).size());
+        assertEquals(((Number)attention.get("total")).intValue(),repository.filteredSchedules(today.plusDays(1),today.plusDays(7),true,"SCHEDULED",true).size());
+        assertEquals(((Number)overview.get("lowRegistrationSessions")).intValue(),repository.filteredSchedules(today,today.plusDays(7),true,"SCHEDULED",false).size());
+        assertTrue(((List<?>)repository.attentionPage(1,6).get("items")).size()>0);
+        Integer packageId=jdbc.queryForObject("SELECT MIN(package_id) FROM PACKAGES",Integer.class);
+        try {
+            for(int i=0;i<10;i++) jdbc.update("INSERT INTO USER_MEMBERSHIPS(user_id,package_id,start_date,end_date,status) VALUES (?,?,?,?,'ACTIVE')",member,packageId,today,today.plusDays(3));
+            assertTrue(((Number)repository.renewalPage(0,6).get("total")).intValue()>=10);
+            assertEquals(6,((List<?>)repository.renewalPage(0,6).get("items")).size());
+            assertTrue(((List<?>)repository.renewalPage(1,6).get("items")).size()>0);
+        } finally { jdbc.update("DELETE FROM USER_MEMBERSHIPS WHERE user_id=?",member); }
+    }
+
+    @Test void operationalOverviewCountsBookingsAndExpiryBoundaries() {
+        int lowBefore = ((Number) repository.dashboard().get("lowRegistrationSessions")).intValue();
+        int todayBefore = ((Number) repository.dashboard().get("sessionsToday")).intValue();
+        int expiryBefore = ((Number) repository.dashboard().get("expiringMemberships")).intValue();
+        jdbc.update("UPDATE CLASSES SET max_slots=4 WHERE class_id=?", course);
+        jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,DATE_ADD(CURDATE(),INTERVAL 1 DAY),DATE_ADD(CURDATE(),INTERVAL 25 HOUR),'SCHEDULED')", course);
+        int upcoming = jdbc.queryForObject("SELECT schedule_id FROM SCHEDULES WHERE class_id=?", Integer.class, course);
+        assertEquals(lowBefore + 1, ((Number) repository.dashboard().get("lowRegistrationSessions")).intValue());
+        booking(upcoming, "PENDING");
+        assertEquals(lowBefore, ((Number) repository.dashboard().get("lowRegistrationSessions")).intValue(), "Exactly 25% is not low; pending bookings reserve seats");
+        jdbc.update("UPDATE BOOKINGS SET status='CANCELLED' WHERE schedule_id=?", upcoming);
+        assertEquals(lowBefore + 1, ((Number) repository.dashboard().get("lowRegistrationSessions")).intValue());
+        jdbc.update("UPDATE SCHEDULES SET status='CANCELLED' WHERE schedule_id=?", upcoming);
+        assertEquals(lowBefore, ((Number) repository.dashboard().get("lowRegistrationSessions")).intValue());
+        jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,CURDATE(),DATE_ADD(CURDATE(),INTERVAL 1 HOUR),'COMPLETED')", course);
+        assertEquals(todayBefore + 1, ((Number) repository.dashboard().get("sessionsToday")).intValue());
+        jdbc.update("UPDATE SCHEDULES SET status='CANCELLED' WHERE class_id=?", course);
+        assertEquals(todayBefore, ((Number) repository.dashboard().get("sessionsToday")).intValue());
+        Integer packageId = jdbc.queryForObject("SELECT MIN(package_id) FROM PACKAGES", Integer.class);
+        assertNotNull(packageId);
+        try {
+            jdbc.update("INSERT INTO USER_MEMBERSHIPS(user_id,package_id,start_date,end_date,status) VALUES (?,?,CURDATE(),DATE_ADD(CURDATE(),INTERVAL 7 DAY),'ACTIVE')", member, packageId);
+            assertEquals(expiryBefore + 1, ((Number) repository.dashboard().get("expiringMemberships")).intValue());
+            jdbc.update("UPDATE USER_MEMBERSHIPS SET end_date=DATE_ADD(CURDATE(),INTERVAL 8 DAY) WHERE user_id=?", member);
+            assertEquals(expiryBefore, ((Number) repository.dashboard().get("expiringMemberships")).intValue());
+            Map<String, Object> overview = service.dashboard();
+            for (String key : List.of("lowRegistrationList", "expiringMembershipList")) {
+                assertTrue(((List<?>) overview.get(key)).size() <= 6);
+            }
+        } finally {
+            jdbc.update("DELETE FROM USER_MEMBERSHIPS WHERE user_id=?", member);
+        }
+    }
+
+    @Test void overviewPagesRequireManagerAccessAndValidateFilters() throws Exception {
+        String adminToken = token(admin);
+        String memberToken = token(member);
+        for (String block : List.of("attention", "renewals")) {
+            String path = "/api/manager/dashboard/" + block;
+            assertEquals(401, request("GET", path, null, null).statusCode());
+            assertEquals(403, request("GET", path, memberToken, null).statusCode());
+            assertEquals(200, request("GET", path + "?page=0&size=1", adminToken, null).statusCode());
+            assertEquals(400, request("GET", path + "?page=-1", adminToken, null).statusCode());
+            assertEquals(400, request("GET", path + "?size=51", adminToken, null).statusCode());
+        }
+        assertThrows(IllegalArgumentException.class, () -> service.overviewPage("attention", 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> service.overviewPage("renewals", 100001, 6));
+        String dates = "?from=2040-06-01&to=2040-06-07";
+        assertEquals(400, request("GET", "/api/manager/schedules" + dates + "&status=INVALID", adminToken, null).statusCode());
+        assertEquals(400, request("GET", "/api/manager/schedules?from=2040-06-07&to=2040-06-01&lowRegistration=true", adminToken, null).statusCode());
+    }
+
     @Test void onlyManagerCanAccessAndLockRevokesExistingToken() throws Exception {
         assertEquals(401, request("GET", "/api/manager/dashboard", null, null).statusCode());
         assertEquals(403, request("GET", "/api/manager/dashboard", token(member), null).statusCode());

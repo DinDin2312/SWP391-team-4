@@ -24,6 +24,11 @@ public class ManagerController {
     @GetMapping("/dashboard")
     public Map<String, Object> dashboard() { return managerService.dashboard(); }
 
+    @GetMapping("/dashboard/attention")
+    public Map<String,Object> attention(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="6") int size) { return managerService.overviewPage("attention",page,size); }
+    @GetMapping("/dashboard/renewals")
+    public Map<String,Object> renewals(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="6") int size) { return managerService.overviewPage("renewals",page,size); }
+
     @GetMapping("/users")
     public List<Map<String, Object>> users(@RequestParam(required = false) String keyword,
                                            @RequestParam(defaultValue = "ALL") String role,
@@ -80,7 +85,11 @@ public class ManagerController {
     @GetMapping("/schedules")
     public List<Map<String, Object>> schedules(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue="false") boolean lowRegistration,
+            @RequestParam(required=false) String status,
+            @RequestParam(defaultValue="false") boolean excludeUrgent) {
+        if(lowRegistration || excludeUrgent || status!=null) return managerService.filteredSchedules(from,to,lowRegistration,status,excludeUrgent);
         return managerService.schedules(from, to);
     }
     @PostMapping("/schedules") public Map<String, Integer> createSchedule(@Valid @RequestBody ManagerRequests.ScheduleRequest request, Authentication auth) { return Map.of("id", managerService.saveSchedule(null, request, auth.getName())); }
