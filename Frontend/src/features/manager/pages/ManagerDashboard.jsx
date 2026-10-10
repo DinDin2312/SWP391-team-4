@@ -4,6 +4,7 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import OperationalOverview from '../components/OperationalOverview';
 import PackagesPage from '../packages/PackagesPage';
 import ReportsPage from '../reports/ReportsPage';
+import AuditPage from '../audit/AuditPage';
 import TransactionsPage from '../transactions/TransactionsPage';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -13,10 +14,8 @@ import {
   Menu, Package, RefreshCw, ShieldCheck, Users, X, Wallet,
 } from 'lucide-react';
 import { AuthContext } from '../../../context/AuthContext';
-import ManagerPageHeader from '../components/ManagerPageHeader';
 import managerService from '../services/managerService';
 import { isoDate, initialForm, apiError } from '../managerUtils';
-import { formatDateTime } from '../../../utils/displayFormat';
 import StaffPage from '../staff/StaffPage';
 import OperationsPage, { OperationsSkeleton } from '../operations/OperationsPage';
 import { weekRange } from '../operations/operationsUtils';
@@ -33,7 +32,6 @@ import './admin-design.css';
 const today = new Date();
 const initialFrom = isoDate(new Date(today.getFullYear(), today.getMonth(), 1));
 const initialTo = isoDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
-const dateTime = formatDateTime;
 
 const adminPages = [
   { id: 'dashboard', title: 'Overview', description: 'Monitor center performance and recent operational activity.', icon: LayoutDashboard },
@@ -44,11 +42,6 @@ const adminPages = [
   { id: 'transactions', title: 'Transactions', description: 'Monitor system-wide invoices and payment history.', icon: Wallet },
   { id: 'audit', title: 'System Audit Log', description: 'Review administrative changes and account activity.', icon: ClipboardList },
 ];
-
-function EmptyState({ message = 'No matching data available.' }) {
-  useLanguage();
-  return <div className="manager-empty"><ClipboardList size={28} /><span>{t(message)}</span></div>;
-}
 
 function Loading() {
   useLanguage();
@@ -214,12 +207,7 @@ function ManagerView(props) {
   if (props.active === 'packages') return <PackagesPage {...props} />;
   if (props.active === 'reports') return <ReportsPage {...props} />;
   if (props.active === 'transactions') return <TransactionsPage {...props} />;
-  return <AuditView {...props} />;
-}
-
-function AuditView({ data, page }) {
-  useLanguage();
-  return <><ManagerPageHeader title={t(page.title)} description={t(page.description)} /><div className="manager-table-wrap"><table><thead><tr><th>{t("Time")}</th><th>{t("Actor")}</th><th>{t("Action")}</th><th>{t("Entity")}</th><th>{t("Details")}</th></tr></thead><tbody>{data?.map((log) => <tr key={log.auditId}><td>{dateTime(log.createdAt)}</td><td><strong>{log.actorEmail}</strong></td><td><span className="manager-action-tag">{log.action}</span></td><td>{log.entityType} #{log.entityId}</td><td>{log.details}</td></tr>)}</tbody></table>{!data?.length && <EmptyState message={t("No administrative activity recorded yet.")} />}</div></>;
+  return <AuditPage {...props} />;
 }
 
 function EditorModal({ config, dictionaries, onClose, onSaved }) {
