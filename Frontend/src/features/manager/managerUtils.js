@@ -37,6 +37,7 @@ export function reportCsv(data) {
     ['Pending invoices', data.summary?.pendingInvoices || 0], ['Class bookings', data.summary?.confirmedBookings || 0],
     [], ['Date', 'Revenue (VND)'], ...(data.revenueByDay || []).map((row) => [row.label, row.value]),
     [], ['Class', 'Bookings', 'Total session capacity'], ...(data.classOccupancy || []).map((row) => [row.label, row.value, row.capacity]),
+    [], ['Package', 'Registrations (membership start date)'], ...(data.memberships || []).map((row) => [row.label, row.value]),
   ];
   return '\uFEFF' + rows.map((row) => row.map(cell).join(',')).join('\r\n');
 }

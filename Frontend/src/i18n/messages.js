@@ -1438,3 +1438,18 @@ const staffPermissionLabels = {
  "Center operations":"Vận hành trung tâm", "Member records":"Hồ sơ hội viên", "Class roster":"Danh sách học viên", "Standard access":"Quyền truy cập cơ bản"
 };
 for (const [en, vi] of Object.entries(staffPermissionLabels)) translations[en] = [en, vi];
+
+const reportDesignLabels = {
+  'Reporting period':'Kỳ báo cáo', 'This month':'Tháng này', 'Last 7 days':'7 ngày gần nhất', 'Last 30 days':'30 ngày gần nhất', 'Date':'Ngày',
+  'Apply the date range to update this report.':'Bấm Xem để cập nhật báo cáo theo khoảng ngày đã chọn.',
+  'Performance summary':'Tổng quan hiệu quả', 'Successful payments only':'Chỉ tính thanh toán thành công',
+  'Payments completed in this period':'Giao dịch hoàn tất trong kỳ', 'Invoices created in this period':'Hóa đơn được tạo trong kỳ',
+  'Confirmed bookings by session date':'Lượt đặt đã xác nhận theo ngày học', 'Daily totals from successful payments.':'Tổng doanh thu thanh toán thành công theo ngày.',
+  'Revenue (VND)':'Doanh thu (VND)', 'Only days with successful payments are shown.':'Chỉ hiển thị ngày có thanh toán thành công.',
+  'Report data is unavailable.':'Chưa tải được dữ liệu báo cáo.', 'No successful payments in this period.':'Không có thanh toán thành công trong kỳ này.',
+  'Top 10 classes by confirmed bookings.':'10 lớp có nhiều lượt đặt đã xác nhận nhất.', 'Total session capacity':'Tổng chỗ trong các buổi', 'Occupancy':'Tỷ lệ lấp đầy',
+  'No class sessions in this period.':'Không có buổi học trong kỳ này.', 'Capacity is summed across sessions in the selected period.':'Sức chứa được cộng từ các buổi học trong khoảng ngày đã chọn.',
+  'Package registrations':'Đăng ký theo gói', 'Top 5 packages by registrations.':'5 gói có nhiều lượt đăng ký nhất.',
+  'No package registrations in this period.':'Không có đăng ký gói trong kỳ này.', 'Based on membership start date, not payment status.':'Tính theo ngày bắt đầu đăng ký, không theo trạng thái thanh toán.',
+};
+for (const [en, vi] of Object.entries(reportDesignLabels)) translations[en] = [en, vi];
