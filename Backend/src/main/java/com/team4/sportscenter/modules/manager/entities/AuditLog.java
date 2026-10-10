@@ -40,6 +40,8 @@ public class AuditLog {
     @Column(name = "details", columnDefinition = "TEXT")
     private String details;
 
+    @Column(name="changes_json",columnDefinition="LONGTEXT") private String changesJson;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 }

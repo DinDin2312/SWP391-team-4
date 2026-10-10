@@ -21,6 +21,9 @@ public class GymClass {
     @Column(name = "class_name")
     private String className;
 
+    @Column(name="subject_id", insertable=false, updatable=false)
+    private Integer subjectId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_id")
     private Subject subject;
@@ -41,4 +44,7 @@ public class GymClass {
 
     @Column(name = "status")
     private String status;
+
+    @Column(name = "image_path", length = 255)
+    private String imagePath;
 }
