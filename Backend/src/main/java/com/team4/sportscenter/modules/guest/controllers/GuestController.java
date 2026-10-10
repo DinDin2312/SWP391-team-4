@@ -26,18 +26,27 @@ public class GuestController {
     private final PackageRepository packageRepository;
     
     private final ScheduleRepository scheduleRepository;
+    private final com.team4.sportscenter.modules.member.services.PackageBenefitsService packageBenefits;
+    private final com.team4.sportscenter.modules.manager.services.PackageTypeCatalog packageTypes;
 
+    @org.springframework.beans.factory.annotation.Autowired private com.team4.sportscenter.modules.member.services.PackageCommerceService commerce;
+    @GetMapping("/packages/{id}") public ResponseEntity<?> detail(@org.springframework.web.bind.annotation.PathVariable int id){return ResponseEntity.ok(commerce.publicDetail(id,null));}
     @GetMapping("/packages")
     public ResponseEntity<List<PackageResponse>> getPackages() {
         List<Package> packages = packageRepository.findAll();
-        List<PackageResponse> response = packages.stream()
+        var allBenefits=packageBenefits.allPackageBenefits();
+        var typeNames=packageTypes.names();
+        List<PackageResponse> response = packages.stream().filter(pkg->"SELLING".equals(pkg.getSellingStatus()))
                 .map(pkg -> PackageResponse.builder()
                         .packageId(pkg.getPackageId())
                         .packageName(pkg.getPackageName())
                         .packageType(pkg.getPackageType())
+                        .packageTypeName(typeNames.get(pkg.getPackageType()))
                         .durationDays(pkg.getDurationDays())
                         .price(pkg.getPrice())
-                        .description("") // Package entity doesn't have description
+                        .purchaseLimitPerMember(pkg.getPurchaseLimitPerMember())
+                        .benefits(allBenefits.getOrDefault(pkg.getPackageId(),List.of()))
+                        .imagePath(pkg.getImagePath())
                         .build())
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);

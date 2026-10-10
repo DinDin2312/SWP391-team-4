@@ -15,7 +15,13 @@ public class PackageResponse {
     private Integer packageId;
     private String packageName;
     private String packageType;
+    private String packageTypeName;
     private Integer durationDays;
     private BigDecimal price;
-    private String description;
+    private Integer purchaseLimitPerMember;
+    private Boolean canPurchase;
+    private String purchaseBlockCode;
+    private String purchaseBlockReason;
+    private String imagePath;
+    private java.util.List<java.util.Map<String,Object>> benefits;
 }

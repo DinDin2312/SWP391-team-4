@@ -8,6 +8,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface BookingRepository extends JpaRepository<Booking, Integer> {
+    // Share the operations lock with batch scheduling so registration sees a complete batch.
+    @Query(value="SELECT role_id FROM ROLES WHERE role_name='Center Manager' FOR UPDATE",nativeQuery=true)
+    List<Integer> lockOperations();
     
     @Query("SELECT b FROM Booking b JOIN FETCH b.schedule s JOIN FETCH s.gymClass c JOIN FETCH c.coach u JOIN FETCH c.room r WHERE b.user.email = :email AND b.status = 'CONFIRMED' AND s.startTime >= :currentTime ORDER BY s.startTime ASC")
     List<Booking> findUpcomingBookingsByEmail(@Param("email") String email, @Param("currentTime") LocalDateTime currentTime);

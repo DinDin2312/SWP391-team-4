@@ -40,6 +40,36 @@ public class ManagerService {
     private final AuditLogRepository auditLogRepository;
     private final PasswordEncoder passwordEncoder;
     private final AvatarStorageService avatarStorageService;
+    private final ResourceImageStorageService resourceImageStorageService;
+    private final com.team4.sportscenter.modules.member.services.PackageBenefitsService packageBenefits;
+    private final PackageTypeCatalog packageTypes;
+    private final com.team4.sportscenter.modules.member.services.PackageCommerceService commerce;
+
+    public String updateResourceImage(String resource, Integer id, MultipartFile file, String actor) {
+        String previous = managerRepository.lockResourceImage(resource, id);
+        String stored = resourceImageStorageService.store(file);
+        replaceResourceImage(resource, id, previous, stored, actor);
+        return stored;
+    }
+
+    public void removeResourceImage(String resource, Integer id, String actor) {
+        String previous = managerRepository.lockResourceImage(resource, id);
+        replaceResourceImage(resource, id, previous, null, actor);
+    }
+
+    private void replaceResourceImage(String resource, Integer id, String previous, String stored, String actor) {
+        // Rollback removes only the new file; the old image stays valid until commit.
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override public void afterCommit() { resourceImageStorageService.delete(previous); }
+            @Override public void afterCompletion(int status) {
+                if (status != TransactionSynchronization.STATUS_COMMITTED) resourceImageStorageService.delete(stored);
+            }
+        });
+        var imageBefore="packages".equals(resource)?commerce.detail(id):Map.<String,Object>of();
+        managerRepository.updateResourceImage(resource, id, stored);
+        if("packages".equals(resource)){commerce.audit(id,"UPDATE_IMAGE",actor,imageBefore,commerce.detail(id));return;}
+        audit(actor, stored == null ? "REMOVE_IMAGE" : "UPDATE_IMAGE", resource.toUpperCase(Locale.ROOT), id, stored == null ? "Removed resource image" : "Updated resource image");
+    }
 
     @Transactional(readOnly = true)
     public Map<String, Object> dashboard() {
@@ -200,7 +230,9 @@ public class ManagerService {
     public int saveClass(Integer id, ManagerRequests.ClassRequest request, String actor) {
         managerRepository.lockOperations();
         if (id != null) {
-            managerRepository.classAssignment(id);
+            var previous=managerRepository.classAssignment(id);
+            if(!request.subjectId().equals(((Number)previous.get("subjectId")).intValue()) && managerRepository.hasClassBookings(id))
+                throw new IllegalArgumentException("A class with registrations cannot be moved to another subject.");
             if (request.maxSlots() < managerRepository.peakBookings(id)) {
                 throw new IllegalArgumentException("Class capacity cannot be lower than the number of booked or held seats in a session");
             }
@@ -220,6 +252,7 @@ public class ManagerService {
         if (id != null && managerRepository.hasAssignmentConflict(id, request.coachId(), request.roomId())) {
             throw new IllegalArgumentException("The new assignment conflicts with the coach or room schedule");
         }
+        if(id!=null) packageBenefits.validateClassRoom(id,request.roomId());
         int savedId = managerRepository.saveClass(id, request);
         audit(actor, id == null ? "CREATE" : "UPDATE", "CLASS", savedId, request.className() + " - HLV " + coach.getFullName());
         return savedId;
@@ -289,6 +322,7 @@ public class ManagerService {
             if (id != null && timingChanged && managerRepository.hasMemberConflict(id, request.startTime(), request.endTime())) {
                 throw new IllegalArgumentException("The new time conflicts with the schedule of a registered student");
             }
+            if (id != null && timingChanged) packageBenefits.validateSessionDates(id,request.startTime(),request.endTime());
         }
         Integer coachId = ((Number) assignment.get("coachId")).intValue();
         Integer roomId = ((Number) assignment.get("roomId")).intValue();
@@ -325,6 +359,52 @@ public class ManagerService {
         return ids;
     }
 
+    private Map<String,Object> planningAssignment(Integer classId) {
+        var assignment=managerRepository.classAssignment(classId);
+        if (!"ACTIVE".equals(assignment.get("status"))) throw new IllegalArgumentException("Only active classes can be scheduled");
+        var coach=findUser(((Number)assignment.get("coachId")).intValue());
+        if (!"Coach".equalsIgnoreCase(coach.getRole().getRoleName()) || !coach.isEnabled())
+            throw new IllegalArgumentException("The assigned coach is no longer active; assign another coach");
+        if (managerRepository.hasClassBookings(classId))
+            throw new IllegalArgumentException("Automatic planning is only available before class registration. Manage existing sessions or make-up sessions separately.");
+        return assignment;
+    }
+
+    @Transactional(readOnly=true)
+    public Map<String,Object> previewSchedulePlan(ManagerRequests.SchedulePlanRequest request) {
+        var now=LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        SchedulePlanner.validateRules(request,now);
+        var assignment=planningAssignment(request.classId());
+        int coachId=((Number)assignment.get("coachId")).intValue(), roomId=((Number)assignment.get("roomId")).intValue();
+        var busy=managerRepository.occupiedSlots(coachId,roomId,request.fromDate().atStartOfDay().minusMinutes(request.breakMinutes()),request.toDate().plusDays(1).atStartOfDay().plusMinutes(request.breakMinutes()));
+        var plan=SchedulePlanner.propose(request,busy,now);
+        return Map.of("sessions",plan.sessions(),"missing",plan.missing(),"skipped",plan.skipped(),"coachId",coachId,"roomId",roomId);
+    }
+
+    public List<Integer> commitSchedulePlan(ManagerRequests.SchedulePlanCommitRequest request, String actor) {
+        managerRepository.lockOperations();
+        var now=LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        var rules=request.rules(); SchedulePlanner.validateRules(rules,now);
+        var assignment=planningAssignment(rules.classId());
+        int coachId=((Number)assignment.get("coachId")).intValue(), roomId=((Number)assignment.get("roomId")).intValue();
+        if (!java.util.Objects.equals(request.coachId(),coachId) || !java.util.Objects.equals(request.roomId(),roomId))
+            throw new IllegalArgumentException("Class assignment changed. Generate a new preview.");
+        if(request.sessions()==null || request.sessions().size()!=rules.sessions())
+            throw new IllegalArgumentException("Generate a complete plan before saving.");
+        var busy=new ArrayList<>(managerRepository.occupiedSlots(coachId,roomId,rules.fromDate().atStartOfDay().minusMinutes(rules.breakMinutes()),rules.toDate().plusDays(1).atStartOfDay().plusMinutes(rules.breakMinutes())));
+        var dates=new java.util.HashSet<java.time.LocalDate>();
+        for(var session:request.sessions()) {
+            SchedulePlanner.validateSession(rules,session,now);
+            if(!dates.add(session.startTime().toLocalDate())) throw new IllegalArgumentException("Plan at most one session per day.");
+            if(!SchedulePlanner.free(session,busy,rules.breakMinutes()))
+                throw new IllegalArgumentException("The preview conflicts with a coach or room booking. Generate a new preview.");
+            busy.add(new SchedulePlanner.BusyPeriod(session.startTime(),session.endTime()));
+        }
+        List<Integer> ids=new ArrayList<>();
+        for(var session:request.sessions()) ids.add(saveSchedule(null,new ManagerRequests.ScheduleRequest(rules.classId(),session.startTime(),session.endTime(),"SCHEDULED"),actor));
+        return ids;
+    }
+
     @Transactional(readOnly = true)
     public List<Map<String, Object>> scheduleBookings(Integer id) {
         managerRepository.schedule(id);
@@ -332,14 +412,42 @@ public class ManagerService {
     }
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> packages() { return managerRepository.packages(); }
+    public List<Map<String, Object>> packages() {
+        var packages=managerRepository.packages();
+        var allBenefits=packageBenefits.allPackageBenefits();
+        var typeNames=packageTypes.names();
+        for(var pkg:packages)pkg.put("packageTypeName",typeNames.get(pkg.get("packageType")));
+        for(var pkg:packages) pkg.put("benefits",allBenefits.getOrDefault(((Number)pkg.get("packageId")).intValue(),List.of()));
+        return packages;
+    }
 
     public int savePackage(Integer id, ManagerRequests.PackageRequest request, String actor) {
+        managerRepository.lockOperations();
+        packageTypes.require(request.packageType());
         if (id != null) managerRepository.requirePackage(id);
+        var before=id==null?Map.<String,Object>of():commerce.detail(id);
         int savedId = managerRepository.savePackage(id, request);
-        audit(actor, id == null ? "CREATE" : "UPDATE", "PACKAGE", savedId,
-                request.packageName() + " - " + request.durationDays() + " days");
+        commerce.saveContent(savedId,request);
+        packageBenefits.saveDefinition(savedId,request.packageType(),request.benefits());
+        commerce.audit(savedId,id==null?"CREATE":"UPDATE",actor,before,commerce.detail(savedId));
         return savedId;
+    }
+
+    public int savePackageWithImage(Integer id, ManagerRequests.PackageRequest request, MultipartFile image, boolean removeImage, String actor) {
+        if (image != null && removeImage) throw new IllegalArgumentException("Choose either a replacement photo or removal.");
+        int savedId=savePackage(id,request,actor);
+        if(image!=null) updateResourceImage("packages",savedId,image,actor);
+        else if(removeImage) removeResourceImage("packages",savedId,actor);
+        return savedId;
+    }
+
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> packageTypes(){return packageTypes.list();}
+    public String savePackageType(String code,ManagerRequests.PackageTypeRequest request,String actor){
+        managerRepository.lockOperations();
+        String saved=packageTypes.save(code,request.typeName(),request.requiresSubjects());
+        audit(actor,code==null?"CREATE":"UPDATE","PACKAGE_TYPE",saved,request.typeName());
+        return saved;
     }
 
     @Transactional(readOnly = true)

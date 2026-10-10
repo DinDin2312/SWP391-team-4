@@ -13,6 +13,9 @@ import java.util.List;
 @AllArgsConstructor
 public class AvailableClassResponse {
     private Integer classId;
+    private Integer subjectId;
+    private Integer roomId;
+    private LocalDateTime lastSessionTime;
     private String className;
     private String coachName;
     private String roomName;

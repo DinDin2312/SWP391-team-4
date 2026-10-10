@@ -11,9 +11,11 @@ public class MemberPackageResponse {
     private Integer membershipId;
     private String packageName;
     private String packageType;
+    private String packageTypeName;
     private LocalDate startDate;
     private LocalDate endDate;
     private String status;
     private Integer durationDays;
     private BigDecimal price;
+    private java.util.List<java.util.Map<String,Object>> benefits;
 }

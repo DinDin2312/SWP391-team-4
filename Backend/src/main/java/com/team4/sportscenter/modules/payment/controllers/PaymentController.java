@@ -17,6 +17,8 @@ import java.util.Map;
 public class PaymentController {
     
     private final PaymentService paymentService;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private Map<String,String> result(int id){String state=jdbc.queryForObject("SELECT status FROM INVOICES WHERE invoice_id=?",String.class,id);return Map.of("status",state,"message","PAID".equals(state)?"Payment completed.":"REVIEW".equals(state)?"Payment received and awaiting reconciliation. Contact reception.":"Payment failed or cancelled.");}
 
     @GetMapping("/cart")
     public ResponseEntity<?> getCartItems(Authentication authentication) {
@@ -30,7 +32,7 @@ public class PaymentController {
         String ipAddress = VNPayConfig.getIpAddress(request);
         String paymentMethod = (body != null && body.containsKey("paymentMethod")) ? body.get("paymentMethod") : "vnpay";
         String paymentUrl = paymentService.checkout(email, ipAddress, paymentMethod);
-        return ResponseEntity.ok(Map.of("paymentUrl", paymentUrl));
+        return ResponseEntity.ok(Map.of("paymentUrl", paymentUrl,"completed",paymentUrl.startsWith("/member/")));
     }
     
     @DeleteMapping("/cart/{classId}")
@@ -57,12 +59,12 @@ public class PaymentController {
     @GetMapping("/momo-callback")
     public ResponseEntity<?> momoCallback(@RequestParam Map<String, String> queryParams) {
         paymentService.handleMoMoCallback(queryParams);
-        return ResponseEntity.ok(Map.of("message", "MoMo Payment processed successfully."));
+        return ResponseEntity.ok(result(Integer.parseInt(queryParams.get("orderId").split("_")[0])));
     }
 
     @GetMapping("/vnpay-callback")
     public ResponseEntity<?> vnpayCallback(@RequestParam Map<String, String> queryParams) {
         paymentService.handleVNPayCallback(queryParams);
-        return ResponseEntity.ok(Map.of("message", "Payment processed successfully."));
+        return ResponseEntity.ok(result(Integer.parseInt(queryParams.get("vnp_TxnRef"))));
     }
 }

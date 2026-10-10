@@ -46,6 +46,7 @@ public class SecurityConfig {
                         // Auth endpoints
                         .requestMatchers("/api/v1/auth/**", "/api/auth/**", "/auth/**", "/api/guest/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/avatars/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/resource-images/**").permitAll()
 
                         // Cho phĂ„â€Ă‚Â©p truy cÄ‚Â¡Ă‚ÂºĂ‚Â­p cĂ„â€Ă‚Â¡c API cÄ‚Â¡Ă‚Â»Ă‚Â§a Receptionist
                         .requestMatchers("/api/receptionist/**", "/receptionist/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
@@ -58,6 +59,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/manager/**").hasRole("CENTER_MANAGER")
                         .requestMatchers("/api/v1/coach/**", "/api/coach/**").hasAnyRole("COACH", "CENTER_MANAGER")
 
+                        .requestMatchers(HttpMethod.POST,"/api/v1/member/book-class/*/with-package/*").hasRole("MEMBER")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

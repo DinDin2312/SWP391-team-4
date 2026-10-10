@@ -25,7 +25,7 @@ public class ManagerRepository {
 
     // Pending and confirmed bookings both reserve seats; the threshold is strictly below 25%.
     private static final String BOOKED_SQL = "(SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id=s.schedule_id AND b.status IN ('CONFIRMED','PENDING'))";
-    private static final String SESSION_SQL = "SELECT s.schedule_id scheduleId,s.class_id classId,c.class_name className,u.full_name coachName,r.room_name roomName,s.start_time startTime,s.end_time endTime,s.status," + BOOKED_SQL + " booked,c.max_slots maxSlots FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id JOIN USERS u ON u.user_id=c.coach_id JOIN ROOMS r ON r.room_id=c.room_id ";
+    private static final String SESSION_SQL = "SELECT s.schedule_id scheduleId,s.class_id classId,c.class_name className,c.image_path classImagePath,u.avatar_path coachAvatarPath,u.full_name coachName,r.image_path roomImagePath,r.room_name roomName,s.start_time startTime,s.end_time endTime,s.status," + BOOKED_SQL + " booked,c.max_slots maxSlots FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id JOIN USERS u ON u.user_id=c.coach_id JOIN ROOMS r ON r.room_id=c.room_id ";
 
     public Map<String, Object> operationalOverview() {
         LocalDateTime now = centerNow();
@@ -253,10 +253,10 @@ public class ManagerRepository {
 
     public List<Map<String, Object>> subjects() {
         return jdbc.queryForList("""
-                SELECT s.subject_id subjectId,s.subject_name subjectName,s.description,
+                SELECT s.subject_id subjectId,s.subject_name subjectName,s.description,s.image_path imagePath,
                        COUNT(c.class_id) classCount
                 FROM SUBJECTS s LEFT JOIN CLASSES c ON c.subject_id=s.subject_id
-                GROUP BY s.subject_id,s.subject_name,s.description ORDER BY s.subject_name
+                GROUP BY s.subject_id,s.subject_name,s.description,s.image_path ORDER BY s.subject_name
                 """);
     }
 
@@ -270,9 +270,9 @@ public class ManagerRepository {
 
     public List<Map<String, Object>> rooms() {
         return jdbc.queryForList("""
-                SELECT r.room_id roomId,r.room_name roomName,r.capacity,COUNT(c.class_id) classCount
+                SELECT r.room_id roomId,r.room_name roomName,r.capacity,r.image_path imagePath,COUNT(c.class_id) classCount
                 FROM ROOMS r LEFT JOIN CLASSES c ON c.room_id=r.room_id
-                GROUP BY r.room_id,r.room_name,r.capacity ORDER BY r.room_name
+                GROUP BY r.room_id,r.room_name,r.capacity,r.image_path ORDER BY r.room_name
                 """);
     }
 
@@ -292,8 +292,8 @@ public class ManagerRepository {
     public List<Map<String, Object>> classes() {
         return jdbc.queryForList("""
                 SELECT c.class_id classId,c.class_name className,c.subject_id subjectId,s.subject_name subjectName,
-                       c.coach_id coachId,u.full_name coachName,c.room_id roomId,r.room_name roomName,
-                       c.price,c.max_slots maxSlots,c.status,
+                       c.coach_id coachId,u.full_name coachName,u.avatar_path coachAvatarPath,c.room_id roomId,r.room_name roomName,r.image_path roomImagePath,
+                       c.price,c.max_slots maxSlots,c.status,c.image_path imagePath,
                        COALESCE((SELECT MAX(booked) FROM (
                          SELECT sx.class_id,COUNT(*) booked FROM SCHEDULES sx JOIN BOOKINGS bx ON bx.schedule_id=sx.schedule_id
                          WHERE sx.status<>'CANCELLED' AND bx.status IN ('CONFIRMED','PENDING') GROUP BY sx.class_id,sx.schedule_id
@@ -301,7 +301,7 @@ public class ManagerRepository {
                 FROM CLASSES c JOIN SUBJECTS s ON s.subject_id=c.subject_id
                 JOIN USERS u ON u.user_id=c.coach_id JOIN ROOMS r ON r.room_id=c.room_id
                 LEFT JOIN SCHEDULES sc ON sc.class_id=c.class_id LEFT JOIN BOOKINGS b ON b.schedule_id=sc.schedule_id
-                GROUP BY c.class_id,c.class_name,c.subject_id,s.subject_name,c.coach_id,u.full_name,c.room_id,r.room_name,c.price,c.max_slots,c.status
+                GROUP BY c.class_id,c.class_name,c.subject_id,s.subject_name,c.coach_id,u.full_name,u.avatar_path,c.room_id,r.room_name,r.image_path,c.price,c.max_slots,c.status,c.image_path
                 ORDER BY c.class_id DESC
                 """);
     }
@@ -332,19 +332,19 @@ public class ManagerRepository {
     public List<Map<String, Object>> schedules(LocalDate from, LocalDate to) {
         return jdbc.queryForList("""
                 SELECT sc.schedule_id scheduleId,sc.class_id classId,c.class_name className,
-                       c.coach_id coachId,u.full_name coachName,c.room_id roomId,r.room_name roomName,
+                       c.coach_id coachId,u.full_name coachName,u.avatar_path coachAvatarPath,c.room_id roomId,r.room_name roomName,c.image_path classImagePath,r.image_path roomImagePath,
                        sc.start_time startTime,sc.end_time endTime,sc.status,
                        COUNT(CASE WHEN b.status IN ('CONFIRMED','PENDING') THEN 1 END) booked,c.max_slots maxSlots
                 FROM SCHEDULES sc JOIN CLASSES c ON c.class_id=sc.class_id JOIN USERS u ON u.user_id=c.coach_id
                 JOIN ROOMS r ON r.room_id=c.room_id LEFT JOIN BOOKINGS b ON b.schedule_id=sc.schedule_id
                 WHERE sc.start_time >= ? AND sc.start_time < ?
-                GROUP BY sc.schedule_id,sc.class_id,c.class_name,c.coach_id,u.full_name,c.room_id,r.room_name,sc.start_time,sc.end_time,sc.status,c.max_slots
+                GROUP BY sc.schedule_id,sc.class_id,c.class_name,c.coach_id,u.full_name,u.avatar_path,c.room_id,r.room_name,c.image_path,r.image_path,sc.start_time,sc.end_time,sc.status,c.max_slots
                 ORDER BY sc.start_time
                 """, from.atStartOfDay(), to.plusDays(1).atStartOfDay()).stream().map(this::localTimes).toList();
     }
 
     public Map<String, Object> classAssignment(Integer classId) {
-        return jdbc.queryForMap("SELECT coach_id coachId,room_id roomId,status,class_name className FROM CLASSES WHERE class_id=?", classId);
+        return jdbc.queryForMap("SELECT subject_id subjectId,coach_id coachId,room_id roomId,status,class_name className FROM CLASSES WHERE class_id=?", classId);
     }
 
     public boolean hasScheduleConflict(Integer scheduleId, Integer coachId, Integer roomId, LocalDateTime start, LocalDateTime end) {
@@ -369,22 +369,53 @@ public class ManagerRepository {
     public List<Map<String, Object>> packages() {
         return jdbc.queryForList("""
                 SELECT p.package_id packageId,p.package_name packageName,p.package_type packageType,
-                       p.duration_days durationDays,p.price,
+                       p.duration_days durationDays,p.price,p.image_path imagePath,p.selling_status sellingStatus,p.purchase_limit_per_member purchaseLimitPerMember,
                        COUNT(um.membership_id) subscribers,
                        COUNT(CASE WHEN um.status='ACTIVE' AND um.start_date<=CURDATE() AND um.end_date>=CURDATE() THEN 1 END) activeSubscribers
                 FROM PACKAGES p LEFT JOIN USER_MEMBERSHIPS um ON um.package_id=p.package_id
-                GROUP BY p.package_id,p.package_name,p.package_type,p.duration_days,p.price ORDER BY p.package_id DESC
+                GROUP BY p.package_id,p.package_name,p.package_type,p.duration_days,p.price,p.image_path,p.selling_status,p.purchase_limit_per_member ORDER BY p.package_id DESC
                 """);
     }
 
     public int savePackage(Integer id, ManagerRequests.PackageRequest request) {
         if (id == null) {
-            return insert("INSERT INTO PACKAGES(package_name,package_type,duration_days,price) VALUES (?,?,?,?)",
+            return insert("INSERT INTO PACKAGES(package_name,package_type,duration_days,price,selling_status) VALUES (?,?,?,?,'SELLING')",
                     request.packageName(), request.packageType(), request.durationDays(), request.price());
         }
         jdbc.update("UPDATE PACKAGES SET package_name=?,package_type=?,duration_days=?,price=? WHERE package_id=?",
                 request.packageName(), request.packageType(), request.durationDays(), request.price(), id);
         return id;
+    }
+
+    public boolean hasClassBookings(Integer classId) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM BOOKINGS b JOIN SCHEDULES s ON s.schedule_id=b.schedule_id WHERE s.class_id=? AND b.status<>'CANCELLED'", Integer.class,classId)>0;
+    }
+
+    public List<com.team4.sportscenter.modules.manager.services.SchedulePlanner.BusyPeriod> occupiedSlots(
+            Integer coachId, Integer roomId, LocalDateTime from, LocalDateTime to) {
+        return jdbc.query("SELECT s.start_time,s.end_time FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id WHERE s.status<>'CANCELLED' AND (c.coach_id=? OR c.room_id=?) AND s.start_time < ? AND s.end_time > ?",
+                (rs,n)->new com.team4.sportscenter.modules.manager.services.SchedulePlanner.BusyPeriod(rs.getTimestamp(1).toLocalDateTime(),rs.getTimestamp(2).toLocalDateTime()),coachId,roomId,to,from);
+    }
+
+    private String[] imageTarget(String resource) {
+        // All SQL identifiers come from this fixed whitelist, never from request input.
+        return switch (resource) {
+            case "subjects" -> new String[] { "SUBJECTS", "subject_id" };
+            case "rooms" -> new String[] { "ROOMS", "room_id" };
+            case "classes" -> new String[] { "CLASSES", "class_id" };
+            case "packages" -> new String[] { "PACKAGES", "package_id" };
+            default -> throw new IllegalArgumentException("Unsupported image resource.");
+        };
+    }
+
+    public String lockResourceImage(String resource, Integer id) {
+        String[] target = imageTarget(resource);
+        return jdbc.queryForObject("SELECT image_path FROM " + target[0] + " WHERE " + target[1] + "=? FOR UPDATE", (rs, row) -> rs.getString(1), id);
+    }
+
+    public void updateResourceImage(String resource, Integer id, String imagePath) {
+        String[] target = imageTarget(resource);
+        jdbc.update("UPDATE " + target[0] + " SET image_path=? WHERE " + target[1] + "=?", imagePath, id);
     }
 
     public Map<String, Object> report(LocalDate from, LocalDate to) {

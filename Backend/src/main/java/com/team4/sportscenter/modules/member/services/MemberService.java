@@ -15,6 +15,7 @@ public interface MemberService {
     List<CalendarBookingResponse> getAllCalendarBookings(String email);
     List<AvailableClassResponse> getAvailableClasses();
     void bookClass(String email, Integer classId);
+    void bookClassUsingPackage(String email,Integer classId,Integer membershipId);
     void cancelClass(String email, Integer classId);
     void addPackageToCart(String email, Integer packageId);
     List<com.team4.sportscenter.modules.member.dtos.response.PackageResponse> getAllPackages();
