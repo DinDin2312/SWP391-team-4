@@ -1,4 +1,4 @@
-import { localizedCopy } from '../../../i18n/languageStore';
+import { localizedCopy } from '../../../i18n/languageStore.js';
 const managerEn = {
   overview: {
     low: 'Low', empty: 'Empty', noBookings: 'No bookings',

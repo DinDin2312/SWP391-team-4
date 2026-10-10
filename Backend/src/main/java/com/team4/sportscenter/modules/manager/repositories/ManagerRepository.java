@@ -238,7 +238,7 @@ public class ManagerRepository {
         String search = "%" + (keyword == null ? "" : keyword.trim()) + "%";
         return jdbc.queryForList("""
                 SELECT u.user_id userId,u.full_name fullName,u.email,u.phone,u.status,u.avatar_path avatarPath,
-                       u.force_password_change forcePasswordChange,
+                       u.force_password_change forcePasswordChange,u.created_at joinedAt,
                        r.role_id roleId,r.role_name roleName
                 FROM USERS u JOIN ROLES r ON r.role_id=u.role_id
                 WHERE (u.full_name LIKE ? OR u.email LIKE ? OR COALESCE(u.phone,'') LIKE ?)
@@ -428,6 +428,16 @@ public class ManagerRepository {
                   (SELECT COUNT(*) FROM BOOKINGS b JOIN SCHEDULES sc ON sc.schedule_id=b.schedule_id
                     WHERE b.status='CONFIRMED' AND DATE(sc.start_time) BETWEEN ? AND ?) confirmedBookings
                 """, from, to, from, to, from, to, from, to));
+        result.put("memberGrowth", jdbc.queryForMap("""
+                SELECT COUNT(CASE WHEN u.created_at>=? AND u.created_at<? THEN 1 END) newMembers,
+                       COUNT(CASE WHEN u.created_at IS NULL THEN 1 END) unknownCreationDates
+                FROM USERS u JOIN ROLES r ON r.role_id=u.role_id WHERE r.role_name='Member'
+                """, from.atStartOfDay(),to.plusDays(1).atStartOfDay()));
+        result.put("bookingStatuses", jdbc.queryForList("""
+                SELECT b.status status,COUNT(*) value FROM BOOKINGS b
+                WHERE b.booking_time>=? AND b.booking_time<?
+                GROUP BY b.status ORDER BY b.status
+                """,from.atStartOfDay(),to.plusDays(1).atStartOfDay()));
         result.put("revenueByDay", jdbc.queryForList("""
                 SELECT DATE(p.payment_date) label,SUM(p.amount) value FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id
                 WHERE p.status IN ('SUCCESS','COMPLETED') AND i.status<>'REVIEW' AND DATE(p.payment_date) BETWEEN ? AND ?

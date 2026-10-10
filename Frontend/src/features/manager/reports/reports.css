@@ -98,3 +98,11 @@
   .reports-packages { padding:4px 16px 8px; }
 }
 .reports-ledger-link{margin-top:14px;padding:0;border:0;background:transparent;color:var(--primary);font-size:12px;font-weight:600;cursor:pointer}.reports-ledger-link:disabled{opacity:.5;cursor:default}
+
+.reports-new-members {display:block;font-size:34px;letter-spacing:-1px;margin:0;padding:12px 24px 24px;color:#17243c}
+.reports-booking-statuses {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:20px}
+.reports-booking-statuses article {padding:14px;background:#f7f9fc;border:1px solid #e3e9f2;border-radius:10px}
+.reports-booking-statuses span {font-size:12px;color:#68778e}.reports-booking-statuses strong {display:block;margin-top:10px;font-size:26px}
+@media(max-width:480px){.reports-booking-statuses{gap:7px}.reports-booking-statuses article{padding:10px}.reports-booking-statuses span{font-size:11px}}
+
+.reports-member-note summary {cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}.reports-member-note summary::before {content:'ⓘ';font-size:15px}.reports-member-note p {margin:8px 0 0;line-height:1.7}@media(max-width:640px){.reports-new-members{padding:8px 16px 20px}}

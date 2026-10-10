@@ -1536,3 +1536,16 @@ const auditDesignLabels = {
   "Terms": "Điều khoản"
 };
 for (const [en, vi] of Object.entries(auditDesignLabels)) translations[en] = [en, vi];
+
+const reportCompletionLabels={
+ "New members":"Hội viên mới", "Member accounts created during the selected period. All account statuses are included.":"Tài khoản hội viên tạo trong khoảng đã chọn, gồm mọi trạng thái tài khoản.",
+ "{0} existing member accounts have no creation date.":"{0} tài khoản hội viên cũ chưa có dữ liệu ngày tạo.",
+ "These accounts are excluded because their registration period cannot be verified. Newly created accounts are recorded automatically.":"Các tài khoản này không được tính vì chưa xác định được thời điểm đăng ký. Tài khoản tạo mới được ghi nhận ngày tạo tự động.",
+ "{0} member accounts have no recorded creation date and are excluded from this count.":"{0} tài khoản hội viên chưa có ngày tạo được ghi nhận và không tính vào chỉ số này.",
+ "Booking status breakdown":"Trạng thái đăng ký lớp", "By booking creation date, not session date. Statuses reflect the current state.":"Tính theo ngày tạo đăng ký, không phải ngày học. Trạng thái là trạng thái hiện tại.",
+ "Other booking statuses":"Trạng thái đăng ký khác", "Role access":"Quyền của vai trò", "Select a role to review its access.":"Chọn vai trò để xem quyền truy cập.",
+ "Access is predefined by the system. Selecting a role assigns its existing access; it does not customize individual permissions.":"Quyền được hệ thống quy định sẵn. Chọn vai trò để gán quyền hiện có, không cấu hình từng quyền riêng.",
+ "Membership packages and pricing":"Gói hội viên và giá bán", "Reports and transactions":"Báo cáo và giao dịch", "Payments and invoices":"Thanh toán và hóa đơn", "Reception check-in":"Điểm danh tại quầy",
+ "Assigned classes and students":"Lớp và học viên được phân công", "Training plans and feedback":"Kế hoạch tập và nhận xét", "Own profile and memberships":"Hồ sơ và gói hội viên cá nhân", "Personal schedule and training history":"Lịch cá nhân và lịch sử tập luyện"
+};
+for(const [en,vi] of Object.entries(reportCompletionLabels)) translations[en]=[en,vi];

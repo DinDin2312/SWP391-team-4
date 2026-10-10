@@ -109,3 +109,5 @@
 @media(prefers-reduced-motion:reduce) { .manager-app .pkg-card { transition:none; } }
 @media(max-width:600px) { .manager-app .overview-list li.overview-upcoming-row { grid-template-columns:76px minmax(0,1fr) 32px; } }
 @media(max-width:767px) { .manager-app .staff-page .manager-staff-stats { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .manager-app .staff-page .manager-stat { min-height:132px; padding:16px; } .manager-app .staff-page .manager-stat > span { width:32px; height:32px; right:12px; top:16px; } .manager-app .staff-page .manager-stat small { font-size:11px; padding-right:30px; min-height:32px; } }
+
+.manager-role-help{padding:16px;background:#f0f5ff;border:1px solid #dce7fc;border-radius:10px;font-size:13px}.manager-role-help p{margin:8px 0}.manager-role-help ul{display:flex;flex-wrap:wrap;gap:8px;list-style:none;padding:0;margin:12px 0}.manager-role-help li{padding:5px 9px;border-radius:6px;background:white;color:#3265e8}.manager-role-help small{display:block;color:#68778e;line-height:1.6}
