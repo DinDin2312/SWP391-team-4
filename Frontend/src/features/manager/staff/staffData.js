@@ -1,34 +1,13 @@
 import { locale } from '../../../i18n/languageStore.js';
-import { formatDate } from '../../../utils/displayFormat';
-const daysAgo = (days) => {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString();
-};
-
-export function enrichStaffUser(user, index) {
-  // TODO: Replace deterministic fallback fields when staff detail metadata is exposed by the API.
-  const seed = Number(user.userId || index + 1);
-  const joinedAt = user.joinedAt || daysAgo(seed % 5 === 0 ? seed % 25 : 45 + (seed % 600));
-  const proposedPlanStart = new Date(daysAgo(60 + (seed % 90))).getTime();
-  const planStartedAt = new Date(Math.max(new Date(joinedAt).getTime(), proposedPlanStart)).toISOString();
-  return {
-    ...user,
-    joinedAt,
-    lastLoginAt: user.lastLoginAt || daysAgo(seed % 45),
-    currentPlan: user.currentPlan || (user.roleName === 'Member' ? ['Premium', 'Gym Access', 'AI Access'][seed % 3] : ''),
-    planHistory: user.planHistory || (user.roleName === 'Member' ? [{
-      name: ['Premium', 'Gym Access', 'AI Access'][seed % 3],
-      status: managerEn.staff.drawer.activePlan,
-      startedAt: planStartedAt,
-      endedAt: new Date(new Date(planStartedAt).setDate(new Date(planStartedAt).getDate() + 30)).toISOString(),
-      price: [499000, 299000, 699000][seed % 3],
-    }] : []),
-    activity: user.activity || [{ label: managerEn.staff.drawer.signedIn, occurredAt: daysAgo(seed % 12) }, { label: managerEn.staff.drawer.profileReviewed, occurredAt: daysAgo(15 + (seed % 30)) }],
-  };
+import { formatDate } from '../../../utils/displayFormat.js';
+// Missing metadata stays unknown; never invent dates, plans or account activity.
+export function enrichStaffUser(user) {
+  return {...user,joinedAt:user.joinedAt || null,lastLoginAt:user.lastLoginAt || null,
+    currentPlan:user.currentPlan || '',planHistory:user.planHistory || [],activity:user.activity || []};
 }
 
 export const isCurrentMonth = (value) => {
+  if (!value) return false;
   const date = new Date(value);
   const now = new Date();
   return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
@@ -84,4 +63,4 @@ export function downloadStaffCsv(users, fileName) {
   link.href = url; link.download = fileName; link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-import managerEn from '../i18n/en';
+import managerEn from '../i18n/en.js';

@@ -1493,3 +1493,59 @@ const transactionLabels = {
 };
 for (const [en, vi] of Object.entries(transactionLabels)) translations[en] = [en, vi];
 Object.assign(translations, { 'Search': ['Search','Tìm kiếm'], 'Amount': ['Amount','Số tiền'], 'Apply filters': ['Apply filters','Áp dụng bộ lọc'], 'Package': ['Package','Gói hội viên'] });
+
+const auditDesignLabels = {
+  "Read-only history": "Lịch sử chỉ đọc",
+  "Loaded records": "Bản ghi đã tải",
+  "Recorded actors": "Người thực hiện",
+  "Affected resource types": "Loại dữ liệu bị tác động",
+  "Showing up to 100 latest records. Filters and counts apply to this loaded set.": "Hiển thị tối đa 100 bản ghi mới nhất. Bộ lọc và thống kê áp dụng trên các bản ghi đã tải.",
+  "Audit filters": "Bộ lọc nhật ký",
+  "Actor, action, resource or recorded details": "Người thực hiện, hành động, dữ liệu hoặc nội dung",
+  "All actions": "Tất cả hành động",
+  "All resources": "Tất cả dữ liệu",
+  "Resource": "Dữ liệu",
+  "Activity history": "Lịch sử hoạt động",
+  "Who changed what, and when.": "Ai đã thay đổi gì, vào thời điểm nào.",
+  "Recorded details": "Nội dung đã ghi nhận",
+  "Record": "Bản ghi",
+  "Changed field": "Trường thay đổi",
+  "Before": "Trước thay đổi",
+  "After": "Sau thay đổi",
+  "Change recorded; previous and new values are unavailable.": "Đã ghi nhận thay đổi; không lưu giá trị trước và sau.",
+  "Values appear exactly as recorded. Long text may have been shortened when logged.": "Hiển thị đúng giá trị được ghi nhận. Văn bản dài có thể đã được rút gọn khi lưu nhật ký.",
+  "This record does not contain a before/after snapshot.": "Bản ghi này không lưu giá trị trước và sau thay đổi.",
+  "View audit record": "Xem bản ghi nhật ký",
+  "Audit data is unavailable.": "Chưa tải được dữ liệu nhật ký.",
+  "No matching audit records.": "Không có bản ghi nhật ký phù hợp.",
+  "Try another filter within the latest loaded records.": "Thử bộ lọc khác trong các bản ghi mới nhất đã tải.",
+  "Recorded administrative changes will appear here.": "Các thao tác quản trị được ghi nhận sẽ xuất hiện tại đây.",
+  "No details recorded.": "Không có nội dung chi tiết.",
+  "Created": "Tạo mới",
+  "Updated": "Cập nhật",
+  "Deleted": "Xóa",
+  "Status changed": "Đổi trạng thái",
+  "Image updated": "Cập nhật ảnh",
+  "Image removed": "Gỡ ảnh",
+  "Avatar updated": "Cập nhật ảnh đại diện",
+  "Payment needs review": "Thanh toán cần đối soát",
+  "Account": "Tài khoản",
+  "Membership package": "Gói hội viên",
+  "Session": "Buổi tập",
+  "Benefits": "Quyền lợi",
+  "Terms": "Điều khoản"
+};
+for (const [en, vi] of Object.entries(auditDesignLabels)) translations[en] = [en, vi];
+
+const reportCompletionLabels={
+ "New members":"Hội viên mới", "Member accounts created during the selected period. All account statuses are included.":"Tài khoản hội viên tạo trong khoảng đã chọn, gồm mọi trạng thái tài khoản.",
+ "{0} existing member accounts have no creation date.":"{0} tài khoản hội viên cũ chưa có dữ liệu ngày tạo.",
+ "These accounts are excluded because their registration period cannot be verified. Newly created accounts are recorded automatically.":"Các tài khoản này không được tính vì chưa xác định được thời điểm đăng ký. Tài khoản tạo mới được ghi nhận ngày tạo tự động.",
+ "{0} member accounts have no recorded creation date and are excluded from this count.":"{0} tài khoản hội viên chưa có ngày tạo được ghi nhận và không tính vào chỉ số này.",
+ "Booking status breakdown":"Trạng thái đăng ký lớp", "By booking creation date, not session date. Statuses reflect the current state.":"Tính theo ngày tạo đăng ký, không phải ngày học. Trạng thái là trạng thái hiện tại.",
+ "Other booking statuses":"Trạng thái đăng ký khác", "Role access":"Quyền của vai trò", "Select a role to review its access.":"Chọn vai trò để xem quyền truy cập.",
+ "Access is predefined by the system. Selecting a role assigns its existing access; it does not customize individual permissions.":"Quyền được hệ thống quy định sẵn. Chọn vai trò để gán quyền hiện có, không cấu hình từng quyền riêng.",
+ "Membership packages and pricing":"Gói hội viên và giá bán", "Reports and transactions":"Báo cáo và giao dịch", "Payments and invoices":"Thanh toán và hóa đơn", "Reception check-in":"Điểm danh tại quầy",
+ "Assigned classes and students":"Lớp và học viên được phân công", "Training plans and feedback":"Kế hoạch tập và nhận xét", "Own profile and memberships":"Hồ sơ và gói hội viên cá nhân", "Personal schedule and training history":"Lịch cá nhân và lịch sử tập luyện"
+};
+for(const [en,vi] of Object.entries(reportCompletionLabels)) translations[en]=[en,vi];

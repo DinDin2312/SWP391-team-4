@@ -40,3 +40,14 @@ Run frontend regressions with `npm test` from `Frontend`, and build with `npm ru
 ## Current limits
 
 Package-list filtering and pagination remain client-side. Room scopes are enforced for course booking; standalone gym/pool entry is not added here. Subjects are not explicitly mapped to rooms, so managers choose applicable rooms from the center catalogue. Payment REVIEW reconciliation is manual, and real gateway settlement has not been tested. Automatic planning requires managers to confirm availability and approve a preview; it is not a background scheduler. Freeze, upgrade/downgrade, promotional pricing and recurring visit quotas are outside this delivery.
+# System-wide transaction history
+
+Managers can open `view=transactions` from the sidebar. Payments and invoices are separate views: payment dates filter recorded payment attempts; invoice dates filter invoice creation. Filters and pagination run on the server (20 rows in the UI, at most 100 per request). Search matches invoice/payment IDs, provider references, member names and emails. Invoice detail is fetched on demand and includes line items and every recorded payment attempt.
+
+`GET /api/manager/transactions` accepts `mode`, `from`, `to`, `status`, `method`, `keyword`, zero-based `page`, and `size`. `GET /api/manager/transactions/{invoiceId}` returns invoice detail. Both endpoints inherit manager-only authorization. This screen is read-only; it does not settle, refund or change payment statuses.
+
+For display/filtering, legacy `SUCCESS` and newer `COMPLETED` payments are treated as successful. Captured payments attached to `REVIEW` invoices are shown as needing reconciliation and excluded from successful revenue/counts. Original payment status is preserved in `rawPaymentStatus`; no stored status is rewritten. Report links carry the applied date range and matching invoice/payment status into the ledger.
+
+## Member creation dates and role access
+
+Apply `Backend/migrations/20261011_user_creation_dates.sql` once to existing installations before starting this version. Older accounts retain unknown creation dates and are excluded from new-member totals. New accounts receive the actual creation timestamp. Reports count Member-role accounts by creation date and booking statuses by booking creation date; booking statuses reflect their current values. Account editors explain existing role permissions without introducing configurable ACLs.

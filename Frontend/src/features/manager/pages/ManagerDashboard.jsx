@@ -5,6 +5,7 @@ import OperationalOverview from '../components/OperationalOverview';
 import PackagesPage from '../packages/PackagesPage';
 import ReportsPage from '../reports/ReportsPage';
 import TransactionsPage from '../transactions/TransactionsPage';
+import AuditPage from '../audit/AuditPage';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -13,16 +14,15 @@ import {
   Menu, Package, RefreshCw, ShieldCheck, Users, X, Wallet,
 } from 'lucide-react';
 import { AuthContext } from '../../../context/AuthContext';
-import ManagerPageHeader from '../components/ManagerPageHeader';
 import managerService from '../services/managerService';
 import { isoDate, initialForm, apiError } from '../managerUtils';
-import { formatDateTime } from '../../../utils/displayFormat';
 import StaffPage from '../staff/StaffPage';
 import OperationsPage, { OperationsSkeleton } from '../operations/OperationsPage';
 import { weekRange } from '../operations/operationsUtils';
 import ManagerToast from '../staff/ManagerToast';
 import StaffSkeleton from '../staff/StaffSkeleton';
 import StaffAvatar from '../staff/StaffAvatar';
+import { rolePermissions } from '../staff/rolePermissions';
 import ManagerSelect from '../staff/ManagerSelect';
 import PasswordInput from '../staff/PasswordInput';
 import { validateAvatarFile } from '../staff/staffData';
@@ -33,7 +33,6 @@ import './admin-design.css';
 const today = new Date();
 const initialFrom = isoDate(new Date(today.getFullYear(), today.getMonth(), 1));
 const initialTo = isoDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
-const dateTime = formatDateTime;
 
 const adminPages = [
   { id: 'dashboard', title: 'Overview', description: 'Monitor center performance and recent operational activity.', icon: LayoutDashboard },
@@ -44,11 +43,6 @@ const adminPages = [
   { id: 'transactions', title: 'Transactions', description: 'Monitor system-wide invoices and payment history.', icon: Wallet },
   { id: 'audit', title: 'System Audit Log', description: 'Review administrative changes and account activity.', icon: ClipboardList },
 ];
-
-function EmptyState({ message = 'No matching data available.' }) {
-  useLanguage();
-  return <div className="manager-empty"><ClipboardList size={28} /><span>{t(message)}</span></div>;
-}
 
 function Loading() {
   useLanguage();
@@ -161,9 +155,9 @@ function ManagerDashboard() {
   const applyFilters = (nextFilters = filters) => { setAppliedFilters({ ...nextFilters }); if (active === 'operations') { const next = new URLSearchParams(query); next.set('from', nextFilters.from); next.set('to', nextFilters.to); setQuery(next); } };
   const initials = (userInfo?.fullName || 'Center Manager').split(' ').filter(Boolean).slice(-2).map((part) => part[0]).join('').toUpperCase();
   const operationFilters = { ...appliedFilters, from: opsFrom, to: opsTo };
-  const openTransactions = params => { setQuery({ view: 'transactions', ...params }); setMobileNav(false); };
   const currentPage = adminPages.find((item) => item.id === active) || adminPages[0];
   const initialLoading = dataView !== active || (loading && data === null);
+  const openTransactions = params => { setQuery({ view: 'transactions', ...params }); setMobileNav(false); };
 
   return (
     <div className={`manager-app ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}`}>
@@ -214,12 +208,7 @@ function ManagerView(props) {
   if (props.active === 'packages') return <PackagesPage {...props} />;
   if (props.active === 'reports') return <ReportsPage {...props} />;
   if (props.active === 'transactions') return <TransactionsPage {...props} />;
-  return <AuditView {...props} />;
-}
-
-function AuditView({ data, page }) {
-  useLanguage();
-  return <><ManagerPageHeader title={t(page.title)} description={t(page.description)} /><div className="manager-table-wrap"><table><thead><tr><th>{t("Time")}</th><th>{t("Actor")}</th><th>{t("Action")}</th><th>{t("Entity")}</th><th>{t("Details")}</th></tr></thead><tbody>{data?.map((log) => <tr key={log.auditId}><td>{dateTime(log.createdAt)}</td><td><strong>{log.actorEmail}</strong></td><td><span className="manager-action-tag">{log.action}</span></td><td>{log.entityType} #{log.entityId}</td><td>{log.details}</td></tr>)}</tbody></table>{!data?.length && <EmptyState message={t("No administrative activity recorded yet.")} />}</div></>;
+  return <AuditPage {...props} />;
 }
 
 function EditorModal({ config, dictionaries, onClose, onSaved }) {
@@ -317,6 +306,7 @@ function validateUserForm(form, editing) {
 
 function EditorFields({ type, form, set, data, editing, avatarPreview, onAvatarSelect, errors = {}, touched = {}, onBlur = () => {}, focusPassword }) {
   useLanguage();
+  const selectedRole=data?.roles?.find(role=>String(role.roleId)===String(form.roleId));
   if (type === 'user') {
     const avatarUser = { userId: form.userId, fullName: form.fullName, avatarPath: form.avatarPath };
     return <div className="manager-account-editor">
@@ -331,6 +321,7 @@ function EditorFields({ type, form, set, data, editing, avatarPreview, onAvatarS
           <Field label={t("Email")} required error={touched.email && errors.email}><input aria-invalid={Boolean(touched.email && errors.email)} type="email" autoComplete="email" placeholder={t("name@example.com")} value={form.email || ''} onBlur={() => onBlur('email')} onChange={(e) => set('email', e.target.value)} /></Field>
           <Field label={t("Phone")}><input type="tel" autoComplete="tel" placeholder={t("Phone number")} value={form.phone || ''} onChange={(e) => set('phone', e.target.value)} /></Field>
           <Field label={t("Role")} required error={touched.roleId && errors.roleId}><ManagerSelect aria-invalid={Boolean(touched.roleId && errors.roleId)} value={form.roleId || ''} onBlur={() => onBlur('roleId')} onChange={(e) => set('roleId', e.target.value)}><option value="">{t("Select a role")}</option>{data?.roles?.map((role) => <option key={role.roleId} value={role.roleId}>{t(role.roleName)}</option>)}</ManagerSelect></Field>
+          <div className="manager-role-help wide" aria-live="polite"><strong>{t('Role access')}</strong>{selectedRole?<><p>{t(selectedRole.roleName)}</p><ul>{(rolePermissions[selectedRole.roleName] || []).map(permission=><li key={permission}>{t(permission)}</li>)}</ul><small>{t('Access is predefined by the system. Selecting a role assigns its existing access; it does not customize individual permissions.')}</small></>:<p>{t('Select a role to review its access.')}</p>}</div>
           <Field label={t("Status")} required error={touched.status && errors.status}><ManagerSelect aria-invalid={Boolean(touched.status && errors.status)} value={form.status || 'ACTIVE'} onBlur={() => onBlur('status')} onChange={(e) => set('status', e.target.value)}><option value="ACTIVE">{t("Active")}</option><option value="INACTIVE">{t("Inactive")}</option><option value="PENDING">{t("Pending")}</option></ManagerSelect></Field>
           <Field label={t(editing ? 'New password' : 'Temporary password')} required={!editing} error={touched.password && errors.password}><PasswordInput value={form.password || ''} onChange={(e) => set('password', e.target.value)} onBlur={() => onBlur('password')} invalid={Boolean(touched.password && errors.password)} autoFocus={focusPassword} /><small className="manager-field-help">{t("6–72 characters")}</small></Field>
           <label className="manager-force-password wide"><input type="checkbox" checked={Boolean(form.forcePasswordChange)} onChange={(event) => set('forcePasswordChange', event.target.checked)} /><span>{t("Force password change on first login")}</span></label>

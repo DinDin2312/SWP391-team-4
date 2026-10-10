@@ -5,14 +5,8 @@ import managerEn from '../i18n/en';
 import { RoleBadge, StatusBadge } from './AccountBadge';
 import StaffAvatar from './StaffAvatar';
 import { displayStaffName, staffDate } from './staffData';
+import { rolePermissions } from './rolePermissions';
 
-const permissionsByRole = {
-  Administrator: ['Full access', 'Manage accounts', 'Audit logs'],
-  'Center Manager': ['Manage staff', 'Center operations', 'Reports'],
-  Receptionist: ['Member records', 'Bookings', 'Payments'],
-  Coach: ['Class roster', 'Attendance', 'Schedule'],
-  Member: ['Book classes', 'Membership', 'Profile'],
-};
 const money = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(Number(value || 0));
 
 function StaffDrawer({ user, onClose, onEdit, onResetPassword, onToggleLock, onViewLogs, lockDisabled }) {
@@ -74,7 +68,7 @@ function StaffDrawer({ user, onClose, onEdit, onResetPassword, onToggleLock, onV
           <article><span><Phone size={17} /></span><div><small>{t(copy.phone)}</small><strong>{t(user.phone || 'No phone')}</strong></div></article>
           <article><span><Clipboard size={17} /></span><div><small>{t("Account UID")}</small><strong>{uid}</strong></div><button className="manager-copy-icon" type="button" onClick={copyUid} aria-label={t("Copy UID")}>{copied ? <Check size={15} /> : <Clipboard size={15} />}</button></article>
         </div>
-        <div className="manager-permissions"><small>{t("Permissions")}</small><div>{(permissionsByRole[user.roleName] || ['Standard access']).map((permission) => <span key={permission}>{t(permission)}</span>)}</div></div>
+        <div className="manager-permissions"><small>{t("Permissions")}</small><div>{(rolePermissions[user.roleName] || []).map((permission) => <span key={permission}>{t(permission)}</span>)}</div></div>
       </section>
 
       <details className="manager-detail-section manager-plan-disclosure" key={user.userId}>

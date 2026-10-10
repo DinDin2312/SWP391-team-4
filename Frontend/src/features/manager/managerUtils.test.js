@@ -24,3 +24,11 @@ test('CSV preserves Unicode text and neutralizes spreadsheet formulas', () => {
   assert.ok(csv.includes('"500000"'));
   assert.ok(csv.includes('"\'@SUM(A1:A3)","7"'));
 });
+
+test('report export identifies the date basis of member growth and booking statuses',()=>{
+ const csv=reportCsv({memberGrowth:{newMembers:2,unknownCreationDates:4},bookingStatuses:[{status:'PENDING',value:7}]});
+ assert.ok(csv.includes('"New member accounts (account creation date)","2"'));
+ assert.ok(csv.includes('"Members with unknown creation date (excluded)","4"'));
+ assert.ok(csv.includes('"Booking status (booking creation date)","Count"'));
+ assert.ok(csv.includes('"PENDING","7"'));
+});

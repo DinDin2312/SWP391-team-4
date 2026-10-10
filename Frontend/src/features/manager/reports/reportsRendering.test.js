@@ -19,12 +19,18 @@ test('reports hide stale totals during loading or failed refresh and preserve AP
       assert.ok(normal.includes('12.345.678'));
       assert.ok(normal.includes('Class name from API'));
       assert.ok(normal.includes('Package name from API'));
+      assert.ok(normal.includes(language==='vi'?'Hội viên mới':'New members'));
+      assert.ok(normal.includes(language==='vi'?'9 tài khoản hội viên':'9 existing member accounts'));
+      assert.ok(normal.includes(language==='vi'?'Trạng thái đăng ký lớp':'Booking status breakdown'));
+      assert.ok(normal.includes('>17</strong>'));
       assert.ok(!normal.includes('NaN'));
       assert.ok(!normal.includes('Infinity'));
       for (const state of [{ loading: true }, { loadError: 'Unable to load data.' }]) {
         const html = render(state);
         assert.ok(!html.includes('12.345.678'));
         assert.ok(!html.includes('Class name from API'));
+        assert.ok(!html.includes('>17</strong>'));
+        assert.ok(!html.includes('9 existing member accounts'));
         assert.match(html, /disabled=""[^>]*>/);
       }
       const pending = render({ filters: { from: '2026-10-05', to: '2026-10-11' } });

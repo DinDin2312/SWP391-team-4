@@ -10,6 +10,7 @@ Apply in this order:
 4. `20261009_dynamic_package_types.sql`
 5. `20261009_package_commerce.sql`
 6. `20261010_package_benefit_rooms.sql`
+7. `20261011_user_creation_dates.sql`: records creation dates for future accounts. Existing accounts remain NULL; never backfill them with migration time.
 
 New installations use the updated `Backend/database_init.sql` instead; do not apply these migrations again after initialization.
 
