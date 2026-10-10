@@ -8,6 +8,8 @@ const managerService = {
   },
   removeResourceImage: (resource, id) => axiosClient.delete(`/manager/${resource}/${id}/image`),
   dashboard: () => axiosClient.get('/manager/dashboard'),
+  transactions: params => axiosClient.get('/manager/transactions', { params }),
+  transactionDetail: id => axiosClient.get(`/manager/transactions/${id}`),
   overviewPage: (block, page) => axiosClient.get(`/manager/dashboard/${block}`, { params: { page, size: 6 } }),
   users: (params = {}) => axiosClient.get('/manager/users', { params }),
   roles: () => axiosClient.get('/manager/roles'),

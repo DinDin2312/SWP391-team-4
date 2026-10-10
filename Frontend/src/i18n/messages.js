@@ -1453,3 +1453,43 @@ const reportDesignLabels = {
   'No package registrations in this period.':'Không có đăng ký gói trong kỳ này.', 'Based on membership start date, not payment status.':'Tính theo ngày bắt đầu đăng ký, không theo trạng thái thanh toán.',
 };
 for (const [en, vi] of Object.entries(reportDesignLabels)) translations[en] = [en, vi];
+
+const transactionLabels = {
+  "Transactions": "Giao dịch",
+  "Monitor system-wide invoices and payment history.": "Theo dõi hóa đơn và lịch sử thanh toán toàn hệ thống.",
+  "Transaction view": "Loại dữ liệu giao dịch",
+  "Payments": "Thanh toán",
+  "Invoices": "Hóa đơn",
+  "Invoice": "Hóa đơn",
+  "Payment": "Thanh toán",
+  "Invoice details": "Chi tiết hóa đơn",
+  "Invoice total": "Tổng hóa đơn",
+  "Payment attempts": "Các lần thanh toán",
+  "payment attempts": "lần thanh toán",
+  "Invoice status and payment status are tracked separately.": "Trạng thái hóa đơn và trạng thái thanh toán được theo dõi riêng.",
+  "No payment recorded for this invoice.": "Hóa đơn này chưa ghi nhận thanh toán.",
+  "This payment needs reconciliation. Verify the provider record before handling it; this screen does not change payment status.": "Giao dịch cần đối soát. Kiểm tra bản ghi từ đơn vị thanh toán trước khi xử lý; màn hình này không thay đổi trạng thái thanh toán.",
+  "Invoice, transaction ID, member name or email": "Mã hóa đơn, mã giao dịch, tên hoặc email hội viên",
+  "Dates filter payment records. Each row is one payment attempt.": "Lọc theo ngày ghi nhận thanh toán. Mỗi dòng là một lần thanh toán.",
+  "Dates filter invoice creation. An invoice may have several payment attempts.": "Lọc theo ngày tạo hóa đơn. Một hóa đơn có thể có nhiều lần thanh toán.",
+  "Payment history": "Lịch sử thanh toán",
+  "Invoice history": "Lịch sử hóa đơn",
+  "records": "bản ghi",
+  "Payment / Invoice": "Thanh toán / Hóa đơn",
+  "Payment status": "Trạng thái thanh toán",
+  "Invoice status": "Trạng thái hóa đơn",
+  "Created at": "Ngày tạo",
+  "No matching transactions. Try another date range or filter.": "Không có giao dịch phù hợp. Hãy thử khoảng ngày hoặc bộ lọc khác.",
+  "View transactions": "Xem giao dịch",
+  "REVIEW": "Cần đối soát",
+  "SUCCESS": "Thành công",
+  "PAID": "Đã thanh toán",
+  "FAILED": "Thất bại",
+  "CANCELLED": "Đã hủy",
+  "PENDING": "Đang chờ",
+  "CASH": "Tiền mặt",
+  "FREE": "Miễn phí",
+  "Unknown": "Chưa xác định"
+};
+for (const [en, vi] of Object.entries(transactionLabels)) translations[en] = [en, vi];
+Object.assign(translations, { 'Search': ['Search','Tìm kiếm'], 'Amount': ['Amount','Số tiền'], 'Apply filters': ['Apply filters','Áp dụng bộ lọc'], 'Package': ['Package','Gói hội viên'] });
