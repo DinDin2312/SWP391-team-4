@@ -10,6 +10,8 @@ import java.util.List;
 
 @Repository
 public interface ReceptionistBookingRepository extends JpaRepository<Booking, Integer> {
+    @Query(value="SELECT role_id FROM ROLES WHERE role_name='Center Manager' FOR UPDATE",nativeQuery=true)
+    List<Integer> lockOperations();
 
     @Query("SELECT b FROM Booking b " +
            "LEFT JOIN FETCH b.schedule s " +

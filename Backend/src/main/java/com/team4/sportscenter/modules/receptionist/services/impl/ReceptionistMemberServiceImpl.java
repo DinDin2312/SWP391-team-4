@@ -35,6 +35,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
     private final ReceptionistUserMembershipRepository userMembershipRepository;
     private final ReceptionistBookingRepository bookingRepository;
     private final ReceptionistPackageRepository packageRepository;
+    private final com.team4.sportscenter.modules.member.services.PackageBenefitsService packageBenefits;
 
 
     @Override
@@ -74,8 +75,8 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 currentMembershipStatus = "ACTIVE";
                 currentMembershipId = activeMembership.getMembershipId();
                 if (activeMembership.getAPackage() != null) {
-                    currentPackageName = activeMembership.getAPackage().getPackageName();
-                    currentPackageType = activeMembership.getAPackage().getPackageType();
+                    currentPackageName = activeMembership.purchasedName();
+                    currentPackageType = activeMembership.purchasedType();
                 }
                 startDate = activeMembership.getStartDate();
                 endDate = activeMembership.getEndDate();
@@ -87,8 +88,8 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 currentMembershipStatus = "EXPIRED";
                 currentMembershipId = latestMembership.getMembershipId();
                 if (latestMembership.getAPackage() != null) {
-                    currentPackageName = latestMembership.getAPackage().getPackageName();
-                    currentPackageType = latestMembership.getAPackage().getPackageType();
+                    currentPackageName = latestMembership.purchasedName();
+                    currentPackageType = latestMembership.purchasedType();
                 }
                 startDate = latestMembership.getStartDate();
                 endDate = latestMembership.getEndDate();
@@ -150,10 +151,10 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             return MemberMembershipDetail.builder()
                     .membershipId(um.getMembershipId())
                     .packageId(um.getAPackage() != null ? um.getAPackage().getPackageId() : null)
-                    .packageName(um.getAPackage() != null ? um.getAPackage().getPackageName() : "N/A")
-                    .packageType(um.getAPackage() != null ? um.getAPackage().getPackageType() : "N/A")
-                    .durationDays(um.getAPackage() != null ? um.getAPackage().getDurationDays() : null)
-                    .price(um.getAPackage() != null ? um.getAPackage().getPrice() : null)
+                    .packageName(um.getAPackage() != null ? um.purchasedName() : "N/A")
+                    .packageType(um.getAPackage() != null ? um.purchasedType() : "N/A")
+                    .durationDays(um.getAPackage() != null ? um.purchasedDuration() : null)
+                    .price(um.getAPackage() != null ? um.purchasedPrice() : null)
                     .startDate(um.getStartDate())
                     .endDate(um.getEndDate())
                     .status(um.getStatus())
@@ -263,10 +264,10 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             return MemberMembershipDetail.builder()
                     .membershipId(um.getMembershipId())
                     .packageId(um.getAPackage() != null ? um.getAPackage().getPackageId() : null)
-                    .packageName(um.getAPackage() != null ? um.getAPackage().getPackageName() : "N/A")
-                    .packageType(um.getAPackage() != null ? um.getAPackage().getPackageType() : "N/A")
-                    .durationDays(um.getAPackage() != null ? um.getAPackage().getDurationDays() : null)
-                    .price(um.getAPackage() != null ? um.getAPackage().getPrice() : null)
+                    .packageName(um.getAPackage() != null ? um.purchasedName() : "N/A")
+                    .packageType(um.getAPackage() != null ? um.purchasedType() : "N/A")
+                    .durationDays(um.getAPackage() != null ? um.purchasedDuration() : null)
+                    .price(um.getAPackage() != null ? um.purchasedPrice() : null)
                     .startDate(um.getStartDate())
                     .endDate(um.getEndDate())
                     .status(um.getStatus())
@@ -384,6 +385,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
     @Override
     @Transactional
     public void confirmClassRenewal(RenewBookingRequest request) {
+        bookingRepository.lockOperations();
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("Member not found with ID: " + request.getUserId()));
 
@@ -424,17 +426,20 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 .toList();
     }
 
+    @org.springframework.beans.factory.annotation.Autowired private com.team4.sportscenter.modules.member.services.PackageCommerceService commerce;
     @Override
     @Transactional
     public void subscribePackageForMember(SubscribePackageRequest request) {
+        bookingRepository.lockOperations();
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("Member not found with ID: " + request.getUserId()));
 
         Package pkg = packageRepository.findById(request.getPackageId())
                 .orElseThrow(() -> new RuntimeException("Package not found with ID: " + request.getPackageId()));
 
+        commerce.checkPurchase(user.getUserId(),pkg.getPackageId(),null,true);
         LocalDate start = request.getStartDate() != null ? request.getStartDate() : LocalDate.now();
-        LocalDate end = start.plusDays(pkg.getDurationDays() != null ? pkg.getDurationDays() : 30);
+        LocalDate end = start.plusDays((pkg.getDurationDays() != null ? pkg.getDurationDays() : 30)-1);
 
         UserMembership membership = new UserMembership();
         membership.setUser(user);
@@ -444,8 +449,12 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         membership.setStartDate(start);
         membership.setEndDate(end);
         membership.setStatus("ACTIVE");
+        membership.setPurchaseCompletedAt(java.time.LocalDateTime.now());
+        membership.setPurchaseSource("COUNTER");
 
-        userMembershipRepository.save(membership);
+        packageBenefits.snapshot(membership);
+        userMembershipRepository.saveAndFlush(membership);
+        packageBenefits.snapshotSubjects(membership.getMembershipId(),pkg.getPackageId());
     }
 
 }

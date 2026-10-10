@@ -12,6 +12,10 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+import jakarta.validation.Valid;
 
 public final class ManagerRequests {
     private ManagerRequests() {
@@ -58,10 +62,23 @@ public final class ManagerRequests {
 
     public record PackageRequest(
             @NotBlank @Size(max = 255) String packageName,
-            @NotBlank @Pattern(regexp = "GYM_ACCESS|AI_ACCESS|PREMIUM|COMBO", message = "Invalid package type") String packageType,
+            @NotBlank @Size(max=100) String packageType,
             @NotNull @Min(1) Integer durationDays,
-            @NotNull @DecimalMin("0") @Digits(integer = 8, fraction = 2) BigDecimal price) {
+            @NotNull @DecimalMin("0") @Digits(integer = 8, fraction = 2) BigDecimal price,
+            @jakarta.validation.Valid @Size(max=100) java.util.List<SubjectBenefitRequest> benefits,
+            @Size(max=1000) String description, @Size(max=10000) String terms,
+            @Min(1) Integer purchaseLimitPerMember, Boolean updatePurchaseLimit) {
+        public PackageRequest(String name,String type,Integer days,BigDecimal price,java.util.List<SubjectBenefitRequest> benefits){this(name,type,days,price,benefits,null,null,null,null);}
+        public PackageRequest(String packageName,String packageType,Integer durationDays,BigDecimal price) {
+            this(packageName,packageType,durationDays,price,null,null,null,null,null);
+        }
     }
+
+    public record SubjectBenefitRequest(@NotNull @Min(1) Integer subjectId,@NotNull @Min(1) @Max(10000) Integer sessionLimit,
+            @Size(max=100) java.util.List<@NotNull @Min(1) Integer> roomIds) {
+        public SubjectBenefitRequest(Integer subjectId,Integer sessionLimit){this(subjectId,sessionLimit,null);}
+    }
+    public record PackageTypeRequest(@NotBlank @Size(max=255) String typeName,boolean requiresSubjects) {}
 
     public record ScheduleSeriesRequest(
             @NotNull Integer classId,
@@ -70,4 +87,22 @@ public final class ManagerRequests {
             @NotNull @Min(2) @Max(52) Integer occurrences,
             @NotNull @Min(1) @Max(4) Integer intervalWeeks) {
     }
+
+    public record SchedulePlanRequest(
+            @NotNull Integer classId,
+            @NotNull LocalDate fromDate, @NotNull LocalDate toDate,
+            @NotNull @Min(1) @Max(52) Integer sessions,
+            @NotNull @Min(15) @Max(240) Integer durationMinutes,
+            @NotNull @Size(min=1, max=7) List<@NotNull @Min(1) @Max(7) Integer> weekdays,
+            @NotNull LocalTime availableFrom, @NotNull LocalTime availableTo,
+            @NotNull LocalTime preferredTime,
+            @NotNull @Min(0) @Max(120) Integer breakMinutes,
+            @NotNull @Size(max=366) List<@NotNull LocalDate> excludedDates) { }
+
+    public record PlannedSession(@NotNull LocalDateTime startTime, @NotNull LocalDateTime endTime) { }
+
+    public record SchedulePlanCommitRequest(
+            @NotNull @Valid SchedulePlanRequest rules,
+            @NotNull Integer coachId, @NotNull Integer roomId,
+            @NotNull @Size(min=1, max=52) List<@NotNull @Valid PlannedSession> sessions) { }
 }

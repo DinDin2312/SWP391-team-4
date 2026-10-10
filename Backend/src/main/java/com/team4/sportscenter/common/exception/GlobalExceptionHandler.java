@@ -18,6 +18,9 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
     }
 
+    @ExceptionHandler(PackageRuleException.class)
+    public ResponseEntity<Map<String,String>> packageRule(PackageRuleException e){return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("code",e.code,"message",e.getMessage()));}
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleException(Exception e) {
         Map<String, String> errorResponse = new HashMap<>();

@@ -21,6 +21,19 @@ import java.util.Map;
 public class ManagerController {
     private final ManagerService managerService;
 
+    @PostMapping(value = "/{resource}/{id}/image", consumes = "multipart/form-data")
+    public Map<String, String> updateResourceImage(@PathVariable String resource, @PathVariable Integer id,
+                                                   @RequestPart("image") MultipartFile image, Authentication auth) {
+        String path = managerService.updateResourceImage(resource, id, image, auth.getName());
+        return Map.of("imagePath", path, "imageUrl", "/api/resource-images/" + path);
+    }
+
+    @DeleteMapping("/{resource}/{id}/image")
+    public ResponseEntity<Void> removeResourceImage(@PathVariable String resource, @PathVariable Integer id, Authentication auth) {
+        managerService.removeResourceImage(resource, id, auth.getName());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/dashboard")
     public Map<String, Object> dashboard() { return managerService.dashboard(); }
 
@@ -100,9 +113,36 @@ public class ManagerController {
 
     @GetMapping("/schedules/{id}/bookings")
     public List<Map<String, Object>> scheduleBookings(@PathVariable Integer id) { return managerService.scheduleBookings(id); }
+
+    @PostMapping("/schedules/plan/preview")
+    public Map<String,Object> previewSchedulePlan(@Valid @RequestBody ManagerRequests.SchedulePlanRequest request) {
+        return managerService.previewSchedulePlan(request);
+    }
+
+    @PostMapping("/schedules/plan")
+    public Map<String,List<Integer>> commitSchedulePlan(@Valid @RequestBody ManagerRequests.SchedulePlanCommitRequest request, Authentication auth) {
+        return Map.of("ids",managerService.commitSchedulePlan(request,auth.getName()));
+    }
     @PutMapping("/schedules/{id}") public Map<String, Integer> updateSchedule(@PathVariable Integer id, @Valid @RequestBody ManagerRequests.ScheduleRequest request, Authentication auth) { return Map.of("id", managerService.saveSchedule(id, request, auth.getName())); }
 
+    @org.springframework.beans.factory.annotation.Autowired private com.team4.sportscenter.modules.member.services.PackageCommerceService commerce;
+    @GetMapping("/packages/{id}") public Map<String,Object> packageDetail(@PathVariable int id){return commerce.detail(id);}
+    @GetMapping("/packages/{id}/history") public Map<String,Object> packageHistory(@PathVariable int id,@RequestParam(defaultValue="1") int page){return commerce.history(id,page);}
+    @PatchMapping("/packages/{id}/selling-status") public ResponseEntity<Void> selling(@PathVariable int id,@RequestBody Map<String,String> body,Authentication auth){commerce.selling(id,body.getOrDefault("status",""),auth.getName());return ResponseEntity.noContent().build();}
     @GetMapping("/packages") public List<Map<String, Object>> packages() { return managerService.packages(); }
+    @PostMapping(value="/packages/with-image",consumes="multipart/form-data")
+    public Map<String,Integer> createPackageWithImage(@Valid @RequestPart("details") ManagerRequests.PackageRequest details,
+            @RequestPart(value="image",required=false) MultipartFile image,@RequestParam(defaultValue="false") boolean removeImage,Authentication auth) {
+        return Map.of("id",managerService.savePackageWithImage(null,details,image,removeImage,auth.getName()));
+    }
+    @PutMapping(value="/packages/{id}/with-image",consumes="multipart/form-data")
+    public Map<String,Integer> updatePackageWithImage(@PathVariable Integer id,@Valid @RequestPart("details") ManagerRequests.PackageRequest details,
+            @RequestPart(value="image",required=false) MultipartFile image,@RequestParam(defaultValue="false") boolean removeImage,Authentication auth) {
+        return Map.of("id",managerService.savePackageWithImage(id,details,image,removeImage,auth.getName()));
+    }
+    @GetMapping("/package-types") public List<Map<String,Object>> packageTypes(){return managerService.packageTypes();}
+    @PostMapping("/package-types") public Map<String,String> createPackageType(@Valid @RequestBody ManagerRequests.PackageTypeRequest request,Authentication auth){return Map.of("typeCode",managerService.savePackageType(null,request,auth.getName()));}
+    @PutMapping("/package-types/{code}") public Map<String,String> renamePackageType(@PathVariable String code,@Valid @RequestBody ManagerRequests.PackageTypeRequest request,Authentication auth){return Map.of("typeCode",managerService.savePackageType(code,request,auth.getName()));}
     @PostMapping("/packages") public Map<String, Integer> createPackage(@Valid @RequestBody ManagerRequests.PackageRequest request, Authentication auth) { return Map.of("id", managerService.savePackage(null, request, auth.getName())); }
     @PutMapping("/packages/{id}") public Map<String, Integer> updatePackage(@PathVariable Integer id, @Valid @RequestBody ManagerRequests.PackageRequest request, Authentication auth) { return Map.of("id", managerService.savePackage(id, request, auth.getName())); }
 

@@ -28,4 +28,12 @@ public class Package {
 
     @Column(name = "price")
     private BigDecimal price;
+
+    @Column(length=1000) private String description;
+    @Column(columnDefinition="TEXT") private String terms;
+    @Column(name="purchase_limit_per_member") private Integer purchaseLimitPerMember;
+    @Column(name="selling_status",nullable=false,length=20,columnDefinition="varchar(20) default 'SELLING'") private String sellingStatus;
+
+    @Column(name = "image_path", length = 255)
+    private String imagePath;
 }

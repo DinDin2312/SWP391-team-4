@@ -21,4 +21,7 @@ public class Room {
 
     @Column(name = "capacity")
     private Integer capacity;
+
+    @Column(name = "image_path", length = 255)
+    private String imagePath;
 }

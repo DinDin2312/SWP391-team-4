@@ -37,6 +37,8 @@ public class InvoiceDetail {
     @JoinColumn(name = "schedule_id")
     private Schedule schedule;
 
+    @Column(name="membership_id") private Integer membershipId;
+
     @Column(name = "unit_price")
     private BigDecimal unitPrice;
 }
