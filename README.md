@@ -63,7 +63,13 @@ git clone https://github.com/SWP391-team-4/SWP391.git
 ```
 
 ### Bước 2: Tạo Database
-Mở **MySQL Workbench**, chạy file SQL trong thư mục `database/` để khởi tạo dữ liệu mẫu.
+Giữ database hiện có và cấu hình kết nối đến database đó. Với cài đặt mới, tạo database rỗng:
+
+```sql
+CREATE DATABASE SportCenter CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+Backend tự cập nhật schema bằng Flyway khi khởi động. Cấu hình `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` nếu khác mặc định. Xem [hướng dẫn migration](Backend/migrations/README.md). `Backend/database_init.sql` chỉ dùng reset dữ liệu demo trong database có thể bỏ đi, không dùng nâng cấp database hiện có.
 
 ### Bước 3: Cấu hình biến môi trường Backend
 

@@ -99,6 +99,9 @@ jobs:
           SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/SportCenter?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
           SPRING_DATASOURCE_USERNAME: root
           SPRING_DATASOURCE_PASSWORD: root
+          MIGRATION_TEST_URL: jdbc:mysql://127.0.0.1:3306/SportCenter?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+          MIGRATION_TEST_USERNAME: root
+          MIGRATION_TEST_PASSWORD: root
 
       - name: Upload backend package
         uses: actions/upload-artifact@v4
