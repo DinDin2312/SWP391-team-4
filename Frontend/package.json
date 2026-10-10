@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:manager": "node --test src/features/manager/managerUtils.test.js src/features/manager/operations/operationsUtils.test.js src/features/manager/operations/operationsState.test.js src/features/manager/operations/operationsRendering.test.js src/features/manager/components/overviewUtils.test.js src/features/manager/packages/packagesState.test.js src/features/manager/packages/packagesRendering.test.js src/features/manager/components/overviewRendering.test.js",
+    "test:manager": "node --test src/features/manager/managerUtils.test.js src/features/manager/operations/operationsUtils.test.js src/features/manager/operations/operationsState.test.js src/features/manager/operations/operationsRendering.test.js src/features/manager/components/overviewUtils.test.js src/features/manager/packages/packagesState.test.js src/features/manager/packages/packagesRendering.test.js src/features/manager/components/overviewRendering.test.js src/features/manager/reports/reportsRendering.test.js src/features/manager/transactions/transactionsRendering.test.js",
     "test:i18n": "node --test src/i18n/languageStore.test.js src/i18n/adminLanguage.test.js",
     "test:images": "node --test src/components/resource-images/resourceImages.test.js",
     "test:benefits": "node --test src/features/member/packageBookingOptions.test.js",

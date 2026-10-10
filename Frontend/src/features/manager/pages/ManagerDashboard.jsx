@@ -3,18 +3,20 @@ import LanguageSwitcher from '../../../i18n/LanguageSwitcher';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import OperationalOverview from '../components/OperationalOverview';
 import PackagesPage from '../packages/PackagesPage';
+import ReportsPage from '../reports/ReportsPage';
+import TransactionsPage from '../transactions/TransactionsPage';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   BarChart3, CalendarDays, Camera,
   ClipboardList, Dumbbell, LayoutDashboard, LogOut,
-  Menu, Package, RefreshCw, ShieldCheck, Users, X,
+  Menu, Package, RefreshCw, ShieldCheck, Users, X, Wallet,
 } from 'lucide-react';
 import { AuthContext } from '../../../context/AuthContext';
 import ManagerPageHeader from '../components/ManagerPageHeader';
 import managerService from '../services/managerService';
-import { isoDate, initialForm, apiError, reportCsv } from '../managerUtils';
-import { formatMoney, formatDate, formatDateTime } from '../../../utils/displayFormat';
+import { isoDate, initialForm, apiError } from '../managerUtils';
+import { formatDateTime } from '../../../utils/displayFormat';
 import StaffPage from '../staff/StaffPage';
 import OperationsPage, { OperationsSkeleton } from '../operations/OperationsPage';
 import { weekRange } from '../operations/operationsUtils';
@@ -31,7 +33,6 @@ import './admin-design.css';
 const today = new Date();
 const initialFrom = isoDate(new Date(today.getFullYear(), today.getMonth(), 1));
 const initialTo = isoDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
-const money = formatMoney;
 const dateTime = formatDateTime;
 
 const adminPages = [
@@ -40,6 +41,7 @@ const adminPages = [
   { id: 'operations', title: 'Center Operations', description: 'Coordinate classes, schedules, subjects, and rooms.', icon: CalendarDays },
   { id: 'packages', title: 'Membership Packages', description: 'Manage membership plans, pricing, and availability.', icon: Package },
   { id: 'reports', title: 'Reports', description: 'Review financial and operational performance by date range.', icon: BarChart3 },
+  { id: 'transactions', title: 'Transactions', description: 'Monitor system-wide invoices and payment history.', icon: Wallet },
   { id: 'audit', title: 'System Audit Log', description: 'Review administrative changes and account activity.', icon: ClipboardList },
 ];
 
@@ -113,10 +115,11 @@ function ManagerDashboard() {
       if (active === 'packages') publish(await managerService.packages());
       if (active === 'reports') publish(await managerService.reports(appliedFilters.from, appliedFilters.to));
       if (active === 'audit') publish(await managerService.auditLogs());
+      if (active === 'transactions') publish(null);
     } catch (err) {
       if (currentRequest === requestId.current) {
         setError(apiError(err, err.message || 'Unable to load data.'));
-        if (active === 'operations') setData(null);
+        if (['operations', 'reports'].includes(active)) setData(null);
         setDataView(active);
       }
     } finally {
@@ -158,6 +161,7 @@ function ManagerDashboard() {
   const applyFilters = (nextFilters = filters) => { setAppliedFilters({ ...nextFilters }); if (active === 'operations') { const next = new URLSearchParams(query); next.set('from', nextFilters.from); next.set('to', nextFilters.to); setQuery(next); } };
   const initials = (userInfo?.fullName || 'Center Manager').split(' ').filter(Boolean).slice(-2).map((part) => part[0]).join('').toUpperCase();
   const operationFilters = { ...appliedFilters, from: opsFrom, to: opsTo };
+  const openTransactions = params => { setQuery({ view: 'transactions', ...params }); setMobileNav(false); };
   const currentPage = adminPages.find((item) => item.id === active) || adminPages[0];
   const initialLoading = dataView !== active || (loading && data === null);
 
@@ -192,7 +196,7 @@ function ManagerDashboard() {
 
         <section className="manager-content">
           {error && active !== 'packages' && <div className="manager-alert" role="alert"><span>{t(error)}</span><button onClick={load}>{t("Retry")}</button></div>}
-          {initialLoading && !['dashboard', 'packages'].includes(active) ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={dataView === active ? data : null} filters={filters} appliedFilters={active === 'operations' ? operationFilters : appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={refreshAll} loading={loading || dataView !== active} loadError={error} updatedAt={updatedAt} />}
+          {initialLoading && !['dashboard', 'packages', 'transactions'].includes(active) ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={dataView === active ? data : null} filters={filters} appliedFilters={active === 'operations' ? operationFilters : appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={refreshAll} loading={loading || dataView !== active} loadError={error} updatedAt={updatedAt} openTransactions={openTransactions} />}
         </section>
       </main>
       <ManagerToast message={t(notice)} onClose={() => setNotice('')} />
@@ -208,25 +212,9 @@ function ManagerView(props) {
   if (props.active === 'people') return <StaffPage {...props} />;
   if (props.active === 'operations') return <OperationsPage {...props} />;
   if (props.active === 'packages') return <PackagesPage {...props} />;
-  if (props.active === 'reports') return <ReportsView {...props} />;
+  if (props.active === 'reports') return <ReportsPage {...props} />;
+  if (props.active === 'transactions') return <TransactionsPage {...props} />;
   return <AuditView {...props} />;
-}
-
-function ReportsView({ data, filters, appliedFilters, setFilters, reload, page }) {
-  useLanguage();
-  const summary = data?.summary || {};
-  const exportReport = () => {
-    const url = URL.createObjectURL(new Blob([reportCsv(data)], { type: 'text/csv;charset=utf-8;' }));
-    const link = document.createElement('a'); link.href = url;
-    link.download = 'report-' + appliedFilters.from + '-' + appliedFilters.to + '.csv'; link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-  const maxRevenue = Math.max(...(data?.revenueByDay || []).map((item) => Number(item.value)), 1);
-  return <>
-    <ManagerPageHeader title={t(page.title)} description={t(page.description)} actions={<div className="manager-report-range"><input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} /><span>{t("to")}</span><input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} /><button className="manager-secondary" onClick={reload}>{t("View")}</button><button className="manager-secondary" disabled={!data} onClick={exportReport}>{t("Export CSV")}</button></div>} />
-    <div className="manager-report-stats"><div><small>{t("Revenue")}</small><strong>{money(summary.revenue)}</strong></div><div><small>{t("Successful transactions")}</small><strong>{summary.successfulPayments || 0}</strong></div><div><small>{t("Pending invoices")}</small><strong>{summary.pendingInvoices || 0}</strong></div><div><small>{t("Class bookings")}</small><strong>{summary.confirmedBookings || 0}</strong></div></div>
-    <div className="manager-report-grid"><section className="manager-panel"><div className="manager-panel-heading"><div><span>{t("Daily revenue")}</span><strong>{t("Revenue trend")}</strong></div><BarChart3 size={20} /></div><div className="manager-bars">{data?.revenueByDay?.map((item) => <div key={item.label}><span>{formatDate(item.label)}</span><i><b style={{ width: `${(Number(item.value) / maxRevenue) * 100}%` }} /></i><strong>{money(item.value)}</strong></div>)}{!data?.revenueByDay?.length && <EmptyState />}</div></section><section className="manager-panel"><div className="manager-panel-heading"><div><span>{t("Class performance")}</span><strong>{t("Bookings / total session capacity")}</strong></div><Users size={20} /></div><div className="manager-occupancy">{data?.classOccupancy?.map((item) => <div key={item.classId}><div><span>{t(item.label)}</span><strong>{item.value}/{item.capacity}</strong></div><i><b style={{ width: `${Math.min((Number(item.value) / Number(item.capacity || 1)) * 100, 100)}%` }} /></i></div>)}</div></section></div>
-  </>;
 }
 
 function AuditView({ data, page }) {

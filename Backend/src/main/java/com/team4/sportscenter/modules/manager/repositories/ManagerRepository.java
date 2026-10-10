@@ -422,16 +422,16 @@ public class ManagerRepository {
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("summary", jdbc.queryForMap("""
                 SELECT
-                  (SELECT COALESCE(SUM(amount),0) FROM PAYMENTS WHERE status='SUCCESS' AND DATE(payment_date) BETWEEN ? AND ?) revenue,
-                  (SELECT COUNT(*) FROM PAYMENTS WHERE status='SUCCESS' AND DATE(payment_date) BETWEEN ? AND ?) successfulPayments,
+                  (SELECT COALESCE(SUM(p.amount),0) FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id WHERE p.status IN ('SUCCESS','COMPLETED') AND i.status<>'REVIEW' AND DATE(p.payment_date) BETWEEN ? AND ?) revenue,
+                  (SELECT COUNT(*) FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id WHERE p.status IN ('SUCCESS','COMPLETED') AND i.status<>'REVIEW' AND DATE(p.payment_date) BETWEEN ? AND ?) successfulPayments,
                   (SELECT COUNT(*) FROM INVOICES WHERE status='PENDING' AND DATE(created_at) BETWEEN ? AND ?) pendingInvoices,
                   (SELECT COUNT(*) FROM BOOKINGS b JOIN SCHEDULES sc ON sc.schedule_id=b.schedule_id
                     WHERE b.status='CONFIRMED' AND DATE(sc.start_time) BETWEEN ? AND ?) confirmedBookings
                 """, from, to, from, to, from, to, from, to));
         result.put("revenueByDay", jdbc.queryForList("""
-                SELECT DATE(payment_date) label,SUM(amount) value FROM PAYMENTS
-                WHERE status='SUCCESS' AND DATE(payment_date) BETWEEN ? AND ?
-                GROUP BY DATE(payment_date) ORDER BY DATE(payment_date)
+                SELECT DATE(p.payment_date) label,SUM(p.amount) value FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id
+                WHERE p.status IN ('SUCCESS','COMPLETED') AND i.status<>'REVIEW' AND DATE(p.payment_date) BETWEEN ? AND ?
+                GROUP BY DATE(p.payment_date) ORDER BY DATE(p.payment_date)
                 """, from, to));
         result.put("memberships", jdbc.queryForList("""
                 SELECT p.package_name label,COUNT(um.membership_id) value

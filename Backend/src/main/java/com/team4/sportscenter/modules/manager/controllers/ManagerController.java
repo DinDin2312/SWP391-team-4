@@ -20,6 +20,19 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ManagerController {
     private final ManagerService managerService;
+    private final com.team4.sportscenter.modules.manager.services.TransactionService transactions;
+
+    @GetMapping("/transactions")
+    public Map<String,Object> transactions(@RequestParam(defaultValue="payments") String mode,
+            @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue="ALL") String status, @RequestParam(defaultValue="ALL") String method,
+            @RequestParam(defaultValue="") String keyword, @RequestParam(defaultValue="0") int page,
+            @RequestParam(defaultValue="20") int size) {
+        return transactions.list(mode,from,to,status,method,keyword,page,size);
+    }
+    @GetMapping("/transactions/{invoiceId}")
+    public Map<String,Object> transactionDetail(@PathVariable int invoiceId) { return transactions.detail(invoiceId); }
 
     @PostMapping(value = "/{resource}/{id}/image", consumes = "multipart/form-data")
     public Map<String, String> updateResourceImage(@PathVariable String resource, @PathVariable Integer id,
