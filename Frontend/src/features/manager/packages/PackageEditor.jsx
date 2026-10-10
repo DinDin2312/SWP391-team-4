@@ -101,6 +101,7 @@ export default function PackageEditor({ item, initial, onClose, onSave, onSaved,
               </div>
             </div>
           </section>
+          <h3 className="admin-form-heading"><span>1</span>{t("Package information")}</h3>
           <div className="manager-form-grid">
             <div className="pkg-field wide"><label htmlFor={`${id}-packageName`}>{t('Package name')}<b aria-hidden="true"> *</b></label><input ref={nameInput} {...inputProps('packageName')} required value={form.packageName} placeholder={t('Enter package name')} onChange={event => change('packageName', event.target.value)} /><small id={`${id}-packageName-help`}>{t('Up to 255 characters.')}</small>{fieldError('packageName')}</div>
             <div className="pkg-field wide"><label htmlFor={`${id}-packageType`}>{t('Package type')}<b aria-hidden="true"> *</b></label><PackageTypeField value={form.packageType} onChange={value=>change('packageType',value)} onCatalog={updateCatalog} inputProps={inputProps('packageType')} /><small id={`${id}-packageType-help`}>{t('Package types are shared categories. Benefits are configured separately for each package.')}</small>{fieldError('packageType')}</div>
@@ -114,11 +115,13 @@ export default function PackageEditor({ item, initial, onClose, onSave, onSaved,
               requestAnimationFrame(() => { const display = priceInput(raw); let index = 0, count = 0; while (index < display.length && count < significant) { if (display[index] !== '.') count++; index++; } if (document.activeElement === input) input.setSelectionRange(index, index); });
             }} /><span aria-hidden="true">₫</span></div><small id={`${id}-price-help`}>{t('0 is free. Use a comma for decimals; up to 99,999,999.99 ₫.')}</small>{fieldError('price')}</div>
           </div>
+          <h3 className="admin-form-heading"><span>2</span>{t("Description and terms")}</h3>
           <div className="pkg-content-fields">
             <label htmlFor={id+'-description'}>{t('Description')}<textarea {...inputProps('description')} maxLength={1000} rows={3} value={form.description} onChange={e=>change('description',e.target.value)}/><small id={`${id}-description-help`}>{form.description.length}/1000 · {t('Plain text, optional.')}</small>{fieldError('description')}</label>
             <label htmlFor={id+'-terms'}>{t('Terms')}<textarea {...inputProps('terms')} maxLength={10000} rows={5} value={form.terms} onChange={e=>change('terms',e.target.value)}/><small id={`${id}-terms-help`}>{form.terms.length}/10000 · {t('Line breaks are preserved. Plain text, optional.')}</small>{fieldError('terms')}</label>
             <label htmlFor={id+'-purchaseLimitPerMember'}>{t('Purchase limit per member')}<input {...inputProps('purchaseLimitPerMember')} type="number" min="1" step="1" value={form.purchaseLimitPerMember} onChange={e=>change('purchaseLimitPerMember',e.target.value)}/><small id={`${id}-purchaseLimitPerMember-help`}>{t('Leave blank for unlimited. Set 1 for a one-time trial. Completed purchases count even after the package expires.')}</small>{fieldError('purchaseLimitPerMember')}</label>
           </div>
+          <h3 className="admin-form-heading"><span>3</span>{t("Usage benefits")}</h3>
           <PackageBenefitsEditor value={form.benefits} onChange={benefits=>change('benefits',benefits)} />
           {invalid('benefits') && <div role="alert">{fieldError('benefits')}</div>}
 
