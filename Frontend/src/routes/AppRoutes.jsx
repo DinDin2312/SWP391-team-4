@@ -37,8 +37,9 @@ const ReceptionistDashboard = lazy(() => import('../features/receptionist/pages/
 function AppRoutes() {
   useLanguage();
   const { pathname } = useLocation();
+  const hasRoleHeader = /^\/(member|coach)(\/|$)/.test(pathname) || Object.values(ROLE_ROUTES).includes(pathname);
   return (
-    <>{pathname !== ROLE_ROUTES.admin && <LanguageSwitcher floating />}<Suspense fallback={<div role="status" style={{ padding: 32 }}>{t("Loading Nexus...")}</div>}><Routes>
+    <>{!hasRoleHeader && <LanguageSwitcher floating />}<Suspense fallback={<div role="status" style={{ padding: 32 }}>{t("Loading Nexus...")}</div>}><Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<Register />} />

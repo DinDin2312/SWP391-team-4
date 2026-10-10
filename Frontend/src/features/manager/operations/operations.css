@@ -1,12 +1,32 @@
 .ops-page {
   min-width: 0;
 }
+.ops-plan-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.ops-header-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.ops-drawer.ops-auto-drawer { width:min(700px,100%); }
+.ops-drawer .ops-plan-weekdays { display:flex; flex-direction:row; flex-wrap:wrap; gap:12px; margin:0; }
+.ops-page .ops-plan-weekdays label,.ops-page .ops-plan-confirm { display:flex; flex-direction:row; align-items:flex-start; gap:8px; }
+.ops-page .ops-plan-weekdays input,.ops-page .ops-plan-confirm input { width:16px; min-height:16px; height:16px; flex-shrink:0; margin:3px 0; }
+.ops-plan-date-entry { display:flex; gap:8px; }
+.ops-plan-date-entry input { min-width:0; flex:1; }
+.ops-plan-exclusions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.ops-plan-preview { margin-top:20px; border-top:1px solid var(--border); padding-top:16px; }
+.ops-plan-session { margin:12px 0; padding:12px; border:1px solid var(--border); border-radius:6px; }
+.ops-plan-session small { display:block; margin-top:6px; color:var(--text-muted); }
+.ops-subject-name { display:flex; align-items:center; gap:12px; }
+@media(max-width:480px) { .ops-plan-grid { grid-template-columns:1fr; } }
 .ops-class-toolbar { display:grid; grid-template-columns:minmax(180px,2fr) repeat(4,minmax(105px,1fr)) auto; gap:12px; align-items:end; margin:18px 0; }
 .ops-query-field { min-width:180px; flex:1; }
 .ops-resource-filters { margin-bottom:18px; align-items:end; }
-.ops-pagination { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:12px; margin:16px 0; font-size:12px; color:var(--text-muted); }
-.ops-pagination label { flex-direction:row; align-items:center; }
-.ops-pagination select { width:70px; }
+.ops-pagination { display:flex; align-items:flex-end; justify-content:flex-end; flex-wrap:wrap; gap:12px; margin:16px 0; font-size:12px; color:var(--text-muted); }
+.ops-pagination label { display:flex; flex-direction:column; gap:6px; }
+.ops-pagination select { width:70px; height:38px; min-height:38px; padding:0 10px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:6px; }
+.ops-pagination > span, .ops-pagination-controls { display:flex; align-items:center; min-height:38px; }
+.ops-pagination-controls { gap:12px; }
+.ops-pagination-controls .manager-icon-button { width:38px; height:38px; }
+.ops-page .ops-resource-toolbar { align-items:flex-end; gap:12px; }
+.ops-resource-toolbar > .manager-primary { height:38px; min-height:38px; margin:0; padding:0 14px; white-space:nowrap; }
+@media(max-width:600px) { .ops-page .manager-tabs { flex-wrap:wrap; } }
 .ops-sort { border:0; padding:0; background:none; color:inherit; font:inherit; text-align:left; cursor:pointer; }
 .ops-inactive { color:var(--text-muted); background:var(--surface-hover); }
 .ops-inactive .overview-class-button { color:var(--text-muted); }

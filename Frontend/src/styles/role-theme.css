@@ -9,6 +9,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 input:focus, select:focus, textarea:focus { border-color: var(--primary); }
 .role-breadcrumb { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 13px; }
 .role-breadcrumb strong { color: var(--text); font-weight: 600; }
+.role-page-topbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; padding-bottom:8px; }
+.role-page-topbar .role-breadcrumb { min-width:0; flex-wrap:wrap; }
+.role-header-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:12px; margin-left:auto; max-width:100%; }
+.role-header-actions > * { max-width:100%; }
+.role-reception-topbar { padding:24px 32px; background:var(--surface); border-bottom:1px solid var(--border); }
+@media (max-width:600px) {
+  .role-page-topbar .language-switcher { position:fixed; top:12px; right:12px; z-index:40; box-shadow:0 2px 8px var(--border); }
+  .role-shell .auto-sidebar-brand { padding-right:112px; }
+}
 .auth-hero { color: var(--hero-text); }
 .auth-hero-shade { background: linear-gradient(var(--hero-overlay), var(--hero-overlay)); }
 @media (max-width: 1023px) {

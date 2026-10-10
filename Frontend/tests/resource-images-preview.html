@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow"><title>Resource image QA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            animation: { aurora: "aurora 60s linear infinite", scroll: "scroll var(--animation-duration, 40s) var(--animation-direction, forwards) linear infinite", "meteor-effect": "meteor 5s linear infinite" },
+            keyframes: { scroll: { to: { transform: "translate(calc(-50% - 0.5rem))" } }, aurora: { from: { backgroundPosition: "50% 50%, 50% 50%" }, to: { backgroundPosition: "350% 50%, 350% 50%" } }, meteor: { "0%": { transform: "rotate(215deg) translateX(0)", opacity: 1 }, "70%": { opacity: 1 }, "100%": { transform: "rotate(215deg) translateX(-500px)", opacity: 0 } } },
+            colors: {
+              "surface": "var(--surface)",
+              "surface-container-lowest": "var(--surface)",
+              "surface-container-low": "var(--bg)",
+              "surface-container": "var(--surface)",
+              "surface-container-high": "var(--surface-hover)",
+              "surface-container-highest": "var(--surface-hover)",
+              "surface-variant": "var(--surface-hover)",
+              "on-surface": "var(--text)",
+              "on-surface-variant": "var(--text-muted)",
+              "primary": "var(--primary)",
+              "on-primary": "var(--on-primary)",
+              "primary-container": "var(--primary-hover)",
+              "on-primary-container": "var(--on-primary)",
+              "secondary": "var(--success-hover)",
+              "on-secondary": "var(--on-primary)",
+              "secondary-container": "var(--success-soft)",
+              "on-secondary-container": "var(--success-text)",
+              "tertiary": "var(--warning-text)",
+              "on-tertiary": "var(--on-primary)",
+              "error": "var(--danger)",
+              "on-error": "var(--on-primary)",
+              "error-container": "var(--danger-soft)",
+              "on-error-container": "var(--danger-text)",
+              "inverse-primary": "var(--primary)",
+              "inverse-surface": "var(--surface)",
+              "inverse-on-surface": "var(--text)",
+              "outline": "var(--text-muted)",
+              "outline-variant": "var(--border)"
+            },
+            spacing: {
+              "space-xs": "4px",
+              "space-sm": "8px",
+              "space-md": "16px",
+              "space-lg": "24px",
+              "space-xl": "32px",
+            }
+          }
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./resource-images-preview.jsx"></script>
+  </body>
+</html>

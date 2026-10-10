@@ -1,6 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readOperationsState,patchOperationsQuery,matchingClasses,pageItems,visibleSchedules,operationCounts} from './operationsState.js';
+import {readOperationsState,normalizeOperationsQuery,patchOperationsQuery,matchingClasses,pageItems,visibleSchedules,operationCounts} from './operationsState.js';
+test('separate subject/room tabs preserve legacy links, independent searches and unrelated filters',()=>{
+  const legacy=new URLSearchParams('view=operations&tab=catalog&catalog=rooms&catalogPage=3&catalogQuery=Yoga&from=2026-10-05&cCoach=7');
+  const next=normalizeOperationsQuery(legacy);
+  assert.equal(next.get('tab'),'rooms');assert.equal(next.get('roomsPage'),'3');assert.equal(next.get('roomsQuery'),'Yoga');
+  assert.equal(next.get('from'),'2026-10-05');assert.equal(next.get('cCoach'),'7');assert.equal(next.has('catalog'),false);assert.equal(next.has('catalogPage'),false);
+  assert.deepEqual(readOperationsState(legacy).resource,{page:3,search:'Yoga'});
+  assert.equal(normalizeOperationsQuery(next).toString(),next.toString());
+  const subjects=patchOperationsQuery(next,{tab:'subjects',subjectsQuery:'Bơi',subjectsPage:2});
+  assert.deepEqual(readOperationsState(subjects).resource,{page:2,search:'Bơi'});
+  assert.deepEqual(readOperationsState(patchOperationsQuery(subjects,{tab:'rooms'})).resource,{page:3,search:'Yoga'});
+  assert.equal(readOperationsState(new URLSearchParams('tab=catalog')).tab,'subjects');
+  assert.equal(readOperationsState(new URLSearchParams('tab=classes&catalog=rooms')).tab,'classes');
+  assert.equal(normalizeOperationsQuery(new URLSearchParams('tab=catalog&catalog=rooms&catalogQuery=old&roomsQuery=new')).get('roomsQuery'),'new');
+});
 test('URL state validates input, preserves overview links and takes priority over preference and width',()=>{
   const query=new URLSearchParams('view=operations&tab=classes&cPage=3&cSize=50&cSort=price&cDir=desc&cStatus=ALL&cCoach=7&scheduleView=calendar&from=2026-10-07&to=2026-10-14&lowRegistration=true&editSchedule=4');
   const state=readOperationsState(query,true,'list');assert.equal(state.view,'calendar');assert.equal(state.classes.page,3);assert.equal(state.classes.status,'ALL');
