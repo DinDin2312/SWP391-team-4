@@ -61,6 +61,14 @@
 	</dependencyManagement>
 
 	<dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
 		<!-- Thêm thư viện dịch Ngày/Tháng (JSR310) vào ĐÂY để nó thực sự được tải về -->
 		<dependency>
 			<groupId>com.fasterxml.jackson.datatype</groupId>
