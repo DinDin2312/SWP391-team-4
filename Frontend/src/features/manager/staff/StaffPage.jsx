@@ -89,14 +89,15 @@ function StaffPage({ data, filters, setFilters, reload, openModal, selectPage, c
   };
   const hasFilters = Boolean(searchTerm || filters.role !== 'ALL' || filters.status !== 'ALL' || quickFilter !== 'ALL');
 
-  return <>
+  return <div className="staff-page">
     <ManagerPageHeader title={t(page.title)} description={t(page.description)} actions={<button className="manager-primary manager-add-account" onClick={() => openModal({ type: 'user' })}><Plus size={17} /> {t(managerEn.staff.addAccount)}</button>} />
     <StaffStats users={visibleUsers} activeFilter={quickFilter} onFilter={selectQuickFilter} />
     {actionError && <div className="manager-alert" role="alert">{actionError}</div>}
+    <div className="admin-section-heading"><div><h2>{t("Account directory")}</h2><p>{t("Review account details, roles and access status.")}</p></div><span>{t("{0} results",[visibleUsers.length])}</span></div>
     <div className="manager-filterbar">
       <label className="manager-search"><Search size={17} /><input type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder={t(managerEn.staff.filters.searchPlaceholder)} aria-label={t(managerEn.staff.filters.searchLabel)} autoComplete="off" /></label>
-      <ManagerSelect value={filters.role} onChange={(event) => changeFilter('role', event.target.value)}><option value="ALL">{t(managerEn.staff.filters.allRoles)}</option>{data?.roles?.map((role) => <option key={role.roleId} value={role.roleName}>{t(role.roleName)}</option>)}</ManagerSelect>
-      <ManagerSelect value={filters.status} onChange={(event) => { setQuickFilter(event.target.value === 'ALL' ? 'ALL' : event.target.value); changeFilter('status', event.target.value); }}><option value="ALL">{t(managerEn.staff.filters.allStatuses)}</option><option value="ACTIVE">{t("Active")}</option><option value="INACTIVE">{t("Inactive")}</option><option value="PENDING">{t("Pending")}</option></ManagerSelect>
+      <ManagerSelect aria-label={t("Role")} value={filters.role} onChange={(event) => changeFilter('role', event.target.value)}><option value="ALL">{t(managerEn.staff.filters.allRoles)}</option>{data?.roles?.map((role) => <option key={role.roleId} value={role.roleName}>{t(role.roleName)}</option>)}</ManagerSelect>
+      <ManagerSelect aria-label={t("Status")} value={filters.status} onChange={(event) => { setQuickFilter(event.target.value === 'ALL' ? 'ALL' : event.target.value); changeFilter('status', event.target.value); }}><option value="ALL">{t(managerEn.staff.filters.allStatuses)}</option><option value="ACTIVE">{t("Active")}</option><option value="INACTIVE">{t("Inactive")}</option><option value="PENDING">{t("Pending")}</option></ManagerSelect>
       <button className={`manager-clear-filter ${hasFilters ? 'is-active' : ''}`} type="button" disabled={!hasFilters} onClick={clearFilters}>{t(managerEn.staff.filters.clear)}</button>
       <output className="manager-result-count" aria-live="polite">{managerEn.staff.filters.resultCount(visibleUsers.length)}</output>
     </div>
@@ -106,7 +107,7 @@ function StaffPage({ data, filters, setFilters, reload, openModal, selectPage, c
     {lockTargets.length > 0 && <LockAccountModal users={lockTargets} busy={pendingId !== null} onClose={() => setLockTargets([])} onConfirm={confirmLock} />}
     <ConfirmDialog open={confirmation?.type === 'reset'} title={t("Reset password?")} message={t("You will be asked to set a new password for {0}.",[confirmation?.user?.fullName || 'this account'])} confirmLabel="Continue" tone="warning" busy={pendingId !== null} onClose={() => setConfirmation(null)} onConfirm={() => { const item = confirmation.user; setConfirmation(null); openModal({ type: 'user', item, focusPassword: true }); }} />
     <ConfirmDialog open={confirmation?.type === 'delete'} title={t("Delete selected accounts?")} message={t("Permanently delete {0} selected account{1}. This cannot be undone.",[selectedUsers.length,selectedUsers.length === 1 ? '' : 's'])} confirmLabel="Delete" busy={pendingId !== null} onClose={() => setConfirmation(null)} onConfirm={deleteSelected} />
-  </>;
+  </div>;
 }
 
 export default StaffPage;

@@ -1,0 +1,111 @@
+/* Shared presentation for the administration workspace. */
+.manager-app { --admin-line:#e3e9f2; --admin-ink:#17243c; --admin-muted:#68778e; }
+.manager-app .manager-page-header { margin-bottom:26px; align-items:center; }
+.manager-app .manager-page-header h1 { letter-spacing:-.8px; font-size:30px; }
+.manager-app .manager-page-header p { line-height:1.6; }
+.manager-app .manager-primary,.manager-app .manager-secondary { min-height:44px; border-radius:9px; }
+.admin-section-heading { display:flex; justify-content:space-between; align-items:center; gap:16px; margin:24px 0 16px; }
+.admin-section-heading h2 { margin:0 0 6px; font-size:20px; font-weight:650; letter-spacing:-.35px; color:var(--admin-ink); }
+.admin-section-heading p { margin:0; color:var(--admin-muted); font-size:13px; line-height:1.6; }
+.admin-section-heading > span { padding:7px 10px; border-radius:8px; background:#edf1f7; font-size:12px; color:var(--admin-muted); white-space:nowrap; }
+.manager-app .manager-panel { border-radius:14px; border-color:var(--admin-line); box-shadow:none; }
+.manager-app .overview-kpi { border-radius:14px; border-color:var(--admin-line); min-height:132px; padding:22px; align-items:flex-start; gap:16px; }
+.manager-app .overview-kpi-icon { width:42px; height:42px; border-radius:12px; color:#3265e8; background:#edf3ff; }
+.manager-app .overview-kpi-icon.is-warning { color:#bc7b21; background:#fff4dd; }
+.manager-app .overview-kpi small { font-weight:600; font-size:12px; }
+.manager-app .overview-kpi strong { font-size:32px; letter-spacing:-1px; margin:8px 0 6px; justify-content:space-between; }
+.manager-app .overview-kpi strong svg { color:#8191aa; }
+.manager-app .overview-kpi p { line-height:1.6; }
+.manager-app .overview-panel { padding:22px; }
+.manager-app .overview-panel > header { padding-bottom:18px; border-bottom:1px solid var(--admin-line); margin-bottom:0; }
+.manager-app .overview-title-line h2,.manager-app .overview-panel header h2 { font-size:17px; letter-spacing:-.25px; }
+.manager-app .overview-panel .overview-empty { padding:28px 0; line-height:1.8; }
+.manager-app .overview-panel .overview-list li:first-child { border-top:0; }
+.manager-app .overview-urgent { border:1px solid #f0dfbd; background:#fffbf1; border-radius:14px; padding:22px; }
+.manager-app .overview-urgent h2 span { margin-left:8px; font-size:12px; padding:4px 8px; background:#ffefce; border-radius:6px; }
+.manager-app .overview-time-column time,.manager-app .overview-slot { display:inline-block; padding:8px; border-radius:8px; background:#f0f5ff; color:#3265e8; font-size:11px; }
+.manager-app .overview-list p { line-height:1.6; }
+.manager-app .overview-upcoming-row { padding:18px 0; }
+.manager-app .overview-list li.overview-upcoming-row { grid-template-columns:76px minmax(0,1fr) 96px 32px; gap:10px; }
+.manager-app .overview-upcoming-row .overview-booking { width:96px; }
+.manager-app .overview-activity { padding:22px; border-color:var(--admin-line); border-radius:14px; }
+.manager-app .overview-renewal-strip { border-color:#dcebdd; background:#fbfefb; border-radius:14px; }
+.manager-app .overview-link { display:inline-flex; align-items:center; padding:7px 10px; background:#edf3ff; border-radius:7px; }
+.manager-app .staff-page .manager-stat { position:relative; min-height:124px; border:1px solid var(--admin-line); border-radius:14px; padding:20px; text-align:left; }
+.manager-app .staff-page .manager-stat > span { position:absolute; right:18px; top:18px; width:38px; height:38px; border-radius:11px; }
+.manager-app .staff-page .manager-stat > div { width:100%; }
+.manager-app .staff-page .manager-stat small { display:block; padding-right:42px; font-size:12px; font-weight:600; }
+.manager-app .staff-page .manager-stat strong { display:block; margin-top:17px; font-size:30px; letter-spacing:-1px; }
+.manager-app .staff-page .manager-stat.is-active { border-color:#aac2ff; background:#f8faff; }
+.manager-app .staff-page .manager-filterbar { border:1px solid var(--admin-line); border-radius:14px; padding:18px; gap:14px; align-items:flex-end; }
+.manager-app .staff-page .manager-search,.manager-app .staff-page .manager-select select { height:44px; min-height:44px; border-radius:9px; }
+.manager-app .staff-page .manager-search { flex:2; }
+.manager-app .staff-page .manager-filterbar > .manager-select { flex:1; }
+.manager-app .staff-page .manager-search input { height:42px; font-size:13px; }
+.manager-app .staff-page .manager-clear-filter { height:44px; border:1px solid var(--admin-line); border-radius:9px; padding:0 14px; background:white; }
+.manager-app .staff-page .manager-result-count { align-self:center; font-size:12px; }
+.manager-app .staff-page .manager-staff-table { border-radius:14px; border-color:var(--admin-line); }
+.manager-app .staff-page .manager-staff-table thead th { padding:17px 16px; background:#f8fafd; color:#63738c; letter-spacing:.025em; }
+.manager-app .staff-page .manager-staff-table td { padding:20px 16px; border-color:var(--admin-line); }
+.manager-app .staff-page .manager-staff-table tr:hover td { background:#fafcff; }
+.manager-app .staff-page .manager-table-avatar { width:42px; height:42px; border-radius:12px; }
+.manager-app .staff-page .manager-staff-table th:last-child,.manager-app .staff-page .manager-staff-table td:last-child { width:80px; text-align:center; }
+.manager-app .staff-page .manager-pagination { background:#fafcff; padding:18px; }
+.manager-app .packages-page .pkg-toolbar { padding:18px; border-radius:14px; border-color:var(--admin-line); gap:14px; }
+.manager-app .packages-page .pkg-search,.manager-app .packages-page .pkg-toolbar select,.manager-app .packages-page .pkg-view-switch button { height:44px; border-radius:9px; }
+.manager-app .packages-page .pkg-count-note { font-size:11px; line-height:1.6; margin:16px 0; }
+.manager-app .packages-page .pkg-table-wrap { border-radius:14px; border:1px solid var(--admin-line); }
+.manager-app .packages-page .pkg-table-wrap th { background:#f8fafd; color:#63738c; font-size:11px; padding:17px 18px; }
+.manager-app .packages-page .pkg-table-wrap td { padding:21px 18px; font-size:13px; border-color:var(--admin-line); }
+.manager-app .packages-page .pkg-name button { font-weight:600; color:var(--admin-ink); }
+.manager-app .packages-page .pkg-price { font-weight:650; }
+.manager-app .packages-page .pkg-card { border-radius:16px; border-color:var(--admin-line); overflow:hidden; transition:border-color .15s,box-shadow .15s; }
+.manager-app .packages-page .pkg-card:hover { border-color:#bdcfff; box-shadow:0 8px 24px #24406309; }
+.manager-app .packages-page .pkg-card h2 { letter-spacing:-.25px; }
+.manager-app .packages-page .pkg-card .resource-photo-cover { aspect-ratio:16/9; max-height:210px; }
+.admin-catalog-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin-bottom:24px; }
+.admin-catalog-stats article { display:flex; align-items:center; gap:16px; padding:20px; background:white; border:1px solid var(--admin-line); border-radius:14px; }
+.admin-catalog-stats article > svg { width:42px; height:42px; padding:10px; border-radius:12px; background:#edf3ff; color:#3265e8; flex-shrink:0; }
+.admin-catalog-stats small { color:var(--admin-muted); font-size:12px; font-weight:600; }
+.admin-catalog-stats strong { display:block; margin-top:6px; font-size:28px; letter-spacing:-.8px; }
+.manager-app .manager-modal-backdrop { backdrop-filter:blur(3px); background:rgba(18,30,50,.42); }
+.manager-app .manager-modal { border-radius:20px; width:min(800px,100%); border-color:var(--admin-line); box-shadow:0 24px 80px #12203a30; }
+.manager-app .manager-modal > header { position:sticky; top:0; z-index:3; padding:24px 28px; background:#fafcff; }
+.manager-app .manager-modal > header h2,.manager-app .manager-modal > header h3 { font-size:24px; letter-spacing:-.5px; }
+.manager-app .manager-modal > header h3 { text-transform:none; }
+.manager-app .manager-modal .manager-form-grid label { font-size:13px; }
+.manager-app .manager-modal input,.manager-app .manager-modal select { font-size:13px; }
+.manager-app .manager-modal input[type=checkbox] { min-height:18px; height:18px; width:18px; flex-shrink:0; }
+.manager-app .manager-modal > header button { width:36px; height:36px; border-radius:9px; }
+.manager-app .manager-modal form { padding:26px 28px 0; }
+.manager-app .manager-modal form > footer { position:sticky; bottom:0; margin:24px -28px 0; padding:18px 28px; background:#fafcff; z-index:2; }
+.manager-app .manager-modal input:not([type=checkbox]):not([type=file]),.manager-app .manager-modal select { min-height:46px; border-radius:9px; }
+.manager-app .manager-modal textarea { border-radius:9px; }
+.manager-app .manager-account-avatar-row { border-radius:12px; padding:18px; background:#f4f7fc; border:1px solid var(--admin-line); margin-bottom:22px; }
+.manager-app .manager-account-section { border-radius:12px; }
+.manager-app .pkg-editor .pkg-photo-field { padding:18px !important; border:1px solid var(--admin-line) !important; background:#f7f9fc; border-radius:12px; margin-bottom:26px; }
+.manager-app .pkg-editor .pkg-photo-field h3 { font-size:14px; font-weight:650; margin-bottom:14px; }
+.manager-app .pkg-editor .pkg-photo-row .resource-photo-cover { width:180px; border-radius:10px; }
+.manager-app .pkg-editor .manager-form-grid { gap:22px 18px; }
+.manager-app .pkg-editor .pkg-field.wide { grid-column:auto; }
+.manager-app .pkg-editor .pkg-field > label { display:flex; flex-direction:row; align-items:center; gap:4px; }
+.manager-app .pkg-editor .pkg-field > label b { margin:0; }
+.manager-app .pkg-editor .pkg-field:first-child,.manager-app .pkg-editor .pkg-field:nth-child(2) { grid-column:1/-1; }
+.admin-form-heading { margin:26px 0 16px; display:flex; align-items:center; gap:10px; font-size:15px; letter-spacing:-.2px; }
+.admin-form-heading > span { display:grid; place-items:center; width:27px; height:27px; font-size:12px; font-weight:700; background:#edf3ff; color:#3265e8; border-radius:8px; }
+.manager-app .pkg-editor .pkg-content-fields { padding:20px; border:1px solid var(--admin-line); border-radius:12px; background:#fafcff; }
+.manager-app .manager-detail-drawer { border-radius:20px; border-color:var(--admin-line); width:min(860px,100%); }
+.manager-app .manager-detail-hero { background:#f6f9ff; padding:30px; }
+.manager-app .manager-detail-hero::after { display:none; }
+.manager-app .manager-detail-summary { gap:12px; padding:20px 28px; }
+.manager-app .manager-detail-summary article { padding:15px; border-radius:10px; border:1px solid var(--admin-line); background:#fafcff; }
+.manager-app .manager-detail-actions { padding:16px 28px; background:white; gap:10px; flex-wrap:wrap; }
+.manager-app .manager-detail-actions button { min-height:40px; border-radius:8px; }
+.manager-app .manager-contact-grid article { border-radius:10px; background:#fafcff; }
+.manager-app .manager-detail-section { padding:24px 28px; }
+.manager-app .manager-permissions span { border-radius:7px; background:#edf3ff; }
+@media(max-width:1100px) { .manager-app .staff-page .manager-filterbar > .manager-search { flex-basis:100%; } }
+@media(max-width:767px) { .manager-app .manager-page-header { align-items:flex-start; } .manager-app .manager-page-header h1 { font-size:26px; } .manager-app .overview-stats { grid-template-columns:1fr; } .manager-app .overview-kpi { min-height:110px; } .manager-app .overview-panel,.manager-app .overview-urgent,.manager-app .overview-activity { padding:18px; } .admin-catalog-stats { grid-template-columns:1fr; gap:10px; } .admin-catalog-stats article { padding:16px; } .admin-catalog-stats article > div { display:flex; align-items:center; justify-content:space-between; flex:1; gap:16px; } .admin-catalog-stats strong { margin:0; font-size:26px; } .admin-section-heading > span { display:none; } .manager-app .manager-modal-backdrop { padding:12px; } .manager-app .manager-modal { max-height:calc(100dvh - 24px); border-radius:14px; } .manager-app .manager-modal > header,.manager-app .manager-modal form { padding:20px; } .manager-app .manager-modal form { padding-bottom:0; } .manager-app .manager-modal form > footer { margin-inline:-20px; padding:16px 20px; } .manager-app .manager-modal > header h2,.manager-app .manager-modal > header h3 { font-size:21px; } .manager-app .pkg-editor .pkg-photo-row .resource-photo-cover { width:100%; max-width:240px; } .manager-app .pkg-editor .pkg-field.wide { grid-column:1/-1; } .manager-app .manager-detail-summary { padding:18px; grid-template-columns:1fr; } .manager-app .manager-detail-section { padding:20px; } .manager-app .manager-detail-hero { padding:24px 20px; } }
+@media(prefers-reduced-motion:reduce) { .manager-app .pkg-card { transition:none; } }
+@media(max-width:600px) { .manager-app .overview-list li.overview-upcoming-row { grid-template-columns:76px minmax(0,1fr) 32px; } }
+@media(max-width:767px) { .manager-app .staff-page .manager-staff-stats { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .manager-app .staff-page .manager-stat { min-height:132px; padding:16px; } .manager-app .staff-page .manager-stat > span { width:32px; height:32px; right:12px; top:16px; } .manager-app .staff-page .manager-stat small { font-size:11px; padding-right:30px; min-height:32px; } }

@@ -3,7 +3,7 @@ import ConfirmDialog from '../staff/ConfirmDialog';
 import PackageBenefits from '../../../components/resource-images/PackageBenefits';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowDown, ArrowUp, Grid2X2, Info, List, Package, Plus, Search, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Grid2X2, Info, List, Package, Plus, Search, X, Users, BadgeCheck } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import ManagerPageHeader from '../components/ManagerPageHeader';
@@ -85,14 +85,16 @@ export default function PackagesPage({ data, loading, loadError, refresh, notify
   const create = () => setEditor({});
   const clear = () => patch({ search: '', type: '', selling:'', page: 1 });
   const isFiltered = Boolean(state.search || state.type || state.selling);
-  const actions = row => <OverviewRowMenu buttonLabel={state.display==='table'?'Actions':undefined} row={{ className: row.packageName }} items={[{ label: 'Edit', run: () => edit(row) }, { label: 'Duplicate', run: () => duplicate(row) },{label:row.sellingStatus==='STOPPED'?'Resume selling':'Stop selling',run:()=>setSelling(row)}]} />;
+  const actions = row => <OverviewRowMenu row={{ className: row.packageName }} items={[{ label: 'Edit', run: () => edit(row) }, { label: 'Duplicate', run: () => duplicate(row) },{label:row.sellingStatus==='STOPPED'?'Resume selling':'Stop selling',run:()=>setSelling(row)}]} />;
   const changeSort = key => patch({ sort: key, direction: state.sort === key && state.direction === 'asc' ? 'desc' : 'asc', page: 1 });
-  const header = key => <th scope="col" aria-sort={state.sort === key ? state.direction === 'asc' ? 'ascending' : 'descending' : 'none'}><button type="button" className="pkg-sort-header" onClick={() => changeSort(key)}>{t(key==='activeSubscribers'?'Number of active registrations':sorts[key])}{state.sort === key && (state.direction === 'asc' ? <ArrowUp size={14} aria-hidden="true" /> : <ArrowDown size={14} aria-hidden="true" />)}</button></th>;
+  const header = key => <th scope="col" aria-sort={state.sort === key ? state.direction === 'asc' ? 'ascending' : 'descending' : 'none'}><button type="button" className="pkg-sort-header" onClick={() => changeSort(key)}>{t(sorts[key])}{state.sort === key && (state.direction === 'asc' ? <ArrowUp size={14} aria-hidden="true" /> : <ArrowDown size={14} aria-hidden="true" />)}</button></th>;
   const price = row => Number(row.price) === 0 ? t('Free') : formatMoney(row.price);
   const duration = row => <span title={approximateDuration(Number(row.durationDays))}>{Number(row.durationDays) === 1 ? t('1 day') : t('{0} days', [number(row.durationDays)])}</span>;
   const rowClick = (event, row) => { if (!event.target.closest('button, a, input, select, [role="menu"]')) { event.currentTarget.focus(); openDetail(row); } };
   return <div className="packages-page">
     <ManagerPageHeader title="Membership Packages" description="Manage membership plans, durations, and pricing." actions={<button type="button" className="manager-primary" onClick={create}><Plus size={17} aria-hidden="true" />{t('Add Package')}</button>} />
+    {!loading && !loadError && <div className="admin-catalog-stats">{[["Packages in catalog",records.length,Package],["Packages on sale",records.filter(row=>row.sellingStatus!=="STOPPED").length,BadgeCheck],["Active registrations",records.reduce((sum,row)=>sum+Number(row.activeSubscribers || 0),0),Users]].map(([label,value,Icon])=><article key={label}><Icon size={20} aria-hidden="true"/><div><small>{t(label)}</small><strong>{number(value)}</strong></div></article>)}</div>}
+    <div className="admin-section-heading"><div><h2>{t("Package catalog")}</h2><p>{t("Organize pricing, availability and benefits for your members.")}</p></div><span>{t("{0} results",[block.total])}</span></div>
     <div className="pkg-toolbar">
       <DebouncedSearch value={state.search} onChange={search => patch({ search, page: 1 })} />
       <label>{t('Package type')}<select value={state.type} onChange={event => patch({ type: event.target.value, page: 1 })}><option value="">{t('All ({0})', [number(block.allCount)])}</option>{typeCodes.map(type => <option key={type} value={type}>{t('{0} ({1})', [t(typeName(type)), number(block.counts[type]||0)])}</option>)}</select></label>

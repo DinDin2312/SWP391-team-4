@@ -41,7 +41,8 @@ test('package list and form render localized labels, free prices and unknown typ
       assert.ok(html.includes(language === 'vi' ? 'Đăng ký còn hiệu lực' : 'Active registrations'));
       assert.ok(!html.replaceAll(/value="[^"]*"/g,'').includes('LEGACY'));
       assert.ok(html.includes(language==='vi'?'<th scope="col">Thao tác</th>':'<th scope="col">Actions</th>'));
-      assert.ok(html.includes('overview-menu-opener has-label'));
+      assert.ok(html.includes('overview-menu-opener'));
+      assert.ok(!html.includes('overview-menu-opener has-label'));
       assert.equal((html.match(/<h1/g) || []).length, 1);
       const create = wrap(React.createElement(Editor, { onClose() {}, onSave() {}, onSaved() {} }), language);
       assert.ok(create.indexOf('pkg-photo-field')<create.indexOf('manager-form-grid'));

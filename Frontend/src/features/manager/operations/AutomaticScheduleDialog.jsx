@@ -17,7 +17,7 @@ export default function AutomaticScheduleDialog({ config, data, onClose, onSaved
     event.preventDefault();if(busy)return;
     if(!confirmed || !form.classId || !form.weekdays.length){setError('Choose a class and confirm its availability.');return;}
     setBusy(true);setError('');setPlan(null);
-    try {const response=await managerService.previewSchedulePlan(rules());setPlan(response.data);}
+    try {const response=await managerService.previewSchedulePlan(rules());setPlan(response);}
     catch(err){setError(err.response?.data?.message || 'Unable to generate a plan. Please try again.');}
     finally{setBusy(false);}
   };

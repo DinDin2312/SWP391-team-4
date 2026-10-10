@@ -40,7 +40,7 @@ function useOperationDialog(onClose, busy) {
       if (event.key !== "Tab") return;
       const controls = [
         ...dialog.querySelectorAll(
-          'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
+          'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex="0"]',
         ),
       ].filter((node) => node.getClientRects().length);
       if (!controls.length) {
@@ -139,7 +139,7 @@ function Field({ label, name, error, children, help }) {
           id={`${id}-help`}
           className={error ? "manager-field-error" : "ops-field-help"}
         >
-          {error || help}
+          {t(error || help)}
         </small>
       )}
     </div>
@@ -263,6 +263,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
           {...aria}
           {...attrs}
           value={form[key] ?? ""}
+          onInput={(event) => set(key, event.target.value)}
           onChange={(event) => set(key, event.target.value)}
         />
       )}
@@ -278,10 +279,10 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
           disabled={disabled}
           onChange={(event) => set(key, event.target.value)}
         >
-          <option value="">{t("Select")}{' '}{label.toLowerCase()}</option>
+          <option value="">{t("Select")}{' '}{t(label).toLocaleLowerCase()}</option>
           {options.map(([value, name]) => (
             <option key={value} value={value}>
-              {name}
+              {key === 'status' ? t(name) : name}
             </option>
           ))}
         </select>
@@ -328,6 +329,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
   };
   return (
     <Drawer
+      className={`ops-editor-dialog ops-editor-${type}`}
       title={t(title)}
       subtitle={
         t(editing
@@ -344,7 +346,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
               {t(error)}
             </div>
           )}
-          <fieldset disabled={saving}>
+          <fieldset className="ops-editor-fields" disabled={saving}>
             {type === "subject" && (
               <>
                 {input("subjectName", "Subject name", { maxLength: 255 })}
@@ -395,7 +397,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                   "Room",
                   data.rooms.map((row) => [
                     row.roomId,
-                    `${row.roomName} · ${row.capacity} seats`,
+                    `${row.roomName} · ${t('{0} seats',[row.capacity])}`,
                   ]),
                 )}
                 {input(
@@ -403,7 +405,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                   "Capacity per session",
                   { type: "number", min: 1, step: 1 },
                   selectedRoom
-                    ? `Room capacity: ${selectedRoom.capacity}. Cannot be below existing booked/held seats.`
+                    ? t('Room capacity: {0}. Cannot be below existing booked/held seats.',[selectedRoom.capacity])
                     : "Choose a room to see its capacity.",
                 )}
                 {input("price", "Tuition (VND / class registration)", {

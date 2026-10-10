@@ -16,13 +16,15 @@
 .pkg-help > span { position:absolute; z-index:35; left:0; top:22px; width:260px; display:none; padding:10px; border:1px solid var(--border); border-radius:8px; color:var(--text); background:var(--surface); box-shadow:var(--shadow); font-weight:400; }
 .pkg-help:hover > span, .pkg-help:focus > span { display:block; }
 .pkg-table-wrap table { width:100%; min-width:1100px; table-layout:fixed; }
-.pkg-table-wrap th:first-child { width:24%; }
+.pkg-table-wrap th:first-child { width:27%; }
 .pkg-table-wrap th:nth-child(2) { width:16%; }
 .pkg-table-wrap th:nth-child(3) { width:12%; }
 .pkg-table-wrap th:nth-child(4) { width:10%; }
 .pkg-table-wrap th:nth-child(5) { width:13%; }
 .pkg-table-wrap th:nth-child(6) { width:14%; }
-.pkg-table-wrap th:last-child { width:11%; }
+.pkg-table-wrap th:last-child { width:8%; }
+.pkg-table-wrap th:nth-child(6), .pkg-table-wrap th:last-child { text-align:center; }
+.pkg-table-wrap th:nth-child(6) .pkg-sort-header { justify-content:center; width:100%; text-align:center; }
 .pkg-table-wrap tbody tr { height:56px; cursor:pointer; }
 .pkg-table-wrap tbody tr:hover { background:var(--surface-hover); }
 .pkg-table-wrap td { padding:10px 14px; overflow-wrap:anywhere; }
@@ -106,4 +108,7 @@
 .pkg-editor fieldset>.pkg-photo-field:first-child{margin-top:0;border-top:0;padding-top:0;margin-bottom:20px}
 
 .pkg-benefit-scope>label{flex-direction:column;align-items:stretch;margin-top:10px}.pkg-benefit-scope button[aria-pressed=true]{background:var(--primary-soft,#eff6ff);border-color:var(--primary,#2563eb)}
-.pkg-actions-cell{border-left:1px solid var(--border,#dce3ed)}.pkg-registration-count{font-variant-numeric:tabular-nums}.pkg-table-wrap .overview-menu-opener.has-label{display:flex;align-items:center;justify-content:center;gap:5px;width:auto;padding:8px;border-color:var(--border,#dce3ed);white-space:nowrap;font-size:12px}
+.pkg-actions-cell { text-align:center; }
+.pkg-registration-count { text-align:center; font-variant-numeric:tabular-nums; }
+.pkg-actions-cell .overview-row-menu { display:inline-flex; }
+.pkg-actions-cell .overview-menu-opener { width:36px; height:36px; border-radius:8px; }

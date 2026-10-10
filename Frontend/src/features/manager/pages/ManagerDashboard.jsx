@@ -26,6 +26,7 @@ import PasswordInput from '../staff/PasswordInput';
 import { validateAvatarFile } from '../staff/staffData';
 import './manager.css';
 import './manager-polish.css';
+import './admin-design.css';
 
 const today = new Date();
 const initialFrom = isoDate(new Date(today.getFullYear(), today.getMonth(), 1));
