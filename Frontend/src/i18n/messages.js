@@ -1398,3 +1398,43 @@ Object.assign(translations, {
 });
 
 Object.assign(translations, {'Gain full access for ': ['Gain full access for ', 'Sử dụng toàn bộ dịch vụ trong ']});
+
+const operationsDesignLabels = {
+  "{0} results": "{0} kết quả",
+  "Teaching schedule": "Lịch giảng dạy",
+  "Review sessions, availability and bookings in the selected period.": "Theo dõi buổi tập, lịch sử dụng tài nguyên và lượt đặt trong khoảng đã chọn.",
+  "Class directory": "Danh sách lớp học",
+  "Manage teaching resources, capacity and tuition for each class.": "Quản lý huấn luyện viên, phòng, sức chứa và học phí của từng lớp.",
+  "Subject directory": "Danh sách bộ môn",
+  "Organize disciplines and their associated classes.": "Quản lý bộ môn và các lớp học thuộc từng môn.",
+  "Room directory": "Danh sách phòng",
+  "Review spaces, capacity and the classes assigned to each room.": "Theo dõi không gian tập, sức chứa và các lớp sử dụng từng phòng."
+};
+for (const [en, vi] of Object.entries(operationsDesignLabels)) translations[en] = [en, vi];
+
+const operationFormLabels = {
+ "Tuition (VND / class registration)":"Học phí (₫ / lần đăng ký lớp)",
+ "Room capacity: {0}. Cannot be below existing booked/held seats.":"Sức chứa phòng: {0}. Không được thấp hơn số chỗ đã đặt hoặc đang giữ.",
+ "{0} seats":"{0} chỗ"
+};
+for (const [en, vi] of Object.entries(operationFormLabels)) translations[en] = [en, vi];
+
+const adminDesignLabels = {
+ "Account directory":"Danh sách tài khoản",
+ "Review account details, roles and access status.":"Theo dõi thông tin tài khoản, vai trò và trạng thái truy cập.",
+ "Packages in catalog":"Gói trong danh sách",
+ "Packages on sale":"Gói đang bán",
+ "Package catalog":"Danh sách gói hội viên",
+ "Organize pricing, availability and benefits for your members.":"Quản lý giá bán, trạng thái mở bán và quyền lợi dành cho hội viên.",
+ "Package information":"Thông tin gói",
+ "Description and terms":"Mô tả và điều khoản",
+ "Usage benefits":"Quyền lợi sử dụng"
+};
+for (const [en, vi] of Object.entries(adminDesignLabels)) translations[en] = [en, vi];
+
+const staffPermissionLabels = {
+ "Membership":"Gói hội viên", "Profile":"Hồ sơ", "Full access":"Toàn quyền truy cập",
+ "Manage accounts":"Quản lý tài khoản", "Audit logs":"Nhật ký hệ thống", "Manage staff":"Quản lý nhân sự",
+ "Center operations":"Vận hành trung tâm", "Member records":"Hồ sơ hội viên", "Class roster":"Danh sách học viên", "Standard access":"Quyền truy cập cơ bản"
+};
+for (const [en, vi] of Object.entries(staffPermissionLabels)) translations[en] = [en, vi];

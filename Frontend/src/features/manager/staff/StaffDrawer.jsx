@@ -25,7 +25,17 @@ function StaffDrawer({ user, onClose, onEdit, onResetPassword, onToggleLock, onV
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     dialogRef.current?.focus();
-    const keyDown = (event) => { if (event.key === 'Escape') onClose(); };
+    const keyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+      if (event.key !== 'Tab') return;
+      const controls = [...dialogRef.current.querySelectorAll('button:not(:disabled), summary, [tabindex="0"]')].filter(node=>node.getClientRects().length);
+      if (!controls.length) {event.preventDefault();return;}
+      if (event.shiftKey && (document.activeElement === controls[0] || document.activeElement === dialogRef.current)) {
+        event.preventDefault();controls.at(-1).focus();
+      } else if (!event.shiftKey && (document.activeElement === controls.at(-1) || document.activeElement === dialogRef.current)) {
+        event.preventDefault();controls[0].focus();
+      }
+    };
     document.addEventListener('keydown', keyDown);
     return () => { document.removeEventListener('keydown', keyDown); document.body.style.overflow = overflow; previous?.focus(); };
   }, [user, onClose]);
@@ -64,7 +74,7 @@ function StaffDrawer({ user, onClose, onEdit, onResetPassword, onToggleLock, onV
           <article><span><Phone size={17} /></span><div><small>{t(copy.phone)}</small><strong>{t(user.phone || 'No phone')}</strong></div></article>
           <article><span><Clipboard size={17} /></span><div><small>{t("Account UID")}</small><strong>{uid}</strong></div><button className="manager-copy-icon" type="button" onClick={copyUid} aria-label={t("Copy UID")}>{copied ? <Check size={15} /> : <Clipboard size={15} />}</button></article>
         </div>
-        <div className="manager-permissions"><small>{t("Permissions")}</small><div>{(permissionsByRole[user.roleName] || ['Standard access']).map((permission) => <span key={permission}>{permission}</span>)}</div></div>
+        <div className="manager-permissions"><small>{t("Permissions")}</small><div>{(permissionsByRole[user.roleName] || ['Standard access']).map((permission) => <span key={permission}>{t(permission)}</span>)}</div></div>
       </section>
 
       <details className="manager-detail-section manager-plan-disclosure" key={user.userId}>
