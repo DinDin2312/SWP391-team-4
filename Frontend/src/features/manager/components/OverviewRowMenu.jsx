@@ -2,7 +2,7 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import { useEffect, useRef, useState } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 
-export default function OverviewRowMenu({ row, time, view, cancel, items }) {
+export default function OverviewRowMenu({ row, time, view, cancel, items, buttonLabel }) {
   useLanguage();
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState(null);
@@ -44,7 +44,7 @@ export default function OverviewRowMenu({ row, time, view, cancel, items }) {
     if (event.key === 'Tab') setOpen(false);
   };
   return <div className="overview-row-menu" ref={root}>
-    <button ref={opener} type="button" className="overview-menu-opener" title={t("Actions for {0}",[row.className])} aria-label={time ? t("Actions for {0}, {1}",[row.className,time]) : t('Actions for {0}',[row.className])} aria-haspopup="menu" aria-expanded={open} onClick={() => open ? close() : show()} onKeyDown={event => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); show(); } }}><MoreHorizontal size={18} /></button>
+    <button ref={opener} type="button" className={`overview-menu-opener${buttonLabel?' has-label':''}`} title={t("Actions for {0}",[row.className])} aria-label={time ? t("Actions for {0}, {1}",[row.className,time]) : t('Actions for {0}',[row.className])} aria-haspopup="menu" aria-expanded={open} onClick={() => open ? close() : show()} onKeyDown={event => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); show(); } }}><MoreHorizontal size={18} aria-hidden="true" />{buttonLabel&&<span>{t(buttonLabel)}</span>}</button>
     {open && <div ref={menu} style={position} role="menu" aria-label={t("Actions for {0}",[row.className])} onKeyDown={keys}>
       {items ? items.map(item => <button key={item.label} role="menuitem" tabIndex={-1} className={item.danger ? 'is-danger' : ''} disabled={item.disabled} onClick={()=>{close();item.run();}}>{t(item.label)}</button>) : <><button role="menuitem" tabIndex={-1} onClick={() => { close(); view(row); }}>{t("View session")}</button><button role="menuitem" tabIndex={-1} className="is-danger" disabled={row.status !== 'SCHEDULED'} onClick={() => { close(); cancel(row); }}>{t("Cancel session")}</button></>}
     </div>}

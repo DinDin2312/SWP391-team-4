@@ -1,3 +1,5 @@
+import PackageDetailDialog from '../../../components/resource-images/PackageDetailDialog';
+import PackageBenefits from '../../../components/resource-images/PackageBenefits';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
@@ -5,16 +7,20 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, ShoppingBag, Percent, Smartphone, RefreshCw,
-  Dumbbell, Flame, Trophy, Shield, Gauge, Activity, Snowflake,
+  Dumbbell, Bot, Crown, Flame, Trophy, Shield, Gauge, Activity, Snowflake,
   Building2, Lock, QrCode, FileCheck, ArrowRight, CheckCircle2,
   Trash2, ShoppingCart, Check, ShieldCheck, Tag,
   CircleDollarSign, DollarSign, BadgeCheck, AlertCircle
 } from 'lucide-react';
 import { Meteors } from '../../../components/ui/meteors';
+import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
 
+
+const loadStoreDetail=id=>axios.get(`http://localhost:8080/api/v1/member/packages/${id}`,{headers:{Authorization:`Bearer ${localStorage.getItem('token')}`}});
 const PackageStore = () => {
   useLanguage();
   const navigate = useNavigate();
+  const [detailId,setDetailId]=useState(null);
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -53,6 +59,9 @@ const PackageStore = () => {
 
   const getPackageIcon = (type) => {
     switch (type?.toLowerCase()) {
+      case 'gym_access': return Dumbbell;
+      case 'ai_access': return Bot;
+      case 'premium': return Crown;
       case 'membership': return Dumbbell;
       case 'combo': return Trophy;
       case 'amenity': return Snowflake;
@@ -68,7 +77,7 @@ const PackageStore = () => {
   });
 
   const handleAddToCart = async (pkg) => {
-    if (addedItems[pkg.packageId]) return;
+    if (addedItems[pkg.packageId]||pkg.canPurchase===false) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -89,6 +98,7 @@ const PackageStore = () => {
       fetchCart();
     } catch (err) {
       setToast({ visible: true, message: err.response?.data?.message || err.response?.data || 'Error adding to cart', type: 'error' });
+      if (err.response?.data?.code) fetchPackages();
       setTimeout(() => {
         setToast({ visible: false, message: '', type: 'error' });
       }, 4000);
@@ -148,6 +158,7 @@ const PackageStore = () => {
 
   return (
     <div className="flex flex-col w-full pb-32">
+      {detailId&&<PackageDetailDialog id={detailId} load={loadStoreDetail} onClose={()=>setDetailId(null)}/>}
       {/* Top Ambient Glow Decorator */}
       <div className="relative w-full overflow-hidden rounded-2xl bg-surface-container-low mb-space-xl">
         <div className="absolute -top-24 -left-20 w-96 h-96 rounded-full bg-primary-container/15 blur-[100px] pointer-events-none"></div>
@@ -260,10 +271,7 @@ const PackageStore = () => {
         <div className="flex items-center gap-1.5 p-1 rounded-xl bg-surface-container-low overflow-x-auto max-w-full">
           {[
             { id: 'all',        label: t('All Packages'),     count: packages.length },
-            { id: 'gym_access', label: t('Gym Access'),        count: packages.filter(p => p.packageType?.toUpperCase() === 'GYM_ACCESS').length },
-            { id: 'ai_access',  label: t('AI Access'),         count: packages.filter(p => p.packageType?.toUpperCase() === 'AI_ACCESS').length },
-            { id: 'combo',      label: t('Combo (Gym + AI)'),  count: packages.filter(p => p.packageType?.toUpperCase() === 'COMBO').length },
-            { id: 'premium',    label: t('Premium'),           count: packages.filter(p => p.packageType?.toUpperCase() === 'PREMIUM').length },
+            ...Array.from(new Set(packages.map(pkg=>pkg.packageType))).map(type=>({id:type.toLowerCase(),label:packages.find(pkg=>pkg.packageType===type)?.packageTypeName||codeLabel(type),count:packages.filter(pkg=>pkg.packageType===type).length})),
           ].map(tab => {
             const isActive = activeCategory === tab.id;
             return (
@@ -345,6 +353,7 @@ const PackageStore = () => {
               )}
 
               <div className="relative z-10">
+                <div className="mb-4"><ResourcePhoto imagePath={pkg.imagePath} name={pkg.packageName} variant="cover" fallback={<Icon size={42} aria-hidden="true" />} /></div>
                 <div className="flex items-start justify-between mb-4 pt-1">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors bg-surface-container-high group-hover:bg-primary-container/20 text-primary`}>
                     <Icon className="w-7 h-7" />
@@ -356,10 +365,12 @@ const PackageStore = () => {
                 <div className="mb-4">
                   {pkg.packageType && (
                     <div className="flex items-center gap-1.5 mb-1">
-                      <span className="text-[11px] font-bold text-primary uppercase">{codeLabel(pkg.packageType)}</span>
+                      <span className="text-[11px] font-bold text-primary uppercase">{pkg.packageTypeName?t(pkg.packageTypeName):codeLabel(pkg.packageType)}</span>
                     </div>
                   )}
-                  <h3 className="text-xl font-bold text-on-surface mb-2">{pkg.packageName}</h3>
+                  <h3 className="text-xl font-bold text-on-surface mb-2"><button type="button" className="text-left hover:underline" onClick={()=>setDetailId(pkg.packageId)}>{pkg.packageName}</button></h3>
+                    {pkg.canPurchase===false&&<p className="text-sm mb-2" role="status">{t(pkg.purchaseBlockReason)}</p>}
+                    <button type="button" className="text-sm underline mb-3" onClick={()=>setDetailId(pkg.packageId)}>{t("Package details")}</button>
                   <p className="text-sm text-on-surface-variant min-h-[40px] leading-relaxed">
                     {t(pkg.description || ("Gain full access for " + pkg.durationDays + " days. Upgrade your fitness routine today."))}
                   </p>
@@ -375,7 +386,7 @@ const PackageStore = () => {
 
                 <div className="flex flex-col gap-3 mb-6">
                   <span className={`text-[11px] uppercase tracking-wider font-semibold ${isPopular ? t('text-primary') : t('text-on-surface-variant')}`}>{t("Included Privileges")}</span>
-                  {['Full facility access', 'Smart locker usage', 'App telemetry sync'].map((feature, idx) => (
+                  {pkg.benefits?.length ? <PackageBenefits benefits={pkg.benefits}/> : ['Full facility access', 'Smart locker usage', 'App telemetry sync'].map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-3">
                       <CheckCircle2 className="w-4 h-4 text-tertiary shrink-0 mt-0.5" />
                       <span className="text-[14px] text-on-surface">{feature}</span>
@@ -386,7 +397,7 @@ const PackageStore = () => {
 
               <button
                 onClick={() => handleAddToCart(pkg)}
-                disabled={isAdded}
+                disabled={isAdded||pkg.canPurchase===false}
                 className={`relative z-10 w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-semibold text-[14px] transition-all active:scale-[0.99] ${
                   isAdded
                     ? t('bg-surface-container-highest text-on-surface-variant cursor-not-allowed border border-surface-container-highest')

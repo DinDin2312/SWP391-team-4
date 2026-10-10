@@ -26,7 +26,7 @@ const PaymentResult = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        setStatus('success');
+        setStatus(response.data.status==='PAID'?'success':'error');
         window.dispatchEvent(new Event('notificationUpdated'));
         setMessage(response.data.message || 'Payment Successful! Your courses are now confirmed.');
       } catch (error) {

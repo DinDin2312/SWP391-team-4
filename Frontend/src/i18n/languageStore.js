@@ -29,7 +29,7 @@ export function t(value, params = []) {
     .replace(/&(bull|nbsp|rarr|middot|amp|quot|apos);/g, (_,name)=>({bull:'•',nbsp:' ',rarr:'→',middot:'·',amp:'&',quot:'"',apos:"'"})[name]);
 }
 export const locale = () => language === 'vi' ? 'vi-VN' : 'en-GB';
-export const codeLabel = value => t(({ ACTIVE:'Active', INACTIVE:'Inactive', SCHEDULED:'Scheduled', COMPLETED:'Completed', CANCELLED:'Cancelled', CONFIRMED:'Confirmed', PENDING:'Pending', EXPIRED:'Expired', SUCCESS:'Success!', FAILED:'Payment Failed', PRESENT:'Present', ABSENT:'Absent', NOT_YET:'Not yet', GYM_ACCESS:'Gym access', AI_ACCESS:'AI access', COMBO:'Combo (Gym + AI)' })[value] || value);
+export const codeLabel = value => t(({ ACTIVE:'Active', INACTIVE:'Inactive', SCHEDULED:'Scheduled', COMPLETED:'Completed', CANCELLED:'Cancelled', CONFIRMED:'Confirmed', PENDING:'Pending', EXPIRED:'Expired', SUCCESS:'Success!', FAILED:'Payment Failed', PRESENT:'Present', ABSENT:'Absent', NOT_YET:'Not yet', GYM_ACCESS:'Gym access', AI_ACCESS:'AI access', COMBO:'Combo (Gym + AI)', PREMIUM:'Premium', SUBJECT_ACCESS:'Subject package' })[value] || value);
 export function localizedCopy(object) {
   return new Proxy(object, { get(target,key) {
     const value = target[key];

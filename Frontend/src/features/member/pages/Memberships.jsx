@@ -1,3 +1,5 @@
+import PackageDetailDialog from '../../../components/resource-images/PackageDetailDialog';
+import PackageBenefits from '../../../components/resource-images/PackageBenefits';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { formatDate } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
@@ -7,8 +9,10 @@ import {
   FileCheck, ShieldCheck, Tag, Building2, AlertCircle, RefreshCw
 } from 'lucide-react';
 
+const loadOwnedDetail=id=>axios.get(`http://localhost:8080/api/v1/member/my-packages/${id}`,{headers:{Authorization:`Bearer ${localStorage.getItem('token')}`}});
 const Memberships = () => {
   useLanguage();
+  const [detailId,setDetailId]=useState(null);
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -48,6 +52,7 @@ const Memberships = () => {
 
   return (
     <div className="flex flex-col w-full pb-32">
+      {detailId&&<PackageDetailDialog id={detailId} load={loadOwnedDetail} onClose={()=>setDetailId(null)}/>}
       {/* Top Banner */}
       <div className="relative w-full overflow-hidden rounded-2xl bg-surface-container-low mb-8">
         <div className="absolute -top-24 -left-20 w-96 h-96 rounded-full bg-primary-container/15 blur-[100px] pointer-events-none"></div>
@@ -120,7 +125,7 @@ const Memberships = () => {
                           {getPackageIcon(pkg.packageType)}
                         </div>
                         <div>
-                          <div className="text-[10px] font-bold tracking-widest text-primary uppercase mb-1">{codeLabel(pkg.packageType)}</div>
+                          <div className="text-[10px] font-bold tracking-widest text-primary uppercase mb-1">{pkg.packageTypeName?t(pkg.packageTypeName):codeLabel(pkg.packageType)}</div>
                           <h3 className="text-xl font-bold text-on-surface leading-tight">{pkg.packageName}</h3>
                         </div>
                       </div>
@@ -140,7 +145,7 @@ const Memberships = () => {
                       </div>
                     </div>
 
-                    <div className="mb-4">
+                    <button type="button" className="text-sm underline mb-4" onClick={()=>setDetailId(pkg.membershipId)}>{t("Package details")}</button><PackageBenefits benefits={pkg.benefits} remaining/><div className="mb-4">
                       <div className="flex justify-between items-end mb-2">
                         <span className="text-xs font-semibold text-on-surface-variant">{t("Time Remaining")}</span>
                         <span className="text-sm font-bold text-primary">{daysLeft}{' '}{t("Days")}</span>
@@ -172,6 +177,7 @@ const Memberships = () => {
                         <h4 className="text-base font-bold text-on-surface">{pkg.packageName}</h4>
                         <div className="text-xs text-on-surface-variant mt-0.5">{t("Expired on")}{' '}{formatDate(pkg.endDate)}
                         </div>
+                        <button type="button" className="text-sm underline mt-2" onClick={()=>setDetailId(pkg.membershipId)}>{t("Package details")}</button>
                       </div>
                     </div>
                     <div className="px-3 py-1 rounded text-xs font-semibold bg-surface-container-high text-on-surface-variant">{t("Expired")}</div>

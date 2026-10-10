@@ -1,9 +1,60 @@
 // Source labels are explicit keys; API data, identifiers and user input are never translated.
 const pairs = `
-Overview|Tổng quan
-Revenue this month|Doanh thu tháng này
-Sessions in the next 7 days|Buổi tập trong 7 ngày tới
 Operations feed|Hoạt động vận hành
+Sessions in the next 7 days|Buổi tập trong 7 ngày tới
+Revenue this month|Doanh thu tháng này
+Package photo|Ảnh gói hội viên
+Membership package|Gói hội viên
+Undo photo change|Hoàn tác ảnh
+The photo will be removed when you save changes.|Ảnh sẽ được gỡ khi bạn lưu thay đổi.
+Choose either a replacement photo or removal.|Chọn thay ảnh hoặc gỡ ảnh.
+Automatic scheduling|Xếp lịch tự động
+This photo is shown beside the subject name in the subjects list.|Ảnh hiển thị cạnh tên bộ môn trong danh sách bộ môn.
+Generate a whole teaching period, then review and confirm once.|Xếp trước cả đợt học, kiểm tra và xác nhận một lần.
+Select a class|Chọn lớp học
+For classes without registrations. One session per eligible day; existing schedules are additional occupied time.|Dành cho lớp chưa có người đăng ký. Mỗi ngày phù hợp xếp một buổi; hệ thống tính cả lịch đã có.
+Sessions to schedule|Số buổi cần xếp
+Minutes per session|Số phút mỗi buổi
+First possible date|Ngày bắt đầu xếp lịch
+Last possible date|Hạn cuối xếp lịch
+Available weekdays|Các thứ có thể tổ chức
+Available from|Giờ bắt đầu hoạt động
+Available until|Giờ kết thúc hoạt động
+Preferred start time|Giờ học ưu tiên
+Rest between sessions (minutes)|Nghỉ giữa hai buổi (phút)
+Days off / room maintenance|Ngày nghỉ / phòng bảo trì
+Exclude date|Bỏ qua ngày này
+Restore date {0}|Cho phép xếp lại ngày {0}
+I confirm these days and hours are available for both the coach and the room, excluding the dates above.|Tôi xác nhận cả HLV và phòng đều có thể hoạt động vào các ngày, giờ này, trừ ngày nghỉ đã chọn.
+The system tries your preferred time, then nearby 15-minute slots. It checks all existing coach and room schedules, including outside the visible week.|Hệ thống ưu tiên giờ mong muốn, rồi tìm giờ gần đó theo bước 15 phút. Kiểm tra cả lịch HLV và phòng ngoài tuần đang xem.
+Generating plan…|Đang đề xuất lịch…
+Generate preview|Đề xuất và xem trước
+Proposed sessions|Lịch đề xuất
+Not enough slots: {0} sessions still need scheduling. Extend the date range or availability.|Chưa đủ chỗ: còn thiếu {0} buổi. Hãy mở rộng khoảng ngày hoặc giờ hoạt động.
+All sessions fit. Review the dates before confirming.|Đã xếp đủ buổi. Kiểm tra lịch trước khi xác nhận.
+Session {0}|Buổi {0}
+Ends at|Kết thúc lúc
+Skipped days|Các ngày đã bỏ qua
+Excluded date|Ngày nghỉ đã chọn
+No available slot|Không có khung giờ trống
+Edited dates must remain inside the rules. All sessions are checked again when saving; one conflict prevents the entire batch.|Ngày giờ đã chỉnh phải nằm trong điều kiện đã chọn. Hệ thống kiểm tra lại khi lưu; nếu một buổi trùng thì không lưu cả đợt.
+Confirm schedule|Xác nhận tạo lịch
+Saving…|Đang lưu…
+Choose a class and confirm its availability.|Hãy chọn lớp và xác nhận ngày giờ hoạt động.
+Unable to generate a plan. Please try again.|Không thể đề xuất lịch. Hãy thử lại.
+{0} sessions created. Change the date range to view the full plan.|Đã tạo {0} buổi. Đổi khoảng ngày để xem toàn bộ lịch.
+Complete the scheduling rules.|Hãy điền đầy đủ điều kiện xếp lịch.
+Choose a future date range of at most 366 days.|Chọn khoảng ngày từ hiện tại, tối đa 366 ngày.
+Invalid scheduling rules.|Điều kiện xếp lịch không hợp lệ.
+The session must fit inside the confirmed availability window.|Giờ ưu tiên và thời lượng buổi học phải nằm trong giờ hoạt động đã xác nhận.
+Automatic planning is only available before class registration. Manage existing sessions or make-up sessions separately.|Chỉ xếp lịch tự động trước khi có người đăng ký. Với lớp đã đăng ký, hãy quản lý buổi hiện có hoặc buổi học bù riêng.
+Class assignment changed. Generate a new preview.|HLV hoặc phòng của lớp đã thay đổi. Hãy đề xuất lại lịch.
+Generate a complete plan before saving.|Cần xếp đủ số buổi trước khi lưu.
+Plan at most one session per day.|Mỗi ngày chỉ xếp tối đa một buổi cho đợt này.
+Each session must respect the date, weekday, duration and availability rules.|Mỗi buổi phải đúng khoảng ngày, thứ, thời lượng và giờ hoạt động đã chọn.
+The preview conflicts with a coach or room booking. Generate a new preview.|Lịch đề xuất bị trùng lịch HLV hoặc phòng. Hãy đề xuất lại lịch.
+The subject, room, class or package will remain available.|Bộ môn, phòng, lớp học hoặc gói vẫn được giữ nguyên.
+Overview|Tổng quan
 Dashboard|Bảng điều khiển
 Customer Dashboard|Tổng quan hội viên
 Member Dashboard|Tổng quan hội viên
@@ -1160,6 +1211,7 @@ Object.assign(translations, {
   'Low': ['Low', 'Thấp'],
   '{0}/{1} booked': ['{0}/{1} booked', '{0}/{1} đã đặt'],
   'Interface language': ['Interface language', 'Ngôn ngữ giao diện'],
+  'Front desk portal': ['Front desk portal', 'Cổng lễ tân'],
   '{0} activities · latest {1}': ['{0} activities · latest {1}', '{0} hoạt động · gần nhất {1}'],
   'Sun': ['Sun', 'CN'], 'Mon': ['Mon', 'T2'], 'Tue': ['Tue', 'T3'],
   'Wed': ['Wed', 'T4'], 'Thu': ['Thu', 'T5'], 'Fri': ['Fri', 'T6'], 'Sat': ['Sat', 'T7'],
@@ -1183,7 +1235,166 @@ Object.assign(translations, {
   Your: ['Your', 'tiềm năng'],
   Physical: ['Physical', 'thể chất'],
   'Potential.': ['Potential.', 'của bạn.'],
-  'Gain full access for ': ['Gain full access for ', 'Sử dụng toàn bộ dịch vụ trong '],
+});
+
+const packageLabels = {
+  'Please check the entered data.': 'Vui lòng kiểm tra dữ liệu đã nhập.',
+  'The data is duplicated, in use, or was recently changed. Refresh and check again.': 'Dữ liệu bị trùng, đang được sử dụng hoặc vừa thay đổi. Hãy tải lại và kiểm tra.',
+  'Invalid package type': 'Loại gói không hợp lệ',
+  '1 day': '1 ngày',
+  'Sort by': 'Sắp xếp theo',
+  'Active filters': 'Bộ lọc đang áp dụng',
+  '{0} days': '{0} ngày',
+  'Manage membership plans, durations, and pricing.': 'Quản lý gói hội viên, thời hạn và giá bán.',
+  'Active registrations': 'Đăng ký còn hiệu lực',
+  'Counts active registration records. A member with several registrations is counted several times.': 'Đếm bản ghi đăng ký còn hiệu lực. Một hội viên có nhiều đăng ký sẽ được đếm nhiều lần.',
+  '{0} active registrations': '{0} đăng ký còn hiệu lực',
+  'Other package type': 'Loại gói khác',
+  'Search packages by name': 'Tìm theo tên gói',
+  'Package display mode': 'Chế độ hiển thị gói',
+  'Table view': 'Dạng bảng',
+  'Card view': 'Dạng thẻ',
+  'Remove search filter': 'Bỏ bộ lọc tìm kiếm',
+  'Remove package type filter': 'Bỏ bộ lọc loại gói',
+  'Search: {0}': 'Tìm kiếm: {0}',
+  '{0} ({1})': '{0} ({1})',
+  '{0} · {1}': '{0} · {1}',
+  'Ascending': 'Tăng dần',
+  'Descending': 'Giảm dần',
+  'Duplicate': 'Nhân bản',
+  '(copy)': '(bản sao)',
+  'Free': 'Miễn phí',
+  'Approximately 1 year': '≈ 1 năm',
+  'Approximately 1 month': '≈ 1 tháng',
+  'Approximately 1 week': '≈ 1 tuần',
+  'Approximately {0} months': '≈ {0} tháng',
+  'Approximately {0} weeks': '≈ {0} tuần',
+  'Edit package {0}': 'Sửa gói {0}',
+  'Loading membership packages': 'Đang tải gói hội viên',
+  'Membership packages could not be loaded.': 'Không thể tải gói hội viên.',
+  'No packages yet': 'Chưa có gói hội viên',
+  'No packages match your filters': 'Không có gói khớp bộ lọc',
+  'Try a different search or package type.': 'Thử từ khóa hoặc loại gói khác.',
+  'Create a membership package to get started.': 'Tạo gói hội viên để bắt đầu.',
+  'Create membership package': 'Tạo gói hội viên',
+  'Edit membership package': 'Sửa gói hội viên',
+  'Package name is required.': 'Vui lòng nhập tên gói.',
+  'Package name must be at most 255 characters.': 'Tên gói không được quá 255 ký tự.',
+  'Select a valid package type.': 'Vui lòng chọn loại gói hợp lệ.',
+  'Enter a whole number of days from 1 to 2,147,483,647.': 'Nhập số ngày nguyên từ 1 đến 2.147.483.647.',
+  'Enter a price from 0 to 99,999,999.99 with up to two decimal places.': 'Nhập giá từ 0 đến 99.999.999,99 với tối đa hai chữ số thập phân.',
+  'Enter package name': 'Nhập tên gói hội viên',
+  'Up to 255 characters.': 'Tối đa 255 ký tự.',
+  'Choose the access included in this package.': 'Chọn quyền sử dụng được bao gồm trong gói.',
+  'Quick duration choices': 'Chọn nhanh thời hạn',
+  'Enter number of days': 'Nhập số ngày',
+  'Enter a positive whole number of days.': 'Nhập số ngày nguyên lớn hơn 0.',
+  '0 is free. Use a comma for decimals; up to 99,999,999.99 ₫.': 'Giá 0 là miễn phí. Dùng dấu phẩy cho phần thập phân; tối đa 99.999.999,99 ₫.',
+  'Existing registration end dates are unchanged. Some member screens display the price and duration from this package.': 'Ngày kết thúc của đăng ký hiện có không thay đổi. Một số màn hình hội viên hiển thị giá và thời hạn từ gói này.',
+  'Discard unsaved changes?': 'Bỏ thay đổi chưa lưu?',
+  'Your package changes have not been saved.': 'Các thay đổi của gói chưa được lưu.',
+  'Discard changes': 'Bỏ thay đổi',
+  'Package name already exists.': 'Tên gói đã tồn tại.',
+};
+for (const [en, vi] of Object.entries(packageLabels)) translations[en] = [en, vi];
+
+const resourceImageLabels = {
+  'Manage photo': 'Quản lý ảnh',
+  'Room details': 'Chi tiết phòng',
+  'View room': 'Xem phòng',
+  'Photo of {0}': 'Ảnh của {0}',
+  'No photo yet': 'Chưa có ảnh',
+  'Choose photo': 'Chọn ảnh',
+  'Replace photo': 'Thay ảnh',
+  'Remove photo': 'Gỡ ảnh',
+  'Save photo': 'Lưu ảnh',
+  'Photo removed.': 'Đã gỡ ảnh.',
+  'Photo saved.': 'Đã lưu ảnh.',
+  'Clear selection': 'Bỏ ảnh đã chọn',
+  'Select an image.': 'Vui lòng chọn ảnh.',
+  'Choose a valid PNG or JPEG image.': 'Chọn ảnh PNG hoặc JPEG hợp lệ.',
+  'Images must be 2 MB or smaller.': 'Ảnh không được vượt quá 2 MB.',
+  'Images must contain at most 16 million pixels.': 'Ảnh không được vượt quá 16 triệu pixel.',
+  'Unsupported image resource.': 'Loại tài nguyên này không hỗ trợ ảnh.',
+  'Unable to save the image.': 'Không thể lưu ảnh.',
+  'Unable to save the photo. Please try again.': 'Không thể lưu ảnh. Vui lòng thử lại.',
+  'PNG or JPEG · max 2 MB. Photos are optimized on upload; transparent areas become white.': 'PNG hoặc JPEG · tối đa 2 MB. Ảnh được tối ưu khi tải lên; vùng trong suốt chuyển thành màu trắng.',
+  'This photo is shown in the member package store.': 'Ảnh này hiển thị ở trang bán gói cho hội viên.',
+  'This photo is shown on admin package cards and in the member package store.': 'Ảnh hiển thị trên thẻ gói của quản trị viên và trang bán gói cho hội viên.',
+  'This photo is shown in resource details and as a small list thumbnail.': 'Ảnh hiển thị ở trang chi tiết và dưới dạng ảnh nhỏ trong danh sách.',
+  'Remove this photo?': 'Gỡ ảnh này?',
+  'The photo will be removed. The room, class or package will remain available.': 'Ảnh sẽ được gỡ. Phòng, lớp hoặc gói vẫn được giữ nguyên.',
+  'The selected photo has not been saved.': 'Ảnh đã chọn chưa được lưu.',
+};
+for (const [en, vi] of Object.entries(resourceImageLabels)) translations[en] = [en, vi];
+
+const packageBenefitLabels={
+ 'Subject package':'Gói theo bộ môn',
+ 'Subject benefits':'Quyền lợi theo bộ môn',
+ 'Set a separate session allowance for each subject. Package duration applies to every benefit.':'Quy định số buổi riêng cho từng môn. Thời hạn gói áp dụng cho mọi quyền lợi.',
+ 'Sessions':'Số buổi', 'Subject {0}':'Bộ môn {0}', 'Remove subject {0}':'Gỡ bộ môn {0}',
+ 'Search subjects':'Tìm bộ môn', 'Available subjects':'Bộ môn có thể thêm', 'Add {0}':'Thêm {0}',
+ 'Loading subjects...':'Đang tải bộ môn...', 'Subjects could not be loaded.':'Không thể tải bộ môn.',
+ 'No more subjects match.':'Không còn bộ môn phù hợp.', 'Create subjects in Center Operations first.':'Hãy tạo bộ môn trong Vận hành trung tâm trước.',
+ 'Select at least one subject for a subject package.':'Chọn ít nhất một bộ môn cho gói theo bộ môn.',
+ 'Select at most 100 subjects per package.':'Chọn tối đa 100 bộ môn cho mỗi gói.',
+ 'Each subject needs a unique selection and 1 to 10,000 sessions.':'Mỗi bộ môn chỉ chọn một lần, với số buổi từ 1 đến 10.000.',
+ '{0} sessions':'{0} buổi', '{0} / {1} sessions available':'Còn {0} / {1} buổi',
+ 'Booking payment':'Hình thức đăng ký', 'Booking payment for {0}':'Hình thức đăng ký cho {0}',
+ 'Buy this course separately':'Mua lớp riêng', '{0} · {1} sessions remaining':'{0} · còn {1} buổi',
+ 'A package must cover every session and have enough remaining sessions for the whole course.':'Gói phải đủ số buổi cho cả lớp và mọi buổi đều nằm trong hạn sử dụng.',
+ 'Package benefits could not be loaded. Refresh to use a package.':'Không tải được quyền lợi. Tải lại trang để sử dụng gói.',
+ 'Booked using package benefits. No additional course payment is required.':'Đã đăng ký bằng quyền lợi gói. Không cần thanh toán thêm tiền lớp.',
+ 'Course added to cart. Complete payment to confirm your place.':'Đã thêm lớp vào giỏ hàng. Hoàn tất thanh toán để xác nhận chỗ.',
+ 'This package is inactive or does not include this subject.':'Gói chưa có hiệu lực hoặc không bao gồm bộ môn này.',
+ 'Every course session must fall within the package validity dates.':'Mọi buổi học phải nằm trong hạn sử dụng gói.',
+ 'Not enough remaining sessions for the whole course.':'Số buổi còn lại không đủ cho cả lớp.',
+ "The new session time falls outside a registered member's package validity.":'Giờ học mới nằm ngoài hạn sử dụng gói của hội viên đã đăng ký.',
+ 'A class with registrations cannot be moved to another subject.':'Không thể đổi bộ môn của lớp đã có đăng ký.',
+ 'Purchased package benefits, price and duration are preserved. Changes apply to new purchases.':'Quyền lợi, giá và thời hạn của gói đã mua được giữ nguyên. Thay đổi áp dụng cho lượt mua mới.',
+};
+for(const [en,vi] of Object.entries(packageBenefitLabels)) translations[en]=[en,vi];
+const packageTypeLabels={
+ 'Add package type':'Thêm loại gói','Rename package type':'Đổi tên loại gói',
+ 'Package type name':'Tên loại gói','Save package type':'Lưu loại gói',
+ 'Loading package types...':'Đang tải loại gói...', 'Package types could not be loaded.':'Không thể tải loại gói.',
+ 'Select a package type':'Chọn loại gói', 'Select an existing package type.':'Chọn loại gói có trong danh mục.',
+ 'Package type name must contain 1 to 255 characters.':'Tên loại gói phải có từ 1 đến 255 ký tự.',
+ 'A package type with this name already exists.':'Tên loại gói này đã tồn tại.',
+ 'Unable to save the package type.':'Không thể lưu loại gói.',
+ 'Require subject benefits for packages of this type':'Yêu cầu cấu hình bộ môn cho gói thuộc loại này',
+ 'Package types are shared categories. Benefits are configured separately for each package.':'Loại gói dùng để phân nhóm và dùng chung cho nhiều gói. Quyền lợi được cấu hình riêng cho từng gói.',
+};
+for(const [en,vi] of Object.entries(packageTypeLabels)) translations[en]=[en,vi];
+
+const commerceLabels={
+ 'Package details':'Chi tiết gói','Loading package details...':'Đang tải chi tiết gói…','Unable to load package details.':'Không thể tải chi tiết gói.',
+ 'Description':'Mô tả','Terms':'Điều khoản','Purchase limit per member':'Giới hạn mua mỗi hội viên','Unlimited':'Không giới hạn','Selling status':'Trạng thái bán','Selling':'Đang bán','Stopped':'Ngừng bán','Stop selling':'Ngừng bán','Resume selling':'Mở bán lại',
+ 'Plain text, optional.':'Văn bản thuần, không bắt buộc.','Line breaks are preserved. Plain text, optional.':'Giữ nguyên xuống dòng. Văn bản thuần, không bắt buộc.',
+ 'Leave blank for unlimited. Set 1 for a one-time trial. Completed purchases count even after the package expires.':'Để trống nếu không giới hạn. Nhập 1 cho gói tập thử một lần. Lượt mua hoàn tất vẫn được tính khi gói hết hạn.',
+ 'Description must be at most 1,000 characters.':'Mô tả tối đa 1.000 ký tự.','Terms must be at most 10,000 characters.':'Điều khoản tối đa 10.000 ký tự.','Enter a positive whole number or leave blank for unlimited.':'Nhập số nguyên dương hoặc để trống nếu không giới hạn.',
+ 'No description provided.':'Chưa có mô tả.','No terms provided.':'Chưa có điều khoản.','Change history':'Lịch sử thay đổi','No changes recorded.':'Chưa có thay đổi được ghi nhận.','Unable to load change history.':'Không thể tải lịch sử thay đổi.',
+ 'Image changed':'Ảnh đã thay đổi','View package {0}':'Xem gói {0}',
+ 'This package will become available for new purchases again.':'Gói này sẽ được mở cho lượt mua mới.',
+ 'New purchases and renewals will be blocked. Existing registrations keep their benefits. Valid checkouts already issued can still complete. Active registrations: {0}':'Chặn lượt mua mới và gia hạn. Đăng ký hiện có giữ nguyên quyền lợi. Checkout hợp lệ đã phát hành vẫn có thể hoàn tất. Đăng ký còn hiệu lực: {0}',
+ 'This package is no longer selling. Choose a currently available package.':'Gói đã ngừng bán. Vui lòng chọn một gói đang bán.',
+ 'You have reached the purchase limit for this package.':'Bạn đã đạt giới hạn mua của gói này.',
+ 'A checkout for this package is awaiting payment. Complete it or wait for it to expire.':'Gói này có checkout đang chờ thanh toán. Hoàn tất hoặc đợi checkout hết hạn.',
+ 'A checkout is awaiting payment. Complete it or wait 15 minutes before changing the cart.':'Có checkout đang chờ thanh toán. Hoàn tất hoặc đợi hết hạn 15 phút trước khi thay đổi giỏ.',
+ 'Payment received and awaiting reconciliation. Contact reception.':'Đã nhận thanh toán và đang chờ đối soát. Vui lòng liên hệ lễ tân.','Payment failed or cancelled.':'Thanh toán thất bại hoặc đã hủy.','Payment completed.':'Thanh toán hoàn tất.',
+ 'packageName':'Tên gói','packageType':'Loại gói','durationDays':'Thời hạn','price':'Giá','description':'Mô tả','terms':'Điều khoản','benefits':'Quyền lợi','purchaseLimitPerMember':'Giới hạn mua','sellingStatus':'Trạng thái bán'
+};for(const [en,vi] of Object.entries(commerceLabels))translations[en]=[en,vi];
+
+const scopeLabels={'Applicable locations':'Địa điểm áp dụng','All locations':'Tất cả địa điểm','Search locations':'Tìm địa điểm','Search locations for {0}':'Tìm địa điểm cho {0}','Sessions are shared across the selected locations. No selection means all locations.':'Số buổi dùng chung giữa các địa điểm đã chọn. Không chọn riêng nghĩa là áp dụng tất cả địa điểm.','Select at most 100 unique locations per subject.':'Chọn tối đa 100 địa điểm khác nhau cho mỗi bộ môn.','This package does not cover the class location.':'Gói này không áp dụng tại địa điểm của lớp học.'};for(const [en,vi] of Object.entries(scopeLabels))translations[en]=[en,vi];
+
+translations['Number of active registrations']=['Number of active registrations','Số đăng ký còn hiệu lực'];
+
+Object.assign(translations, {
   'Back to Home': ['Back to Home', 'Quay lại trang chủ'],
+});
+
+Object.assign(translations, {
   'NEXUS AI can make mistakes. Verify before buying.': ['NEXUS AI can make mistakes. Verify before buying.', 'NEXUS AI có thể mắc lỗi. Vui lòng kiểm tra kỹ trước khi mua.'],
 });
+
+Object.assign(translations, {'Gain full access for ': ['Gain full access for ', 'Sử dụng toàn bộ dịch vụ trong ']});
