@@ -84,7 +84,8 @@ const PaymentCart = () => {
 
       // Redirect to VNPay.
       if (response.data && response.data.paymentUrl) {
-          window.location.href = response.data.paymentUrl;
+          window.dispatchEvent(new Event("cartUpdated"));
+          if(response.data.completed)navigate(response.data.paymentUrl);else window.location.href = response.data.paymentUrl;
       }
 
     } catch (err) {

@@ -1,18 +1,31 @@
 import { filterSchedules, sessionDay } from './operationsUtils.js';
 const oneOf = (value, options, fallback) => options.includes(value) ? value : fallback;
 const positive = value => Math.max(1, parseInt(value,10) || 1);
+export function normalizeOperationsQuery(query) {
+  const next = new URLSearchParams(query);
+  const resource = oneOf(next.get('catalog'), ['subjects', 'rooms'], 'subjects');
+  if (next.get('tab') === 'catalog') next.set('tab', resource);
+  for (const [legacy, current] of [['catalogQuery', `${resource}Query`], ['catalogPage', `${resource}Page`]]) {
+    if (next.has(legacy) && !next.has(current)) next.set(current, next.get(legacy));
+    next.delete(legacy);
+  }
+  next.delete('catalog');
+  return next;
+}
 export function readOperationsState(query, narrow = false, savedView = '') {
+  query = normalizeOperationsQuery(query);
+  const tab = oneOf(query.get('tab'), ['schedules', 'classes', 'subjects', 'rooms'], 'schedules');
   return {
-    tab:oneOf(query.get('tab'),['schedules','classes','catalog'],'schedules'),
+    tab,
     view:oneOf(query.get('scheduleView'),['calendar','list'],oneOf(savedView,['calendar','list'],query.has('lowRegistration') || query.has('excludeCancelled') || narrow ? 'list' : 'calendar')),
-    group:oneOf(query.get('group'),['room','coach'],'room'), catalog:oneOf(query.get('catalog'),['subjects','rooms'],'subjects'),
+    group:oneOf(query.get('group'),['room','coach'],'room'),
     selection:{subject:query.get('sSubject') || '',coach:query.get('sCoach') || '',room:query.get('sRoom') || '',status:query.get('status') || ''},
     classes:{search:query.get('cQuery') || '',subject:query.get('cSubject') || '',coach:query.get('cCoach') || '',room:query.get('cRoom') || '',status:oneOf(query.get('cStatus'),['ACTIVE','INACTIVE','ALL'],'ACTIVE'),sort:oneOf(query.get('cSort'),['className','coachName','maxSlots','price'],'className'),dir:oneOf(query.get('cDir'),['asc','desc'],'asc'),page:positive(query.get('cPage')),size:Number(oneOf(query.get('cSize'),['20','50','100'],'20'))},
-    schedulePage:positive(query.get('sPage')), catalogPage:positive(query.get('catalogPage')), catalogSearch:query.get('catalogQuery') || '',
+    schedulePage:positive(query.get('sPage')), resource:{page:positive(query.get(`${tab}Page`)), search:query.get(`${tab}Query`) || ''},
   };
 }
 export function patchOperationsQuery(query, patch) {
-  const next = new URLSearchParams(query);
+  const next = normalizeOperationsQuery(query);
   Object.entries(patch).forEach(([key,value])=>value===null || value==='' || value===undefined ? next.delete(key) : next.set(key,String(value)));
   return next;
 }

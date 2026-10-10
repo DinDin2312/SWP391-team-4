@@ -1,5 +1,6 @@
 import { t, useLanguage } from '../i18n/useLanguage';
 import AutoSidebar from '../components/AutoSidebar';
+import LanguageSwitcher from '../i18n/LanguageSwitcher';
 import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -286,6 +287,10 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
 
       {/* ===================== MAIN CONTENT WRAPPER ===================== */}
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+        <header className="role-page-topbar role-reception-topbar">
+          <nav className="role-breadcrumb" aria-label={t('Breadcrumb')}><span>{t('Front desk portal')}</span><span aria-hidden="true">/</span><strong>{navItems.find(item => item.id === activeFeature)?.label}</strong></nav>
+          <div className="role-header-actions"><LanguageSwitcher /></div>
+        </header>
         {children}
       </main>
     </div>

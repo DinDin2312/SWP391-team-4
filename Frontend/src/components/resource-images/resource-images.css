@@ -1,0 +1,22 @@
+.resource-photo { display:block; overflow:hidden; border:1px solid var(--border); background:var(--surface-hover); border-radius:8px; flex-shrink:0; }
+.resource-photo img { display:block; width:100%; height:100%; object-fit:cover; }
+.resource-photo-thumbnail { width:48px; height:38px; }
+.resource-photo-hero, .resource-photo-cover { width:100%; aspect-ratio:16/10; }
+.resource-photo-hero { margin-bottom:16px; }
+.resource-photo-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; color:var(--text-muted); font-size:12px; }
+.resource-name-button { display:flex; align-items:center; gap:10px; border:0; background:transparent; padding:0; color:var(--text); text-align:left; font-weight:600; cursor:pointer; min-width:0; }
+.resource-name-button > span:last-child { overflow-wrap:anywhere; }
+.ops-coach-identity { display:flex; align-items:center; gap:8px; margin:13px 0; line-height:1.6; }
+.ops-coach-avatar { position:relative; display:grid; place-items:center; width:32px; height:32px; border-radius:50%; overflow:hidden; flex-shrink:0; font-size:11px; }
+.ops-coach-avatar img { position:absolute; width:100%; height:100%; object-fit:cover; inset:0; }
+.manager-modal.resource-image-dialog { width:min(580px,100%); }
+.resource-image-dialog .resource-photo-hero { max-height:280px; }
+.resource-image-dialog h2 { font-size:20px; margin:0; }
+.resource-image-dialog-body { padding:22px; }
+.resource-image-help { display:block; margin:12px 0; color:var(--text-muted); font-size:12px; line-height:1.6; }
+.resource-image-selection { display:flex; gap:10px; align-items:center; justify-content:space-between; margin-top:12px; font-size:12px; }
+.resource-image-selection > span { min-width:0; overflow-wrap:anywhere; }
+.resource-image-selection button, .resource-image-remove { border:0; background:transparent; color:var(--danger-text); cursor:pointer; }
+.manager-modal.resource-image-dialog footer { flex-wrap:wrap; margin-top:0; padding:16px 22px; }
+.resource-image-remove { margin-right:auto; }
+.resource-image-dialog :focus-visible, .resource-name-button:focus-visible { outline:2px solid var(--primary); outline-offset:3px; }

@@ -1,5 +1,6 @@
 import { t, useLanguage } from '../i18n/useLanguage';
 import AutoSidebar from '../components/AutoSidebar';
+import LanguageSwitcher from '../i18n/LanguageSwitcher';
 import React, { useContext, useState, Suspense } from 'react';
 import { useOutlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -151,10 +152,10 @@ const CoachLayout = () => {
       {/* ===================== MAIN CONTENT ===================== */}
       <main className="flex-1 overflow-y-auto p-8 max-w-[1440px] mx-auto space-y-6">
         {/* Top Header Bar */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
+        <header className="role-page-topbar">
           <nav className="role-breadcrumb" aria-label={t("Breadcrumb")}><span>{t("Coach portal")}</span><span aria-hidden="true">/</span><strong>{t(getPageTitle())}</strong></nav>
 
-          <div className="flex items-center gap-3">
+          <div className="role-header-actions">
             <button
               onClick={() => setIsNotifModalOpen(true)}
               className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-[var(--text)] font-bold text-xs shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer"
@@ -166,6 +167,7 @@ const CoachLayout = () => {
               <LogOut className="w-3.5 h-3.5" />
               <span>{t("Logout")}</span>
             </button>
+            <LanguageSwitcher />
           </div>
         </header>
 

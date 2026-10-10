@@ -15,6 +15,8 @@ import {
   sessionDay,
 } from "./operationsUtils";
 import { Occupancy, OperationStatus } from "./OperationsUI";
+import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
+import StaffAvatar from '../staff/StaffAvatar';
 
 function useOperationDialog(onClose, busy) {
   const ref = useRef(null);
@@ -67,7 +69,7 @@ function useOperationDialog(onClose, busy) {
   return ref;
 }
 
-function Drawer({ title, subtitle, onClose, busy = false, children }) {
+export function Drawer({ title, subtitle, onClose, busy = false, children, className = '' }) {
   useLanguage();
   const dialog = useOperationDialog(onClose, busy);
   const id = useId();
@@ -80,7 +82,7 @@ function Drawer({ title, subtitle, onClose, busy = false, children }) {
     >
       <section
         ref={dialog}
-        className="ops-drawer"
+        className={`ops-drawer ${className}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={id}
@@ -106,9 +108,14 @@ function Drawer({ title, subtitle, onClose, busy = false, children }) {
   );
 }
 
-export function ClassDrawer({ row, upcomingInRange, onClose, edit, recurring }) {
+export function ClassDrawer({ row, upcomingInRange, onClose, edit, recurring, photo }) {
   useLanguage();
-  return <Drawer title={row.className} subtitle={row.subjectName} onClose={onClose}><div className="ops-drawer-body"><div className="ops-session-facts"><p>{t('Coach')}: {row.coachName}</p><p>{t('Room')}: {row.roomName}</p><p>{t('Capacity')}: {row.maxSlots}</p><p>{t('Tuition / class registration')}: {formatMoney(row.price)}</p><OperationStatus status={row.status}/></div>{upcomingInRange > 0 && <p className="ops-warning">{t('{0} upcoming sessions in the loaded range. Cancel these before deactivating.',[upcomingInRange])}</p>}<p className="ops-note">{t('Classes with future sessions cannot be deactivated; cancel those sessions first.')}</p><div className="ops-detail-actions"><button className="manager-secondary" onClick={edit}>{t('Edit')}</button><button className="manager-secondary" disabled={row.status!=='ACTIVE'} onClick={recurring}>{t('Create recurring sessions')}</button></div></div><footer><button className="manager-secondary" onClick={onClose}>{t('Close')}</button></footer></Drawer>;
+  return <Drawer title={row.className} subtitle={row.subjectName} onClose={onClose}><div className="ops-drawer-body"><ResourcePhoto imagePath={row.imagePath} name={row.className} variant="hero"/><div className="ops-session-facts"><div className="ops-coach-identity"><StaffAvatar user={{fullName:row.coachName,avatarPath:row.coachAvatarPath}} className="ops-coach-avatar"/>{t('Coach')}: {row.coachName}</div><p>{t('Room')}: {row.roomName}</p><p>{t('Capacity')}: {row.maxSlots}</p><p>{t('Tuition / class registration')}: {formatMoney(row.price)}</p><OperationStatus status={row.status}/></div>{upcomingInRange > 0 && <p className="ops-warning">{t('{0} upcoming sessions in the loaded range. Cancel these before deactivating.',[upcomingInRange])}</p>}<p className="ops-note">{t('Classes with future sessions cannot be deactivated; cancel those sessions first.')}</p><div className="ops-detail-actions"><button className="manager-secondary" onClick={edit}>{t('Edit')}</button><button className="manager-secondary" onClick={photo}>{t('Manage photo')}</button><button className="manager-secondary" disabled={row.status!=='ACTIVE'} onClick={recurring}>{t('Automatic scheduling')}</button></div></div><footer><button className="manager-secondary" onClick={onClose}>{t('Close')}</button></footer></Drawer>;
+}
+
+export function RoomDrawer({ row, onClose, edit, photo }) {
+  useLanguage();
+  return <Drawer title={row.roomName} subtitle={t('Room details')} onClose={onClose}><div className="ops-drawer-body"><ResourcePhoto imagePath={row.imagePath} name={row.roomName} variant="hero"/><div className="ops-session-facts"><p>{t('Capacity')}: {row.capacity}</p><p>{t('Classes')}: {row.classCount || 0}</p></div><div className="ops-detail-actions"><button className="manager-secondary" onClick={edit}>{t('Edit')}</button><button className="manager-secondary" onClick={photo}>{t('Manage photo')}</button></div></div><footer><button className="manager-secondary" onClick={onClose}>{t('Close')}</button></footer></Drawer>;
 }
 export function SessionGroupDrawer({ cell, onClose, open }) {
   useLanguage();
@@ -565,10 +572,10 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
             {formatDateTime(schedule.startTime)} →{t(" ")}
             {formatDateTime(schedule.endTime)}
           </p>
-          <p>
-            <Users size={18} />
+          <div className="ops-coach-identity">
+            <StaffAvatar user={{fullName:schedule.coachName,avatarPath:schedule.coachAvatarPath}} className="ops-coach-avatar"/>
             {schedule.coachName}
-          </p>
+          </div>
           <p>
             <MapPin size={18} />
             {schedule.roomName}

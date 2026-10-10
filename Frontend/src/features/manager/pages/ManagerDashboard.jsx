@@ -2,12 +2,13 @@ import { locale } from '../../../i18n/languageStore.js';
 import LanguageSwitcher from '../../../i18n/LanguageSwitcher';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import OperationalOverview from '../components/OperationalOverview';
+import PackagesPage from '../packages/PackagesPage';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   BarChart3, CalendarDays, Camera,
   ClipboardList, Dumbbell, LayoutDashboard, LogOut,
-  Menu, Package, Pencil, Plus, RefreshCw, ShieldCheck, Users, X,
+  Menu, Package, RefreshCw, ShieldCheck, Users, X,
 } from 'lucide-react';
 import { AuthContext } from '../../../context/AuthContext';
 import ManagerPageHeader from '../components/ManagerPageHeader';
@@ -70,6 +71,14 @@ function ManagerDashboard() {
   const [appliedFilters, setAppliedFilters] = useState(filters);
   const requestId = useRef(0);
   const operationLookups = useRef(null);
+  useEffect(() => {
+    let robots = document.querySelector('meta[name="robots"]');
+    const previous = robots?.getAttribute('content');
+    const created = !robots;
+    if (!robots) { robots = document.createElement('meta'); robots.name = 'robots'; document.head.appendChild(robots); }
+    robots.content = 'noindex, nofollow';
+    return () => { if (created) robots.remove(); else if (previous == null) robots.removeAttribute('content'); else robots.content = previous; };
+  }, []);
   const opsFrom=query.get('from') || (active==='operations'?weekRange().from:appliedFilters.from);
   const opsTo=query.get('to') || (active==='operations'?weekRange().to:appliedFilters.to);
   const opsLow=query.get('lowRegistration')==='true', opsStatus=query.get('status') || undefined, opsExclude=query.get('excludeUrgent')==='true';
@@ -181,8 +190,8 @@ function ManagerDashboard() {
         </header>
 
         <section className="manager-content">
-          {error && <div className="manager-alert" role="alert"><span>{t(error)}</span><button onClick={load}>{t("Retry")}</button></div>}
-          {initialLoading && active !== 'dashboard' ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={dataView === active ? data : null} filters={filters} appliedFilters={active === 'operations' ? operationFilters : appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={refreshAll} loading={loading || dataView !== active} loadError={error} updatedAt={updatedAt} />}
+          {error && active !== 'packages' && <div className="manager-alert" role="alert"><span>{t(error)}</span><button onClick={load}>{t("Retry")}</button></div>}
+          {initialLoading && !['dashboard', 'packages'].includes(active) ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={dataView === active ? data : null} filters={filters} appliedFilters={active === 'operations' ? operationFilters : appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={refreshAll} loading={loading || dataView !== active} loadError={error} updatedAt={updatedAt} />}
         </section>
       </main>
       <ManagerToast message={t(notice)} onClose={() => setNotice('')} />
@@ -197,17 +206,9 @@ function ManagerView(props) {
   if (props.active === 'dashboard') return <OperationalOverview {...props} />;
   if (props.active === 'people') return <StaffPage {...props} />;
   if (props.active === 'operations') return <OperationsPage {...props} />;
-  if (props.active === 'packages') return <PackagesView {...props} />;
+  if (props.active === 'packages') return <PackagesPage {...props} />;
   if (props.active === 'reports') return <ReportsView {...props} />;
   return <AuditView {...props} />;
-}
-
-function PackagesView({ data, openModal, page }) {
-  useLanguage();
-  return <>
-    <ManagerPageHeader title={t(page.title)} description={t(page.description)} actions={<button className="manager-primary" onClick={() => openModal({ type: 'package' })}><Plus size={17} />{t("Add Package")}</button>} />
-    <div className="manager-package-grid">{data?.map((item) => <article key={item.packageId}><div className="manager-package-top"><span><Package size={19} /></span><button onClick={() => openModal({ type: 'package', item })}><Pencil size={16} /></button></div><small>{item.packageType?.replace('_', ' ')}</small><h3>{item.packageName}</h3><strong>{money(item.price)}</strong><div><span>{item.durationDays}{' '}{t("days")}</span><span>{item.activeSubscribers || 0}{' '}{t("active")}</span></div></article>)}</div>{!data?.length && <EmptyState />}
-  </>;
 }
 
 function ReportsView({ data, filters, appliedFilters, setFilters, reload, page }) {

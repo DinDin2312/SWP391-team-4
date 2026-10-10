@@ -1,5 +1,6 @@
 import { t, useLanguage } from '../i18n/useLanguage';
 import AutoSidebar from '../components/AutoSidebar';
+import LanguageSwitcher from '../i18n/LanguageSwitcher';
 
 import React, { useContext, useState, useEffect, Suspense } from 'react';
 import { useNavigate, useLocation, useOutlet } from 'react-router-dom';
@@ -191,10 +192,10 @@ const MemberLayout = () => {
       {/* ===================== MAIN CONTENT ===================== */}
       <main className="flex-1 overflow-y-auto p-8 max-w-[1440px] mx-auto space-y-6">
         {/* Top Header Bar */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
+        <header className="role-page-topbar">
           <nav className="role-breadcrumb" aria-label={t("Breadcrumb")}><span>{t("Member portal")}</span><span aria-hidden="true">/</span><strong>{t(getPageTitle())}</strong></nav>
 
-          <div className="flex items-center gap-3">
+          <div className="role-header-actions">
             <div className="px-3.5 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-2 text-xs text-[var(--text)]">
               <span className="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
               <span className="text-[var(--text-muted)]">{t("Next Session:")}</span>
@@ -217,6 +218,7 @@ const MemberLayout = () => {
             </button>
 
             <button onClick={handleLogout} className="px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-[var(--text)] hover:text-[var(--text)] text-xs font-medium transition-colors">{t("Logout")}</button>
+            <LanguageSwitcher />
           </div>
         </header>
 

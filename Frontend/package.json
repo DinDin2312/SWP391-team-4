@@ -8,8 +8,12 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:manager": "node --test src/features/manager/managerUtils.test.js src/features/manager/operations/operationsUtils.test.js src/features/manager/components/overviewUtils.test.js src/features/manager/components/overviewRendering.test.js src/features/manager/operations/operationsState.test.js",
-    "test:i18n": "node --test src/i18n/languageStore.test.js src/i18n/adminLanguage.test.js"
+    "test:manager": "node --test src/features/manager/managerUtils.test.js src/features/manager/operations/operationsUtils.test.js src/features/manager/operations/operationsState.test.js src/features/manager/components/overviewUtils.test.js src/features/manager/packages/packagesState.test.js src/features/manager/packages/packagesRendering.test.js src/features/manager/components/overviewRendering.test.js",
+    "test:i18n": "node --test src/i18n/languageStore.test.js src/i18n/adminLanguage.test.js",
+    "test:images": "node --test src/components/resource-images/resourceImages.test.js",
+    "test:benefits": "node --test src/features/member/packageBookingOptions.test.js",
+    "test:member": "node --test src/features/member/memberUtils.test.js",
+    "test": "npm run test:manager && npm run test:i18n && npm run test:images && npm run test:benefits && npm run test:member"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
