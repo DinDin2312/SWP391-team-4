@@ -37,7 +37,7 @@ const CoachLayout = () => {
       case '/coach/dashboard': return 'Coach Dashboard';
       case '/coach/schedule': return 'Teaching Schedule & Trainees';
       case '/coach/students': return 'Assigned Trainees';
-      case '/coach/workouts': return 'Giao Bài Tập Cho Học Viên';
+      case '/coach/workouts': return 'Workout Plans';
       case '/coach/settings': return 'Settings';
       default: return 'Coach Portal';
     }
@@ -109,7 +109,7 @@ const CoachLayout = () => {
               }`}
             >
               <Dumbbell className="w-4 h-4 text-[var(--primary)]" />
-              <span>Giao Bài Tập</span>
+              <span>{t("Workout Plans")}</span>
             </button>
 
             <button
@@ -161,7 +161,7 @@ const CoachLayout = () => {
               className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-[var(--text)] font-bold text-xs shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer"
             >
               <Bell className="w-3.5 h-3.5" />
-              <span>{t("Gá»­i thĂ´ng bĂ¡o")}</span>
+              <span>{t("Send Notification")}</span>
             </button>
             <button onClick={handleLogout} className="px-3.5 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-slate-600 text-[var(--text)] hover:text-[var(--text)] text-xs font-medium transition-colors flex items-center gap-2">
               <LogOut className="w-3.5 h-3.5" />

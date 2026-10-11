@@ -1549,3 +1549,208 @@ const reportCompletionLabels={
  "Assigned classes and students":"Lớp và học viên được phân công", "Training plans and feedback":"Kế hoạch tập và nhận xét", "Own profile and memberships":"Hồ sơ và gói hội viên cá nhân", "Personal schedule and training history":"Lịch cá nhân và lịch sử tập luyện"
 };
 for(const [en,vi] of Object.entries(reportCompletionLabels)) translations[en]=[en,vi];
+
+// ==================== BẢN DỊCH TÍNH NĂNG ĐÁNH GIÁ TIẾN ĐỘ HỌC VIÊN (COACH ASSESSMENT) ====================
+const assessmentLabels = {
+  // Nút bấm & Tiêu đề
+  "Evaluate Trainees": "Đánh Giá Học Viên",
+  "Assessment": "Đánh giá",
+  "Evaluate this trainee": "Đánh giá tiến độ học viên này",
+  "Trainee Progress Assessment & Coach Feedback": "Đánh Giá Tiến Độ & Ghi Nhận Xét Học Viên",
+  "Track physical metrics, evaluate fitness performance, and provide periodic feedback to trainees.": "Theo dõi chỉ số thể chất, chấm điểm thể lực và gửi phản hồi định kỳ cho học viên",
+  "Coach Portal": "Cổng Huấn Luyện Viên",
+
+  // Cột trái: Chọn lớp và học viên
+  "1. Select Teaching Class": "1. Chọn Lớp Học Đang Dạy",
+  "-- No classes yet --": "-- Chưa có lớp học nào --",
+  "trainees": "học viên",
+  "Search trainees in class...": "Tìm học viên trong lớp...",
+  "Trainee list": "Danh sách học viên",
+  "Selecting #": "Đang chọn #",
+  "Loading list...": "Đang tải danh sách...",
+  "No trainees enrolled in this class": "Lớp này chưa có học viên đăng ký",
+  "Target Trainee": "Học viên mục tiêu",
+
+  // Cột phải: Tabs & Form đánh giá
+  "New Assessment": "Ghi Đánh Giá Mới",
+  "Assessment History": "Lịch Sử Đánh Giá",
+  "Refresh history": "Làm mới lịch sử",
+  "Assessment Title": "Tiêu Đề Buổi Đánh Giá",
+  "Optional, defaults to date": "Tùy chọn, mặc định theo ngày",
+  "e.g. Week 1 fitness test / Squat technique check...": "VD: Đánh giá thể lực tuần 1 / Kiểm tra kỹ thuật Squat...",
+  "Fitness & Technique Rating": "Đánh giá Thể lực & Kỹ thuật",
+  "Attendance & Attitude": "Chuyên cần & Tinh thần",
+  "Trainee Body Metrics": "Chỉ Số Cơ Thể Học Viên",
+  "Fill in if measurement data is available": "Nhập nếu có số liệu đo lường",
+  "Weight (kg)": "Cân nặng (kg)",
+  "Height (cm)": "Chiều cao (cm)",
+  "Body Fat (%)": "Tỷ lệ Mỡ (%)",
+  "Muscle Mass (kg)": "Khối lượng Cơ (kg)",
+  "Detailed Coach Feedback": "Nhận Xét Chi Tiết Của Huấn Luyện Viên",
+  "Feedback on technique, posture, endurance, workout completion, and trainee improvements...": "Nhận xét về kỹ thuật động tác, tư thế, độ bền thể lực, mức độ hoàn thành bài tập và những điểm học viên đã cải thiện tốt...",
+  "Nutrition & Extra Exercise Recommendations": "Lời Khuyên & Dặn Dò Dinh Dưỡng / Bài Tập Thêm",
+  "e.g. Stretch after workout, drink 2L water daily, slightly increase weight on last set...": "VD: Chú ý giãn cơ sau buổi tập, bổ sung 2L nước mỗi ngày, tăng nhẹ mức tạ ở set cuối...",
+  "Saving will automatically send a system notification to the trainee.": "Lưu sẽ tự động gửi thông báo hệ thống đến học viên.",
+  "Saving assessment...": "Đang lưu đánh giá...",
+  "Save Progress Assessment": "Lưu Đánh Giá Tiến Độ",
+
+  // Tab lịch sử đánh giá
+  "Loading assessment history...": "Đang tải lịch sử đánh giá...",
+  "No assessment records yet": "Chưa có bản ghi đánh giá nào",
+  "Switch to the \"New Assessment\" tab to start rating and giving feedback for this trainee.": "Chuyển sang tab \"Ghi Đánh Giá Mới\" để bắt đầu gửi nhận xét và chấm điểm tiến độ cho học viên này.",
+  "Progress Assessment": "Đánh giá tiến độ",
+  "Session Assessment": "Đánh giá buổi học",
+  "Class:": "Lớp:",
+  "Delete this assessment": "Xóa đánh giá này",
+  "Weight:": "Cân nặng:",
+  "Height:": "Chiều cao:",
+  "Body Fat:": "Body Fat:",
+  "Muscle mass:": "Khối lượng cơ:",
+  "Coach Feedback:": "Nhận xét của Huấn Luyện Viên:",
+  "Recommendation:": "Dặn dò:",
+
+  // Thông báo lỗi, thông báo thành công & Hộp thoại xác nhận
+  "Unable to load coach classes.": "Không thể tải danh sách lớp học của HLV.",
+  "Unable to load class trainees.": "Không thể tải danh sách học viên của lớp.",
+  "Please select a trainee to evaluate.": "Vui lòng chọn 1 học viên để thực hiện đánh giá.",
+  "Please enter coach feedback for the trainee.": "Vui lòng nhập nhận xét chi tiết của HLV về học viên.",
+  "Assessment saved and notification sent to trainee successfully!": "Đánh giá tiến độ đã được lưu và gửi thông báo tới học viên thành công!",
+  "An error occurred while saving assessment.": "Có lỗi xảy ra khi lưu đánh giá.",
+  "Error saving assessment.": "Lỗi khi lưu đánh giá.",
+  "Are you sure you want to delete this assessment record?": "Bạn có chắc chắn muốn xóa bản ghi đánh giá này?",
+  "Unable to delete assessment.": "Không thể xóa đánh giá.",
+
+  // Nút Báo tin & Thông báo lớp trên lịch dạy
+  "Notify": "Báo tin",
+  "Notify Class": "Báo tin lớp",
+  "Send Notification": "Gửi thông báo",
+  "Send notification": "Gửi thông báo",
+  "Send notification to this class": "Gửi thông báo cho lớp này"
+};
+
+for (const [en, vi] of Object.entries(assessmentLabels)) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+// ==================== BẢN DỊCH GIAO BÀI TẬP (COACH WORKOUT PLANS) ====================
+const workoutPlanLabels = {
+  // Navigation & Tiêu đề chung
+  "Coach Portal": "Cổng Huấn Luyện Viên",
+  "Workout Management": "Quản lý bài tập",
+  "Workout Plans": "Giao bài tập",
+  "Assign Workout Plan to Trainees": "Giao Bài Tập Cho Học Viên",
+  "Create and assign customized workouts to individual trainees or an entire class. System will automatically notify trainees upon assignment.": "Tạo và giao bài tập tùy chỉnh cho cá nhân 1 học viên hoặc toàn bộ học viên của một lớp. Hệ thống sẽ tự động gửi thông báo cho học viên ngay sau khi giao bài.",
+  "Add New Exercise to Library": "Thêm Bài Tập Mới Vào Thư Viện",
+  "Total Assigned Plans": "Tổng Giáo Án Đã Giao",
+  "Managed Trainees": "Học Viên Quản Lý",
+  "Exercise Library": "Thư Viện Bài Tập",
+  "exercises": "bài tập",
+  "movements": "động tác",
+  "trainees": "học viên",
+
+  // Tabs
+  "Assign New Workout": "Giao Bài Tập Mới",
+  "Assigned Plans History": "Lịch Sử Giáo Án Đã Giao",
+
+  // Bước 1: Phạm vi
+  "Select Assignment Scope": "Chọn Phạm Vi Giao Bài",
+  "1. Assign to Individual Trainee": "1. Giao bài cho 1 Cá nhân",
+  "Select a specific trainee to send a personalized training plan.": "Chọn chính xác 1 học viên để gửi giáo án huấn luyện riêng biệt.",
+  "2. Assign to Entire Class": "2. Giao bài cho Toàn Lớp",
+  "Automatically generate plans & notify all enrolled trainees in the selected class.": "Tự động tạo giáo án & gửi thông báo cho tất cả học viên trong lớp được chọn.",
+  "Select Trainee to Receive Workout": "Chọn Học Viên Nhận Bài Tập",
+  "-- Select trainee from list ({0}) --": "-- Chọn danh sách học viên ({0}) --",
+  "-- Select trainee from list --": "-- Chọn danh sách học viên --",
+  "Select Class": "Chọn Lớp Học",
+  "-- Select class you are coaching ({0}) --": "-- Chọn lớp học bạn đang phụ trách ({0}) --",
+  "-- Select class you are coaching --": "-- Chọn lớp học bạn đang phụ trách --",
+  "Class: {0} ({1} enrolled trainees)": "Lớp: {0} ({1} học viên đã tham gia)",
+  "enrolled trainees": "học viên đã tham gia",
+
+  // Bước 2: Thông tin giáo án
+  "Workout Plan Information & Instructions": "Thông Tin & Hướng Dẫn Giáo Án",
+  "Plan Title": "Tiêu Đề Giáo Án",
+  "e.g. Chest Hypertrophy Plan - Week 1": "VD: Giáo án Tăng Cơ Ngực - Tuần 1",
+  "Notes / Coach Message (Optional)": "Ghi Chú / Lời Nhắn HLV (Tùy chọn)",
+  "e.g. Rest strictly as specified, stay well hydrated...": "VD: Nghỉ đúng thời gian chỉ định, chú ý uống đủ nước...",
+
+  // Bước 3: Chi tiết bài tập
+  "Exercise Movements Details": "Chi Tiết Các Động Tác Tập Luyện",
+  "Add Movement": "Thêm Động Tác",
+  "Movement Name": "Tên Động Tác",
+  "-- Select exercise from library --": "-- Chọn bài tập từ thư viện --",
+  "Watch video tutorial": "Xem video hướng dẫn mẫu",
+  "Sets": "Số Hiệp (Sets)",
+  "Reps": "Số Lần/Hiệp (Reps)",
+  "Rest (Seconds)": "Nghỉ (Giây)",
+  "Remove exercise row": "Xóa dòng động tác",
+  "Submitting will automatically send a push notification to trainees.": "Nhấn gửi sẽ đồng thời tạo thông báo đẩy tới tài khoản của học viên.",
+  "Confirm & Send Workout Plan": "Xác Nhận Gửi Giáo Án & Thông Báo",
+  "Processing & Sending...": "Đang xử lý & Gửi...",
+
+  // Tab Lịch sử
+  "All Trainees": "Tất cả học viên",
+  "Refresh list": "Làm mới danh sách",
+  "Loading workout plans...": "Đang tải danh sách giáo án...",
+  "No Workout Plans Assigned Yet": "Chưa Có Giáo Án Nào Được Giao",
+  "Switch to \"Assign New Workout\" tab to start creating plans for trainees.": "Hãy chuyển sang tab \"Giao Bài Tập Mới\" để bắt đầu soạn bài cho học viên.",
+  "Movements count:": "Số động tác:",
+  "Workout details": "Chi tiết giáo án",
+  "Delete": "Xóa",
+  "Coach note:": "Ghi chú HLV:",
+  "Assigned to:": "Giao cho:",
+  "General": "Chung",
+
+  // Modal Chi tiết & Thêm bài tập
+  "Add New Movement": "Thêm Động Tác Mới",
+  "Add to library for repeated use": "Thêm vào thư viện để sử dụng lại nhiều lần",
+  "Exercise Name": "Tên Bài Tập",
+  "e.g. Bench Press, Plank, Deadlift...": "VD: Bench Press, Plank, Deadlift...",
+  "Target Muscle Group": "Nhóm Cơ Tác Động",
+  "Youtube Tutorial Link (Optional)": "Link Video Youtube Mẫu (Tùy chọn)",
+  "Save to Library": "Lưu Vào Thư Viện",
+
+  // Nhóm cơ
+  "Chest (Ngực)": "Chest (Ngực)",
+  "Back (Lưng/Xô)": "Back (Lưng/Xô)",
+  "Legs (Đùi/Bắp chân)": "Legs (Đùi/Bắp chân)",
+  "Shoulders (Vai)": "Shoulders (Vai)",
+  "Arms (Tay trước/Tay sau)": "Arms (Tay trước/Tay sau)",
+  "Abs (Bụng/Core)": "Abs (Bụng/Core)",
+  "Cardio / Toàn thân": "Cardio / Toàn thân",
+
+  // Messages & Alerts
+  "Unable to load workout plans data.": "Không thể tải dữ liệu giáo án bài tập.",
+  "Workout plan must contain at least 1 exercise.": "Giáo án phải có ít nhất 1 bài tập.",
+  "Please enter workout plan title.": "Vui lòng nhập tiêu đề giáo án bài tập.",
+  "Please select 1 trainee to assign workout.": "Vui lòng chọn 1 học viên để giao bài.",
+  "Please select 1 class to assign workout to the entire class.": "Vui lòng chọn 1 lớp học để giao bài cho toàn bộ lớp.",
+  "Workout assigned and notification sent successfully!": "Giao bài tập và gửi thông báo thành công!",
+  "An error occurred while assigning workout plan.": "Có lỗi xảy ra khi giao bài tập.",
+  "Unable to create new exercise.": "Không thể tạo bài tập mới.",
+  "Are you sure you want to delete this assigned workout plan?": "Bạn có chắc chắn muốn xóa giáo án đã giao này không?",
+  "Workout plan deleted successfully.": "Đã xóa giáo án thành công.",
+  "Unable to delete workout plan.": "Không thể xóa giáo án.",
+  "Please select an exercise for row {0}.": "Vui lòng chọn bài tập cho dòng số {0}.",
+  "Added exercise": "Đã thêm bài tập",
+  "to library!": "vào thư viện!",
+  "Exercise list ({0})": "Danh sách bài tập ({0})",
+  "Target muscle:": "Nhóm cơ:",
+  "Set": "Hiệp",
+  "Rep": "Lần",
+  "Rest {0}s": "Nghỉ {0}s",
+  "Close": "Đóng",
+  "Cancel": "Hủy",
+  "Movements count: {0}": "Số động tác: {0}",
+  "All trainees ({0} plans)": "Tất cả học viên ({0} giáo án)",
+  "Trainee: {0}": "Học viên: {0}",
+  "Trainee:": "Học viên:"
+};
+
+for (const [en, vi] of Object.entries(workoutPlanLabels)) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+
