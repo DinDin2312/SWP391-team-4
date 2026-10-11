@@ -1,3 +1,5 @@
+import { t, useLanguage } from '../../../i18n/useLanguage';
+import { locale } from '../../../i18n/languageStore.js';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
@@ -8,6 +10,7 @@ import {
 const API_BASE = 'http://localhost:8080/api/v1/coach';
 
 const CoachWorkoutPlans = () => {
+  useLanguage();
   // Main Data States
   const [exercises, setExercises] = useState([]);
   const [students, setStudents] = useState([]);
@@ -72,7 +75,7 @@ const CoachWorkoutPlans = () => {
       }
     } catch (error) {
       console.error('Error loading coach workout data:', error);
-      showBanner('error', 'Không thể tải dữ liệu giáo án bài tập.');
+      showBanner('error', t('Không thể tải dữ liệu giáo án bài tập.'));
     } finally {
       setLoading(false);
     }
@@ -97,7 +100,7 @@ const CoachWorkoutPlans = () => {
   // Remove exercise row
   const handleRemoveExerciseRow = (index) => {
     if (selectedExercises.length === 1) {
-      showBanner('error', 'Giáo án phải có ít nhất 1 bài tập.');
+      showBanner('error', t('Giáo án phải có ít nhất 1 bài tập.'));
       return;
     }
     const updated = selectedExercises.filter((_, idx) => idx !== index);
@@ -116,24 +119,24 @@ const CoachWorkoutPlans = () => {
     e.preventDefault();
 
     if (!planTitle.trim()) {
-      showBanner('error', 'Vui lòng nhập tiêu đề giáo án bài tập.');
+      showBanner('error', t('Vui lòng nhập tiêu đề giáo án bài tập.'));
       return;
     }
 
     if (targetType === 'INDIVIDUAL' && !selectedStudentUserId) {
-      showBanner('error', 'Vui lòng chọn 1 học viên để giao bài.');
+      showBanner('error', t('Vui lòng chọn 1 học viên để giao bài.'));
       return;
     }
 
     if (targetType === 'CLASS' && !selectedClassId) {
-      showBanner('error', 'Vui lòng chọn 1 lớp học để giao bài cho toàn bộ lớp.');
+      showBanner('error', t('Vui lòng chọn 1 lớp học để giao bài cho toàn bộ lớp.'));
       return;
     }
 
     // Validate exercises
     for (let i = 0; i < selectedExercises.length; i++) {
       if (!selectedExercises[i].exerciseId) {
-        showBanner('error', `Vui lòng chọn bài tập cho dòng số ${i + 1}.`);
+        showBanner('error', `${t('Vui lòng chọn bài tập cho dòng số')} ${i + 1}.`);
         return;
       }
     }
@@ -156,7 +159,7 @@ const CoachWorkoutPlans = () => {
 
       const res = await axios.post(`${API_BASE}/workouts/assign`, payload, { headers: getHeaders() });
 
-      showBanner('success', res.data?.message || 'Giao bài tập và gửi thông báo thành công!');
+      showBanner('success', res.data?.message ? t(res.data.message) : t('Giao bài tập và gửi thông báo thành công!'));
 
       // Reset form
       setPlanTitle('');
@@ -170,8 +173,8 @@ const CoachWorkoutPlans = () => {
       setActiveTab('history');
     } catch (error) {
       console.error('Error assigning workout:', error);
-      const errMsg = error.response?.data?.message || error.response?.data || 'Có lỗi xảy ra khi giao bài tập.';
-      showBanner('error', typeof errMsg === 'string' ? errMsg : 'Có lỗi xảy ra khi giao bài tập.');
+      const errMsg = error.response?.data?.message || error.response?.data || t('Có lỗi xảy ra khi giao bài tập.');
+      showBanner('error', typeof errMsg === 'string' ? t(errMsg) : t('Có lỗi xảy ra khi giao bài tập.'));
     } finally {
       setSubmitting(false);
     }
@@ -190,27 +193,27 @@ const CoachWorkoutPlans = () => {
       }, { headers: getHeaders() });
 
       setExercises([...exercises, res.data]);
-      showBanner('success', `Đã thêm bài tập "${res.data.exerciseName}" vào thư viện!`);
+      showBanner('success', `${t('Đã thêm bài tập')} "${res.data.exerciseName}" ${t('vào thư viện!')}`);
       setNewExName('');
       setNewExVideoUrl('');
       setIsAddExModalOpen(false);
     } catch (error) {
       console.error('Error creating exercise:', error);
-      showBanner('error', 'Không thể tạo bài tập mới.');
+      showBanner('error', t('Không thể tạo bài tập mới.'));
     }
   };
 
   // Delete plan
   const handleDeletePlan = async (planId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa giáo án đã giao này không?')) return;
+    if (!window.confirm(t('Bạn có chắc chắn muốn xóa giáo án đã giao này không?'))) return;
 
     try {
       await axios.delete(`${API_BASE}/workouts/${planId}`, { headers: getHeaders() });
       setAssignedPlans(assignedPlans.filter(p => p.planId !== planId));
-      showBanner('success', 'Đã xóa giáo án thành công.');
+      showBanner('success', t('Đã xóa giáo án thành công.'));
     } catch (error) {
       console.error('Error deleting workout plan:', error);
-      showBanner('error', 'Không thể xóa giáo án.');
+      showBanner('error', t('Không thể xóa giáo án.'));
     }
   };
 
@@ -226,16 +229,16 @@ const CoachWorkoutPlans = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-1 text-[var(--primary)] font-semibold text-[11px] uppercase tracking-wider">
-            <span>Coach Portal</span>
+            <span>{t("Coach Portal")}</span>
             <ChevronRight className="w-3 h-3" />
-            <span className="text-[var(--text-muted)]">Workout Management</span>
+            <span className="text-[var(--text-muted)]">{t("Workout Management")}</span>
           </div>
           <h1 className="text-3xl font-bold text-[var(--text)] tracking-tight flex items-center gap-3">
             <Dumbbell className="w-8 h-8 text-[var(--primary)]" />
-            Giao Bài Tập Cho Học Viên
+            {t("Giao Bài Tập Cho Học Viên")}
           </h1>
           <p className="text-sm text-[var(--text-muted)] max-w-3xl">
-            Tạo và giao bài tập tùy chỉnh cho <strong>cá nhân 1 học viên</strong> hoặc <strong>toàn bộ học viên của một lớp</strong>. Hệ thống sẽ tự động gửi thông báo cho học viên ngay sau khi giao bài.
+            {t("Tạo và giao bài tập tùy chỉnh cho cá nhân 1 học viên hoặc toàn bộ học viên của một lớp. Hệ thống sẽ tự động gửi thông báo cho học viên ngay sau khi giao bài.")}
           </p>
         </div>
 
@@ -245,7 +248,7 @@ const CoachWorkoutPlans = () => {
           className="px-4 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] hover:border-[var(--primary)] text-[var(--text)] font-semibold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 self-start md:self-auto"
         >
           <Plus className="w-4 h-4 text-[var(--primary)]" />
-          <span>Thêm Bài Tập Mới Vao Thư Viện</span>
+          <span>{t("Thêm Bài Tập Mới Vào Thư Viện")}</span>
         </button>
       </div>
 
@@ -275,8 +278,8 @@ const CoachWorkoutPlans = () => {
             <Layers className="w-6 h-6" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-[var(--text-muted)] font-medium">Tổng Giáo Án Đã Giao</span>
-            <span className="text-2xl font-bold text-[var(--text)]">{assignedPlans.length} <span className="text-xs text-[var(--text-muted)] font-normal">bài tập</span></span>
+            <span className="text-xs text-[var(--text-muted)] font-medium">{t("Tổng Giáo Án Đã Giao")}</span>
+            <span className="text-2xl font-bold text-[var(--text)]">{assignedPlans.length} <span className="text-xs text-[var(--text-muted)] font-normal">{t("bài tập")}</span></span>
           </div>
         </div>
 
@@ -285,8 +288,8 @@ const CoachWorkoutPlans = () => {
             <Users className="w-6 h-6" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-[var(--text-muted)] font-medium">Học Viên Quản Lý</span>
-            <span className="text-2xl font-bold text-[var(--text)]">{students.length} <span className="text-xs text-[var(--text-muted)] font-normal">học viên</span></span>
+            <span className="text-xs text-[var(--text-muted)] font-medium">{t("Học Viên Quản Lý")}</span>
+            <span className="text-2xl font-bold text-[var(--text)]">{students.length} <span className="text-xs text-[var(--text-muted)] font-normal">{t("học viên")}</span></span>
           </div>
         </div>
 
@@ -295,8 +298,8 @@ const CoachWorkoutPlans = () => {
             <Dumbbell className="w-6 h-6" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-[var(--text-muted)] font-medium">Thư Viện Bài Tập</span>
-            <span className="text-2xl font-bold text-[var(--text)]">{exercises.length} <span className="text-xs text-[var(--text-muted)] font-normal">động tác</span></span>
+            <span className="text-xs text-[var(--text-muted)] font-medium">{t("Thư Viện Bài Tập")}</span>
+            <span className="text-2xl font-bold text-[var(--text)]">{exercises.length} <span className="text-xs text-[var(--text-muted)] font-normal">{t("động tác")}</span></span>
           </div>
         </div>
       </div>
@@ -312,7 +315,7 @@ const CoachWorkoutPlans = () => {
           }`}
         >
           <Send className="w-4 h-4" />
-          <span>Giao Bài Tập Mới</span>
+          <span>{t("Giao Bài Tập Mới")}</span>
         </button>
 
         <button
@@ -324,7 +327,7 @@ const CoachWorkoutPlans = () => {
           }`}
         >
           <BookOpen className="w-4 h-4" />
-          <span>Lịch Sử Giáo Án Đã Giao ({assignedPlans.length})</span>
+          <span>{t("Lịch Sử Giáo Án Đã Giao")} ({assignedPlans.length})</span>
         </button>
       </div>
 
@@ -336,7 +339,7 @@ const CoachWorkoutPlans = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-2 border-b border-[var(--border)] pb-3">
               <span className="w-6 h-6 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center">1</span>
-              <h3 className="text-base font-bold text-[var(--text)]">Chọn Phạm Vi Giao Bài</h3>
+              <h3 className="text-base font-bold text-[var(--text)]">{t("Chọn Phạm Vi Giao Bài")}</h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -354,11 +357,11 @@ const CoachWorkoutPlans = () => {
                 </div>
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-[var(--text)]">1. Giao bài cho 1 Cá nhân</span>
+                    <span className="font-bold text-sm text-[var(--text)]">{t("1. Giao bài cho 1 Cá nhân")}</span>
                     {targetType === 'INDIVIDUAL' && <Sparkles className="w-4 h-4 text-[var(--primary)]" />}
                   </div>
                   <p className="text-xs text-[var(--text-muted)]">
-                    Chọn chính xác 1 học viên để gửi giáo án huấn luyện riêng biệt.
+                    {t("Chọn chính xác 1 học viên để gửi giáo án huấn luyện riêng biệt.")}
                   </p>
                 </div>
               </div>
@@ -377,11 +380,11 @@ const CoachWorkoutPlans = () => {
                 </div>
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-[var(--text)]">2. Giao bài cho Toàn Lớp</span>
+                    <span className="font-bold text-sm text-[var(--text)]">{t("2. Giao bài cho Toàn Lớp")}</span>
                     {targetType === 'CLASS' && <Sparkles className="w-4 h-4 text-[var(--primary)]" />}
                   </div>
                   <p className="text-xs text-[var(--text-muted)]">
-                    Tự động tạo giáo án & gửi thông báo cho tất cả học viên trong lớp được chọn.
+                    {t("Tự động tạo giáo án & gửi thông báo cho tất cả học viên trong lớp được chọn.")}
                   </p>
                 </div>
               </div>
@@ -392,14 +395,14 @@ const CoachWorkoutPlans = () => {
               {targetType === 'INDIVIDUAL' ? (
                 <div className="space-y-1.5 max-w-xl">
                   <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                    Chọn Học Viên Nhận Bài Tập <span className="text-rose-500">*</span>
+                    {t("Chọn Học Viên Nhận Bài Tập")} <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={selectedStudentUserId}
                     onChange={(e) => setSelectedStudentUserId(e.target.value)}
                     className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition-all font-medium"
                   >
-                    <option value="">-- Chọn danh sách học viên ({students.length}) --</option>
+                    <option value="">{t("-- Select trainee from list ({0}) --", [students.length])}</option>
                     {students.map((st) => (
                       <option key={st.userId} value={st.userId}>
                         {st.fullName} ({st.email || st.phone || `ID: #${st.userId}`})
@@ -410,17 +413,17 @@ const CoachWorkoutPlans = () => {
               ) : (
                 <div className="space-y-1.5 max-w-xl">
                   <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                    Chọn Lớp Học <span className="text-rose-500">*</span>
+                    {t("Chọn Lớp Học")} <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={selectedClassId}
                     onChange={(e) => setSelectedClassId(e.target.value)}
                     className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition-all font-medium"
                   >
-                    <option value="">-- Chọn lớp học bạn đang phụ trách ({classes.length}) --</option>
+                    <option value="">{t("-- Select class you are coaching ({0}) --", [classes.length])}</option>
                     {classes.map((cls) => (
                       <option key={cls.classId} value={cls.classId}>
-                        Lớp: {cls.className} ({cls.enrolledCount} học viên đã tham gia)
+                        {t("Class: {0} ({1} enrolled trainees)", [cls.className, cls.enrolledCount])}
                       </option>
                     ))}
                   </select>
@@ -433,32 +436,32 @@ const CoachWorkoutPlans = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-2 border-b border-[var(--border)] pb-3">
               <span className="w-6 h-6 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center">2</span>
-              <h3 className="text-base font-bold text-[var(--text)]">Thông Tin & Hướng Dẫn Giáo Án</h3>
+              <h3 className="text-base font-bold text-[var(--text)]">{t("Thông Tin & Hướng Dẫn Giáo Án")}</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                  Tiêu Đề Giáo Án <span className="text-rose-500">*</span>
+                  {t("Tiêu Đề Giáo Án")} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={planTitle}
                   onChange={(e) => setPlanTitle(e.target.value)}
-                  placeholder="VD: Giáo án Tăng Cơ Ngực - Tuần 1"
+                  placeholder={t("VD: Giáo án Tăng Cơ Ngực - Tuần 1")}
                   className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition-all font-semibold"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                  Ghi Chú / Lời Nhắn HLV (Tùy chọn)
+                  {t("Ghi Chú / Lời Nhắn HLV (Tùy chọn)")}
                 </label>
                 <input
                   type="text"
                   value={planNote}
                   onChange={(e) => setPlanNote(e.target.value)}
-                  placeholder="VD: Nghỉ đúng thời gian chỉ định, chú ý uống đủ nước..."
+                  placeholder={t("VD: Nghỉ đúng thời gian chỉ định, chú ý uống đủ nước...")}
                   className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition-all"
                 />
               </div>
@@ -470,7 +473,7 @@ const CoachWorkoutPlans = () => {
             <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
               <div className="flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center">3</span>
-                <h3 className="text-base font-bold text-[var(--text)]">Chi Tiết Các Động Tác Tập Luyện</h3>
+                <h3 className="text-base font-bold text-[var(--text)]">{t("Chi Tiết Các Động Tác Tập Luyện")}</h3>
               </div>
 
               <button
@@ -479,7 +482,7 @@ const CoachWorkoutPlans = () => {
                 className="px-3 py-1.5 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center gap-1.5 border border-[var(--primary-soft)] hover:bg-[var(--primary)] hover:text-[color:var(--on-primary)] transition-all cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Thêm Động Tác</span>
+                <span>{t("Thêm Động Tác")}</span>
               </button>
             </div>
 
@@ -495,29 +498,29 @@ const CoachWorkoutPlans = () => {
 
                     {/* Exercise Select */}
                     <div className="flex-1 space-y-1">
-                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Tên Động Tác</label>
+                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t("Tên Động Tác")}</label>
                       <select
                         value={exRow.exerciseId}
                         onChange={(e) => handleUpdateExerciseRow(idx, 'exerciseId', e.target.value)}
                         className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] font-semibold"
                       >
-                        <option value="">-- Chọn bài tập từ thư viện --</option>
+                        <option value="">{t("-- Chọn bài tập từ thư viện --")}</option>
                         {exercises.map((ex) => (
                           <option key={ex.exerciseId} value={ex.exerciseId}>
-                            {ex.exerciseName} [{ex.muscleGroup || 'Chung'}]
+                            {ex.exerciseName} [{t(ex.muscleGroup || 'Chung')}]
                           </option>
                         ))}
                       </select>
                       {currentExObj && currentExObj.videoUrl && (
                         <a href={currentExObj.videoUrl} target="_blank" rel="noreferrer" className="text-[10px] text-blue-400 hover:underline flex items-center gap-1 mt-0.5">
-                          <Play className="w-3 h-3" /> Xem video hướng dẫn mẫu
+                          <Play className="w-3 h-3" /> {t("Xem video hướng dẫn mẫu")}
                         </a>
                       )}
                     </div>
 
                     {/* Sets */}
                     <div className="w-24 space-y-1">
-                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Số Hiệp (Sets)</label>
+                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t("Số Hiệp (Sets)")}</label>
                       <input
                         type="number"
                         min="1"
@@ -530,7 +533,7 @@ const CoachWorkoutPlans = () => {
 
                     {/* Reps */}
                     <div className="w-28 space-y-1">
-                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Số Lần/Hiệp (Reps)</label>
+                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t("Số Lần/Hiệp (Reps)")}</label>
                       <input
                         type="number"
                         min="1"
@@ -543,7 +546,7 @@ const CoachWorkoutPlans = () => {
 
                     {/* Rest Seconds */}
                     <div className="w-28 space-y-1">
-                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Nghỉ (Giây)</label>
+                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t("Nghỉ (Giây)")}</label>
                       <input
                         type="number"
                         min="0"
@@ -560,7 +563,7 @@ const CoachWorkoutPlans = () => {
                       <button
                         type="button"
                         onClick={() => handleRemoveExerciseRow(idx)}
-                        title="Xóa dòng động tác"
+                        title={t("Xóa dòng động tác")}
                         className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition-all cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -576,7 +579,7 @@ const CoachWorkoutPlans = () => {
           <div className="pt-4 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
               <ShieldAlert className="w-4 h-4 text-[var(--primary)] shrink-0" />
-              <span>Nhấn gửi sẽ đồng thời tạo thông báo đẩy tới tài khoản của học viên.</span>
+              <span>{t("Nhấn gửi sẽ đồng thời tạo thông báo đẩy tới tài khoản của học viên.")}</span>
             </div>
 
             <button
@@ -587,12 +590,12 @@ const CoachWorkoutPlans = () => {
               {submitting ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-900"></div>
-                  <span>Đang xử lý & Gửi...</span>
+                  <span>{t("Đang xử lý & Gửi...")}</span>
                 </>
               ) : (
                 <>
                   <Send className="w-4 h-4" />
-                  <span>Xác Nhận Gửi Giáo Án & Thông Báo</span>
+                  <span>{t("Xác Nhận Gửi Giáo Án & Thông Báo")}</span>
                 </>
               )}
             </button>
@@ -613,10 +616,10 @@ const CoachWorkoutPlans = () => {
                 onChange={(e) => setHistoryFilterStudent(e.target.value)}
                 className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)]"
               >
-                <option value="">Tất cả học viên ({assignedPlans.length} giáo án)</option>
+                <option value="">{t("All trainees ({0} plans)", [assignedPlans.length])}</option>
                 {students.map((st) => (
                   <option key={st.userId} value={st.userId}>
-                    Học viên: {st.fullName}
+                    {t("Trainee: {0}", [st.fullName])}
                   </option>
                 ))}
               </select>
@@ -627,18 +630,18 @@ const CoachWorkoutPlans = () => {
               className="px-3 py-1.5 rounded-xl bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text)] text-xs flex items-center gap-1.5 border border-[var(--border)]"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>Làm mới danh sách</span>
+              <span>{t("Refresh list")}</span>
             </button>
           </div>
 
           {/* List Content */}
           {loading ? (
-            <div className="text-center py-16 text-[var(--text-muted)]">Đang tải danh sách giáo án...</div>
+            <div className="text-center py-16 text-[var(--text-muted)]">{t("Loading workout plans...")}</div>
           ) : filteredPlans.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Dumbbell className="w-12 h-12 text-[var(--text-muted)] mb-3" />
-              <h4 className="text-base font-bold text-[var(--text)]">Chưa Có Giáo Án Nào Được Giao</h4>
-              <p className="text-xs text-[var(--text-muted)] mt-1">Hãy chuyển sang tab "Giao Bài Tập Mới" để bắt đầu soạn bài cho học viên.</p>
+              <h4 className="text-base font-bold text-[var(--text)]">{t("No Workout Plans Assigned Yet")}</h4>
+              <p className="text-xs text-[var(--text-muted)] mt-1">{t("Switch to \"Assign New Workout\" tab to start creating plans for trainees.")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -655,11 +658,11 @@ const CoachWorkoutPlans = () => {
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
                       <span className="flex items-center gap-1">
                         <Users className="w-3.5 h-3.5 text-[var(--primary)]" />
-                        Học viên: <strong className="text-[var(--text)]">{plan.studentName}</strong>
+                        {t("Trainee:")} <strong className="text-[var(--text)]">{plan.studentName}</strong>
                       </span>
                       <span className="flex items-center gap-1 text-[10px]">
                         <Clock className="w-3 h-3" />
-                        {new Date(plan.createdAt).toLocaleString('vi-VN')}
+                        {new Date(plan.createdAt).toLocaleString(locale())}
                       </span>
                     </div>
 
@@ -672,12 +675,12 @@ const CoachWorkoutPlans = () => {
 
                   <div className="space-y-2 pt-2 border-t border-[var(--border)]">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-[var(--text-muted)]">Số động tác: <strong className="text-[var(--text)]">{plan.details?.length || 0} bài</strong></span>
+                      <span className="text-[var(--text-muted)]">{t("Movements count: {0}", [plan.details?.length || 0])}</span>
                       <button
                         onClick={() => setSelectedPlanDetail(plan)}
                         className="text-xs text-[var(--primary)] hover:underline font-bold flex items-center gap-1"
                       >
-                        Chi tiết giáo án <ChevronRight className="w-3.5 h-3.5" />
+                        {t("Workout details")} <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
@@ -686,7 +689,7 @@ const CoachWorkoutPlans = () => {
                         onClick={() => handleDeletePlan(plan.planId)}
                         className="px-3 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-semibold text-[11px] border border-rose-500/20 flex items-center gap-1"
                       >
-                        <Trash2 className="w-3 h-3" /> Xóa
+                        <Trash2 className="w-3 h-3" /> {t("Delete")}
                       </button>
                     </div>
                   </div>
@@ -708,7 +711,7 @@ const CoachWorkoutPlans = () => {
                 </div>
                 <div className="flex flex-col">
                   <h3 className="text-base font-bold text-[var(--text)]">{selectedPlanDetail.title}</h3>
-                  <span className="text-xs text-[var(--primary)] font-medium">Giao cho: {selectedPlanDetail.studentName}</span>
+                  <span className="text-xs text-[var(--primary)] font-medium">{t("Assigned to:")} {selectedPlanDetail.studentName}</span>
                 </div>
               </div>
 
@@ -723,12 +726,12 @@ const CoachWorkoutPlans = () => {
             <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto text-xs">
               {selectedPlanDetail.note && (
                 <div className="p-3 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text-muted)] italic">
-                  <strong>Ghi chú HLV:</strong> {selectedPlanDetail.note}
+                  <strong>{t("Coach note:")}</strong> {selectedPlanDetail.note}
                 </div>
               )}
 
               <div className="space-y-2">
-                <h5 className="font-bold text-[var(--text-muted)] uppercase tracking-wider text-[10px]">Danh sách bài tập ({selectedPlanDetail.details?.length || 0})</h5>
+                <h5 className="font-bold text-[var(--text-muted)] uppercase tracking-wider text-[10px]">{t("Exercise list ({0})", [selectedPlanDetail.details?.length || 0])}</h5>
                 <div className="space-y-2">
                   {selectedPlanDetail.details?.map((d, dIdx) => (
                     <div key={dIdx} className="p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between gap-4">
@@ -738,15 +741,15 @@ const CoachWorkoutPlans = () => {
                         </span>
                         <div>
                           <p className="font-bold text-[var(--text)]">{d.exerciseName}</p>
-                          <p className="text-[10px] text-[var(--text-muted)]">Nhóm cơ: {d.muscleGroup || 'Chung'}</p>
+                          <p className="text-[10px] text-[var(--text-muted)]">{t("Target muscle:")} {t(d.muscleGroup || 'Chung')}</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3 text-right">
                         <span className="px-2.5 py-1 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] font-semibold text-[11px]">
-                          {d.sets} Hiệp x {d.reps} Lần
+                          {d.sets} {t("Set")} x {d.reps} {t("Rep")}
                         </span>
-                        <span className="text-[10px] text-[var(--text-muted)]">Nghỉ {d.restSeconds}s</span>
+                        <span className="text-[10px] text-[var(--text-muted)]">{t("Rest {0}s", [d.restSeconds])}</span>
                       </div>
                     </div>
                   ))}
@@ -759,7 +762,7 @@ const CoachWorkoutPlans = () => {
                 onClick={() => setSelectedPlanDetail(null)}
                 className="px-5 py-2 rounded-xl bg-[var(--surface-hover)] text-[var(--text)] font-semibold text-xs border border-[var(--border)]"
               >
-                Đóng
+                {t("Close")}
               </button>
             </div>
           </div>
@@ -777,8 +780,8 @@ const CoachWorkoutPlans = () => {
                     <Plus className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-[var(--text)]">Thêm Động Tác Mới</h3>
-                    <p className="text-xs text-[var(--text-muted)]">Thêm vào thư viện để sử dụng lại nhiều lần</p>
+                    <h3 className="text-base font-bold text-[var(--text)]">{t("Thêm Động Tác Mới")}</h3>
+                    <p className="text-xs text-[var(--text-muted)]">{t("Thêm vào thư viện để sử dụng lại nhiều lần")}</p>
                   </div>
                 </div>
 
@@ -793,36 +796,36 @@ const CoachWorkoutPlans = () => {
 
               <div className="p-6 space-y-4 text-xs">
                 <div className="space-y-1.5">
-                  <label className="font-bold text-[var(--text-muted)] uppercase tracking-wider text-[10px]">Tên Bài Tập <span className="text-rose-500">*</span></label>
+                  <label className="font-bold text-[var(--text-muted)] uppercase tracking-wider text-[10px]">{t("Tên Bài Tập")} <span className="text-rose-500">*</span></label>
                   <input
                     type="text"
                     required
                     value={newExName}
                     onChange={(e) => setNewExName(e.target.value)}
-                    placeholder="VD: Bench Press, Plank, Deadlift..."
+                    placeholder={t("VD: Bench Press, Plank, Deadlift...")}
                     className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)]"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-bold text-[var(--text-muted)] uppercase tracking-wider text-[10px]">Nhóm Cơ Tác Động</label>
+                  <label className="font-bold text-[var(--text-muted)] uppercase tracking-wider text-[10px]">{t("Nhóm Cơ Tác Động")}</label>
                   <select
                     value={newExMuscleGroup}
                     onChange={(e) => setNewExMuscleGroup(e.target.value)}
                     className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)]"
                   >
-                    <option value="Chest (Ngực)">Chest (Ngực)</option>
-                    <option value="Back (Lưng/Xô)">Back (Lưng/Xô)</option>
-                    <option value="Legs (Đùi/Bắp chân)">Legs (Đùi/Bắp chân)</option>
-                    <option value="Shoulders (Vai)">Shoulders (Vai)</option>
-                    <option value="Arms (Tay trước/Tay sau)">Arms (Tay trước/Tay sau)</option>
-                    <option value="Abs (Bụng/Core)">Abs (Bụng/Core)</option>
-                    <option value="Cardio / Toàn thân">Cardio / Toàn thân</option>
+                    <option value="Chest (Ngực)">{t("Chest (Ngực)")}</option>
+                    <option value="Back (Lưng/Xô)">{t("Back (Lưng/Xô)")}</option>
+                    <option value="Legs (Đùi/Bắp chân)">{t("Legs (Đùi/Bắp chân)")}</option>
+                    <option value="Shoulders (Vai)">{t("Shoulders (Vai)")}</option>
+                    <option value="Arms (Tay trước/Tay sau)">{t("Arms (Tay trước/Tay sau)")}</option>
+                    <option value="Abs (Bụng/Core)">{t("Abs (Bụng/Core)")}</option>
+                    <option value="Cardio / Toàn thân">{t("Cardio / Toàn thân")}</option>
                   </select>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-bold text-[var(--text-muted)] uppercase tracking-wider text-[10px]">Link Video Youtube Mẫu (Tùy chọn)</label>
+                  <label className="font-bold text-[var(--text-muted)] uppercase tracking-wider text-[10px]">{t("Link Video Youtube Mẫu (Tùy chọn)")}</label>
                   <input
                     type="url"
                     value={newExVideoUrl}
@@ -839,13 +842,13 @@ const CoachWorkoutPlans = () => {
                   onClick={() => setIsAddExModalOpen(false)}
                   className="px-4 py-2 rounded-xl bg-[var(--surface-hover)] text-[var(--text-muted)] font-semibold text-xs"
                 >
-                  Hủy
+                  {t("Hủy")}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 rounded-xl bg-[var(--primary)] text-[color:var(--on-primary)] font-bold text-xs shadow-md"
                 >
-                  Lưu Vào Thư Viện
+                  {t("Lưu Vào Thư Viện")}
                 </button>
               </div>
             </form>

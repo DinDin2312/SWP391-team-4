@@ -1,4 +1,5 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
+import { locale } from '../../../i18n/languageStore.js';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
@@ -95,7 +96,7 @@ const TraineeAssessmentModal = ({
       }
     } catch (err) {
       console.error('Error fetching classes for assessment:', err);
-      setErrorMsg('Không thể tải danh sách lớp học của HLV.');
+      setErrorMsg(t('Không thể tải danh sách lớp học của HLV.'));
     } finally {
       setLoadingData(false);
     }
@@ -127,7 +128,7 @@ const TraineeAssessmentModal = ({
       }
     } catch (err) {
       console.error('Error fetching class students:', err);
-      setErrorMsg('Không thể tải danh sách học viên của lớp.');
+      setErrorMsg(t('Không thể tải danh sách học viên của lớp.'));
     } finally {
       setLoadingData(false);
     }
@@ -178,12 +179,12 @@ const TraineeAssessmentModal = ({
     setSuccessMsg('');
 
     if (!selectedStudent) {
-      setErrorMsg('Vui lòng chọn 1 học viên để thực hiện đánh giá.');
+      setErrorMsg(t('Vui lòng chọn 1 học viên để thực hiện đánh giá.'));
       return;
     }
 
     if (!feedbackNote.trim()) {
-      setErrorMsg('Vui lòng nhập nhận xét chi tiết của HLV về học viên.');
+      setErrorMsg(t('Vui lòng nhập nhận xét chi tiết của HLV về học viên.'));
       return;
     }
 
@@ -192,7 +193,7 @@ const TraineeAssessmentModal = ({
       const payload = {
         studentUserId: selectedStudent.userId,
         scheduleId: initialScheduleId ? Number(initialScheduleId) : null,
-        assessmentTitle: assessmentTitle.trim() || `Đánh giá buổi học (${new Date().toLocaleDateString('vi-VN')})`,
+        assessmentTitle: assessmentTitle.trim() || `${t('Đánh giá buổi học')} (${new Date().toLocaleDateString(locale())})`,
         weight: weight ? parseFloat(weight) : null,
         height: height ? parseFloat(height) : null,
         bodyFatPercentage: bodyFatPercentage ? parseFloat(bodyFatPercentage) : null,
@@ -205,7 +206,7 @@ const TraineeAssessmentModal = ({
 
       const res = await axios.post(`${API_BASE}/assessments`, payload, { headers: getHeaders() });
 
-      setSuccessMsg('Đánh giá tiến độ đã được lưu và gửi thông báo tới học viên thành công!');
+      setSuccessMsg(t('Đánh giá tiến độ đã được lưu và gửi thông báo tới học viên thành công!'));
       
       // Refresh history & switch tab to show result
       await fetchStudentHistory(selectedStudent.userId);
@@ -215,8 +216,8 @@ const TraineeAssessmentModal = ({
       if (onSuccess) onSuccess(res.data);
     } catch (err) {
       console.error('Error creating assessment:', err);
-      const msg = err.response?.data?.message || err.response?.data || 'Có lỗi xảy ra khi lưu đánh giá.';
-      setErrorMsg(typeof msg === 'string' ? msg : 'Lỗi khi lưu đánh giá.');
+      const msg = err.response?.data?.message || err.response?.data || t('Có lỗi xảy ra khi lưu đánh giá.');
+      setErrorMsg(typeof msg === 'string' ? t(msg) : t('Lỗi khi lưu đánh giá.'));
     } finally {
       setSubmitting(false);
     }
@@ -224,13 +225,13 @@ const TraineeAssessmentModal = ({
 
   // Delete assessment from history
   const handleDeleteAssessment = async (assessmentId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa bản ghi đánh giá này?')) return;
+    if (!window.confirm(t('Bạn có chắc chắn muốn xóa bản ghi đánh giá này?'))) return;
     try {
       await axios.delete(`${API_BASE}/assessments/${assessmentId}`, { headers: getHeaders() });
       setAssessmentHistory(prev => prev.filter(a => a.assessmentId !== assessmentId));
     } catch (err) {
       console.error('Error deleting assessment:', err);
-      alert('Không thể xóa đánh giá.');
+      alert(t('Không thể xóa đánh giá.'));
     }
   };
 
@@ -259,7 +260,7 @@ const TraineeAssessmentModal = ({
                   {t("Đánh Giá Tiến Độ & Ghi Nhận Xét Học Viên")}
                 </h3>
                 <span className="px-2 py-0.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] text-[10px] font-bold border border-[var(--primary-soft)]">
-                  Coach Portal
+                  {t("Coach Portal")}
                 </span>
               </div>
               <p className="text-xs text-[var(--text-muted)]">
@@ -310,11 +311,11 @@ const TraineeAssessmentModal = ({
                 className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] font-semibold transition-all cursor-pointer"
               >
                 {classes.length === 0 ? (
-                  <option value="">-- Chưa có lớp học nào --</option>
+                  <option value="">{t("-- Chưa có lớp học nào --")}</option>
                 ) : (
                   classes.map(cls => (
                     <option key={cls.classId} value={cls.classId}>
-                      {cls.className} ({cls.enrolledCount} học viên)
+                      {cls.className} ({cls.enrolledCount} {t("học viên")})
                     </option>
                   ))
                 )}
@@ -442,7 +443,7 @@ const TraineeAssessmentModal = ({
                 <button
                   type="button"
                   onClick={() => fetchStudentHistory(selectedStudent.userId)}
-                  title="Làm mới lịch sử"
+                  title={t("Làm mới lịch sử")}
                   className="p-2 rounded-lg bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-all cursor-pointer"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin' : ''}`} />
@@ -682,16 +683,16 @@ const TraineeAssessmentModal = ({
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex flex-col gap-1">
                             <h4 className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
-                              <span>{item.assessmentTitle || 'Đánh giá tiến độ'}</span>
+                              <span>{item.assessmentTitle || t('Đánh giá tiến độ')}</span>
                             </h4>
                             <div className="flex items-center gap-3 text-[11px] text-[var(--text-muted)]">
                               <span className="flex items-center gap-1">
                                 <Clock className="w-3 h-3 text-[var(--primary)]" />
-                                {new Date(item.createdAt).toLocaleString('vi-VN')}
+                                {new Date(item.createdAt).toLocaleString(locale())}
                               </span>
                               {item.className && (
                                 <span className="px-2 py-0.5 rounded bg-[var(--primary-soft)] text-[var(--primary)] text-[10px] font-semibold">
-                                  Lớp: {item.className}
+                                  {t("Lớp:")} {item.className}
                                 </span>
                               )}
                             </div>
@@ -707,7 +708,7 @@ const TraineeAssessmentModal = ({
                             <button
                               type="button"
                               onClick={() => handleDeleteAssessment(item.assessmentId)}
-                              title="Xóa đánh giá này"
+                              title={t("Xóa đánh giá này")}
                               className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/20 transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -720,22 +721,22 @@ const TraineeAssessmentModal = ({
                           <div className="flex flex-wrap gap-2 pt-1 border-t border-[var(--border)]">
                             {item.weight && (
                               <span className="px-2.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[10px] font-semibold">
-                                Cân nặng: <strong>{item.weight} kg</strong>
+                                {t("Cân nặng:")} <strong>{item.weight} kg</strong>
                               </span>
                             )}
                             {item.height && (
                               <span className="px-2.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[10px] font-semibold">
-                                Chiều cao: <strong>{item.height} cm</strong>
+                                {t("Chiều cao:")} <strong>{item.height} cm</strong>
                               </span>
                             )}
                             {item.bodyFatPercentage && (
                               <span className="px-2.5 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-semibold">
-                                Body Fat: <strong>{item.bodyFatPercentage}%</strong>
+                                {t("Body Fat:")} <strong>{item.bodyFatPercentage}%</strong>
                               </span>
                             )}
                             {item.muscleMass && (
                               <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[10px] font-semibold">
-                                Khối lượng cơ: <strong>{item.muscleMass} kg</strong>
+                                {t("Khối lượng cơ:")} <strong>{item.muscleMass} kg</strong>
                               </span>
                             )}
                           </div>
@@ -744,7 +745,7 @@ const TraineeAssessmentModal = ({
                         {/* Feedback Note Content */}
                         <div className="p-3 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] text-xs space-y-1">
                           <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
-                            Nhận xét của Huấn Luyện Viên:
+                            {t("Nhận xét của Huấn Luyện Viên:")}
                           </span>
                           <p className="text-[var(--text)] italic leading-relaxed">
                             "{item.feedbackNote}"
@@ -755,7 +756,7 @@ const TraineeAssessmentModal = ({
                         {item.recommendation && (
                           <div className="text-[11px] text-[var(--text-muted)] flex items-start gap-1.5 pt-0.5">
                             <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                            <span><strong>Dặn dò:</strong> {item.recommendation}</span>
+                            <span><strong>{t("Dặn dò:")}</strong> {item.recommendation}</span>
                           </div>
                         )}
                       </div>
