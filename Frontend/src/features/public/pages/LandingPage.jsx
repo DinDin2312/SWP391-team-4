@@ -77,7 +77,7 @@ const LandingPage = () => {
           }}
           className="max-w-7xl mx-auto px-6 relative z-10 w-full"
         >
-          <div className="max-w-3xl mx-auto text-center space-y-8">
+          <div className="max-w-6xl mx-auto text-center space-y-8">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-semibold mx-auto">
               <Sparkles className="w-4 h-4" />
               <ShinyText text={t("Premium Sports & Fitness Laboratory")} speed={3} className="tracking-wider" />
