@@ -5,9 +5,10 @@ import axios from 'axios';
 import {
   ChevronLeft, ChevronRight, MapPin,
   Clock, Users, BookOpen, Phone, Mail, ChevronDown, ChevronUp,
-  X, Search, Sparkles, Save, Check, AlertCircle, AlertTriangle, Bell
+  X, Search, Sparkles, Save, Check, AlertCircle, AlertTriangle, Bell, Award
 } from 'lucide-react';
 import SendNotificationModal from '../components/SendNotificationModal';
+import StudentEvaluationModal from '../components/StudentEvaluationModal';
 
 const CoachSchedule = () => {
   useLanguage();
@@ -29,6 +30,15 @@ const CoachSchedule = () => {
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
   const [notifTargetType, setNotifTargetType] = useState('CLASS');
   const [notifClassId, setNotifClassId] = useState(null);
+
+  // Student Evaluation Modal States
+  const [isEvalModalOpen, setIsEvalModalOpen] = useState(false);
+  const [evalClassId, setEvalClassId] = useState(null);
+
+  const handleOpenEvaluationModal = (classId = null) => {
+    setEvalClassId(classId);
+    setIsEvalModalOpen(true);
+  };
 
   const handleOpenClassNotification = (classId) => {
     setNotifTargetType('CLASS');
@@ -242,6 +252,14 @@ const CoachSchedule = () => {
             <h1 className="text-3xl font-bold text-[var(--text)] tracking-tight">{t("Coach Schedule & Trainee Enrolment")}</h1>
             <p className="text-sm text-[var(--text-muted)] max-w-3xl">{t("Select a date on the calendar grid to inspect scheduled sessions, then click to view registered trainees and mark attendance for each class.")}</p>
           </div>
+
+          <button
+            onClick={() => handleOpenEvaluationModal(null)}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/25 flex items-center gap-2 transition-all cursor-pointer shrink-0"
+          >
+            <Award className="w-4 h-4 text-slate-950" />
+            <span>Đánh Giá Tiến Độ Học Viên</span>
+          </button>
         </div>
 
         {/* Toolbar */}
@@ -400,21 +418,30 @@ const CoachSchedule = () => {
 
                       {/* Main Action Button: View registered trainees modal */}
                       <div className="mt-3 pt-3 border-t border-[var(--border)] flex flex-col gap-2">
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-1.5">
                           <button
                             onClick={() => openTraineesModal(s)}
-                            className="py-2 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-[var(--text)] font-semibold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+                            className="py-2 px-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-1 shadow-md shadow-blue-600/20 transition-all cursor-pointer"
                           >
-                            <Users className="w-3.5 h-3.5" />
-                            <span>{t("Học viên (")}{' '}{s.enrolledCount})</span>
+                            <Users className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">{t("Học viên (")}{' '}{s.enrolledCount})</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenEvaluationModal(s.classId)}
+                            className="py-2 px-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 hover:text-white font-semibold text-xs border border-amber-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                            title="Đánh giá tiến độ học viên của lớp này"
+                          >
+                            <Award className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <span>Đánh giá</span>
                           </button>
 
                           <button
                             onClick={() => handleOpenClassNotification(s.classId)}
-                            className="py-2 px-3 rounded-xl bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 hover:text-[var(--text)] font-semibold text-xs border border-blue-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                            className="py-2 px-2 rounded-xl bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 hover:text-white font-semibold text-xs border border-blue-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer"
                           >
-                            <Bell className="w-3.5 h-3.5 text-[var(--primary)]" />
-                            <span>{t("Báo tin lớp")}</span>
+                            <Bell className="w-3.5 h-3.5 text-[var(--primary)] shrink-0" />
+                            <span>Báo tin</span>
                           </button>
                         </div>
 
@@ -669,6 +696,14 @@ const CoachSchedule = () => {
         onClose={() => setIsNotifModalOpen(false)}
         initialTargetType={notifTargetType}
         initialClassId={notifClassId}
+      />
+
+      {/* Student Progress Evaluation Modal */}
+      <StudentEvaluationModal
+        isOpen={isEvalModalOpen}
+        onClose={() => setIsEvalModalOpen(false)}
+        initialClassId={evalClassId}
+        onSuccess={() => fetchCoachSchedules()}
       />
     </div>
   );

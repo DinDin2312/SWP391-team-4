@@ -268,3 +268,54 @@ CREATE TABLE MEMBERSHIP_BENEFIT_ROOMS (
  FOREIGN KEY(benefit_id) REFERENCES MEMBERSHIP_SUBJECT_BENEFITS(benefit_id) ON DELETE CASCADE,
  FOREIGN KEY(room_id) REFERENCES ROOMS(room_id)
 );
+
+-- ================== 4. TIẾN ĐỘ HỌC VIÊN & ĐÁNH GIÁ NHẬN XÉT COACH ==================
+CREATE TABLE `STUDENT_PROGRESS` (
+  `progress_id` int PRIMARY KEY AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `coach_id` int,
+  `weight_kg` decimal(5,2),
+  `height_cm` decimal(5,2),
+  `body_fat_pct` decimal(4,2),
+  `muscle_mass_kg` decimal(4,2),
+  `notes` text,
+  `recorded_date` date NOT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `USERS` (`user_id`),
+  FOREIGN KEY (`coach_id`) REFERENCES `USERS` (`user_id`),
+  KEY `idx_student_progress_user` (`user_id`, `recorded_date`)
+);
+
+CREATE TABLE `COACH_STUDENT_EVALUATIONS` (
+  `evaluation_id` int PRIMARY KEY AUTO_INCREMENT,
+  `coach_id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `class_id` int,
+  `evaluation_type` varchar(50) DEFAULT 'MONTHLY',
+  `attendance_score` int,
+  `effort_score` int,
+  `technique_score` int,
+  `coach_comment` text NOT NULL,
+  `recommendations` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`coach_id`) REFERENCES `USERS` (`user_id`),
+  FOREIGN KEY (`user_id`) REFERENCES `USERS` (`user_id`),
+  FOREIGN KEY (`class_id`) REFERENCES `CLASSES` (`class_id`),
+  KEY `idx_eval_coach_user` (`coach_id`, `user_id`)
+);
+
+CREATE TABLE `COACH_REVIEWS` (
+  `review_id` int PRIMARY KEY AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `coach_id` int NOT NULL,
+  `class_id` int,
+  `rating` int NOT NULL,
+  `comment` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `USERS` (`user_id`),
+  FOREIGN KEY (`coach_id`) REFERENCES `USERS` (`user_id`),
+  FOREIGN KEY (`class_id`) REFERENCES `CLASSES` (`class_id`),
+  CHECK (`rating` BETWEEN 1 AND 5),
+  KEY `idx_coach_reviews_coach` (`coach_id`)
+);
+

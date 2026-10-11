@@ -1,10 +1,12 @@
 package com.team4.sportscenter.modules.coach.controllers;
 
 import com.team4.sportscenter.modules.coach.dtos.request.AssignWorkoutPlanRequest;
+import com.team4.sportscenter.modules.coach.dtos.request.CreateEvaluationRequest;
 import com.team4.sportscenter.modules.coach.dtos.request.CreateExerciseRequest;
 import com.team4.sportscenter.modules.coach.dtos.request.SendCoachNotificationRequest;
 import com.team4.sportscenter.modules.coach.dtos.request.UpdateAttendanceRequest;
 import com.team4.sportscenter.modules.coach.dtos.response.*;
+import com.team4.sportscenter.modules.coach.services.CoachEvaluationService;
 import com.team4.sportscenter.modules.coach.services.CoachNotificationService;
 import com.team4.sportscenter.modules.coach.services.CoachScheduleService;
 import com.team4.sportscenter.modules.coach.services.CoachWorkoutService;
@@ -25,6 +27,7 @@ public class CoachController {
     private final CoachScheduleService coachScheduleService;
     private final CoachNotificationService coachNotificationService;
     private final CoachWorkoutService coachWorkoutService;
+    private final CoachEvaluationService coachEvaluationService;
 
     @GetMapping("/schedules")
     public ResponseEntity<List<CoachScheduleResponse>> getCoachSchedules(Authentication authentication) {
@@ -119,6 +122,43 @@ public class CoachController {
         String coachEmail = authentication.getName();
         coachWorkoutService.deleteWorkoutPlan(planId, coachEmail);
         return ResponseEntity.ok(Map.of("message", "Xóa giáo án bài tập thành công!"));
+    }
+
+    // ==================== ĐÁNH GIÁ TIẾN ĐỘ HỌC VIÊN ====================
+
+    @GetMapping("/classes/{classId}/students")
+    public ResponseEntity<List<CoachStudentItemResponse>> getClassStudents(
+            @PathVariable Integer classId,
+            Authentication authentication) {
+        String coachEmail = authentication.getName();
+        return ResponseEntity.ok(coachEvaluationService.getStudentsByClassId(classId, coachEmail));
+    }
+
+    @PostMapping("/evaluations")
+    public ResponseEntity<?> createEvaluation(
+            @RequestBody CreateEvaluationRequest request,
+            Authentication authentication) {
+        String coachEmail = authentication.getName();
+        Map<String, Object> result = coachEvaluationService.createEvaluation(request, coachEmail);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/evaluations")
+    public ResponseEntity<List<CoachStudentEvaluationResponse>> getEvaluations(
+            @RequestParam(required = false) Integer userId,
+            @RequestParam(required = false) Integer classId,
+            Authentication authentication) {
+        String coachEmail = authentication.getName();
+        return ResponseEntity.ok(coachEvaluationService.getEvaluations(coachEmail, userId, classId));
+    }
+
+    @DeleteMapping("/evaluations/{evaluationId}")
+    public ResponseEntity<?> deleteEvaluation(
+            @PathVariable Integer evaluationId,
+            Authentication authentication) {
+        String coachEmail = authentication.getName();
+        coachEvaluationService.deleteEvaluation(evaluationId, coachEmail);
+        return ResponseEntity.ok(Map.of("message", "Xóa bản ghi đánh giá thành công!"));
     }
 }
 
