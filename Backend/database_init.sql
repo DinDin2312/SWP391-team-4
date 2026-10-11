@@ -268,3 +268,37 @@ CREATE TABLE MEMBERSHIP_BENEFIT_ROOMS (
  FOREIGN KEY(benefit_id) REFERENCES MEMBERSHIP_SUBJECT_BENEFITS(benefit_id) ON DELETE CASCADE,
  FOREIGN KEY(room_id) REFERENCES ROOMS(room_id)
 );
+
+-- ================== 4. ĐÁNH GIÁ TIẾN ĐỘ HỌC VIÊN CỦA HLV ==================
+CREATE TABLE `TRAINEE_ASSESSMENTS` (
+    `assessment_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `coach_id` INT NOT NULL,
+    `user_id` INT NOT NULL,
+    `schedule_id` INT DEFAULT NULL,
+    `booking_id` INT DEFAULT NULL,
+    `plan_id` INT DEFAULT NULL,
+    `assessment_title` VARCHAR(255) DEFAULT NULL,
+    `weight` DECIMAL(5,2) DEFAULT NULL,
+    `height` DECIMAL(5,2) DEFAULT NULL,
+    `body_fat_percentage` DECIMAL(4,1) DEFAULT NULL,
+    `muscle_mass` DECIMAL(5,2) DEFAULT NULL,
+    `performance_rating` INT DEFAULT NULL,
+    `attendance_rating` INT DEFAULT NULL,
+    `feedback_note` TEXT NOT NULL,
+    `recommendation` TEXT DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY `idx_assessment_user` (`user_id`, `created_at`),
+    KEY `idx_assessment_coach` (`coach_id`, `created_at`)
+);
+
+ALTER TABLE `TRAINEE_ASSESSMENTS` ADD CONSTRAINT `fk_assessment_coach` FOREIGN KEY (`coach_id`) REFERENCES `USERS` (`user_id`);
+ALTER TABLE `TRAINEE_ASSESSMENTS` ADD CONSTRAINT `fk_assessment_user` FOREIGN KEY (`user_id`) REFERENCES `USERS` (`user_id`);
+ALTER TABLE `TRAINEE_ASSESSMENTS` ADD CONSTRAINT `fk_assessment_schedule` FOREIGN KEY (`schedule_id`) REFERENCES `SCHEDULES` (`schedule_id`) ON DELETE SET NULL;
+ALTER TABLE `TRAINEE_ASSESSMENTS` ADD CONSTRAINT `fk_assessment_booking` FOREIGN KEY (`booking_id`) REFERENCES `BOOKINGS` (`booking_id`) ON DELETE SET NULL;
+ALTER TABLE `TRAINEE_ASSESSMENTS` ADD CONSTRAINT `fk_assessment_plan` FOREIGN KEY (`plan_id`) REFERENCES `COACH_WORKOUT_PLANS` (`plan_id`) ON DELETE SET NULL;
+
+-- Dữ liệu mẫu đánh giá tiến độ học viên
+INSERT INTO `TRAINEE_ASSESSMENTS` (`assessment_id`, `coach_id`, `user_id`, `schedule_id`, `booking_id`, `plan_id`, `assessment_title`, `weight`, `height`, `body_fat_percentage`, `muscle_mass`, `performance_rating`, `attendance_rating`, `feedback_note`, `recommendation`, `created_at`) VALUES
+(1, 3, 6, 1, 1, NULL, 'Đánh giá buổi tập Gym đầu tiên', 72.50, 175.00, 21.0, 32.50, 4, 5, 'Học viên có thể lực nền tảng khá, tư thế squat và deadlift cơ bản đúng kỹ thuật. Cần chú ý hít thở đều.', 'Tập trung siết cơ bụng khi nâng tạ. Uống thêm nước và bổ sung thêm đạm sau buổi tập.', '2026-10-01 08:00:00'),
+(2, 4, 7, 4, 4, NULL, 'Kiểm tra độ dẻo dai và hơi thở Yoga', 54.00, 162.00, 24.5, 21.00, 5, 5, 'Khả năng giữ thăng bằng rất tốt, kiểm soát hơi thở đều đặn trong các tư thế chiến binh và uốn lưng.', 'Tiếp tục duy trì giãn cơ mỗi sáng 15 phút tại nhà để cải thiện khớp háng.', '2026-10-02 19:45:00');
+
