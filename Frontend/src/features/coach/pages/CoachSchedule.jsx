@@ -5,9 +5,10 @@ import axios from 'axios';
 import {
   ChevronLeft, ChevronRight, MapPin,
   Clock, Users, BookOpen, Phone, Mail, ChevronDown, ChevronUp,
-  X, Search, Sparkles, Save, Check, AlertCircle, AlertTriangle, Bell
+  X, Search, Sparkles, Save, Check, AlertCircle, AlertTriangle, Bell, Star
 } from 'lucide-react';
 import SendNotificationModal from '../components/SendNotificationModal';
+import TraineeAssessmentModal from '../components/TraineeAssessmentModal';
 
 const CoachSchedule = () => {
   useLanguage();
@@ -30,6 +31,33 @@ const CoachSchedule = () => {
   const [notifTargetType, setNotifTargetType] = useState('CLASS');
   const [notifClassId, setNotifClassId] = useState(null);
 
+  // Assessment Modal States
+  const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false);
+  const [assessmentInitialClassId, setAssessmentInitialClassId] = useState(null);
+  const [assessmentInitialScheduleId, setAssessmentInitialScheduleId] = useState(null);
+  const [assessmentInitialStudent, setAssessmentInitialStudent] = useState(null);
+
+  const handleOpenGeneralAssessment = () => {
+    setAssessmentInitialClassId(null);
+    setAssessmentInitialScheduleId(null);
+    setAssessmentInitialStudent(null);
+    setIsAssessmentModalOpen(true);
+  };
+
+  const handleOpenScheduleAssessment = (schedule) => {
+    setAssessmentInitialClassId(schedule.classId);
+    setAssessmentInitialScheduleId(schedule.scheduleId);
+    setAssessmentInitialStudent(null);
+    setIsAssessmentModalOpen(true);
+  };
+
+  const handleOpenDirectStudentAssessment = (student, schedule) => {
+    setAssessmentInitialClassId(schedule.classId);
+    setAssessmentInitialScheduleId(schedule.scheduleId);
+    setAssessmentInitialStudent(student);
+    setIsAssessmentModalOpen(true);
+  };
+
   const handleOpenClassNotification = (classId) => {
     setNotifTargetType('CLASS');
     setNotifClassId(classId);
@@ -44,9 +72,10 @@ const CoachSchedule = () => {
       const response = await axios.get('http://localhost:8080/api/v1/coach/schedules', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setSchedules(response.data);
+      setSchedules(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching coach schedules:', error);
+      setSchedules([]);
     } finally {
       setLoading(false);
     }
@@ -210,8 +239,10 @@ const CoachSchedule = () => {
     setSelectedDate(new Date());
   };
 
+  const safeSchedules = Array.isArray(schedules) ? schedules : [];
+
   // Filter schedules for the selected date
-  const selectedDateSchedules = schedules.filter(s => {
+  const selectedDateSchedules = safeSchedules.filter(s => {
     const sDate = new Date(s.startTime);
     return sDate.getDate() === selectedDate.getDate() &&
       sDate.getMonth() === selectedDate.getMonth() &&
@@ -219,8 +250,8 @@ const CoachSchedule = () => {
   });
 
   // Calculate stats
-  const totalSchedules = schedules.length;
-  const totalEnrolledStudents = schedules.reduce((sum, s) => sum + (s.enrolledCount || 0), 0);
+  const totalSchedules = safeSchedules.length;
+  const totalEnrolledStudents = safeSchedules.reduce((sum, s) => sum + (s.enrolledCount || 0), 0);
 
   const toggleExpandSchedule = (scheduleId) => {
     setExpandedScheduleId(prev => prev === scheduleId ? null : scheduleId);
@@ -237,11 +268,20 @@ const CoachSchedule = () => {
     <div className="flex flex-col w-full pb-8">
       {/* Top Header */}
       <div className="flex flex-col gap-2 mb-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
             <h1 className="text-3xl font-bold text-[var(--text)] tracking-tight">{t("Coach Schedule & Trainee Enrolment")}</h1>
             <p className="text-sm text-[var(--text-muted)] max-w-3xl">{t("Select a date on the calendar grid to inspect scheduled sessions, then click to view registered trainees and mark attendance for each class.")}</p>
           </div>
+
+          {/* Quick Action Button: Evaluate Trainees */}
+          <button
+            onClick={handleOpenGeneralAssessment}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/25 flex items-center gap-2 transition-all cursor-pointer shrink-0 self-start md:self-auto"
+          >
+            <Star className="w-4 h-4 fill-slate-950 text-slate-950" />
+            <span>{t("Đánh Giá Học Viên")}</span>
+          </button>
         </div>
 
         {/* Toolbar */}
@@ -299,7 +339,7 @@ const CoachSchedule = () => {
                 const isToday = cell.date.getDate() === new Date().getDate() && cell.date.getMonth() === new Date().getMonth() && cell.date.getFullYear() === new Date().getFullYear();
 
                 // Find schedules for this cell
-                const daySchedules = schedules.filter(s => {
+                const daySchedules = safeSchedules.filter(s => {
                   const sDate = new Date(s.startTime);
                   return sDate.getDate() === cell.date.getDate() && sDate.getMonth() === cell.date.getMonth();
                 });
@@ -400,21 +440,29 @@ const CoachSchedule = () => {
 
                       {/* Main Action Button: View registered trainees modal */}
                       <div className="mt-3 pt-3 border-t border-[var(--border)] flex flex-col gap-2">
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-1.5">
                           <button
                             onClick={() => openTraineesModal(s)}
-                            className="py-2 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-[var(--text)] font-semibold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+                            className="py-2 px-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-[var(--text)] font-semibold text-[11px] flex items-center justify-center gap-1 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
                           >
                             <Users className="w-3.5 h-3.5" />
-                            <span>{t("Học viên (")}{' '}{s.enrolledCount})</span>
+                            <span>{t("Học viên")}{' '}({s.enrolledCount})</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenScheduleAssessment(s)}
+                            className="py-2 px-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 hover:text-white font-semibold text-[11px] border border-amber-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                          >
+                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                            <span>{t("Đánh giá")}</span>
                           </button>
 
                           <button
                             onClick={() => handleOpenClassNotification(s.classId)}
-                            className="py-2 px-3 rounded-xl bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 hover:text-[var(--text)] font-semibold text-xs border border-blue-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                            className="py-2 px-2 rounded-xl bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 hover:text-[var(--text)] font-semibold text-[11px] border border-blue-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer"
                           >
                             <Bell className="w-3.5 h-3.5 text-[var(--primary)]" />
-                            <span>{t("Báo tin lớp")}</span>
+                            <span>{t("Báo tin")}</span>
                           </button>
                         </div>
 
@@ -581,40 +629,54 @@ const CoachSchedule = () => {
                         </div>
                       </div>
 
-                      {/* Attendance Selector Controls */}
-                      <div className="flex items-center gap-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-1 shrink-0">
+                      {/* Attendance Selector Controls & Assessment Trigger */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-1 shrink-0">
+                          <button
+                            type="button"
+                            disabled={!isAllowed}
+                            onClick={() => handleStatusChange(key, 'NOT_YET')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${currentStatus === 'NOT_YET'
+                                ? t('bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--border)] shadow')
+                                : t('text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]')
+                              } ${!isAllowed ? t('opacity-50 cursor-not-allowed') : t('cursor-pointer')}`}
+                            title={t(!isAllowed ? t('Chưa đến ngày học') : t('Đặt trạng thái Chưa điểm danh'))}
+                          >{t("NOT YET")}</button>
+                          <button
+                            type="button"
+                            disabled={!isAllowed}
+                            onClick={() => handleStatusChange(key, 'PRESENT')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${currentStatus === 'PRESENT'
+                                ? t('bg-[var(--success-hover)] text-[color:var(--on-primary)] border border-[var(--success-soft)] shadow shadow-[var(--shadow)]')
+                                : t('text-[var(--text-muted)] hover:text-[var(--success-text)] hover:bg-[var(--success-soft)]')
+                              } ${!isAllowed ? t('opacity-50 cursor-not-allowed') : t('cursor-pointer')}`}
+                            title={t(!isAllowed ? t('Chưa đến ngày học') : t('Điểm danh Có Mặt'))}
+                          >
+                            <Check className="w-3.5 h-3.5" />{t("Present")}</button>
+                          <button
+                            type="button"
+                            disabled={!isAllowed}
+                            onClick={() => handleStatusChange(key, 'ABSENT')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${currentStatus === 'ABSENT'
+                                ? t('bg-[var(--rose)] text-[color:var(--on-primary)] border border-[var(--rose-soft)] shadow shadow-[var(--shadow)]')
+                                : t('text-[var(--text-muted)] hover:text-[var(--rose)] hover:bg-[var(--rose-soft)]')
+                              } ${!isAllowed ? t('opacity-50 cursor-not-allowed') : t('cursor-pointer')}`}
+                            title={t(!isAllowed ? t('Chưa đến ngày học') : t('Điểm danh Vắng Mặt'))}
+                          >
+                            <X className="w-3.5 h-3.5" />{t("Absent")}
+                          </button>
+                        </div>
+
+                        {/* Assessment Quick Trigger */}
                         <button
                           type="button"
-                          disabled={!isAllowed}
-                          onClick={() => handleStatusChange(key, 'NOT_YET')}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${currentStatus === 'NOT_YET'
-                              ? t('bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--border)] shadow')
-                              : t('text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]')
-                            } ${!isAllowed ? t('opacity-50 cursor-not-allowed') : t('cursor-pointer')}`}
-                          title={t(!isAllowed ? t('Chưa đến ngày học') : t('Đặt trạng thái Chưa điểm danh'))}
-                        >{t("NOT YET")}</button>
-                        <button
-                          type="button"
-                          disabled={!isAllowed}
-                          onClick={() => handleStatusChange(key, 'PRESENT')}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${currentStatus === 'PRESENT'
-                              ? t('bg-[var(--success-hover)] text-[color:var(--on-primary)] border border-[var(--success-soft)] shadow shadow-[var(--shadow)]')
-                              : t('text-[var(--text-muted)] hover:text-[var(--success-text)] hover:bg-[var(--success-soft)]')
-                            } ${!isAllowed ? t('opacity-50 cursor-not-allowed') : t('cursor-pointer')}`}
-                          title={t(!isAllowed ? t('Chưa đến ngày học') : t('Điểm danh Có Mặt'))}
+                          onClick={() => handleOpenDirectStudentAssessment(st, activeModalSchedule)}
+                          title={t("Đánh giá tiến độ học viên này")}
+                          className="px-2.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer shrink-0"
                         >
-                          <Check className="w-3.5 h-3.5" />{t("Present")}</button>
-                        <button
-                          type="button"
-                          disabled={!isAllowed}
-                          onClick={() => handleStatusChange(key, 'ABSENT')}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${currentStatus === 'ABSENT'
-                              ? t('bg-[var(--rose)] text-[color:var(--on-primary)] border border-[var(--rose-soft)] shadow shadow-[var(--shadow)]')
-                              : t('text-[var(--text-muted)] hover:text-[var(--rose)] hover:bg-[var(--rose-soft)]')
-                            } ${!isAllowed ? t('opacity-50 cursor-not-allowed') : t('cursor-pointer')}`}
-                          title={t(!isAllowed ? t('Chưa đến ngày học') : t('Điểm danh Vắng Mặt'))}
-                        >
-                          <X className="w-3.5 h-3.5" />{t("Absent")}</button>
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                          <span className="hidden sm:inline">{t("Đánh giá")}</span>
+                        </button>
                       </div>
                     </div>
                   );
@@ -670,9 +732,22 @@ const CoachSchedule = () => {
         initialTargetType={notifTargetType}
         initialClassId={notifClassId}
       />
+
+      {/* Trainee Assessment Modal */}
+      <TraineeAssessmentModal
+        isOpen={isAssessmentModalOpen}
+        onClose={() => setIsAssessmentModalOpen(false)}
+        initialClassId={assessmentInitialClassId}
+        initialScheduleId={assessmentInitialScheduleId}
+        initialStudent={assessmentInitialStudent}
+        onSuccess={() => {
+          fetchCoachSchedules();
+        }}
+      />
     </div>
   );
 };
 
 export default CoachSchedule;
+
 
