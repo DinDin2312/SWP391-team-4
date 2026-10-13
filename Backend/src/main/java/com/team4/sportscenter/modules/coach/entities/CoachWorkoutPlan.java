@@ -30,6 +30,10 @@ public class CoachWorkoutPlan {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_id")
+    private com.team4.sportscenter.modules.member.entities.GymClass gymClass;
+
     @Column(name = "title")
     private String title;
 

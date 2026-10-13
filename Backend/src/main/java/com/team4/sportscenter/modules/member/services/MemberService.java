@@ -20,4 +20,8 @@ public interface MemberService {
     void addPackageToCart(String email, Integer packageId);
     List<com.team4.sportscenter.modules.member.dtos.response.PackageResponse> getAllPackages();
     List<com.team4.sportscenter.modules.member.dtos.response.MemberPackageResponse> getMyPackages(String email);
+
+    List<com.team4.sportscenter.modules.member.dtos.response.EnrolledClassResponse> getEnrolledClasses(String email);
+    List<com.team4.sportscenter.modules.member.dtos.response.MemberWorkoutPlanResponse> getWorkoutsByClass(String email, Integer classId);
+    List<com.team4.sportscenter.modules.member.dtos.response.MemberWorkoutPlanResponse> getMyWorkouts(String email);
 }

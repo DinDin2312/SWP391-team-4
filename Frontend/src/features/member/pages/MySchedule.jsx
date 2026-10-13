@@ -6,8 +6,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   ChevronLeft, ChevronRight, Plus, Activity, MapPin,
-  User, CheckCircle2, XCircle, Clock
+  User, CheckCircle2, XCircle, Clock, Dumbbell
 } from 'lucide-react';
+import MemberWorkoutsModal from '../components/MemberWorkoutsModal';
 
 const MySchedule = () => {
   useLanguage();
@@ -17,6 +18,7 @@ const MySchedule = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cancelModal, setCancelModal] = useState({ isOpen: false, classId: null });
+  const [workoutModal, setWorkoutModal] = useState({ isOpen: false, classId: 'ALL' });
 
   useEffect(() => {
     fetchBookings();
@@ -128,6 +130,14 @@ const MySchedule = () => {
               </button>
             </div>
             <button onClick={goToToday} className="px-4 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:text-[var(--text)] hover:border-[var(--border)] font-semibold text-xs transition-all">{t("Today")}</button>
+            <button
+              onClick={() => setWorkoutModal({ isOpen: true, classId: 'ALL' })}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--surface)] border border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary-soft)] font-semibold text-sm transition-all shadow-[var(--shadow)]"
+              title={t("Xem bài tập được HLV giao")}
+            >
+              <Dumbbell className="w-4 h-4 text-[var(--primary)]" />
+              <span>{t("Xem bài tập")}</span>
+            </button>
             <button onClick={() => navigate('/member/book-class')} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--primary)] text-[color:var(--on-primary)] font-semibold text-sm hover:bg-[var(--primary)] transition-all shadow-[var(--shadow)]">
               <Plus className="w-4 h-4" />
               <span>{t("Book New Session")}</span>
@@ -271,6 +281,15 @@ const MySchedule = () => {
                         )}
                       </div>
 
+                      {/* Class Workout Action Button */}
+                      <button
+                        onClick={() => setWorkoutModal({ isOpen: true, classId: b.classId })}
+                        className="w-full mt-2 py-1.5 px-3 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[color:var(--on-primary)] text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-[var(--primary)]/20"
+                      >
+                        <Dumbbell className="w-3.5 h-3.5" />
+                        <span>{t("Xem bài tập lớp này")}</span>
+                      </button>
+
                       {isConfirmed && (
                         <div className="flex items-center gap-2 mt-2 pt-3 border-t border-[var(--border)]">
                           <button className="flex-1 py-1.5 rounded-lg bg-[var(--primary)] text-[color:var(--on-primary)] hover:bg-[var(--primary)] text-xs font-bold transition-colors">{t("Check-in QR")}</button>
@@ -298,6 +317,11 @@ const MySchedule = () => {
         title={t("Cancel Class Registration")}
         message={t("Are you sure you want to cancel this class? All future sessions of this class will be dropped from your schedule. This action cannot be undone.")}
         confirmText={t("Yes, Cancel Class")}
+      />
+      <MemberWorkoutsModal
+        isOpen={workoutModal.isOpen}
+        onClose={() => setWorkoutModal({ isOpen: false, classId: 'ALL' })}
+        initialClassId={workoutModal.classId}
       />
     </div>
   );
