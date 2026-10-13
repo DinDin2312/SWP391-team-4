@@ -36,6 +36,14 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import java.util.Collections;
+import com.team4.sportscenter.modules.coach.repositories.CoachWorkoutPlanRepository;
+import com.team4.sportscenter.modules.coach.repositories.CoachClassRepository;
+import com.team4.sportscenter.modules.coach.entities.CoachWorkoutPlan;
+import com.team4.sportscenter.modules.member.dtos.response.EnrolledClassResponse;
+import com.team4.sportscenter.modules.member.dtos.response.MemberWorkoutPlanResponse;
+import com.team4.sportscenter.modules.member.dtos.response.MemberWorkoutExerciseResponse;
+
 @Service
 @RequiredArgsConstructor
 public class MemberServiceImpl implements MemberService {
@@ -49,6 +57,8 @@ public class MemberServiceImpl implements MemberService {
     private final UserRepository userRepository;
     private final com.team4.sportscenter.modules.member.repositories.PackageRepository packageRepository;
     private final NotificationRepository notificationRepository;
+    private final CoachWorkoutPlanRepository coachWorkoutPlanRepository;
+    private final CoachClassRepository coachClassRepository;
 
     @Override
     public MemberMembershipResponse getMyActiveMembership(String email) {
@@ -419,5 +429,98 @@ public class MemberServiceImpl implements MemberService {
         packageBenefits.snapshot(membership);
         membershipRepository.saveAndFlush(membership);
         packageBenefits.snapshotSubjects(membership.getMembershipId(),packageId);
+    }
+
+    @Override
+    public List<EnrolledClassResponse> getEnrolledClasses(String email) {
+        List<GymClass> enrolled = bookingRepository.findEnrolledClassesByEmail(email);
+        List<EnrolledClassResponse> result = new ArrayList<>();
+
+        for (GymClass c : enrolled) {
+            List<Schedule> schedules = bookingRepository.findEnrolledSchedulesByEmailAndClassId(email, c.getClassId());
+            Set<DayOfWeek> days = schedules.stream()
+                    .map(s -> s.getStartTime().getDayOfWeek())
+                    .collect(Collectors.toSet());
+            String pattern = days.stream()
+                    .sorted()
+                    .map(d -> d.getDisplayName(TextStyle.SHORT, Locale.ENGLISH))
+                    .collect(Collectors.joining(", "));
+
+            Integer coachId = (c.getCoach() != null) ? c.getCoach().getUserId() : null;
+            long workoutsCount = 0;
+            if (coachId != null) {
+                workoutsCount = coachWorkoutPlanRepository.countByUserEmailAndClassOrCoach(email, c.getClassId(), coachId);
+            }
+
+            result.add(EnrolledClassResponse.builder()
+                    .classId(c.getClassId())
+                    .className(c.getClassName())
+                    .subjectId(c.getSubject() != null ? c.getSubject().getSubjectId() : null)
+                    .subjectName(c.getSubject() != null ? c.getSubject().getSubjectName() : null)
+                    .coachId(coachId)
+                    .coachName(c.getCoach() != null ? c.getCoach().getFullName() : null)
+                    .coachEmail(c.getCoach() != null ? c.getCoach().getEmail() : null)
+                    .coachAvatar(c.getCoach() != null ? c.getCoach().getAvatarPath() : null)
+                    .roomName(c.getRoom() != null ? c.getRoom().getRoomName() : null)
+                    .imagePath(c.getImagePath())
+                    .status(c.getStatus())
+                    .price(c.getPrice())
+                    .totalBookedSessions(schedules.size())
+                    .schedulePattern(pattern)
+                    .workoutsCount(workoutsCount)
+                    .build());
+        }
+        return result;
+    }
+
+    @Override
+    public List<MemberWorkoutPlanResponse> getWorkoutsByClass(String email, Integer classId) {
+        GymClass gymClass = coachClassRepository.findById(classId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lớp học ID: " + classId));
+
+        Integer coachId = gymClass.getCoach() != null ? gymClass.getCoach().getUserId() : null;
+        if (coachId == null) {
+            return Collections.emptyList();
+        }
+
+        List<CoachWorkoutPlan> plans = coachWorkoutPlanRepository.findByUserEmailAndClassOrCoach(email, classId, coachId);
+        return plans.stream().map(p -> mapToMemberWorkoutPlanResponse(p, gymClass)).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<MemberWorkoutPlanResponse> getMyWorkouts(String email) {
+        List<CoachWorkoutPlan> plans = coachWorkoutPlanRepository.findByUserEmailOrderByCreatedAtDesc(email);
+        return plans.stream().map(p -> mapToMemberWorkoutPlanResponse(p, p.getGymClass())).collect(Collectors.toList());
+    }
+
+    private MemberWorkoutPlanResponse mapToMemberWorkoutPlanResponse(CoachWorkoutPlan p, GymClass defaultClass) {
+        GymClass gymClass = p.getGymClass() != null ? p.getGymClass() : defaultClass;
+        List<MemberWorkoutExerciseResponse> exercises = (p.getPlanDetails() != null)
+                ? p.getPlanDetails().stream().map(d -> MemberWorkoutExerciseResponse.builder()
+                        .detailId(d.getDetailId())
+                        .exerciseId(d.getExercise() != null ? d.getExercise().getExerciseId() : null)
+                        .exerciseName(d.getExercise() != null ? d.getExercise().getExerciseName() : "Bài tập")
+                        .muscleGroup(d.getExercise() != null ? d.getExercise().getMuscleGroup() : "")
+                        .videoUrl(d.getExercise() != null ? d.getExercise().getVideoUrl() : null)
+                        .sets(d.getSets())
+                        .reps(d.getReps())
+                        .restSeconds(d.getRestSeconds())
+                        .build()).collect(Collectors.toList())
+                : Collections.emptyList();
+
+        return MemberWorkoutPlanResponse.builder()
+                .planId(p.getPlanId())
+                .classId(gymClass != null ? gymClass.getClassId() : null)
+                .className(gymClass != null ? gymClass.getClassName() : "Bài tập cá nhân")
+                .coachId(p.getCoach() != null ? p.getCoach().getUserId() : null)
+                .coachName(p.getCoach() != null ? p.getCoach().getFullName() : "HLV")
+                .coachEmail(p.getCoach() != null ? p.getCoach().getEmail() : "")
+                .coachAvatar(p.getCoach() != null ? p.getCoach().getAvatarPath() : null)
+                .title(p.getTitle())
+                .note(p.getNote())
+                .status(p.getStatus())
+                .createdAt(p.getCreatedAt())
+                .exercises(exercises)
+                .build();
     }
 }

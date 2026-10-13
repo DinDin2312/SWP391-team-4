@@ -83,6 +83,8 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
         List<User> targetStudents = new ArrayList<>();
         String classInfo = "";
 
+        GymClass assignedGymClass = null;
+
         if ("INDIVIDUAL".equals(targetType)) {
             if (request.getStudentUserId() == null) {
                 throw new RuntimeException("Vui lòng chọn học viên cần giao bài.");
@@ -91,6 +93,9 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
                     .orElseThrow(
                             () -> new RuntimeException("Không tìm thấy học viên ID: " + request.getStudentUserId()));
             targetStudents.add(student);
+            if (request.getClassId() != null) {
+                assignedGymClass = coachClassRepository.findById(request.getClassId()).orElse(null);
+            }
         } else if ("CLASS".equals(targetType)) {
             if (request.getClassId() == null) {
                 throw new RuntimeException("Vui lòng chọn lớp học cần giao bài.");
@@ -102,6 +107,7 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
                 throw new RuntimeException("Bạn không có quyền giao bài tập cho lớp học này.");
             }
 
+            assignedGymClass = gymClass;
             targetStudents = coachClassRepository.findDistinctStudentsByClassIdAndCoachEmail(request.getClassId(),
                     coachEmail);
             if (targetStudents.isEmpty()) {
@@ -140,6 +146,7 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
             CoachWorkoutPlan plan = CoachWorkoutPlan.builder()
                     .coach(coach)
                     .user(student)
+                    .gymClass(assignedGymClass)
                     .title(request.getTitle().trim())
                     .note(request.getNote() != null ? request.getNote().trim() : "")
                     .status("ACTIVE")
@@ -254,6 +261,8 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
                 .title(plan.getTitle())
                 .note(plan.getNote())
                 .status(plan.getStatus())
+                .classId(plan.getGymClass() != null ? plan.getGymClass().getClassId() : null)
+                .className(plan.getGymClass() != null ? plan.getGymClass().getClassName() : null)
                 .createdAt(plan.getCreatedAt())
                 .details(detailResponses)
                 .build();

@@ -21,5 +21,7 @@ public class CoachWorkoutPlanResponse {
     private String note;
     private String status;
     private LocalDateTime createdAt;
+    private Integer classId;
+    private String className;
     private List<WorkoutPlanDetailResponse> details;
 }

@@ -45,6 +45,23 @@ public class MemberController {
         return ResponseEntity.ok(memberService.getAllCalendarBookings(authentication.getName()));
     }
 
+    @GetMapping("/enrolled-classes")
+    public ResponseEntity<List<com.team4.sportscenter.modules.member.dtos.response.EnrolledClassResponse>> getEnrolledClasses(Authentication authentication) {
+        return ResponseEntity.ok(memberService.getEnrolledClasses(authentication.getName()));
+    }
+
+    @GetMapping("/classes/{classId}/workouts")
+    public ResponseEntity<List<com.team4.sportscenter.modules.member.dtos.response.MemberWorkoutPlanResponse>> getWorkoutsByClass(
+            Authentication authentication,
+            @PathVariable Integer classId) {
+        return ResponseEntity.ok(memberService.getWorkoutsByClass(authentication.getName(), classId));
+    }
+
+    @GetMapping("/my-workouts")
+    public ResponseEntity<List<com.team4.sportscenter.modules.member.dtos.response.MemberWorkoutPlanResponse>> getMyWorkouts(Authentication authentication) {
+        return ResponseEntity.ok(memberService.getMyWorkouts(authentication.getName()));
+    }
+
     @GetMapping("/available-classes")
     public ResponseEntity<List<com.team4.sportscenter.modules.member.dtos.response.AvailableClassResponse>> getAvailableClasses() {
         return ResponseEntity.ok(memberService.getAvailableClasses());
