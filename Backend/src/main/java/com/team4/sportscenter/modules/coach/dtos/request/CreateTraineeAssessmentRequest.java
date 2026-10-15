@@ -20,6 +20,7 @@ public class CreateTraineeAssessmentRequest {
     @NotNull(message = "ID học viên không được để trống")
     private Integer studentUserId;
 
+    private Integer classId;
     private Integer scheduleId;
     private Integer bookingId;
     private Integer planId;

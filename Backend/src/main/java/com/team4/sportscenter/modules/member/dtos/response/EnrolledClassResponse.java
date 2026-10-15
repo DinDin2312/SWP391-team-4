@@ -27,4 +27,5 @@ public class EnrolledClassResponse {
     private Integer totalBookedSessions;
     private String schedulePattern;
     private Long workoutsCount;
+    private Long assessmentsCount;
 }

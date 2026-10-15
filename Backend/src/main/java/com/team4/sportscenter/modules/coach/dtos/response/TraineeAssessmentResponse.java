@@ -27,6 +27,7 @@ public class TraineeAssessmentResponse {
     private String phone;
 
     // Context info
+    private Integer classId;
     private Integer scheduleId;
     private String className;
     private Integer bookingId;
