@@ -5,7 +5,7 @@ import axios from 'axios';
 import {
   ChevronLeft, ChevronRight, MapPin,
   Clock, Users, BookOpen, Phone, Mail, ChevronDown, ChevronUp,
-  X, Search, Sparkles, Save, Check, AlertCircle, AlertTriangle, Bell, Star
+  X, Search, Sparkles, Save, Check, AlertCircle, Bell, Star
 } from 'lucide-react';
 import SendNotificationModal from '../components/SendNotificationModal';
 import TraineeAssessmentModal from '../components/TraineeAssessmentModal';
@@ -103,10 +103,10 @@ const CoachSchedule = () => {
     today.setHours(0, 0, 0, 0);
 
     if (sessionDate > today) {
-      return `Chưa đến ngày học (${sessionDate.toLocaleDateString(locale())}). Điểm danh chỉ được phép thực hiện vào đúng ngày học.`;
+      return t("Chưa đến ngày học ({0}). Điểm danh chỉ được phép thực hiện vào đúng ngày học.", [sessionDate.toLocaleDateString(locale())]);
     }
     if (sessionDate < today) {
-      return `Buổi học đã trôi qua (${sessionDate.toLocaleDateString(locale())}). Không thể điểm danh hoặc thay đổi điểm danh sau khi ngày học đã trôi qua.`;
+      return t("Buổi học đã trôi qua ({0}). Không thể điểm danh hoặc thay đổi điểm danh sau khi ngày học đã trôi qua.", [sessionDate.toLocaleDateString(locale())]);
     }
     return null;
   };
@@ -154,13 +154,13 @@ const CoachSchedule = () => {
         })
       };
 
-      const res = await axios.put(
+      await axios.put(
         `http://localhost:8080/api/v1/coach/schedules/${activeModalSchedule.scheduleId}/attendance`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setSaveSuccessMsg('Điểm danh đã được lưu thành công!');
+      setSaveSuccessMsg(t('Điểm danh đã được lưu thành công!'));
 
       // Re-fetch fresh schedule data from backend
       await fetchCoachSchedules();
@@ -181,8 +181,8 @@ const CoachSchedule = () => {
       setTimeout(() => setSaveSuccessMsg(''), 4000);
     } catch (error) {
       console.error('Error saving attendance:', error);
-      const msg = error.response?.data?.message || error.response?.data || 'Không thể lưu điểm danh';
-      setSaveErrorMsg(typeof msg === 'string' ? msg : 'Lỗi khi lưu điểm danh');
+      const msg = error.response?.data?.message || error.response?.data || t('Không thể lưu điểm danh');
+      setSaveErrorMsg(typeof msg === 'string' ? t(msg) : t('Lỗi khi lưu điểm danh'));
       setTimeout(() => setSaveErrorMsg(''), 5000);
     } finally {
       setSavingAttendance(false);
@@ -409,7 +409,6 @@ const CoachSchedule = () => {
                   const startTime = new Date(s.startTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
                   const endTime = new Date(s.endTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
                   const isExpanded = expandedScheduleId === s.scheduleId;
-                  const canMark = canTakeAttendance(s.startTime);
 
                   return (
                     <div key={idx} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-3 relative overflow-hidden group hover:border-[var(--primary-soft)] transition-all">
