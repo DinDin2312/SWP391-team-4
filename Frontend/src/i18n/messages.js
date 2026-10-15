@@ -1769,7 +1769,15 @@ const workoutPlanLabels = {
   "Instructions": "Hướng Dẫn",
   "Video": "Video",
   "Chưa Có Bài Tập Nào Được Giao": "Chưa Có Bài Tập Nào Được Giao",
-  "No Workout Plans Assigned Yet": "Chưa Có Bài Tập Nào Được Giao"
+  "No Workout Plans Assigned Yet": "Chưa Có Bài Tập Nào Được Giao",
+  "Chưa thanh toán (Thanh toán để nhận bài tập)": "Chưa thanh toán (Thanh toán để nhận bài tập)",
+  "Unpaid (Pay to receive workouts)": "Chưa thanh toán (Thanh toán để nhận bài tập)",
+  "Thanh toán để xác nhận lớp và nhận bài tập": "Thanh toán để xác nhận lớp và nhận bài tập",
+  "Pay now to confirm class and receive workouts": "Thanh toán để xác nhận lớp và nhận bài tập",
+  "Xem và theo dõi giáo án chi tiết theo từng lớp học đã thanh toán.": "Xem và theo dõi giáo án chi tiết theo từng lớp học đã thanh toán.",
+  "View and track detailed workout plans for each paid class.": "Xem và theo dõi giáo án chi tiết theo từng lớp học đã thanh toán.",
+  "Bạn chưa có lớp học nào đã hoàn tất thanh toán. Chỉ những lớp đã thanh toán mới hiển thị bài tập từ HLV!": "Bạn chưa có lớp học nào đã hoàn tất thanh toán. Chỉ những lớp đã thanh toán mới hiển thị bài tập từ HLV!",
+  "You have no paid classes yet. Only paid classes will display workouts from coach!": "Bạn chưa có lớp học nào đã hoàn tất thanh toán. Chỉ những lớp đã thanh toán mới hiển thị bài tập từ HLV!"
 };
 
 for (const [en, vi] of Object.entries(workoutPlanLabels)) {

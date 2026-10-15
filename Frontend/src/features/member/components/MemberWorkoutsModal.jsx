@@ -84,8 +84,15 @@ const MemberWorkoutsModal = ({ isOpen, onClose, initialClassId = null }) => {
       const data = res.data || [];
       setClasses(data);
 
-      // If no initialClassId was provided and we have classes, default to the first class or keep 'ALL'
-      if (!initialClassId && data.length > 0 && selectedClassId === 'ALL') {
+      // If initialClassId was provided, ensure it exists in confirmed classes; otherwise fall back
+      if (initialClassId && initialClassId !== 'ALL') {
+        const classExists = data.some((c) => c.classId === initialClassId);
+        if (classExists) {
+          setSelectedClassId(initialClassId);
+        } else {
+          setSelectedClassId(data.length > 0 ? data[0].classId : 'ALL');
+        }
+      } else if (!initialClassId && data.length > 0 && selectedClassId === 'ALL') {
         setSelectedClassId(data[0].classId);
       }
     } catch (err) {
@@ -165,7 +172,7 @@ const MemberWorkoutsModal = ({ isOpen, onClose, initialClassId = null }) => {
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-[var(--text-muted)] line-clamp-1">
-                {t("Xem và theo dõi giáo án chi tiết theo từng lớp học đã đăng ký, không bị lẫn lộn.")}
+                {t("Xem và theo dõi giáo án chi tiết theo từng lớp học đã thanh toán.")}
               </p>
             </div>
           </div>
@@ -205,7 +212,7 @@ const MemberWorkoutsModal = ({ isOpen, onClose, initialClassId = null }) => {
               <div className="p-6 text-center rounded-2xl bg-[var(--surface)] border border-dashed border-[var(--border)] flex flex-col items-center gap-2">
                 <BookOpen className="w-8 h-8 text-[var(--text-muted)]" />
                 <p className="text-xs text-[var(--text-muted)]">
-                  {t("Bạn chưa đăng ký lớp học nào. Hãy đăng ký lớp để nhận bài tập từ HLV!")}
+                  {t("Bạn chưa có lớp học nào đã hoàn tất thanh toán. Chỉ những lớp đã thanh toán mới hiển thị bài tập từ HLV!")}
                 </p>
               </div>
             ) : (
