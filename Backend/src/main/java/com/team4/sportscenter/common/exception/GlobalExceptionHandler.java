@@ -21,6 +21,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(PackageRuleException.class)
     public ResponseEntity<Map<String,String>> packageRule(PackageRuleException e){return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("code",e.code,"message",e.getMessage()));}
 
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
+    public ResponseEntity<Map<String, String>> handleBusinessException(RuntimeException e) {
+        Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("message", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleException(Exception e) {
         Map<String, String> errorResponse = new HashMap<>();
