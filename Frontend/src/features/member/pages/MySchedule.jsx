@@ -6,9 +6,10 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   ChevronLeft, ChevronRight, Plus, Activity, MapPin,
-  User, CheckCircle2, XCircle, Clock, Dumbbell
+  User, CheckCircle2, XCircle, Clock, Dumbbell, Award
 } from 'lucide-react';
 import MemberWorkoutsModal from '../components/MemberWorkoutsModal';
+import MemberAssessmentsModal from '../components/MemberAssessmentsModal';
 
 const MySchedule = () => {
   useLanguage();
@@ -19,6 +20,7 @@ const MySchedule = () => {
   const [loading, setLoading] = useState(true);
   const [cancelModal, setCancelModal] = useState({ isOpen: false, classId: null });
   const [workoutModal, setWorkoutModal] = useState({ isOpen: false, classId: 'ALL' });
+  const [assessmentModal, setAssessmentModal] = useState({ isOpen: false, classId: 'ALL' });
 
   useEffect(() => {
     fetchBookings();
@@ -137,6 +139,14 @@ const MySchedule = () => {
             >
               <Dumbbell className="w-4 h-4 text-[var(--primary)]" />
               <span>{t("Xem bài tập")}</span>
+            </button>
+            <button
+              onClick={() => setAssessmentModal({ isOpen: true, classId: 'ALL' })}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--surface)] border border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 font-semibold text-sm transition-all shadow-[var(--shadow)]"
+              title={t("Xem đánh giá từ Huấn luyện viên")}
+            >
+              <Award className="w-4 h-4 text-amber-500" />
+              <span>{t("Xem đánh giá")}</span>
             </button>
             <button onClick={() => navigate('/member/book-class')} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--primary)] text-[color:var(--on-primary)] font-semibold text-sm hover:bg-[var(--primary)] transition-all shadow-[var(--shadow)]">
               <Plus className="w-4 h-4" />
@@ -281,23 +291,34 @@ const MySchedule = () => {
                         )}
                       </div>
 
-                      {/* Class Workout Action Button */}
+                      {/* Class Action Buttons */}
                       {isConfirmed ? (
-                        <button
-                          onClick={() => setWorkoutModal({ isOpen: true, classId: b.classId })}
-                          className="w-full mt-2 py-1.5 px-3 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[color:var(--on-primary)] text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-[var(--primary)]/20"
-                        >
-                          <Dumbbell className="w-3.5 h-3.5" />
-                          <span>{t("Xem bài tập lớp này")}</span>
-                        </button>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <button
+                            onClick={() => setWorkoutModal({ isOpen: true, classId: b.classId })}
+                            className="py-1.5 px-2 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[color:var(--on-primary)] text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-[var(--primary)]/20"
+                            title={t("Xem bài tập lớp này")}
+                          >
+                            <Dumbbell className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">{t("Bài tập")}</span>
+                          </button>
+                          <button
+                            onClick={() => setAssessmentModal({ isOpen: true, classId: b.classId })}
+                            className="py-1.5 px-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-amber-500/30"
+                            title={t("Xem đánh giá của HLV cho lớp này")}
+                          >
+                            <Award className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">{t("Đánh giá")}</span>
+                          </button>
+                        </div>
                       ) : (
                         <button
                           onClick={() => navigate('/member/cart')}
                           className="w-full mt-2 py-1.5 px-3 rounded-lg bg-amber-500/10 text-amber-600 hover:bg-amber-500 hover:text-white dark:text-amber-400 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-amber-500/30"
-                          title={t("Thanh toán để xác nhận lớp và nhận bài tập")}
+                          title={t("Thanh toán để xác nhận lớp và nhận bài tập, đánh giá")}
                         >
                           <Clock className="w-3.5 h-3.5" />
-                          <span>{t("Chưa thanh toán (Thanh toán để nhận bài tập)")}</span>
+                          <span>{t("Chưa thanh toán (Thanh toán để nhận bài tập, đánh giá)")}</span>
                         </button>
                       )}
 
@@ -333,6 +354,11 @@ const MySchedule = () => {
         isOpen={workoutModal.isOpen}
         onClose={() => setWorkoutModal({ isOpen: false, classId: 'ALL' })}
         initialClassId={workoutModal.classId}
+      />
+      <MemberAssessmentsModal
+        isOpen={assessmentModal.isOpen}
+        onClose={() => setAssessmentModal({ isOpen: false, classId: 'ALL' })}
+        initialClassId={assessmentModal.classId}
       />
     </div>
   );

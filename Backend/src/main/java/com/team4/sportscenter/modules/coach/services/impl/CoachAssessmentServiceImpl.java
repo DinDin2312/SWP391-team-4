@@ -54,16 +54,30 @@ public class CoachAssessmentServiceImpl implements CoachAssessmentService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin HLV: " + coachEmail));
 
         User student = userRepository.findById(request.getStudentUserId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy học viên với ID: " + request.getStudentUserId()));
+                .orElseThrow(
+                        () -> new RuntimeException("Không tìm thấy học viên với ID: " + request.getStudentUserId()));
 
         Schedule schedule = null;
         if (request.getScheduleId() != null) {
             schedule = coachScheduleRepository.findById(request.getScheduleId()).orElse(null);
         }
+        if (schedule == null && request.getClassId() != null) {
+            List<Schedule> enrolledSchedules = bookingRepository
+                    .findEnrolledSchedulesByEmailAndClassId(student.getEmail(), request.getClassId());
+            if (!enrolledSchedules.isEmpty()) {
+                schedule = enrolledSchedules.get(0);
+            }
+        }
 
         Booking booking = null;
         if (request.getBookingId() != null) {
             booking = bookingRepository.findById(request.getBookingId()).orElse(null);
+        }
+        if (booking == null && schedule != null) {
+            final Integer schedId = schedule.getScheduleId();
+            booking = bookingRepository.findAllBookingsByEmail(student.getEmail()).stream()
+                    .filter(b -> b.getSchedule() != null && b.getSchedule().getScheduleId().equals(schedId))
+                    .findFirst().orElse(null);
         }
 
         CoachWorkoutPlan workoutPlan = null;
@@ -101,7 +115,8 @@ public class CoachAssessmentServiceImpl implements CoachAssessmentService {
             Notification notification = Notification.builder()
                     .user(student)
                     .title("[HLV " + coach.getFullName() + "] Nhận xét & Đánh giá tiến độ mới")
-                    .message("HLV " + coach.getFullName() + " vừa đưa ra nhận xét tiến độ tập luyện mới cho bạn: \"" + saved.getAssessmentTitle() + "\". Hãy vào hồ sơ để kiểm tra chi tiết!")
+                    .message("HLV " + coach.getFullName() + " vừa đưa ra nhận xét tiến độ tập luyện mới cho bạn: \""
+                            + saved.getAssessmentTitle() + "\". Hãy vào hồ sơ để kiểm tra chi tiết!")
                     .type("COACH")
                     .isRead(false)
                     .createdAt(LocalDateTime.now())
@@ -127,7 +142,8 @@ public class CoachAssessmentServiceImpl implements CoachAssessmentService {
 
     @Override
     public List<TraineeAssessmentResponse> getStudentAssessmentHistory(Integer studentUserId, String coachEmail) {
-        List<TraineeAssessment> list = traineeAssessmentRepository.findByCoachEmailAndUserIdOrderByCreatedAtDesc(coachEmail, studentUserId);
+        List<TraineeAssessment> list = traineeAssessmentRepository
+                .findByCoachEmailAndUserIdOrderByCreatedAtDesc(coachEmail, studentUserId);
         return list.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
@@ -157,7 +173,22 @@ public class CoachAssessmentServiceImpl implements CoachAssessmentService {
         traineeAssessmentRepository.delete(assessment);
     }
 
-    private TraineeAssessmentResponse mapToResponse(TraineeAssessment a) {
+    public static TraineeAssessmentResponse mapAssessmentToResponse(TraineeAssessment a) {
+        Integer classId = null;
+        String className = null;
+
+        if (a.getSchedule() != null && a.getSchedule().getGymClass() != null) {
+            classId = a.getSchedule().getGymClass().getClassId();
+            className = a.getSchedule().getGymClass().getClassName();
+        } else if (a.getBooking() != null && a.getBooking().getSchedule() != null
+                && a.getBooking().getSchedule().getGymClass() != null) {
+            classId = a.getBooking().getSchedule().getGymClass().getClassId();
+            className = a.getBooking().getSchedule().getGymClass().getClassName();
+        } else if (a.getWorkoutPlan() != null && a.getWorkoutPlan().getGymClass() != null) {
+            classId = a.getWorkoutPlan().getGymClass().getClassId();
+            className = a.getWorkoutPlan().getGymClass().getClassName();
+        }
+
         return TraineeAssessmentResponse.builder()
                 .assessmentId(a.getAssessmentId())
                 .coachId(a.getCoach() != null ? a.getCoach().getUserId() : null)
@@ -167,8 +198,9 @@ public class CoachAssessmentServiceImpl implements CoachAssessmentService {
                 .fullName(a.getUser() != null ? a.getUser().getFullName() : null)
                 .email(a.getUser() != null ? a.getUser().getEmail() : null)
                 .phone(a.getUser() != null ? a.getUser().getPhone() : null)
+                .classId(classId)
+                .className(className)
                 .scheduleId(a.getSchedule() != null ? a.getSchedule().getScheduleId() : null)
-                .className(a.getSchedule() != null && a.getSchedule().getGymClass() != null ? a.getSchedule().getGymClass().getClassName() : null)
                 .bookingId(a.getBooking() != null ? a.getBooking().getBookingId() : null)
                 .planId(a.getWorkoutPlan() != null ? a.getWorkoutPlan().getPlanId() : null)
                 .planTitle(a.getWorkoutPlan() != null ? a.getWorkoutPlan().getTitle() : null)
@@ -183,5 +215,9 @@ public class CoachAssessmentServiceImpl implements CoachAssessmentService {
                 .recommendation(a.getRecommendation())
                 .createdAt(a.getCreatedAt())
                 .build();
+    }
+
+    private TraineeAssessmentResponse mapToResponse(TraineeAssessment a) {
+        return mapAssessmentToResponse(a);
     }
 }

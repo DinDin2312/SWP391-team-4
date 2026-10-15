@@ -1785,4 +1785,34 @@ for (const [en, vi] of Object.entries(workoutPlanLabels)) {
   translations[vi] = [en, vi];
 }
 
+const coachAssessmentLabels = {
+  "Coach Evaluations": "Đánh Giá Từ Huấn Luyện Viên",
+  "Đánh Giá Từ Huấn Luyện Viên": "Đánh Giá Từ Huấn Luyện Viên",
+  "View Coach Evaluations": "Xem đánh giá",
+  "Xem đánh giá": "Xem đánh giá",
+  "Evaluations": "Đánh giá",
+  "Đánh giá": "Đánh giá",
+  "View and track detailed feedback, physical metrics and coach recommendations for each class.": "Xem nhận xét chi tiết, chỉ số thể chất và lời khuyên định hướng từ HLV theo từng lớp học.",
+  "Xem nhận xét chi tiết, chỉ số thể chất và lời khuyên định hướng từ HLV theo từng lớp học.": "Xem nhận xét chi tiết, chỉ số thể chất và lời khuyên định hướng từ HLV theo từng lớp học.",
+  "Physical & Technical": "Thể lực & Kỹ thuật",
+  "Thể lực & Kỹ thuật": "Thể lực & Kỹ thuật",
+  "Attendance & Attitude": "Chuyên cần & Thái độ",
+  "Chuyên cần & Thái độ": "Chuyên cần & Thái độ",
+  "Body Metrics & Measurements": "Chỉ Số Thể Hình & Đo Lường",
+  "Chỉ Số Thể Hình & Đo Lường": "Chỉ Số Thể Hình & Đo Lường",
+  "Detailed Feedback from Coach": "Nhận xét chi tiết từ Huấn luyện viên",
+  "Nhận xét chi tiết từ Huấn luyện viên": "Nhận xét chi tiết từ Huấn luyện viên",
+  "Advice & Next Training Direction": "Lời khuyên & Định hướng tập luyện tiếp theo",
+  "Lời khuyên & Định hướng tập luyện tiếp theo": "Lời khuyên & Định hướng tập luyện tiếp theo",
+  "No Evaluations Found Yet": "Chưa Có Đánh Giá Nào",
+  "Chưa Có Đánh Giá Nào": "Chưa Có Đánh Giá Nào",
+  "Coach will submit feedback, physical stats, and recommendations after your training sessions!": "Huấn luyện viên phụ trách sẽ gửi nhận xét, chỉ số thể lực và lời khuyên sau các buổi tập luyện của bạn!",
+  "Huấn luyện viên phụ trách sẽ gửi nhận xét, chỉ số thể lực và lời khuyên sau các buổi tập luyện của bạn!": "Huấn luyện viên phụ trách sẽ gửi nhận xét, chỉ số thể lực và lời khuyên sau các buổi tập luyện của bạn!"
+};
+
+for (const [en, vi] of Object.entries(coachAssessmentLabels)) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
 

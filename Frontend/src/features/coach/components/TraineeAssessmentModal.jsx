@@ -192,6 +192,7 @@ const TraineeAssessmentModal = ({
       setSubmitting(true);
       const payload = {
         studentUserId: selectedStudent.userId,
+        classId: selectedClassId ? Number(selectedClassId) : null,
         scheduleId: initialScheduleId ? Number(initialScheduleId) : null,
         assessmentTitle: assessmentTitle.trim() || `${t('Đánh giá buổi học')} (${new Date().toLocaleDateString(locale())})`,
         weight: weight ? parseFloat(weight) : null,

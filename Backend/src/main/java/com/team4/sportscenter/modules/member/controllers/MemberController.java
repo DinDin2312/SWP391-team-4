@@ -62,6 +62,20 @@ public class MemberController {
         return ResponseEntity.ok(memberService.getMyWorkouts(authentication.getName()));
     }
 
+    @GetMapping("/assessments")
+    public ResponseEntity<List<com.team4.sportscenter.modules.coach.dtos.response.TraineeAssessmentResponse>> getMyAssessments(
+            Authentication authentication,
+            @RequestParam(required = false) Integer classId) {
+        return ResponseEntity.ok(memberService.getMyAssessments(authentication.getName(), classId));
+    }
+
+    @GetMapping("/classes/{classId}/assessments")
+    public ResponseEntity<List<com.team4.sportscenter.modules.coach.dtos.response.TraineeAssessmentResponse>> getAssessmentsByClass(
+            Authentication authentication,
+            @PathVariable Integer classId) {
+        return ResponseEntity.ok(memberService.getAssessmentsByClass(authentication.getName(), classId));
+    }
+
     @GetMapping("/available-classes")
     public ResponseEntity<List<com.team4.sportscenter.modules.member.dtos.response.AvailableClassResponse>> getAvailableClasses() {
         return ResponseEntity.ok(memberService.getAvailableClasses());
