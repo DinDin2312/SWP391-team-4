@@ -20,4 +20,7 @@ public interface CoachClassRepository extends JpaRepository<GymClass, Integer> {
 
     @Query("SELECT DISTINCT b.user FROM Booking b JOIN b.schedule s JOIN s.gymClass c WHERE c.classId = :classId AND c.coach.email = :email AND b.status IN ('CONFIRMED', 'PENDING')")
     List<User> findDistinctStudentsByClassIdAndCoachEmail(@Param("classId") Integer classId, @Param("email") String email);
+
+    @Query("SELECT DISTINCT c FROM GymClass c WHERE c.coach.userId = :coachId AND c.subject.subjectId = :subjectId AND (c.status = 'ACTIVE' OR EXISTS (SELECT 1 FROM Schedule s WHERE s.gymClass.classId = c.classId AND s.status = 'SCHEDULED' AND s.endTime > CURRENT_TIMESTAMP))")
+    List<GymClass> findActiveClassesByCoachAndSubject(@Param("coachId") Integer coachId, @Param("subjectId") Integer subjectId);
 }

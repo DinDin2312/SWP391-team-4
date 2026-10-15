@@ -31,6 +31,7 @@ const CoachDashboard = lazy(() => import('../features/coach/pages/CoachDashboard
 const CoachSchedule = lazy(() => import('../features/coach/pages/CoachSchedule'));
 const CoachStudents = lazy(() => import('../features/coach/pages/CoachStudents'));
 const CoachWorkoutPlans = lazy(() => import('../features/coach/pages/CoachWorkoutPlans'));
+const CoachSettings = lazy(() => import('../features/coach/pages/CoachSettings'));
 const ManagerDashboard = lazy(() => import('../features/manager/pages/ManagerDashboard'));
 const ReceptionistDashboard = lazy(() => import('../features/receptionist/pages/ReceptionistDashboard'));
 
@@ -75,6 +76,7 @@ function AppRoutes() {
         <Route path="schedule" element={<CoachSchedule />} />
         <Route path="students" element={<CoachStudents />} />
         <Route path="workouts" element={<CoachWorkoutPlans />} />
+        <Route path="settings" element={<CoachSettings />} />
       </Route>
 
       {/* Legacy role path mappings */}

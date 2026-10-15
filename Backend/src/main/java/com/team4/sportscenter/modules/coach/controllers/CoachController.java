@@ -17,11 +17,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.team4.sportscenter.modules.coach.dtos.request.UpdateCoachProfileRequest;
+import com.team4.sportscenter.modules.coach.services.CoachProfileService;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/coach")
-@RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class CoachController {
 
@@ -29,6 +30,42 @@ public class CoachController {
     private final CoachNotificationService coachNotificationService;
     private final CoachWorkoutService coachWorkoutService;
     private final CoachAssessmentService coachAssessmentService;
+    private final CoachProfileService coachProfileService;
+
+    public CoachController(
+            CoachScheduleService coachScheduleService,
+            CoachNotificationService coachNotificationService,
+            CoachWorkoutService coachWorkoutService,
+            CoachAssessmentService coachAssessmentService,
+            CoachProfileService coachProfileService) {
+        this.coachScheduleService = coachScheduleService;
+        this.coachNotificationService = coachNotificationService;
+        this.coachWorkoutService = coachWorkoutService;
+        this.coachAssessmentService = coachAssessmentService;
+        this.coachProfileService = coachProfileService;
+    }
+
+    // ==================== HỒ SƠ & CÀI ĐẶT HUẤN LUYỆN VIÊN ====================
+
+    @GetMapping("/profile")
+    public ResponseEntity<CoachProfileResponse> getCoachProfile(Authentication authentication) {
+        String coachEmail = authentication.getName();
+        return ResponseEntity.ok(coachProfileService.getCoachProfile(coachEmail));
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateCoachProfile(
+            @RequestBody UpdateCoachProfileRequest request,
+            Authentication authentication) {
+        String coachEmail = authentication.getName();
+        coachProfileService.updateCoachProfile(coachEmail, request);
+        return ResponseEntity.ok(Map.of("message", "Cập nhật hồ sơ huấn luyện viên thành công!"));
+    }
+
+    @GetMapping("/subjects")
+    public ResponseEntity<List<SubjectOptionResponse>> getCoachSubjects() {
+        return ResponseEntity.ok(coachProfileService.getAllSubjects());
+    }
 
     @GetMapping("/schedules")
     public ResponseEntity<List<CoachScheduleResponse>> getCoachSchedules(Authentication authentication) {
