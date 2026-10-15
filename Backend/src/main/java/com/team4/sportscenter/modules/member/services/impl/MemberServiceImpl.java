@@ -475,6 +475,10 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public List<MemberWorkoutPlanResponse> getWorkoutsByClass(String email, Integer classId) {
+        if (!bookingRepository.existsConfirmedByEmailAndClassId(email, classId)) {
+            return Collections.emptyList();
+        }
+
         GymClass gymClass = coachClassRepository.findById(classId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lớp học ID: " + classId));
 
@@ -490,7 +494,15 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public List<MemberWorkoutPlanResponse> getMyWorkouts(String email) {
         List<CoachWorkoutPlan> plans = coachWorkoutPlanRepository.findByUserEmailOrderByCreatedAtDesc(email);
-        return plans.stream().map(p -> mapToMemberWorkoutPlanResponse(p, p.getGymClass())).collect(Collectors.toList());
+        List<GymClass> enrolled = bookingRepository.findEnrolledClassesByEmail(email);
+        Set<Integer> confirmedClassIds = enrolled.stream()
+                .map(GymClass::getClassId)
+                .collect(Collectors.toSet());
+
+        return plans.stream()
+                .filter(p -> p.getGymClass() == null || confirmedClassIds.contains(p.getGymClass().getClassId()))
+                .map(p -> mapToMemberWorkoutPlanResponse(p, p.getGymClass()))
+                .collect(Collectors.toList());
     }
 
     private MemberWorkoutPlanResponse mapToMemberWorkoutPlanResponse(CoachWorkoutPlan p, GymClass defaultClass) {

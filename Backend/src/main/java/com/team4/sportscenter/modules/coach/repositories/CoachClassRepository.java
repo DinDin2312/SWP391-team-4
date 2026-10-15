@@ -15,10 +15,10 @@ public interface CoachClassRepository extends JpaRepository<GymClass, Integer> {
     @Query("SELECT DISTINCT c FROM GymClass c LEFT JOIN FETCH c.room r WHERE c.coach.email = :email")
     List<GymClass> findClassesByCoachEmail(@Param("email") String email);
 
-    @Query("SELECT DISTINCT b.user FROM Booking b JOIN b.schedule s JOIN s.gymClass c WHERE c.coach.email = :email AND b.status IN ('CONFIRMED', 'PENDING')")
+    @Query("SELECT DISTINCT b.user FROM Booking b JOIN b.schedule s JOIN s.gymClass c WHERE c.coach.email = :email AND b.status = 'CONFIRMED'")
     List<User> findDistinctStudentsByCoachEmail(@Param("email") String email);
 
-    @Query("SELECT DISTINCT b.user FROM Booking b JOIN b.schedule s JOIN s.gymClass c WHERE c.classId = :classId AND c.coach.email = :email AND b.status IN ('CONFIRMED', 'PENDING')")
+    @Query("SELECT DISTINCT b.user FROM Booking b JOIN b.schedule s JOIN s.gymClass c WHERE c.classId = :classId AND c.coach.email = :email AND b.status = 'CONFIRMED'")
     List<User> findDistinctStudentsByClassIdAndCoachEmail(@Param("classId") Integer classId, @Param("email") String email);
 
     @Query("SELECT DISTINCT c FROM GymClass c WHERE c.coach.userId = :coachId AND c.subject.subjectId = :subjectId AND (c.status = 'ACTIVE' OR EXISTS (SELECT 1 FROM Schedule s WHERE s.gymClass.classId = c.classId AND s.status = 'SCHEDULED' AND s.endTime > CURRENT_TIMESTAMP))")

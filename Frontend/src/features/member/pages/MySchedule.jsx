@@ -1,6 +1,6 @@
 import { locale } from '../../../i18n/languageStore.js';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
-﻿import { ConfirmModal } from '../../../components/ui/confirm-modal';
+import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -93,8 +93,8 @@ const MySchedule = () => {
   const selectedDateBookings = bookings.filter(b => {
     const bDate = new Date(b.startTime);
     return bDate.getDate() === selectedDate.getDate() &&
-           bDate.getMonth() === selectedDate.getMonth() &&
-           bDate.getFullYear() === selectedDate.getFullYear();
+      bDate.getMonth() === selectedDate.getMonth() &&
+      bDate.getFullYear() === selectedDate.getFullYear();
   });
 
   return (
@@ -273,7 +273,7 @@ const MySchedule = () => {
                       <div className="mt-2 pt-2 border-t border-[var(--border)] flex items-center justify-between">
                         <span className="text-xs text-[var(--text-muted)] font-medium">{t("Attendance:")}</span>
                         {b.attendanceStatus === 'PRESENT' ? (
-                          <span className="text-xs font-bold text-[var(--success-text)] flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5"/>{t("Present")}</span>
+                          <span className="text-xs font-bold text-[var(--success-text)] flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" />{t("Present")}</span>
                         ) : b.attendanceStatus === 'ABSENT' ? (
                           <span className="text-xs font-bold text-[var(--rose)] flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[var(--rose)]"></span>{t("Absent")}</span>
                         ) : (
@@ -282,13 +282,24 @@ const MySchedule = () => {
                       </div>
 
                       {/* Class Workout Action Button */}
-                      <button
-                        onClick={() => setWorkoutModal({ isOpen: true, classId: b.classId })}
-                        className="w-full mt-2 py-1.5 px-3 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[color:var(--on-primary)] text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-[var(--primary)]/20"
-                      >
-                        <Dumbbell className="w-3.5 h-3.5" />
-                        <span>{t("Xem bài tập lớp này")}</span>
-                      </button>
+                      {isConfirmed ? (
+                        <button
+                          onClick={() => setWorkoutModal({ isOpen: true, classId: b.classId })}
+                          className="w-full mt-2 py-1.5 px-3 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[color:var(--on-primary)] text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-[var(--primary)]/20"
+                        >
+                          <Dumbbell className="w-3.5 h-3.5" />
+                          <span>{t("Xem bài tập lớp này")}</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => navigate('/member/cart')}
+                          className="w-full mt-2 py-1.5 px-3 rounded-lg bg-amber-500/10 text-amber-600 hover:bg-amber-500 hover:text-white dark:text-amber-400 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-amber-500/30"
+                          title={t("Thanh toán để xác nhận lớp và nhận bài tập")}
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>{t("Chưa thanh toán (Thanh toán để nhận bài tập)")}</span>
+                        </button>
+                      )}
 
                       {isConfirmed && (
                         <div className="flex items-center gap-2 mt-2 pt-3 border-t border-[var(--border)]">
@@ -304,7 +315,7 @@ const MySchedule = () => {
           </div>
         </div>
       </div>
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={cancelModal.isOpen}
         onClose={() => setCancelModal({ isOpen: false, classId: null })}
         onConfirm={() => {

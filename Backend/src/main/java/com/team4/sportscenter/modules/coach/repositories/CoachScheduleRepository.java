@@ -15,9 +15,9 @@ public interface CoachScheduleRepository extends JpaRepository<Schedule, Integer
     @Query("SELECT s FROM Schedule s JOIN FETCH s.gymClass c JOIN FETCH c.coach u JOIN FETCH c.room r WHERE u.email = :email ORDER BY s.startTime ASC")
     List<Schedule> findSchedulesByCoachEmail(@Param("email") String email);
 
-    @Query("SELECT b FROM Booking b JOIN FETCH b.user u WHERE b.schedule.scheduleId = :scheduleId AND b.status IN ('CONFIRMED', 'PENDING')")
+    @Query("SELECT b FROM Booking b JOIN FETCH b.user u WHERE b.schedule.scheduleId = :scheduleId AND b.status = 'CONFIRMED'")
     List<Booking> findBookingsByScheduleId(@Param("scheduleId") Integer scheduleId);
 
-    @Query("SELECT b FROM Booking b JOIN FETCH b.user u JOIN FETCH b.schedule s JOIN FETCH s.gymClass c JOIN FETCH c.coach ch WHERE ch.email = :email AND b.status IN ('CONFIRMED', 'PENDING')")
+    @Query("SELECT b FROM Booking b JOIN FETCH b.user u JOIN FETCH b.schedule s JOIN FETCH s.gymClass c JOIN FETCH c.coach ch WHERE ch.email = :email AND b.status = 'CONFIRMED'")
     List<Booking> findBookingsByCoachEmail(@Param("email") String email);
 }
