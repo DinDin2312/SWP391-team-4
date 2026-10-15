@@ -3,9 +3,9 @@ import { locale } from '../../../i18n/languageStore.js';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-  Star, Award, Activity, Heart, Scale, Ruler, CheckCircle2,
-  AlertCircle, Loader2, X, Search, User, Users, Calendar,
-  MessageSquare, Sparkles, Plus, Trash2, Clock, Dumbbell, History, RefreshCw, Send
+  Star, Award, Activity, Heart, Scale, CheckCircle2,
+  AlertCircle, Loader2, X, Search, User, Users,
+  MessageSquare, Sparkles, Plus, Trash2, Clock, History, RefreshCw, Send
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8080/api/v1/coach';
@@ -670,8 +670,8 @@ const TraineeAssessmentModal = ({
                 ) : assessmentHistory.length === 0 ? (
                   <div className="py-16 text-center text-xs text-[var(--text-muted)] flex flex-col items-center gap-3">
                     <History className="w-10 h-10 opacity-30 text-[var(--primary)]" />
-                    <p className="font-bold text-sm text-[var(--text)]">{t("Chưa có bản ghi đánh giá nào")}</p>
-                    <p className="max-w-sm">{t("Chuyển sang tab \"Ghi Đánh Giá Mới\" để bắt đầu gửi nhận xét và chấm điểm tiến độ cho học viên này.")}</p>
+                    <p className="font-bold text-sm text-[var(--text)]">{t("No Evaluations Found Yet")}</p>
+                    <p className="max-w-sm">{t('Switch to "New Assessment" tab to start submitting feedback and rating progress for this trainee.')}</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
