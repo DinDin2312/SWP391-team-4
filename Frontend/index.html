@@ -6,14 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NEXUS Sports Center</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
-            animation: { aurora: "aurora 60s linear infinite", scroll: "scroll var(--animation-duration, 40s) var(--animation-direction, forwards) linear infinite", "meteor-effect": "meteor 5s linear infinite" },
-            keyframes: { scroll: { to: { transform: "translate(calc(-50% - 0.5rem))" } }, aurora: { from: { backgroundPosition: "50% 50%, 50% 50%" }, to: { backgroundPosition: "350% 50%, 350% 50%" } }, meteor: { "0%": { transform: "rotate(215deg) translateX(0)", opacity: 1 }, "70%": { opacity: 1 }, "100%": { transform: "rotate(215deg) translateX(-500px)", opacity: 0 } } },
             colors: {
               "surface": "var(--surface)",
               "surface-container-lowest": "var(--surface)",

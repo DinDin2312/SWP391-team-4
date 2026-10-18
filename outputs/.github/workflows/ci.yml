@@ -1,0 +1,149 @@
+name: CI Pipeline (Build, Test & Quality Gate)
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'bugfix/**'
+      - 'fix/**'
+      - 'hotfix/**'
+      - 'update/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (Lint, Unit Tests & Build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Static Analysis (Oxlint)
+        run: npm run lint
+
+      - name: Run Frontend Unit & Rendering Tests (Flows 1-6 & i18n)
+        run: npm test
+
+      - name: Build Production Bundle (Vite)
+        run: npm run build
+
+      - name: Upload Frontend Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: Frontend/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  backend:
+    name: Backend (Flyway Migrations, Unit/Integration Tests & Package)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: SportCenter
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    defaults:
+      run:
+        working-directory: Backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: Backend/pom.xml
+
+      - name: Make Maven wrapper executable
+        run: chmod +x mvnw
+
+      - name: Initialize MySQL schema and seed fixtures
+        run: |
+          mysql --protocol=TCP -h 127.0.0.1 -uroot -proot -e "DROP DATABASE IF EXISTS SportCenter; CREATE DATABASE SportCenter CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+          tail -n +4 database_init.sql | mysql --protocol=TCP -h 127.0.0.1 -uroot -proot SportCenter
+
+      - name: Ensure required 4-Actor role fixtures
+        run: |
+          mysql --protocol=TCP -h 127.0.0.1 -uroot -proot SportCenter -e "INSERT IGNORE INTO ROLES (role_id, role_name) VALUES (1, 'Center Manager'), (2, 'Receptionist'), (3, 'Coach'), (4, 'Member'); SELECT COUNT(*) AS role_count FROM ROLES;"
+
+      - name: Execute Maven Verify (Unit, Integration & Flyway Migration Tests)
+        run: ./mvnw --batch-mode --no-transfer-progress clean verify
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/SportCenter?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: root
+          MIGRATION_TEST_URL: jdbc:mysql://127.0.0.1:3306/SportCenter?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+          MIGRATION_TEST_USERNAME: root
+          MIGRATION_TEST_PASSWORD: root
+
+      - name: Upload Surefire Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: Backend/target/surefire-reports/*.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload Backend JAR Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: Backend/target/*.jar
+          if-no-files-found: error
+          retention-days: 7
+
+  ci-gate:
+    name: CI Quality Gate Summary
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    if: always()
+    steps:
+      - name: Check job statuses
+        run: |
+          if [ "${{ needs.frontend.result }}" != "success" ] || [ "${{ needs.backend.result }}" != "success" ]; then
+            echo "::error::CI Quality Gate failed (frontend=${{ needs.frontend.result }}, backend=${{ needs.backend.result }})"
+            exit 1
+          fi
+          echo "All Frontend and Backend CI checks passed!"

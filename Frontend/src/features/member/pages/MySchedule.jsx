@@ -3,13 +3,13 @@ import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import {
   ChevronLeft, ChevronRight, Plus, Activity, MapPin,
-  User, CheckCircle2, XCircle, Clock, Dumbbell, Award
+  User, CheckCircle2, XCircle, Clock, Dumbbell, Award, QrCode, X
 } from 'lucide-react';
 import MemberWorkoutsModal from '../components/MemberWorkoutsModal';
 import MemberAssessmentsModal from '../components/MemberAssessmentsModal';
+import { memberService } from '../services/memberService';
 
 const MySchedule = () => {
   useLanguage();
@@ -21,6 +21,7 @@ const MySchedule = () => {
   const [cancelModal, setCancelModal] = useState({ isOpen: false, classId: null });
   const [workoutModal, setWorkoutModal] = useState({ isOpen: false, classId: 'ALL' });
   const [assessmentModal, setAssessmentModal] = useState({ isOpen: false, classId: 'ALL' });
+  const [qrModal, setQrModal] = useState({ isOpen: false, session: null });
 
   useEffect(() => {
     fetchBookings();
@@ -29,11 +30,8 @@ const MySchedule = () => {
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/v1/member/calendar-bookings', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setBookings(response.data);
+      const data = await memberService.getCalendarBookings();
+      setBookings(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching calendar bookings:', error);
     } finally {
@@ -175,13 +173,13 @@ const MySchedule = () => {
             {/* Grid */}
             <div className="grid grid-cols-7 gap-1.5 flex-1">
               {calendarGrid.map((cell, idx) => {
-                const isSelected = cell.date.getDate() === selectedDate.getDate() && cell.date.getMonth() === selectedDate.getMonth();
+                const isSelected = cell.date.getDate() === selectedDate.getDate() && cell.date.getMonth() === selectedDate.getMonth() && cell.date.getFullYear() === selectedDate.getFullYear();
                 const isToday = cell.date.getDate() === new Date().getDate() && cell.date.getMonth() === new Date().getMonth() && cell.date.getFullYear() === new Date().getFullYear();
 
                 // Find bookings for this cell
                 const dayBookings = bookings.filter(b => {
                   const bDate = new Date(b.startTime);
-                  return bDate.getDate() === cell.date.getDate() && bDate.getMonth() === cell.date.getMonth();
+                  return bDate.getDate() === cell.date.getDate() && bDate.getMonth() === cell.date.getMonth() && bDate.getFullYear() === cell.date.getFullYear();
                 });
 
                 return (
@@ -324,7 +322,7 @@ const MySchedule = () => {
 
                       {isConfirmed && (
                         <div className="flex items-center gap-2 mt-2 pt-3 border-t border-[var(--border)]">
-                          <button className="flex-1 py-1.5 rounded-lg bg-[var(--primary)] text-[color:var(--on-primary)] hover:bg-[var(--primary)] text-xs font-bold transition-colors">{t("Check-in QR")}</button>
+                          <button onClick={() => setQrModal({ isOpen: true, session: b })} className="flex-1 py-1.5 rounded-lg bg-[var(--primary)] text-[color:var(--on-primary)] hover:bg-[var(--primary)] text-xs font-bold transition-colors">{t("Check-in QR")}</button>
                           <button onClick={() => setCancelModal({ isOpen: true, classId: b.classId })} className="px-3 py-1.5 rounded-lg bg-[var(--surface)] text-[var(--text)] hover:text-[var(--danger-text)] text-xs font-medium transition-colors">{t("Cancel")}</button>
                         </div>
                       )}
@@ -340,10 +338,9 @@ const MySchedule = () => {
         isOpen={cancelModal.isOpen}
         onClose={() => setCancelModal({ isOpen: false, classId: null })}
         onConfirm={() => {
-          axios.post('http://localhost:8080/api/v1/member/cancel-class/' + cancelModal.classId, {}, {
-            headers: { Authorization: "Bearer " + localStorage.getItem('token') }
-          }).then(() => {
-            window.location.reload();
+          memberService.cancelClass(cancelModal.classId).then(() => {
+            setCancelModal({ isOpen: false, classId: null });
+            fetchBookings();
           }).catch(err => alert(err.response?.data || 'Failed to cancel class'));
         }}
         title={t("Cancel Class Registration")}
@@ -360,6 +357,45 @@ const MySchedule = () => {
         onClose={() => setAssessmentModal({ isOpen: false, classId: 'ALL' })}
         initialClassId={assessmentModal.classId}
       />
+      {qrModal.isOpen && qrModal.session && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setQrModal({ isOpen: false, session: null })}>
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 max-w-sm w-full shadow-2xl flex flex-col items-center gap-4 relative" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setQrModal({ isOpen: false, session: null })} className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text)]">
+              <X className="w-5 h-5" />
+            </button>
+            <div className="w-12 h-12 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
+              <QrCode className="w-6 h-6" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-[var(--text)]">{t("Session Check-in Pass")}</h3>
+              <p className="text-xs text-[var(--text-muted)] mt-1">{qrModal.session.className}</p>
+            </div>
+            <div className="p-4 bg-white rounded-xl border border-[var(--border)] flex flex-col items-center gap-2">
+              <QrCode className="w-36 h-36 text-slate-900" />
+              <span className="font-mono text-xs font-bold text-slate-700 tracking-widest">
+                NXS-{qrModal.session.bookingId || qrModal.session.classId || 'PASS'}-{new Date(qrModal.session.startTime).getDate()}
+              </span>
+            </div>
+            <div className="w-full text-xs text-[var(--text-muted)] bg-[var(--bg)] rounded-xl p-3 border border-[var(--border)] flex flex-col gap-1.5">
+              <div className="flex justify-between">
+                <span>{t("Coach:")}</span>
+                <span className="font-semibold text-[var(--text)]">{qrModal.session.coachName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>{t("Location:")}</span>
+                <span className="font-semibold text-[var(--text)]">{qrModal.session.roomName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>{t("Status:")}</span>
+                <span className="font-semibold text-[var(--success-text)]">{codeLabel(qrModal.session.status)}</span>
+              </div>
+            </div>
+            <button onClick={() => setQrModal({ isOpen: false, session: null })} className="w-full py-2.5 rounded-xl bg-[var(--primary)] text-[color:var(--on-primary)] font-bold text-xs">
+              {t("Done")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

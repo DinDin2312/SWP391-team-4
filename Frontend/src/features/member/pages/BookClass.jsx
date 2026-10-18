@@ -3,8 +3,9 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import { packageBookingOptions } from '../packageBookingOptions';
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import axios from 'axios';
-import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar } from 'lucide-react';
+import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar, Sparkles } from 'lucide-react';
 
 const BookClass = () => {
   useLanguage();
@@ -14,10 +15,65 @@ const BookClass = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [toast, setToast] = useState({ visible: false, type: 'success', title: '', message: '' });
+  const [aiHighlightedClassId, setAiHighlightedClassId] = useState(null);
+
+  const triggerClassHighlight = (id, courseList = courses) => {
+    if (!id) return;
+    const targetCourse = (courseList || []).find(c => Number(c.classId) === Number(id));
+    if (targetCourse && targetCourse.nextSessionTime) {
+      setSelectedDate(new Date(targetCourse.nextSessionTime).toDateString());
+    }
+    setSearchTerm('');
+    setAiHighlightedClassId(null);
+    requestAnimationFrame(() => {
+      setAiHighlightedClassId(Number(id));
+    });
+    setTimeout(() => {
+      const el = document.getElementById(`ai-class-${id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 280);
+    setTimeout(() => {
+      setAiHighlightedClassId(prev => (Number(prev) === Number(id) ? null : prev));
+    }, 10000);
+  };
 
   useEffect(() => {
     fetchCourses(true);
   }, []);
+
+  useEffect(() => {
+    const checkPendingHighlight = () => {
+      try {
+        const raw = sessionStorage.getItem('nexus_ai_highlight');
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (data.type === 'CLASS' && Date.now() - data.timestamp < 15000) {
+          sessionStorage.removeItem('nexus_ai_highlight');
+          triggerClassHighlight(data.id, courses);
+        }
+      } catch { /* ignore */ }
+    };
+
+    if (!loading && courses.length > 0) {
+      checkPendingHighlight();
+    }
+
+    const handleAiHighlight = (e) => {
+      const detail = e.detail;
+      if (detail && detail.type === 'CLASS') {
+        sessionStorage.removeItem('nexus_ai_highlight');
+        if (detail.action === 'BOOK_CLASS') {
+          fetchCourses(false);
+        }
+        triggerClassHighlight(detail.id, courses);
+      }
+    };
+
+    window.addEventListener('nexusAiHighlight', handleAiHighlight);
+    return () => window.removeEventListener('nexusAiHighlight', handleAiHighlight);
+  }, [loading, courses]);
 
   const fetchCourses = async (isInitialLoad = false) => {
     try {
@@ -165,17 +221,71 @@ const BookClass = () => {
               const progressWidth = ((course.maxSlots - spotsLeft) / course.maxSlots) * 100;
               const isBooked = course.isBookedByMe;
               const isFull = spotsLeft <= 0;
+              const isAiSelected = Number(aiHighlightedClassId) === Number(course.classId);
 
               return (
-                <div key={idx} className="bg-surface-container-low border border-surface-container-highest hover:border-primary/50 transition-colors rounded-xl p-5 flex flex-col sm:flex-row gap-6 shadow-[var(--shadow)] group">
-                  <div className="flex flex-col shrink-0 sm:w-24 text-left">
+                <div
+                  key={course.classId || idx}
+                  id={`ai-class-${course.classId}`}
+                  className={`relative transition-all duration-300 rounded-xl p-5 flex flex-col sm:flex-row gap-6 group ${
+                    isAiSelected
+                      ? 'overflow-visible shadow-2xl scale-[1.015]'
+                      : 'overflow-hidden bg-surface-container-low border border-surface-container-highest hover:border-primary/50 shadow-[var(--shadow)]'
+                  }`}
+                >
+                  {isAiSelected && (
+                    <>
+                      {/* Aceternity UI: Background Gradient - Ambient outer blur */}
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{
+                          opacity: [0.6, 0.9, 0.6],
+                          backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                          scale: [1, 1.012, 1],
+                        }}
+                        transition={{
+                          backgroundPosition: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+                          opacity: { duration: 3.5, repeat: Infinity, ease: "easeInOut" },
+                          scale: { duration: 3.5, repeat: Infinity, ease: "easeInOut" },
+                        }}
+                        style={{ backgroundSize: "300% 300%" }}
+                        className="absolute -inset-[4px] rounded-xl z-0 pointer-events-none blur-lg bg-[radial-gradient(circle_farthest-side_at_0_100%,#00f2fe,transparent),radial-gradient(circle_farthest-side_at_100%_0,#7b61ff,transparent),radial-gradient(circle_farthest-side_at_100%_100%,#ffc414,transparent),radial-gradient(circle_farthest-side_at_0_0,#1ca0fb,#141316)]"
+                      />
+                      {/* Aceternity UI: Background Gradient - Sharp 2px glowing border */}
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{
+                          opacity: 1,
+                          backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                        }}
+                        transition={{
+                          backgroundPosition: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+                          opacity: { duration: 0.3 }
+                        }}
+                        style={{ backgroundSize: "300% 300%" }}
+                        className="absolute -inset-[2px] rounded-xl z-0 pointer-events-none bg-[radial-gradient(circle_farthest-side_at_0_100%,#00f2fe,transparent),radial-gradient(circle_farthest-side_at_100%_0,#7b61ff,transparent),radial-gradient(circle_farthest-side_at_100%_100%,#ffc414,transparent),radial-gradient(circle_farthest-side_at_0_0,#1ca0fb,#141316)]"
+                      />
+                      {/* Solid card surface plate */}
+                      <div className="absolute inset-0 rounded-xl bg-[var(--surface)] z-[1] pointer-events-none" />
+                      {/* AI Selected Pill Badge */}
+                      <motion.div
+                        initial={{ y: -8, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className="absolute -top-3.5 right-4 z-30 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-md shadow-indigo-500/30 border border-white/40 pointer-events-none"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                        <span>{t("AI Selected")}</span>
+                      </motion.div>
+                    </>
+                  )}
+                  <div className="relative z-10 flex flex-col shrink-0 sm:w-24 text-left">
                     <span className="text-xs font-bold text-on-surface-variant tracking-wider uppercase mb-1">{t("First Session")}</span>
                     <span className="text-2xl font-extrabold text-on-surface">{timeStr}</span>
                     <span className="text-xs font-semibold text-on-surface-variant mt-1">{course.durationMinutes}{' '}{t("min/session")}</span>
                   </div>
 
-                  <div className="flex flex-col flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                  <div className="relative z-10 flex flex-col flex-1">
+                    <div className="flex flex-wrap items-center gap-3 mb-2">
                       <span className="text-[11px] font-bold text-[var(--success-text)] uppercase tracking-wider bg-[var(--success-soft)] px-2 py-0.5 rounded">{t("Full Course:")}{' '}{course.totalSessions}{' '}{t("Sessions")}</span>
                     </div>
 
@@ -192,19 +302,19 @@ const BookClass = () => {
                       </div>
                     </div>
 
-                                          <details className="text-xs text-[var(--text-muted)] mb-4 group cursor-pointer bg-[var(--surface)] p-2.5 rounded-lg border border-[var(--border)]">
-                        <summary className="flex items-center gap-2 list-none outline-none">
-                          <Repeat className="w-4 h-4 text-[var(--violet)]" />{t("Repeats on:")}<span className="text-[var(--text)] font-semibold">{t(course.schedulePattern || 'Custom')}</span>
-                          <span className="text-[10px] text-[var(--primary)] ml-auto group-open:hidden border border-[var(--primary-soft)] px-2 py-0.5 rounded-full hover:bg-[var(--primary-soft)] transition-colors">{t("View all")}{' '}{course.totalSessions}{' '}{t("dates")}</span>
-                        </summary>
-                        <div className="mt-3 pl-6 pr-2 max-h-24 overflow-y-auto custom-scrollbar">
-                          <ul className="list-disc space-y-1 text-[var(--text)] marker:text-[var(--violet)]">
-                            {course.upcomingDates?.map((d, i) => <li key={i}>{d}</li>)}
-                          </ul>
-                        </div>
-                      </details>
+                    <details className="text-xs text-[var(--text-muted)] mb-4 group cursor-pointer bg-[var(--surface)] p-2.5 rounded-lg border border-[var(--border)]">
+                      <summary className="flex items-center gap-2 list-none outline-none">
+                        <Repeat className="w-4 h-4 text-[var(--violet)]" />{t("Repeats on:")}<span className="text-[var(--text)] font-semibold">{t(course.schedulePattern || 'Custom')}</span>
+                        <span className="text-[10px] text-[var(--primary)] ml-auto group-open:hidden border border-[var(--primary-soft)] px-2 py-0.5 rounded-full hover:bg-[var(--primary-soft)] transition-colors">{t("View all")}{' '}{course.totalSessions}{' '}{t("dates")}</span>
+                      </summary>
+                      <div className="mt-3 pl-6 pr-2 max-h-24 overflow-y-auto custom-scrollbar">
+                        <ul className="list-disc space-y-1 text-[var(--text)] marker:text-[var(--violet)]">
+                          {course.upcomingDates?.map((d, i) => <li key={i}>{d}</li>)}
+                        </ul>
+                      </div>
+                    </details>
 
-                      <div className="flex flex-col gap-1.5 mt-auto">
+                    <div className="flex flex-col gap-1.5 mt-auto">
                       <div className="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
                         <div className="bg-primary h-full rounded-full" style={{ width: `${progressWidth}%` }}></div>
                       </div>
@@ -215,7 +325,7 @@ const BookClass = () => {
                     </div>
                   </div>
 
-                  <div className="flex flex-col justify-between shrink-0 sm:w-32 border-t sm:border-t-0 sm:border-l border-surface-container-highest pt-4 sm:pt-0 sm:pl-6">
+                  <div className="relative z-10 flex flex-col justify-between shrink-0 sm:w-32 border-t sm:border-t-0 sm:border-l border-surface-container-highest pt-4 sm:pt-0 sm:pl-6">
                     <div className="flex flex-col gap-1 text-right sm:text-left">
                       <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{t("Course Fee")}</span>
                       <span className="text-sm font-bold text-primary">{formatMoney(course.price)}</span>

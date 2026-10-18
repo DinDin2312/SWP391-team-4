@@ -1976,5 +1976,23 @@ for (const [en, vi] of Object.entries(workoutAndAssessmentDictionary)) {
   translations[vi] = [en, vi];
 }
 
+const receptionistDictionary = {
+  "Validity Remaining": "Thời hạn sử dụng còn lại",
+  "Benefits & Quota": "Quyền lợi & Hạn mức",
+  "Gym & Facility Access": "Tập Gym & Cơ sở vật chất",
+  "Expiring Soon (≤ 7d)": "Sắp hết hạn (≤ 7 ngày)",
+  "🟠 Expiring Soon (≤ 7 days)": "🟠 Sắp hết hạn (≤ 7 ngày)",
+  "Click to filter members with packages expiring within 7 days": "Bấm để lọc hội viên có gói sắp hết hạn trong 7 ngày",
+  "This membership package will expire within 7 days. Please remind the member to renew.": "Gói thành viên này sẽ hết hạn trong vòng 7 ngày tới. Vui lòng nhắc hội viên gia hạn.",
+  "days": "ngày",
+  "GYM_ACCESS": "Thẻ tập Gym & CSVC",
+  "AI_ACCESS": "Gói huấn luyện AI",
+  "COMBO": "Gói Combo",
+  "COMBO_PROMO": "Gói Combo Khuyến Mãi",
+  "SUBJECT_ACCESS": "Gói theo bộ môn"
+};
 
-
+for (const [en, vi] of Object.entries(receptionistDictionary)) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}

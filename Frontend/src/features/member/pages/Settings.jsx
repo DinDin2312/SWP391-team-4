@@ -1,6 +1,19 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { 
+  RefreshCw, 
+  User, 
+  Camera, 
+  CheckCircle2, 
+  BadgeCheck, 
+  X, 
+  Mail, 
+  Shield, 
+  Smartphone, 
+  Info, 
+  CheckCheck 
+} from 'lucide-react';
 
 const Settings = () => {
   useLanguage();
@@ -41,44 +54,43 @@ const Settings = () => {
   }, []);
 
   const handleChange = (e) => {
-    setProfile({ ...profile, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setProfile(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSave = async () => {
     try {
       setSaving(true);
       const token = localStorage.getItem('token');
-      // Copy profile without email, email is handled separately now
-      const { email, ...updateData } = profile;
-      await axios.put('http://localhost:8080/api/v1/user/profile', updateData, {
+      await axios.put('http://localhost:8080/api/v1/user/profile', {
+        fullName: profile.fullName,
+        phone: profile.phone,
+        bio: profile.bio
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      window.dispatchEvent(new Event('notificationUpdated'));
       setToastVisible(true);
       setTimeout(() => setToastVisible(false), 3000);
     } catch (err) {
-      console.error("Failed to update profile", err);
+      console.error("Failed to save profile", err);
+      alert("Error saving profile details.");
     } finally {
       setSaving(false);
     }
   };
 
   const handleSendOtp = async () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!newEmail || !emailRegex.test(newEmail)) {
-      setEmailError('Please enter a valid email address.');
-      return;
-    }
     try {
       setEmailLoading(true);
       setEmailError('');
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:8080/api/v1/user/email-change/send-otp', { newEmail }, {
+      await axios.post('http://localhost:8080/api/v1/user/email/send-otp', { email: newEmail }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setEmailStep(2);
     } catch (err) {
-      setEmailError(err.response?.data?.message || 'Failed to send OTP');
+      console.error("Failed to send OTP", err);
+      setEmailError(err.response?.data?.message || "Failed to send OTP to new email.");
     } finally {
       setEmailLoading(false);
     }
@@ -89,20 +101,18 @@ const Settings = () => {
       setEmailLoading(true);
       setEmailError('');
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:8080/api/v1/user/email-change/verify', { newEmail, otp }, {
+      await axios.post('http://localhost:8080/api/v1/user/email/verify', { email: newEmail, otp }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // Success: force logout with notification
-      setEmailStep(3); // Hide the form or show a success check
-      setToastVisible(true);
-
+      setEmailStep(3);
       setTimeout(() => {
-        localStorage.removeItem('token');
+        localStorage.clear();
         window.location.href = '/login';
-      }, 2500);
-
+      }, 2000);
     } catch (err) {
-      setEmailError(err.response?.data?.message || 'Invalid OTP');
+      console.error("Failed to verify OTP", err);
+      setEmailError(err.response?.data?.message || "Invalid OTP code.");
+    } finally {
       setEmailLoading(false);
     }
   };
@@ -111,7 +121,9 @@ const Settings = () => {
     return (
       <div className="flex items-center justify-center w-full h-64">
         <div className="text-on-surface-variant flex items-center gap-2 font-semibold">
-          <span className="material-symbols-outlined animate-spin">sync</span>{t("Loading Profile...")}</div>
+          <RefreshCw className="w-5 h-5 animate-spin" />
+          <span>{t("Loading Profile...")}</span>
+        </div>
       </div>
     );
   }
@@ -134,7 +146,7 @@ const Settings = () => {
       {/* Main Navigation Tabs */}
       <div className="w-full bg-surface-container-lowest rounded-xl p-1.5 mb-space-lg shadow-[var(--shadow)] flex items-center gap-1 overflow-x-auto">
         <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all whitespace-nowrap bg-primary-container text-on-primary-container font-semibold shadow-[var(--shadow)]">
-          <span className="material-symbols-outlined text-[18px]">badge</span>
+          <BadgeCheck className="w-4 h-4 shrink-0" />
           <span>{t("Personal Profile")}</span>
         </button>
       </div>
@@ -150,8 +162,8 @@ const Settings = () => {
               <div className="w-24 h-24 rounded-full bg-secondary-container text-on-secondary-container text-3xl flex items-center justify-center font-bold shadow-[var(--shadow)]">
                 {profile.fullName ? profile.fullName.substring(0, 2).toUpperCase() : t('U')}
               </div>
-              <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center hover:bg-inverse-primary hover:text-surface transition-all shadow-[var(--shadow)]" title={t("Upload new photo")}>
-                <span className="material-symbols-outlined text-[16px]">photo_camera</span>
+              <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center hover:bg-inverse-primary hover:text-surface transition-all shadow-[var(--shadow)] cursor-pointer" title={t("Upload new photo")}>
+                <Camera className="w-4 h-4" />
               </button>
             </div>
 
@@ -172,7 +184,9 @@ const Settings = () => {
               <div className="flex flex-col">
                 <span className="text-[11px] font-bold text-on-surface-variant uppercase">{t("Status")}</span>
                 <span className="text-sm mt-1 text-[var(--success-text)] font-bold flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">check_circle</span>{t("Active")}</span>
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{t("Active")}</span>
+                </span>
               </div>
             </div>
           </div>
@@ -184,7 +198,7 @@ const Settings = () => {
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-surface-container">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[20px]">person</span>
+                  <User className="w-5 h-5" />
                 </div>
                 <div>
                   <h2 className="text-lg text-on-surface font-bold">{t("Personal Details")}</h2>
@@ -205,13 +219,15 @@ const Settings = () => {
                     type="text"
                     placeholder={t("Enter your full name")}
                   />
-                  <span className="material-symbols-outlined absolute right-3 top-3 text-on-surface-variant text-[18px]">badge</span>
+                  <BadgeCheck className="w-4 h-4 text-on-surface-variant absolute right-3 top-3.5" />
                 </div>
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-on-surface-variant flex justify-between items-center">{t("Linked Email Address")}{' '}{!showEmailModal && (
-                    <button onClick={() => setShowEmailModal(true)} className="text-xs text-primary font-bold hover:underline">{t("Change Email")}</button>
+                <label className="text-sm font-semibold text-on-surface-variant flex justify-between items-center">
+                  <span>{t("Linked Email Address")}</span>
+                  {!showEmailModal && (
+                    <button onClick={() => setShowEmailModal(true)} className="text-xs text-primary font-bold hover:underline cursor-pointer">{t("Change Email")}</button>
                   )}
                 </label>
 
@@ -219,7 +235,9 @@ const Settings = () => {
                   <div className="p-4 rounded-lg bg-surface-container border border-primary/30 flex flex-col gap-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-bold text-on-surface">{t("Update Email")}</span>
-                      <button onClick={() => {setShowEmailModal(false); setEmailStep(1);}} className="text-xs text-on-surface-variant hover:text-on-surface"><span className="material-symbols-outlined text-[16px]">close</span></button>
+                      <button onClick={() => {setShowEmailModal(false); setEmailStep(1);}} className="text-xs text-on-surface-variant hover:text-on-surface p-1 cursor-pointer">
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                     {emailError && <div className="text-xs text-[var(--rose)] bg-[var(--rose-soft)] p-2 rounded">{t(emailError)}</div>}
 
@@ -229,27 +247,26 @@ const Settings = () => {
                           value={newEmail}
                           onChange={(e) => setNewEmail(e.target.value)}
                           placeholder={t("Enter new email address")}
-                          className="w-full bg-surface-container-lowest text-on-surface text-sm font-medium rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary shadow-[var(--shadow)]"
+                          className="bg-surface-container-lowest p-2 rounded text-xs border border-surface-container-high focus:outline-none focus:border-primary"
                           type="email"
                         />
-                        <button onClick={handleSendOtp} disabled={emailLoading || !newEmail} className="mt-1 w-full py-2 rounded bg-primary text-on-primary text-xs font-bold disabled:opacity-50">
-                          {t(emailLoading ? t('Sending...') : t('Send Verification OTP'))}
+                        <button onClick={handleSendOtp} disabled={emailLoading || !newEmail} className="mt-1 w-full py-2 rounded bg-primary text-on-primary text-xs font-bold disabled:opacity-50 cursor-pointer">
+                          {t(emailLoading ? t('Sending OTP...') : t('Send Verification Code'))}
                         </button>
                       </>
                     )}
 
                     {emailStep === 2 && (
                       <>
-                        <p className="text-xs text-on-surface-variant">{t("Enter the 6-digit code sent to")}{' '}{newEmail}</p>
+                        <p className="text-xs text-on-surface-variant">{t("We sent a 6-digit code to")}{' '}<b className="text-on-surface">{newEmail}</b></p>
                         <input
                           value={otp}
                           onChange={(e) => setOtp(e.target.value)}
-                          placeholder={t("000000")}
-                          className="w-full bg-surface-container-lowest text-on-surface text-center tracking-widest text-lg font-bold rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary shadow-[var(--shadow)]"
-                          type="text"
+                          placeholder={t("Enter 6-digit OTP")}
+                          className="bg-surface-container-lowest p-2 rounded text-xs tracking-widest text-center border border-surface-container-high focus:outline-none focus:border-primary"
                           maxLength={6}
                         />
-                        <button onClick={handleVerifyOtp} disabled={emailLoading || otp.length < 6} className="mt-1 w-full py-2 rounded bg-[var(--success-hover)] text-[color:var(--on-primary)] text-xs font-bold disabled:opacity-50">
+                        <button onClick={handleVerifyOtp} disabled={emailLoading || otp.length < 6} className="mt-1 w-full py-2 rounded bg-[var(--success-hover)] text-[color:var(--on-primary)] text-xs font-bold disabled:opacity-50 cursor-pointer">
                           {t(emailLoading ? t('Verifying...') : t('Verify & Change'))}
                         </button>
                       </>
@@ -257,7 +274,7 @@ const Settings = () => {
 
                     {emailStep === 3 && (
                       <div className="flex flex-col items-center justify-center p-4 text-center">
-                        <span className="material-symbols-outlined text-4xl text-[var(--success-text)] mb-2">check_circle</span>
+                        <CheckCircle2 className="w-8 h-8 text-[var(--success-text)] mb-2" />
                         <span className="text-sm font-bold text-on-surface">{t("Email Updated!")}</span>
                         <span className="text-xs text-on-surface-variant mt-1">{t("Logging you out for security...")}</span>
                       </div>
@@ -271,11 +288,13 @@ const Settings = () => {
                       className="w-full bg-surface-container text-on-surface-variant text-sm font-medium rounded-lg px-4 py-3 cursor-not-allowed border border-surface-container-high"
                       type="email"
                     />
-                    <span className="material-symbols-outlined absolute right-3 top-3 text-primary text-[18px]">mail</span>
+                    <Mail className="w-4 h-4 text-primary absolute right-3 top-3.5" />
                   </div>
                 )}
-                <p className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-1">
-                  <span className="material-symbols-outlined text-[12px]">security</span>{t("Email updates require OTP verification. Changing it will log you out.")}</p>
+                <p className="text-[11px] text-on-surface-variant flex items-center gap-1.5 mt-1">
+                  <Shield className="w-3.5 h-3.5 shrink-0" />
+                  <span>{t("Email updates require OTP verification. Changing it will log you out.")}</span>
+                </p>
               </div>
 
               <div className="flex flex-col gap-2">
@@ -289,7 +308,7 @@ const Settings = () => {
                     type="tel"
                     placeholder={t("Enter phone number")}
                   />
-                  <span className="material-symbols-outlined absolute right-3 top-3 text-on-surface-variant text-[18px]">phone_iphone</span>
+                  <Smartphone className="w-4 h-4 text-on-surface-variant absolute right-3 top-3.5" />
                 </div>
               </div>
             </div>
@@ -300,21 +319,21 @@ const Settings = () => {
       {/* Bottom Floating / Fixed Action Bar */}
       <div className="sticky bottom-6 z-30 w-full p-4 rounded-xl bg-surface-container-high/90 backdrop-blur-xl shadow-[var(--shadow)] flex flex-col sm:flex-row items-center justify-between gap-4 border border-surface-container-highest">
         <div className="flex items-center gap-2 text-on-surface-variant hidden sm:flex">
-          <span className="material-symbols-outlined text-tertiary text-[20px]">info</span>
+          <Info className="w-5 h-5 text-tertiary shrink-0" />
           <span className="text-xs">{t("Your profile data is encrypted.")}</span>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-          <button className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-highest transition-all text-sm font-semibold" type="button">{t("Cancel")}</button>
+          <button className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-highest transition-all text-sm font-semibold cursor-pointer" type="button">{t("Cancel")}</button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full sm:w-auto px-8 py-2.5 rounded-lg bg-primary-container text-on-primary-container hover:bg-inverse-primary hover:text-surface transition-all text-sm font-bold flex items-center justify-center gap-2 shadow-[var(--shadow)] active:scale-95 disabled:opacity-50"
+            className="w-full sm:w-auto px-8 py-2.5 rounded-lg bg-primary-container text-on-primary-container hover:bg-inverse-primary hover:text-surface transition-all text-sm font-bold flex items-center justify-center gap-2 shadow-[var(--shadow)] active:scale-95 disabled:opacity-50 cursor-pointer"
             type="button"
           >
             {saving ? (
-              <span className="material-symbols-outlined text-[18px] animate-spin">sync</span>
+              <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
             ) : (
-              <span className="material-symbols-outlined text-[18px]">check_circle</span>
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
             )}
             <span>{t(saving ? t('Saving...') : t('Save Changes'))}</span>
           </button>
@@ -324,7 +343,7 @@ const Settings = () => {
       {/* Toast Notification Modal */}
       <div className={`fixed bottom-24 right-8 z-50 transform transition-all duration-300 flex items-center gap-3 px-6 py-4 rounded-xl bg-surface-container-highest text-on-surface shadow-[var(--shadow)] border border-surface-container/50 ${toastVisible ? "translate-y-0 opacity-100" : "translate-y-12 opacity-0 pointer-events-none"}`}>
         <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center">
-          <span className="material-symbols-outlined text-[18px]">done_all</span>
+          <CheckCheck className="w-4 h-4" />
         </div>
         <div className="flex flex-col">
           <span className="text-sm font-bold text-on-surface">{t("Saved Successfully!")}</span>

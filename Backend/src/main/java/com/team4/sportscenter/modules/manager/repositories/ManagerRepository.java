@@ -179,7 +179,7 @@ public class ManagerRepository {
                   (SELECT COUNT(*) FROM USERS u JOIN ROLES r ON r.role_id=u.role_id WHERE r.role_name='Coach' AND u.status='ACTIVE') activeCoaches,
                   (SELECT COUNT(*) FROM CLASSES WHERE status='ACTIVE') activeClasses,
                   (SELECT COUNT(*) FROM USER_MEMBERSHIPS WHERE status='ACTIVE' AND start_date<=CURDATE() AND end_date >= CURDATE()) activeMemberships,
-                  (SELECT COALESCE(SUM(amount),0) FROM PAYMENTS WHERE status='SUCCESS' AND YEAR(payment_date)=YEAR(CURDATE()) AND MONTH(payment_date)=MONTH(CURDATE())) monthlyRevenue,
+                  (SELECT COALESCE(SUM(amount),0) FROM PAYMENTS WHERE status IN ('SUCCESS','COMPLETED') AND YEAR(payment_date)=YEAR(CURDATE()) AND MONTH(payment_date)=MONTH(CURDATE())) monthlyRevenue,
                   (SELECT COUNT(*) FROM SCHEDULES WHERE status='SCHEDULED' AND start_time BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)) upcomingSchedules,
                   (SELECT COUNT(*) FROM SCHEDULES WHERE status<>'CANCELLED' AND start_time>=CURDATE() AND start_time<DATE_ADD(CURDATE(), INTERVAL 1 DAY)) sessionsToday,
                   (SELECT COUNT(*) FROM USER_MEMBERSHIPS WHERE status='ACTIVE' AND start_date<=CURDATE() AND end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)) expiringMemberships,
@@ -226,7 +226,7 @@ public class ManagerRepository {
         return jdbc.queryForList("""
                 SELECT 'PAYMENT' type, CONCAT('Payment #', payment_id) title,
                        CONCAT(FORMAT(amount,0),' VND - ',payment_method) detail, payment_date occurredAt
-                FROM PAYMENTS WHERE status='SUCCESS'
+                FROM PAYMENTS WHERE status IN ('SUCCESS','COMPLETED')
                 UNION ALL
                 SELECT 'MEMBERSHIP', CONCAT('Membership for ',u.full_name), p.package_name, um.start_date
                 FROM USER_MEMBERSHIPS um JOIN USERS u ON u.user_id=um.user_id JOIN PACKAGES p ON p.package_id=um.package_id

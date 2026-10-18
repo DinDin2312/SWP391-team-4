@@ -17,8 +17,8 @@ import {
   Smartphone,
   Check,
 } from 'lucide-react';
-import axios from 'axios';
 import { Link } from 'react-router-dom';
+import authService from '../services/authService';
 
 export default function ForgotPassword() {
   useLanguage();
@@ -78,9 +78,21 @@ export default function ForgotPassword() {
     if (val !== '' && index < 5) inputRefs.current[index + 1]?.focus();
   };
 
+  const handleKeyDown = (index, e) => {
+    if (e.key === 'Backspace') {
+      if (otp[index] === '' && index > 0) {
+        inputRefs.current[index - 1]?.focus();
+      } else {
+        const newOtp = [...otp];
+        newOtp[index] = '';
+        setOtp(newOtp);
+      }
+    }
+  };
+
   // 1. API: Send Forgot Password OTP
   const handleSendOtp = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || !emailRegex.test(email)) {
       setErrorMsg('Please enter a valid email address.');
@@ -90,7 +102,7 @@ export default function ForgotPassword() {
     setIsLoading(true);
 
     try {
-      await axios.post(`http://localhost:8080/api/v1/auth/forgot-password/send-otp?email=${encodeURIComponent(email)}`);
+      await authService.sendForgotPasswordOtp(email);
       setStep(2);
       setTimeLeft(300);
     } catch (err) {
@@ -111,7 +123,7 @@ export default function ForgotPassword() {
     setIsLoading(true);
 
     try {
-      await axios.post('http://localhost:8080/api/v1/auth/forgot-password/verify-otp', {
+      await authService.verifyForgotPasswordOtp({
         email,
         otp: otp.join('')
       });
@@ -138,7 +150,7 @@ export default function ForgotPassword() {
     setIsLoading(true);
 
     try {
-      await axios.post('http://localhost:8080/api/v1/auth/forgot-password/reset', {
+      await authService.resetPassword({
         email,
         otp: otp.join(''),
         newPassword

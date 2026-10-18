@@ -98,7 +98,12 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
 
             // Apply membershipFilter if requested
             if (membershipFilter != null && !membershipFilter.trim().isEmpty() && !membershipFilter.equalsIgnoreCase("ALL")) {
-                if (!currentMembershipStatus.equalsIgnoreCase(membershipFilter.trim())) {
+                String filter = membershipFilter.trim().toUpperCase();
+                if ("EXPIRING_SOON".equals(filter)) {
+                    if (!"ACTIVE".equalsIgnoreCase(currentMembershipStatus) || daysRemaining > 7) {
+                        continue;
+                    }
+                } else if (!currentMembershipStatus.equalsIgnoreCase(filter)) {
                     continue; // Skip members that don't match membership filter
                 }
             }
@@ -157,9 +162,10 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                     .price(um.getAPackage() != null ? um.purchasedPrice() : null)
                     .startDate(um.getStartDate())
                     .endDate(um.getEndDate())
-                    .status(um.getStatus())
+                    .status(isActive ? "ACTIVE" : ("ACTIVE".equalsIgnoreCase(um.getStatus()) ? "EXPIRED" : um.getStatus()))
                     .daysRemaining(remaining)
                     .active(isActive)
+                    .benefits(um.getMembershipId() != null ? packageBenefits.membershipBenefits(um.getMembershipId()) : List.of())
                     .build();
         }).collect(Collectors.toList());
 
@@ -270,9 +276,10 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                     .price(um.getAPackage() != null ? um.purchasedPrice() : null)
                     .startDate(um.getStartDate())
                     .endDate(um.getEndDate())
-                    .status(um.getStatus())
+                    .status(isActive ? "ACTIVE" : ("ACTIVE".equalsIgnoreCase(um.getStatus()) ? "EXPIRED" : um.getStatus()))
                     .daysRemaining(remaining)
                     .active(isActive)
+                    .benefits(um.getMembershipId() != null ? packageBenefits.membershipBenefits(um.getMembershipId()) : List.of())
                     .build();
         }).collect(Collectors.toList());
     }
@@ -406,7 +413,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 .user(user)
                 .schedule(schedule)
                 .status("CONFIRMED")
-                .attendanceStatus("ABSENT")
+                .attendanceStatus("NOT_YET")
                 .bookingTime(LocalDateTime.now())
                 .build();
 
@@ -427,6 +434,10 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
     }
 
     @org.springframework.beans.factory.annotation.Autowired private com.team4.sportscenter.modules.member.services.PackageCommerceService commerce;
+    @org.springframework.beans.factory.annotation.Autowired private com.team4.sportscenter.modules.payment.repositories.InvoiceRepository invoiceRepository;
+    @org.springframework.beans.factory.annotation.Autowired private com.team4.sportscenter.modules.payment.repositories.InvoiceDetailRepository invoiceDetailRepository;
+    @org.springframework.beans.factory.annotation.Autowired private com.team4.sportscenter.modules.payment.repositories.PaymentRepository paymentRepository;
+
     @Override
     @Transactional
     public void subscribePackageForMember(SubscribePackageRequest request) {
@@ -438,23 +449,70 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 .orElseThrow(() -> new RuntimeException("Package not found with ID: " + request.getPackageId()));
 
         commerce.checkPurchase(user.getUserId(),pkg.getPackageId(),null,true);
-        LocalDate start = request.getStartDate() != null ? request.getStartDate() : LocalDate.now();
+        LocalDate today = LocalDate.now();
+        LocalDate baseStart = (request.getStartDate() != null && request.getStartDate().isAfter(today))
+                ? request.getStartDate()
+                : today;
+        for (UserMembership existing : userMembershipRepository.findByUser_UserId(user.getUserId())) {
+            if ("ACTIVE".equalsIgnoreCase(existing.getStatus())
+                    && existing.getEndDate() != null
+                    && !existing.getEndDate().isBefore(today)
+                    && pkg.getPackageType() != null
+                    && pkg.getPackageType().equalsIgnoreCase(existing.purchasedType())) {
+                LocalDate stackedStart = existing.getEndDate().plusDays(1);
+                if (stackedStart.isAfter(baseStart)) {
+                    baseStart = stackedStart;
+                }
+            }
+        }
+        LocalDate start = baseStart;
         LocalDate end = start.plusDays((pkg.getDurationDays() != null ? pkg.getDurationDays() : 30)-1);
+        LocalDateTime now = LocalDateTime.now();
 
         UserMembership membership = new UserMembership();
         membership.setUser(user);
-        // Lưu ý: Nếu trong UserMembership đặt tên là pkg thì dùng membership.setPkg(pkg)
-        // Nếu đặt tên là aPackage thì dùng membership.setPackage(pkg)
         membership.setAPackage(pkg);
         membership.setStartDate(start);
         membership.setEndDate(end);
         membership.setStatus("ACTIVE");
-        membership.setPurchaseCompletedAt(java.time.LocalDateTime.now());
+        membership.setPurchaseCompletedAt(now);
         membership.setPurchaseSource("COUNTER");
 
         packageBenefits.snapshot(membership);
+
+        java.math.BigDecimal amount = membership.purchasedPrice() != null
+                ? membership.purchasedPrice()
+                : (pkg.getPrice() != null ? pkg.getPrice() : java.math.BigDecimal.ZERO);
+
+        com.team4.sportscenter.modules.payment.entities.Invoice invoice = com.team4.sportscenter.modules.payment.entities.Invoice.builder()
+                .user(user)
+                .totalAmount(amount)
+                .status("PAID")
+                .createdAt(now)
+                .build();
+        invoice = invoiceRepository.saveAndFlush(invoice);
+
+        membership.setCheckoutInvoiceId(invoice.getInvoiceId());
         userMembershipRepository.saveAndFlush(membership);
         packageBenefits.snapshotSubjects(membership.getMembershipId(),pkg.getPackageId());
+
+        com.team4.sportscenter.modules.payment.entities.InvoiceDetail detail = com.team4.sportscenter.modules.payment.entities.InvoiceDetail.builder()
+                .invoice(invoice)
+                .aPackage(pkg)
+                .membershipId(membership.getMembershipId())
+                .unitPrice(amount)
+                .build();
+        invoiceDetailRepository.save(detail);
+
+        com.team4.sportscenter.modules.payment.entities.PaymentEntity payment = com.team4.sportscenter.modules.payment.entities.PaymentEntity.builder()
+                .invoice(invoice)
+                .amount(amount)
+                .paymentMethod("CASH")
+                .transactionNo("COUNTER-" + invoice.getInvoiceId())
+                .status("COMPLETED")
+                .paymentDate(now)
+                .build();
+        paymentRepository.saveAndFlush(payment);
     }
 
 }

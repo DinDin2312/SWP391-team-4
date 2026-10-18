@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, X, Bot, User, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const NexusAiChat = ({ isOpen, onClose }) => {
   useLanguage();
@@ -17,6 +17,7 @@ const NexusAiChat = ({ isOpen, onClose }) => {
   const dragRef = useRef(null);
   const offset = useRef({ x: 0, y: 0 });
   const navigate = useNavigate();
+  const location = useLocation();
 
   const messagesEndRef = useRef(null);
 
@@ -58,27 +59,66 @@ const NexusAiChat = ({ isOpen, onClose }) => {
     };
   }, [isDragging]);
 
-  const executeAction = async (actionStr) => {
+  const dispatchHighlight = (payload) => {
+    sessionStorage.setItem('nexus_ai_highlight', JSON.stringify({
+      ...payload,
+      timestamp: Date.now()
+    }));
+    window.dispatchEvent(new CustomEvent('nexusAiHighlight', { detail: payload }));
+  };
+
+  const executeAction = async (actionStr, suppressNavigate = false) => {
     const parts = actionStr.split(':');
     if (parts.length < 2) return;
-    const type = parts[0];
-    const target = parts[1];
+    const type = parts[0].trim();
+    const target = parts.slice(1).join(':').trim();
 
     try {
       const token = localStorage.getItem('token');
       if (type === 'NAVIGATE') {
-        navigate(target);
-      } else if (type === 'ADD_CART') {
-        await axios.post('http://localhost:8080/api/v1/member/add-package-to-cart/' + target, {}, {
-          headers: { Authorization: "Bearer " + token }
-        });
-        // dispatch custom event to update cart in layout
-        window.dispatchEvent(new Event('cartUpdated'));
-      } else if (type === 'BOOK_CLASS') {
-        await axios.post('http://localhost:8080/api/v1/member/book-class/' + target, {}, {
-          headers: { Authorization: "Bearer " + token }
-        });
-        window.dispatchEvent(new Event('cartUpdated'));
+        if (!suppressNavigate) {
+          navigate(target);
+        }
+      } else if (type === 'ADD_CART' || type === 'HIGHLIGHT_PACKAGE') {
+        const pkgId = Number(String(target).replace(/\D+/g, ''));
+        if (!pkgId) return;
+        dispatchHighlight({ type: 'PACKAGE', id: pkgId, action: type });
+
+        if (location.pathname !== '/member/package-store') {
+          navigate('/member/package-store');
+        }
+
+        if (type === 'ADD_CART') {
+          try {
+            await axios.post('http://localhost:8080/api/v1/member/add-package-to-cart/' + pkgId, {}, {
+              headers: { Authorization: "Bearer " + token }
+            });
+          } catch (apiErr) {
+            console.warn('Package may already be in cart:', apiErr);
+          }
+          window.dispatchEvent(new Event('cartUpdated'));
+          dispatchHighlight({ type: 'PACKAGE', id: pkgId, action: type });
+        }
+      } else if (type === 'BOOK_CLASS' || type === 'HIGHLIGHT_CLASS') {
+        const clsId = Number(String(target).replace(/\D+/g, ''));
+        if (!clsId) return;
+        dispatchHighlight({ type: 'CLASS', id: clsId, action: type });
+
+        if (location.pathname !== '/member/book-class') {
+          navigate('/member/book-class');
+        }
+
+        if (type === 'BOOK_CLASS') {
+          try {
+            await axios.post('http://localhost:8080/api/v1/member/book-class/' + clsId, {}, {
+              headers: { Authorization: "Bearer " + token }
+            });
+          } catch (apiErr) {
+            console.warn('Class booking action warning:', apiErr);
+          }
+          window.dispatchEvent(new Event('cartUpdated'));
+          dispatchHighlight({ type: 'CLASS', id: clsId, action: type });
+        }
       }
     } catch (err) {
       console.error('Action failed:', err);
@@ -99,23 +139,28 @@ const NexusAiChat = ({ isOpen, onClose }) => {
         headers: { Authorization: "Bearer " + token }
       });
 
-      let rawText = res.data;
-      const actionMatch = rawText.match(/\[ACTION:(.*?)\]/);
+      let rawText = typeof res.data === 'string' ? res.data : String(res.data || '');
+      const actionMatches = [...rawText.matchAll(/\[ACTION:(.*?)\]/g)];
 
-      if (actionMatch) {
-        rawText = rawText.replace(actionMatch[0], '').trim();
-        executeAction(actionMatch[1]);
+      if (actionMatches.length > 0) {
+        rawText = rawText.replace(/\[ACTION:(.*?)\]/g, '').trim();
+        const hasItemHighlight = actionMatches.some(m =>
+          /^(ADD_CART|HIGHLIGHT_PACKAGE|BOOK_CLASS|HIGHLIGHT_CLASS):/i.test(m[1].trim())
+        );
+        for (const match of actionMatches) {
+          await executeAction(match[1], hasItemHighlight);
+        }
       }
 
       setMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'bot', text: rawText }]);
-    } catch (err) {
+    } catch {
       setMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'bot', text: t('Sorry, the AI system is currently busy. Please try again later.') }]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  
+
 
   return (
     <AnimatePresence>
@@ -161,7 +206,7 @@ const NexusAiChat = ({ isOpen, onClose }) => {
       </div>
 
       {/* CHAT AREA */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[var(--surface)] custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[var(--surface)] custom-scrollbar relative z-10">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`flex gap-2 max-w-[85%] ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -205,7 +250,7 @@ const NexusAiChat = ({ isOpen, onClose }) => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={t("Ask anything...")}
+            placeholder={t("Ask about workouts, packages, gym services...")}
             disabled={isLoading}
             className="w-full bg-[var(--surface)] text-[var(--text)] text-sm rounded-xl pl-4 pr-12 py-3.5 border border-[var(--border)] focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] outline-none transition-all placeholder-[var(--text-muted)] disabled:opacity-50 disabled:bg-[var(--surface-hover)]"
           />
