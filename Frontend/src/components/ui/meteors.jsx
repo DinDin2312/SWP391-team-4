@@ -1,26 +1,48 @@
-import React, { useEffect, useState } from "react";
+import React, { useMemo } from "react";
 
-export const Meteors = ({ number = 20, className }) => {
-  const [meteors, setMeteors] = useState([]);
-  
-  useEffect(() => {
-    setMeteors(new Array(number).fill(true));
-  }, [number]);
-  
+/**
+ * Meteors that fall diagonally (top-left -> bottom-right) across the WHOLE card.
+ * - Self-contained clipping layer (absolute inset-0 overflow-hidden), so the parent
+ *   only needs `position: relative`.
+ * - Spawn positions are in % of the card, spread evenly, so they cover the card
+ *   regardless of its width/height (old version used fixed px from the top edge only,
+ *   which made meteors cluster in the top-right corner).
+ * - Negative delays: meteors are already mid-flight on mount, no static dots waiting.
+ */
+export const Meteors = ({ number = 8, className = "" }) => {
+  const meteors = useMemo(
+    () =>
+      Array.from({ length: number }, (_, idx) => {
+        const duration = 14 + Math.random() * 6; // 14s - 20s: calm glide
+        return {
+          // Near-vertical fall with slight right drift (~70% of card width over its full
+          // height), so spread starts evenly from -40% to 95% of the card width.
+          left: -40 + (idx / Math.max(number - 1, 1)) * 135 + (Math.random() * 8 - 4),
+          top: -15 + Math.random() * 35, // -15% .. 20% of card height
+          duration,
+          delay: -Math.random() * duration,
+        };
+      }),
+    [number]
+  );
+
   return (
-    <>
-      {meteors.map((el, idx) => (
+    <div
+      aria-hidden="true"
+      className="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none z-0"
+    >
+      {meteors.map((m, idx) => (
         <span
           key={"meteor" + idx}
-          className={`animate-meteor-effect absolute top-1/2 left-1/2 h-0.5 w-0.5 rounded-[9999px] bg-slate-500 shadow-[0_0_0_1px_#ffffff10] rotate-[215deg] before:content-[''] before:absolute before:top-1/2 before:transform before:-translate-y-[50%] before:w-[50px] before:h-[1px] before:bg-gradient-to-r before:from-[#64748b] before:to-transparent ${className || ""}`}
+          className={`nexus-meteor ${className}`}
           style={{
-            top: 0,
-            left: Math.floor(Math.random() * (400 - -400) + -400) + "px",
-            animationDelay: Math.random() * (0.8 - 0.2) + 0.2 + "s",
-            animationDuration: Math.floor(Math.random() * (10 - 2) + 2) + "s",
+            top: `${m.top}%`,
+            left: `${m.left}%`,
+            animationDuration: `${m.duration}s`,
+            animationDelay: `${m.delay}s`,
           }}
-        ></span>
+        />
       ))}
-    </>
+    </div>
   );
 };

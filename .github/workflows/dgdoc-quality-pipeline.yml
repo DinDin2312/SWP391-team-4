@@ -1,0 +1,121 @@
+name: CI/CD Quality Pipeline (DGDoC)
+
+on:
+  push:
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 1. Quét Dockerfile với Hadolint (Tương tự DGDoC Hadolint)
+  dockerfile-lint:
+    name: Dockerfile Lint (Hadolint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Hadolint on Backend Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: "outputs/Backend/Dockerfile"
+          ignore: "DL3008,DL3015"
+        continue-on-error: true
+
+      - name: Run Hadolint on Frontend Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: "outputs/Frontend/Dockerfile"
+          ignore: "DL3008,DL3015"
+        continue-on-error: true
+
+  # 2. Quét Frontend với React ESLint (Tương tự DGDoC React ESLint)
+  frontend-lint:
+    name: Frontend Lint (React ESLint)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint (DGDoC Standard)
+        run: npm run lint || true
+
+      - name: Frontend Dependency Security Audit
+        run: npm audit --audit-level=high || true
+
+  # 3. Quét Backend Java với Checkstyle (Tương tự DGDoC Java Checkstyle)
+  backend-java-lint:
+    name: Backend Lint (Java Checkstyle)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Backend
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: Backend/pom.xml
+
+      - name: Grant execute permission for Maven Wrapper
+        run: chmod +x mvnw
+
+      - name: Run Java Checkstyle Analysis
+        run: |
+          ./mvnw --batch-mode --no-transfer-progress \
+            org.apache.maven.plugins:maven-checkstyle-plugin:3.3.1:checkstyle \
+            -Dcheckstyle.config.location=google_checks.xml \
+            -Dcheckstyle.failsOnError=false \
+            -Dcheckstyle.consoleOutput=false
+
+      - name: Upload Java Checkstyle Quality Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dgdoc-java-checkstyle-report
+          path: Backend/target/checkstyle-result.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # 4. Quét bảo mật & rà soát mã nguồn (Security SAST Scanner)
+  security-sast-scan:
+    name: Security & Vulnerability Scan (SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy Vulnerability & Secret Scanner
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          format: 'table'
+          exit-code: '0'
+          trivyargs: '--offline-scan'

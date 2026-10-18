@@ -208,7 +208,11 @@ const MemberManagementView = () => {
       }
 
       if (selectedPackageStatus !== 'ALL') {
-        filtered = filtered.filter((m) => m.membershipStatus === selectedPackageStatus);
+        if (selectedPackageStatus === 'EXPIRING_SOON') {
+          filtered = filtered.filter((m) => m.membershipStatus === 'ACTIVE' && m.daysRemaining <= 7);
+        } else {
+          filtered = filtered.filter((m) => m.membershipStatus === selectedPackageStatus);
+        }
       }
 
       setMembers(filtered);
@@ -248,12 +252,14 @@ const MemberManagementView = () => {
                   membershipId: member.currentMembershipId || 1,
                   packageName: member.currentPackageName,
                   packageType: member.currentPackageType || 'GYM_ACCESS',
+                  durationDays: 30,
                   price: 500000,
                   startDate: member.membershipStartDate || '2026-09-01',
                   endDate: member.membershipEndDate || '2026-10-01',
                   status: member.membershipStatus,
                   daysRemaining: member.daysRemaining,
                   active: member.membershipStatus === 'ACTIVE',
+                  benefits: [],
                 },
               ]
             : [],
@@ -297,43 +303,58 @@ const MemberManagementView = () => {
       .toUpperCase();
   };
 
-    const formatDate = displayFormatDate;
+  const formatDate = displayFormatDate;
 
   // Stats calculation
   const totalCount = members.length;
   const activeCount = members.filter((m) => m.status === 'ACTIVE').length;
   const hasActivePackageCount = members.filter((m) => m.membershipStatus === 'ACTIVE').length;
+  const expiringSoonCount = members.filter((m) => m.membershipStatus === 'ACTIVE' && m.daysRemaining <= 7).length;
   const expiredPackageCount = members.filter((m) => m.membershipStatus === 'EXPIRED').length;
 
   return (
     <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       {/* ================= PAGE HEADER ================= */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>{t("Member Search & Directory")}</h1>
-                <span
-                    style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        padding: '0.2rem 0.65rem',
-                        borderRadius: '9999px',
-                        backgroundColor: 'var(--primary-soft)',
-                        color: 'var(--primary)',
-                        border: '1px solid var(--border)',
-                    }}
-                >{t("Front Desk")}</span>
-            </div>
-            <p style={{ margin: '0.4rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>{t("Search members by Name, Phone number, Email or Member ID (#MEM). View membership status and course history.")}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>{t("Member Search & Directory")}</h1>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                padding: '0.2rem 0.65rem',
+                borderRadius: '9999px',
+                backgroundColor: 'var(--primary-soft)',
+                color: 'var(--primary)',
+                border: '1px solid var(--border)',
+              }}
+            >{t("Front Desk")}</span>
+          </div>
+          <p style={{ margin: '0.4rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>{t("Search members by Name, Phone number, Email or Member ID (#MEM). View membership status and course history.")}</p>
         </div>
 
         <button
-            onClick={fetchMembers}
-            disabled={loading}
-            // ...style giữ nguyên...
+          onClick={fetchMembers}
+          disabled={loading}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            padding: '0.6rem 1rem',
+            backgroundColor: 'var(--surface)',
+            color: 'var(--text)',
+            border: '1px solid var(--border)',
+            borderRadius: '0.65rem',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            cursor: loading ? 'not-allowed' : 'pointer',
+          }}
         >
-            <RefreshCw style={{ width: '15px', height: '15px', animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-            <span>{t("Refresh List")}</span>
+          <RefreshCw style={{ width: '15px', height: '15px', animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+          <span>{t("Refresh List")}</span>
         </button>
+      </div>
 
       {/* ================= STATS OVERVIEW CARDS ================= */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
@@ -445,7 +466,46 @@ const MemberManagementView = () => {
           </div>
         </div>
 
-        {/* Card 4: Gói hết hạn */}
+        {/* Card 4: Gói sắp hết hạn (<= 7 ngày) */}
+        <div
+          onClick={() => setSelectedPackageStatus(selectedPackageStatus === 'EXPIRING_SOON' ? 'ALL' : 'EXPIRING_SOON')}
+          style={{
+            backgroundColor: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '1rem',
+            padding: '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            boxShadow: 'var(--shadow)',
+            cursor: 'pointer',
+          }}
+          title={t("Click to filter members with packages expiring within 7 days")}
+        >
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '0.75rem',
+              backgroundColor: 'var(--warning-soft)',
+              border: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--warning-text)',
+            }}
+          >
+            <Clock style={{ width: '24px', height: '24px' }} />
+          </div>
+          <div>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>{t("Expiring Soon (≤ 7d)")}</span>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--warning-text)', marginTop: '0.1rem' }}>
+              {expiringSoonCount}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 5: Gói hết hạn */}
         <div
           style={{
             backgroundColor: 'var(--surface)',
@@ -548,32 +608,53 @@ const MemberManagementView = () => {
             )}
           </div>
 
-            {/* Filter: Account Status */}
-            <div style={{ minWidth: '180px' }}>
-                <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    // ...style giữ nguyên...
-                >
-                    <option value="ALL">{t("All Account Status")}</option>
-                    <option value="ACTIVE">{t("● Active")}</option>
-                    <option value="INACTIVE">{t("● Inactive")}</option>
-                </select>
-            </div>
+          {/* Filter: Account Status */}
+          <div style={{ minWidth: '180px' }}>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              style={{
+                width: '100%',
+                backgroundColor: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                padding: '0.75rem 1rem',
+                color: 'var(--text)',
+                fontSize: '0.875rem',
+                outline: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="ALL">{t("All Account Status")}</option>
+              <option value="ACTIVE">{t("● Active")}</option>
+              <option value="INACTIVE">{t("● Inactive")}</option>
+            </select>
+          </div>
 
-            {/* Filter: Membership Package Status */}
-            <div style={{ minWidth: '200px' }}>
-                <select
-                    value={selectedPackageStatus}
-                    onChange={(e) => setSelectedPackageStatus(e.target.value)}
-                    // ...style giữ nguyên...
-                >
-                    <option value="ALL">{t("All Package Status")}</option>
-                    <option value="ACTIVE">{t("🟢 Active Package")}</option>
-                    <option value="EXPIRED">{t("🔴 Expired Package")}</option>
-                    <option value="NO_MEMBERSHIP">{t("⚪ No Package")}</option>
-                </select>
-            </div>
+          {/* Filter: Membership Package Status */}
+          <div style={{ minWidth: '220px' }}>
+            <select
+              value={selectedPackageStatus}
+              onChange={(e) => setSelectedPackageStatus(e.target.value)}
+              style={{
+                width: '100%',
+                backgroundColor: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                padding: '0.75rem 1rem',
+                color: 'var(--text)',
+                fontSize: '0.875rem',
+                outline: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="ALL">{t("All Package Status")}</option>
+              <option value="ACTIVE">{t("🟢 Active Package")}</option>
+              <option value="EXPIRING_SOON">{t("🟠 Expiring Soon (≤ 7 days)")}</option>
+              <option value="EXPIRED">{t("🔴 Expired Package")}</option>
+              <option value="NO_MEMBERSHIP">{t("⚪ No Package")}</option>
+            </select>
+          </div>
         </div>
 
         {/* Active Filter Chips indicator */}

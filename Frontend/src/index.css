@@ -6,6 +6,7 @@
   color: var(--text);
   background: var(--surface);
   font-synthesis: none;
+  --marquee-duration: 95s;
 }
 
 * { box-sizing: border-box; }
@@ -257,8 +258,183 @@ button { color: inherit; }
   .role-copy small { white-space: normal; }
 }
 
+/* Reduced motion: only shorten UI transitions & smooth-scroll.
+   Do NOT override animation-duration here — forcing .01ms on infinite animations
+   (aurora, marquee, meteors) makes them loop thousands of times per second and
+   only visibly update on repaint (e.g. hover), which looks like "crazy fast" motion. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
 
 @media (min-width: 561px) and (max-width: 1023px) { .login-page { display: block; padding: 24px; } .hero-panel { display: none; } .login-shell { margin: 0 auto; padding: 0; } }
+
+/* ==========================================================================
+   Aurora Background (Serene, elegant Northern Lights glow - no jitter, no snap)
+   ========================================================================== */
+.aurora-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  background-color: #060b17;
+  color: #f1f5f9;
+  overflow: hidden;
+}
+
+.aurora-canvas {
+  position: absolute;
+  inset: -40px;
+  opacity: 0.45;
+  filter: blur(55px);
+  will-change: transform, background-position;
+  background-image:
+    repeating-linear-gradient(105deg, rgba(6, 11, 23, 0.95) 0%, rgba(6, 11, 23, 0.95) 8%, transparent 11%, transparent 13%, rgba(6, 11, 23, 0.95) 17%),
+    repeating-linear-gradient(105deg, #1d4ed8 10%, #6366f1 16%, #38bdf8 22%, #a855f7 28%, #2563eb 34%);
+  background-size: 300% 200%;
+  background-position: 50% 50%;
+  animation: aurora-shift 40s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.aurora-canvas::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(105deg, rgba(6, 11, 23, 0.95) 0%, rgba(6, 11, 23, 0.95) 8%, transparent 11%, transparent 13%, rgba(6, 11, 23, 0.95) 17%),
+    repeating-linear-gradient(105deg, #2563eb 8%, #4f46e5 15%, #0ea5e9 22%, #7c3aed 29%, #3b82f6 36%);
+  background-size: 200% 150%;
+  animation: aurora-shift-reverse 32s ease-in-out infinite alternate;
+  mix-blend-mode: screen;
+  opacity: 0.65;
+}
+
+@keyframes aurora-shift {
+  0% {
+    background-position: 15% 35%;
+    transform: scale(1);
+  }
+  50% {
+    background-position: 85% 65%;
+    transform: scale(1.04);
+  }
+  100% {
+    background-position: 25% 45%;
+    transform: scale(1);
+  }
+}
+
+@keyframes aurora-shift-reverse {
+  0% {
+    background-position: 80% 65%;
+    transform: scale(1.03) rotate(0.6deg);
+  }
+  50% {
+    background-position: 20% 35%;
+    transform: scale(1) rotate(-0.6deg);
+  }
+  100% {
+    background-position: 80% 65%;
+    transform: scale(1.03) rotate(0.6deg);
+  }
+}
+
+.aurora-mask-radial {
+  -webkit-mask-image: radial-gradient(ellipse at 100% 0%, black 20%, transparent 75%);
+  mask-image: radial-gradient(ellipse at 100% 0%, black 20%, transparent 75%);
+}
+
+/* ==========================================================================
+   Infinite Moving Cards / Marquee (Silky smooth, declarative, zero DOM cloning)
+   ========================================================================== */
+.marquee-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  flex-wrap: nowrap;
+  gap: 1.5rem;
+  will-change: transform;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused !important;
+}
+
+.marquee-left {
+  animation: marquee-scroll-left var(--marquee-duration, 95s) linear infinite;
+}
+
+.marquee-right {
+  animation: marquee-scroll-right var(--marquee-duration, 95s) linear infinite;
+}
+
+@keyframes marquee-scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(-50% - 0.75rem));
+  }
+}
+
+@keyframes marquee-scroll-right {
+  0% {
+    transform: translateX(calc(-50% - 0.75rem));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+
+
+
+
+
+/* ==========================================================================
+   Meteors (1-year gym card) - steep fall across the whole (tall, narrow) card
+   rotate(255deg) + translateX(negative) => direction ≈ 15° off vertical (slight right drift).
+   The ::before tail extends along local +x, i.e. up-left, trailing behind the head.
+   ========================================================================== */
+.nexus-meteor {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 9999px;
+  background: #93c5fd;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 0 6px rgba(96, 165, 250, 0.6);
+  transform: rotate(255deg);
+  opacity: 0;
+  animation-name: nexus-meteor-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+.nexus-meteor::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 80px;
+  height: 1px;
+  background: linear-gradient(to right, rgba(96, 165, 250, 0.55), transparent);
+}
+
+@keyframes nexus-meteor-fall {
+  0%   { transform: rotate(255deg) translateX(0);      opacity: 0; }
+  6%   { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: rotate(255deg) translateX(-900px); opacity: 0; }
+}
+

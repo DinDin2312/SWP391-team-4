@@ -2,6 +2,18 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDateTime } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { 
+  Bell, 
+  BellOff, 
+  Trash2, 
+  CheckCheck, 
+  Check, 
+  RefreshCw, 
+  Settings as SettingsIcon, 
+  Calendar, 
+  CreditCard, 
+  Megaphone 
+} from 'lucide-react';
 
 const Notifications = () => {
   useLanguage();
@@ -84,7 +96,9 @@ const Notifications = () => {
     return (
       <div className="flex items-center justify-center w-full h-64">
         <div className="text-on-surface-variant flex items-center gap-2 font-semibold">
-          <span className="material-symbols-outlined animate-spin">sync</span>{t("Loading Notifications...")}</div>
+          <RefreshCw className="w-5 h-5 animate-spin" />
+          <span>{t("Loading Notifications...")}</span>
+        </div>
       </div>
     );
   }
@@ -95,9 +109,12 @@ const Notifications = () => {
     <div className="flex flex-col w-full min-h-screen">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md pb-space-lg border-b border-surface-container mb-6">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl lg:text-4xl text-on-surface tracking-tight font-extrabold flex items-center gap-3">{t("Notifications")}{' '}{unreadCount > 0 && (
+          <h1 className="text-3xl lg:text-4xl text-on-surface tracking-tight font-extrabold flex items-center gap-3">
+            {t("Notifications")}{' '}
+            {unreadCount > 0 && (
               <span className="px-3 py-1 rounded-full bg-primary-container text-on-primary-container text-sm font-bold shadow-[var(--shadow)]">
-                {unreadCount}{' '}{t("NEW")}</span>
+                {unreadCount} {t("NEW")}
+              </span>
             )}
           </h1>
           <p className="text-sm text-on-surface-variant mt-1">{t("Stay updated on your schedule, payments, and system alerts.")}</p>
@@ -107,9 +124,9 @@ const Notifications = () => {
           {notifications.length > 0 && (
             <button
               onClick={handleDeleteAll}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-error-container text-on-error-container text-sm font-bold transition-all shadow-[var(--shadow)] active:scale-95 hover:brightness-95"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-error-container text-on-error-container text-sm font-bold transition-all shadow-[var(--shadow)] active:scale-95 hover:brightness-95 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
+              <Trash2 className="w-4 h-4 shrink-0" />
               <span>{t("Clear All")}</span>
             </button>
           )}
@@ -117,9 +134,9 @@ const Notifications = () => {
           {notifications.length > 0 && unreadCount > 0 && (
             <button
               onClick={handleMarkAllAsRead}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-sm font-bold transition-all shadow-[var(--shadow)] active:scale-95"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-sm font-bold transition-all shadow-[var(--shadow)] active:scale-95 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px] text-[var(--success-text)]">done_all</span>
+              <CheckCheck className="w-4 h-4 text-[var(--success-text)] shrink-0" />
               <span>{t("Mark all as read")}</span>
             </button>
           )}
@@ -129,7 +146,7 @@ const Notifications = () => {
       <div className="flex flex-col gap-4 max-w-4xl">
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 bg-surface-container-lowest rounded-xl border border-surface-container text-center">
-            <span className="material-symbols-outlined text-6xl text-on-surface-variant mb-4">notifications_off</span>
+            <BellOff className="w-16 h-16 text-on-surface-variant mb-4 opacity-50" />
             <h3 className="text-xl font-bold text-on-surface">{t("No notifications yet")}</h3>
             <p className="text-sm text-on-surface-variant mt-2">{t("When you get updates, they'll show up here.")}</p>
           </div>
@@ -137,12 +154,12 @@ const Notifications = () => {
           notifications.map((notification) => {
             const isUnread = !notification.read;
             const iconMap = {
-              'SYSTEM': 'settings',
-              'BOOKING': 'event',
-              'PAYMENT': 'credit_card',
-              'PROMOTION': 'campaign'
+              'SYSTEM': SettingsIcon,
+              'BOOKING': Calendar,
+              'PAYMENT': CreditCard,
+              'PROMOTION': Megaphone
             };
-            const icon = iconMap[notification.type] || 'notifications';
+            const IconComponent = iconMap[notification.type] || Bell;
 
             return (
               <div
@@ -156,7 +173,7 @@ const Notifications = () => {
                 <div className={`relative w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
                   isUnread ? t('bg-primary-container text-on-primary-container') : t('bg-surface-container text-on-surface-variant')
                 }`}>
-                  <span className="material-symbols-outlined text-2xl">{icon}</span>
+                  <IconComponent className="w-6 h-6 shrink-0" />
                   {isUnread && (
                     <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-primary animate-pulse border-2 border-surface-container-low"></div>
                   )}
@@ -173,10 +190,10 @@ const Notifications = () => {
                       </span>
                       <button
                         onClick={() => handleDelete(notification.id)}
-                        className="text-on-surface-variant hover:text-error transition-colors p-1 rounded-md hover:bg-error-container/20"
+                        className="text-on-surface-variant hover:text-error transition-colors p-1.5 rounded-md hover:bg-error-container/20 cursor-pointer"
                         title={t("Delete notification")}
                       >
-                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                        <Trash2 className="w-4 h-4 shrink-0" />
                       </button>
                     </div>
                   </div>
@@ -189,9 +206,11 @@ const Notifications = () => {
                     <div className="mt-3 flex items-center">
                       <button
                         onClick={() => handleMarkAsRead(notification.id)}
-                        className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                        className="text-xs font-bold text-primary hover:underline flex items-center gap-1.5 cursor-pointer"
                       >
-                        <span className="material-symbols-outlined text-[14px]">check</span>{t("Mark as read")}</button>
+                        <Check className="w-3.5 h-3.5 shrink-0" />
+                        <span>{t("Mark as read")}</span>
+                      </button>
                     </div>
                   )}
                 </div>

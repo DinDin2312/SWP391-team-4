@@ -150,9 +150,13 @@ public class MemberServiceImpl implements MemberService {
             long duration = java.time.Duration.between(b.getSchedule().getStartTime(), b.getSchedule().getEndTime())
                     .toMinutes();
 
-            // Mocking some telemetry data
-            int calories = 300 + (int) (Math.random() * 200);
-            int avgHr = 110 + (int) (Math.random() * 40);
+            int seed = Math.abs(java.util.Objects.hash(
+                    b.getBookingId(),
+                    b.getSchedule().getScheduleId(),
+                    b.getSchedule().getGymClass().getClassId()));
+            long effectiveDuration = duration > 0 ? duration : 60;
+            int calories = (int) (effectiveDuration * 5) + (seed % 120);
+            int avgHr = 115 + (seed % 35);
 
             return RecentActivityResponse.builder()
                     .bookingId(b.getBookingId()).classId(b.getSchedule().getGymClass().getClassId())

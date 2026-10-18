@@ -3,14 +3,15 @@ import PackageBenefits from '../../../components/resource-images/PackageBenefits
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, ShoppingBag, Percent, Smartphone, RefreshCw,
-  Dumbbell, Bot, Crown, Flame, Trophy, Shield, Gauge, Activity, Snowflake,
+  Dumbbell, Bot, Crown, Flame, Trophy, Activity, Snowflake,
   Building2, Lock, QrCode, FileCheck, ArrowRight, CheckCircle2,
   Trash2, ShoppingCart, Check, ShieldCheck, Tag,
-  CircleDollarSign, DollarSign, BadgeCheck, AlertCircle
+  DollarSign, BadgeCheck, AlertCircle, Sparkles
 } from 'lucide-react';
 import { Meteors } from '../../../components/ui/meteors';
 import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
@@ -34,11 +35,68 @@ const PackageStore = () => {
 
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
   const [addedItems, setAddedItems] = useState({});
+  const [aiHighlightedId, setAiHighlightedId] = useState(null);
+
+  const triggerPackageHighlight = (pkgId, actionType = 'ADD_CART') => {
+    setActiveCategory('all');
+    setSearchTerm('');
+    if (actionType === 'ADD_CART') {
+      setAddedItems(prev => ({ ...prev, [Number(pkgId)]: true }));
+    }
+    setAiHighlightedId(null);
+    requestAnimationFrame(() => {
+      setAiHighlightedId(Number(pkgId));
+    });
+    fetchCart();
+
+    setTimeout(() => {
+      const el = document.getElementById(`ai-package-${pkgId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 240);
+
+    setTimeout(() => {
+      setAiHighlightedId((prev) => (Number(prev) === Number(pkgId) ? null : prev));
+    }, 10000);
+  };
 
   useEffect(() => {
     fetchPackages();
     fetchCart();
+
+    const onAiHighlight = (e) => {
+      if (e.detail?.type === 'PACKAGE' && e.detail?.id) {
+        sessionStorage.removeItem('nexus_ai_highlight');
+        triggerPackageHighlight(e.detail.id, e.detail.action);
+      }
+    };
+    const onCartUpdated = () => fetchCart();
+
+    window.addEventListener('nexusAiHighlight', onAiHighlight);
+    window.addEventListener('cartUpdated', onCartUpdated);
+    return () => {
+      window.removeEventListener('nexusAiHighlight', onAiHighlight);
+      window.removeEventListener('cartUpdated', onCartUpdated);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!loading && packages.length > 0) {
+      try {
+        const raw = sessionStorage.getItem('nexus_ai_highlight');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.type === 'PACKAGE' && parsed.id && Date.now() - (parsed.timestamp || 0) < 15000) {
+            sessionStorage.removeItem('nexus_ai_highlight');
+            triggerPackageHighlight(parsed.id, parsed.action);
+          }
+        }
+      } catch {
+        // ignore storage parse error
+      }
+    }
+  }, [loading, packages.length]);
 
   const fetchPackages = async () => {
     try {
@@ -331,21 +389,72 @@ const PackageStore = () => {
           const Icon = getPackageIcon(pkg.packageType);
           const isPopular = pkg.price > 2000000;
           const isAdded = addedItems[pkg.packageId];
+          const isAiSelected = Number(aiHighlightedId) === Number(pkg.packageId);
 
           return (
             <div 
               key={pkg.packageId} 
-              className={`flex flex-col justify-between rounded-2xl p-6 transition-all duration-300 group relative overflow-hidden ${
-                isPopular 
-                  ? 'bg-surface-container-high/90 shadow-xl shadow-primary-container/10 border border-blue-500/30'
-                  : 'bg-surface-container-low hover:bg-surface-container shadow-md'
+              id={`ai-package-${pkg.packageId}`}
+              className={`flex flex-col justify-between rounded-2xl p-6 transition-all duration-300 group relative ${
+                isAiSelected
+                  ? 'overflow-visible shadow-2xl scale-[1.015]'
+                  : isPopular 
+                    ? 'overflow-hidden bg-surface-container-high/90 shadow-xl shadow-primary-container/10 border border-blue-500/30'
+                    : 'overflow-hidden bg-surface-container-low hover:bg-surface-container shadow-md'
               }`}
             >
-              {isPopular && (
+              {isAiSelected && (
                 <>
-                  <Meteors number={15} />
+                  {/* Aceternity UI: Background Gradient - Ambient outer blur */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{
+                      opacity: [0.6, 0.9, 0.6],
+                      backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                      scale: [1, 1.012, 1],
+                    }}
+                    transition={{
+                      backgroundPosition: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+                      opacity: { duration: 3.5, repeat: Infinity, ease: "easeInOut" },
+                      scale: { duration: 3.5, repeat: Infinity, ease: "easeInOut" },
+                    }}
+                    style={{ backgroundSize: "300% 300%" }}
+                    className="absolute -inset-[4px] rounded-2xl z-0 pointer-events-none blur-lg bg-[radial-gradient(circle_farthest-side_at_0_100%,#00f2fe,transparent),radial-gradient(circle_farthest-side_at_100%_0,#7b61ff,transparent),radial-gradient(circle_farthest-side_at_100%_100%,#ffc414,transparent),radial-gradient(circle_farthest-side_at_0_0,#1ca0fb,#141316)]"
+                  />
+                  {/* Aceternity UI: Background Gradient - Sharp 2px glowing border */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{
+                      opacity: 1,
+                      backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                    }}
+                    transition={{
+                      backgroundPosition: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+                      opacity: { duration: 0.3 }
+                    }}
+                    style={{ backgroundSize: "300% 300%" }}
+                    className="absolute -inset-[2px] rounded-2xl z-0 pointer-events-none bg-[radial-gradient(circle_farthest-side_at_0_100%,#00f2fe,transparent),radial-gradient(circle_farthest-side_at_100%_0,#7b61ff,transparent),radial-gradient(circle_farthest-side_at_100%_100%,#ffc414,transparent),radial-gradient(circle_farthest-side_at_0_0,#1ca0fb,#141316)]"
+                  />
+                  {/* Solid card surface plate */}
+                  <div className="absolute inset-0 rounded-2xl bg-[var(--surface)] z-[1] pointer-events-none" />
+                  {/* AI Selected Pill Badge */}
+                  <motion.div
+                    initial={{ y: -8, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className="absolute -top-3.5 right-4 z-30 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-md shadow-indigo-500/30 border border-white/40 pointer-events-none"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                    <span>{t("AI Selected")}</span>
+                  </motion.div>
+                </>
+              )}
+
+              {isPopular && !isAiSelected && (
+                <>
+                  <Meteors number={8} />
                   <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-blue-500/10 to-teal-500/10 blur-xl pointer-events-none -z-0"></div>
-                  <div className="mb-3 px-4 py-1.5 rounded-full bg-primary-container text-on-primary-container text-[11px] font-bold tracking-widest uppercase shadow-md flex items-center gap-1 z-20 w-fit">
+                  {/* Absolute so it overlays the cover photo and doesn't push content down (keeps cards aligned) */}
+                  <div className="absolute top-9 left-9 z-20 px-4 py-1.5 rounded-full bg-primary-container text-on-primary-container text-[11px] font-bold tracking-widest uppercase shadow-md flex items-center gap-1 w-fit pointer-events-none">
                     <Flame className="w-3.5 h-3.5" />
                     <span>{t("Most Popular")}</span>
                   </div>

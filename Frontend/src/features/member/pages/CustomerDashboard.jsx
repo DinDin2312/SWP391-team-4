@@ -4,8 +4,8 @@ import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import { formatDate } from '../../../utils/displayFormat';
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { AuthContext } from '../../../context/AuthContext';
+import { memberService } from '../services/memberService';
 import {
   Dumbbell,
   QrCode,
@@ -20,6 +20,7 @@ import {
   Clock,
   MapPin,
   User, TrendingUp,
+  X,
 } from 'lucide-react';
 
 const CustomerDashboard = () => {
@@ -29,6 +30,7 @@ const CustomerDashboard = () => {
 
   const [activeTab, setActiveTab] = useState('all');
   const [cancelModal, setCancelModal] = useState({ isOpen: false, classId: null });
+  const [qrModal, setQrModal] = useState({ isOpen: false, session: null });
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -45,44 +47,41 @@ const CustomerDashboard = () => {
   const [memberTier, setMemberTier] = useState('MEMBER');
   const [recentActivities, setRecentActivities] = useState([]);
 
-// Fetch membership card and schedule data
-  React.useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem('token');
+  const fetchDashboardData = React.useCallback(async () => {
+    try {
+      const [membershipData, bookingsData, checkInsData, recentData, profileData] = await Promise.all([
+        memberService.getMyMembership(),
+        memberService.getUpcomingBookings(),
+        memberService.getTotalCheckIns(),
+        memberService.getRecentActivities(),
+        memberService.getUserProfile()
+      ]);
 
-// Call 2 APIs in parallel for speed
-        const [membershipRes, bookingsRes, checkInsRes, recentRes, profileRes] = await Promise.all([
-          axios.get('http://localhost:8080/api/v1/member/my-membership', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://localhost:8080/api/v1/member/upcoming-bookings', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://localhost:8080/api/v1/member/total-checkins', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://localhost:8080/api/v1/member/recent-activities', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('http://localhost:8080/api/v1/user/profile', { headers: { Authorization: `Bearer ${token}` } })
-        ]);
-
-        setMembership(membershipRes.data);
-        setUpcomingBookings(bookingsRes.data);
-        setTotalCheckIns(checkInsRes.data);
-        if (profileRes.data) {
-          setLoyaltyPoints(profileRes.data.loyaltyPoints);
-          setMemberTier(profileRes.data.memberTier);
-        }
-        setRecentActivities(recentRes.data);
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
-      } finally {
-        setLoadingMembership(false);
-        setLoadingBookings(false);
+      setMembership(membershipData || null);
+      setUpcomingBookings(Array.isArray(bookingsData) ? bookingsData : []);
+      setTotalCheckIns(typeof checkInsData === 'number' ? checkInsData : Number(checkInsData) || 0);
+      if (profileData) {
+        setLoyaltyPoints(profileData.loyaltyPoints || 0);
+        setMemberTier(profileData.memberTier || 'MEMBER');
       }
-    };
-
-    if (localStorage.getItem('token')) {
-      fetchData();
-    } else {
+      setRecentActivities(Array.isArray(recentData) ? recentData : []);
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+    } finally {
       setLoadingMembership(false);
       setLoadingBookings(false);
     }
   }, []);
+
+// Fetch membership card and schedule data
+  React.useEffect(() => {
+    if (localStorage.getItem('token')) {
+      fetchDashboardData();
+    } else {
+      setLoadingMembership(false);
+      setLoadingBookings(false);
+    }
+  }, [fetchDashboardData]);
 
 // Get full name from login session
   const fullName = userInfo?.fullName || 'Active Member';
@@ -96,6 +95,47 @@ const CustomerDashboard = () => {
     return Math.abs(hash).toString().substring(0, 5);
   };
   const dynamicMemberId = getMemberId(userInfo?.email);
+
+  const filteredActivities = recentActivities.filter((log) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    const dateStr = log.startTime
+      ? new Date(log.startTime).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' }).toLowerCase()
+      : '';
+    return (
+      (log.className && log.className.toLowerCase().includes(q)) ||
+      (log.coachName && log.coachName.toLowerCase().includes(q)) ||
+      (log.status && log.status.toLowerCase().includes(q)) ||
+      dateStr.includes(q)
+    );
+  });
+
+  const handleExportCsv = () => {
+    if (!filteredActivities.length) return;
+    const headers = ['Date & Time', 'Activity / Facility', 'Trainer / Zone', 'Duration (min)', 'Status', 'Calories (kcal)', 'Avg HR (bpm)'];
+    const rows = filteredActivities.map((log) => {
+      const dt = log.startTime ? new Date(log.startTime).toLocaleString(locale()) : '';
+      return [
+        `"${dt.replace(/"/g, '""')}"`,
+        `"${(log.className || '').replace(/"/g, '""')}"`,
+        `"${(log.coachName || '').replace(/"/g, '""')}"`,
+        log.durationMinutes ?? '',
+        `"${(log.status || '').replace(/"/g, '""')}"`,
+        log.calories ?? '',
+        log.avgHr ?? ''
+      ].join(',');
+    });
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `nexus-activity-log-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-[var(--text)]">{t("Member Dashboard")}</h1>
@@ -272,9 +312,9 @@ const CustomerDashboard = () => {
     upcomingBookings.filter(item => {
       if (activeTab === 'all') return true;
       const name = item.className.toLowerCase();
-      if (activeTab === 'group') return name.includes('yoga') || name.includes('gym') || name.includes('cÄ‚â€ Ă‚Â¡');
-      if (activeTab === 'courts') return name.includes('court') || name.includes('sĂ„â€Ă‚Â¢n');
-      if (activeTab === 'recovery') return name.includes('recovery') || name.includes('hÄ‚Â¡Ă‚Â»Ă¢â‚¬Å“i phÄ‚Â¡Ă‚Â»Ă‚Â¥c');
+      if (activeTab === 'group') return name.includes('yoga') || name.includes('gym') || name.includes('hiit') || name.includes('cơ') || name.includes('fitness');
+      if (activeTab === 'courts') return name.includes('court') || name.includes('sân') || name.includes('tennis') || name.includes('badminton') || name.includes('cầu lông') || name.includes('bóng');
+      if (activeTab === 'recovery') return name.includes('recovery') || name.includes('hồi phục') || name.includes('stretching') || name.includes('pilates') || name.includes('spa');
       return true;
     }).map((item) => {
       const dateObj = new Date(item.startTime);
@@ -322,7 +362,7 @@ const CustomerDashboard = () => {
 
                     {/* Action Buttons */}
           <div className="flex items-center gap-2 mt-2 sm:mt-0">
-            <button className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary)] text-[color:var(--on-primary)] text-xs font-bold transition-colors">
+            <button onClick={() => setQrModal({ isOpen: true, session: item })} className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary)] text-[color:var(--on-primary)] text-xs font-bold transition-colors">
               <QrCode className="w-3.5 h-3.5" />{t("Check-in")}</button>
             <button onClick={() => setCancelModal({ isOpen: true, classId: item.classId })} className="px-3 py-1.5 rounded-lg bg-transparent hover:bg-red-500/10 text-[var(--text-muted)] hover:text-[var(--danger-text)] text-xs font-semibold transition-colors">{t("Cancel")}</button>
           </div>
@@ -373,8 +413,22 @@ const CustomerDashboard = () => {
 
               <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] pt-1">
                 <span>{t("Hold near turnstile optical scanner")}</span>
-                <span className="text-[var(--cyan)] font-semibold flex items-center gap-1">
-                  <Radio className="w-3.5 h-3.5 animate-pulse" />{t("Simulate Tap")}</span>
+                <button
+                  type="button"
+                  onClick={() => setQrModal({
+                    isOpen: true,
+                    session: {
+                      className: t("NEXUS Turnstile Access"),
+                      coachName: fullName,
+                      roomName: t("Main Gate"),
+                      status: membership ? membership.status : 'ACTIVE',
+                      bookingId: dynamicMemberId,
+                      startTime: new Date().toISOString()
+                    }
+                  })}
+                  className="text-[var(--cyan)] font-semibold flex items-center gap-1 cursor-pointer hover:underline"
+                >
+                  <Radio className="w-3.5 h-3.5 animate-pulse" />{t("Simulate Tap")}</button>
               </div>
             </div>
 
@@ -383,10 +437,10 @@ const CustomerDashboard = () => {
               <h3 className="text-sm font-bold text-[var(--text)] mb-3">{t("Express Actions")}</h3>
               <div className="space-y-2">
                 {[
-                  { title: t("Book PT Session"), subtitle: t("Consult biomechanics coaches"), icon: User, TrendingUp, onClick: () => alert("System is matching you with an available trainer...") },
-                  { title: t("Reserve Smart Court"), subtitle: t("Tennis, Basketball & Padel"), icon: Search, onClick: () => alert("Loading Smart Court layout...") },
-                  { title: t("Biometric Telemetry"), subtitle: t("VO2 Max & recovery index"), icon: Activity, onClick: () => alert("Syncing data with your Apple Watch/Garmin...") },
-                  { title: t("Locker & Facility Access"), subtitle: t("Manage digital locker keys"), icon: Dumbbell, onClick: () => alert("Connecting NFC to unlock locker #42...") },
+                  { title: t("Book PT Session"), subtitle: t("Consult biomechanics coaches"), icon: User, onClick: () => navigate('/member/book-class') },
+                  { title: t("Reserve Smart Court"), subtitle: t("Tennis, Basketball & Padel"), icon: Search, onClick: () => navigate('/member/book-class') },
+                  { title: t("Biometric Telemetry"), subtitle: t("VO2 Max & recovery index"), icon: Activity, onClick: () => navigate('/member/attendance') },
+                  { title: t("Locker & Facility Access"), subtitle: t("Manage digital locker keys"), icon: Dumbbell, onClick: () => navigate('/member/memberships') },
                 ].map((action, idx) => {
                   const Icon = action.icon;
                   return (
@@ -427,13 +481,21 @@ const CustomerDashboard = () => {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   placeholder={t("Search facility, date...")}
                   className="bg-[var(--surface)] border border-[var(--border)] rounded-xl pl-9 pr-4 py-2 text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] w-52 transition-colors"
                 />
               </div>
 
-              <button className="px-3.5 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-xs font-semibold text-[var(--text)] flex items-center gap-2 transition-colors">
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                disabled={filteredActivities.length === 0}
+                className="px-3.5 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-xs font-semibold text-[var(--text)] flex items-center gap-2 transition-colors disabled:opacity-50"
+              >
                 <Download className="w-3.5 h-3.5" />
                 <span>{t("Export CSV")}</span>
               </button>
@@ -454,12 +516,12 @@ const CustomerDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
-                  {recentActivities.length === 0 ? (
+                  {filteredActivities.length === 0 ? (
                     <tr>
                       <td colSpan="6" className="py-8 text-center text-[var(--text-muted)] font-medium">{t("No recent activities found. Start booking classes to see your logs!")}</td>
                     </tr>
                   ) : (
-                    recentActivities.slice((currentPage - 1) * 3, currentPage * 3).map((log) => {
+                    filteredActivities.slice((currentPage - 1) * 3, currentPage * 3).map((log) => {
                       const dateObj = new Date(log.startTime);
                       const isYesterday = new Date(new Date().setDate(new Date().getDate()-1)).toDateString() === dateObj.toDateString();
                       const dateStr = isYesterday ? t('Yesterday') : dateObj.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -497,14 +559,14 @@ const CustomerDashboard = () => {
 
           {/* Table Pagination */}
           <div className="pt-4 mt-2 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--text-muted)]">
-            <span>{t("Showing")}{' '}{recentActivities.slice((currentPage - 1) * 3, currentPage * 3).length}{' '}{t("of")}{' '}{recentActivities.length}{' '}{t("recorded sessions")}</span>
+            <span>{t("Showing")}{' '}{filteredActivities.slice((currentPage - 1) * 3, currentPage * 3).length}{' '}{t("of")}{' '}{filteredActivities.length}{' '}{t("recorded sessions")}</span>
             <div className="flex items-center gap-1.5">
               <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
                   className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${currentPage === 1 ? 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] cursor-not-allowed' : 'bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-[var(--text)]'}`}
                 ><ChevronLeft className="w-4 h-4" /></button>
-                {Array.from({ length: Math.ceil(recentActivities.length / 3) || 1 }).map((_, idx) => (
+                {Array.from({ length: Math.ceil(filteredActivities.length / 3) || 1 }).map((_, idx) => (
                   <button
                     key={idx}
                     onClick={() => setCurrentPage(idx + 1)}
@@ -514,9 +576,9 @@ const CustomerDashboard = () => {
                   </button>
                 ))}
                 <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(recentActivities.length / 3) || 1))}
-                  disabled={currentPage === (Math.ceil(recentActivities.length / 3) || 1)}
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${currentPage === (Math.ceil(recentActivities.length / 3) || 1) ? 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] cursor-not-allowed' : 'bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-[var(--text)]'}`}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredActivities.length / 3) || 1))}
+                  disabled={currentPage === (Math.ceil(filteredActivities.length / 3) || 1)}
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${currentPage === (Math.ceil(filteredActivities.length / 3) || 1) ? 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] cursor-not-allowed' : 'bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-[var(--text)]'}`}
                 ><ChevronRight className="w-4 h-4" /></button>
             </div>
           </div>
@@ -526,16 +588,55 @@ const CustomerDashboard = () => {
         isOpen={cancelModal.isOpen}
         onClose={() => setCancelModal({ isOpen: false, classId: null })}
         onConfirm={() => {
-          axios.post('http://localhost:8080/api/v1/member/cancel-class/' + cancelModal.classId, {}, {
-            headers: { Authorization: "Bearer " + localStorage.getItem('token') }
-          }).then(() => {
-            window.location.reload();
+          memberService.cancelClass(cancelModal.classId).then(() => {
+            setCancelModal({ isOpen: false, classId: null });
+            fetchDashboardData();
           }).catch(err => alert(err.response?.data || 'Failed to cancel class'));
         }}
         title={t("Cancel Class Registration")}
         message={t("Are you sure you want to cancel this class? All future sessions of this class will be dropped from your schedule. This action cannot be undone.")}
         confirmText={t("Yes, Cancel Class")}
       />
+
+      {qrModal.isOpen && qrModal.session && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setQrModal({ isOpen: false, session: null })}>
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 max-w-sm w-full shadow-2xl flex flex-col items-center gap-4 relative" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setQrModal({ isOpen: false, session: null })} className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text)]">
+              <X className="w-5 h-5" />
+            </button>
+            <div className="w-12 h-12 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
+              <QrCode className="w-6 h-6" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-[var(--text)]">{t("Session Check-in Pass")}</h3>
+              <p className="text-xs text-[var(--text-muted)] mt-1">{qrModal.session.className}</p>
+            </div>
+            <div className="p-4 bg-white rounded-xl border border-[var(--border)] flex flex-col items-center gap-2">
+              <QrCode className="w-36 h-36 text-slate-900" />
+              <span className="font-mono text-xs font-bold text-slate-700 tracking-widest">
+                NXS-{qrModal.session.bookingId || qrModal.session.classId || dynamicMemberId}
+              </span>
+            </div>
+            <div className="w-full text-xs text-[var(--text-muted)] bg-[var(--bg)] rounded-xl p-3 border border-[var(--border)] flex flex-col gap-1.5">
+              <div className="flex justify-between">
+                <span>{t("Coach:")}</span>
+                <span className="font-semibold text-[var(--text)]">{qrModal.session.coachName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>{t("Location:")}</span>
+                <span className="font-semibold text-[var(--text)]">{qrModal.session.roomName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>{t("Status:")}</span>
+                <span className="font-semibold text-[var(--success-text)]">{codeLabel(qrModal.session.status)}</span>
+              </div>
+            </div>
+            <button onClick={() => setQrModal({ isOpen: false, session: null })} className="w-full py-2.5 rounded-xl bg-[var(--primary)] text-[color:var(--on-primary)] font-bold text-xs">
+              {t("Done")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

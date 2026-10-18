@@ -1,7 +1,8 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import authService from '../services/authService';
+import { RefreshCw, Check, X } from 'lucide-react';
 
 export default function OTPVerification() {
   useLanguage();
@@ -51,12 +52,14 @@ export default function OTPVerification() {
     if (timeLeft > 0) return; // Prevent resend if timer hasn't expired (5 minutes)
     try {
       setLoading(true);
-      await axios.post(`http://localhost:8080/api/v1/auth/resend-otp?email=${encodeURIComponent(email)}`);
+      await authService.resendOtp(email);
       setTimeLeft(300); // Reset timer to 5 minutes
       setOtp(['', '', '', '', '', '']); // Clear input boxes
-      setErrorMsg('');
+      setToastMessage({ type: 'success', text: t('A new OTP code has been sent to your email.') });
+      setTimeout(() => setToastMessage(null), 3000);
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Failed to resend code.');
+      setToastMessage({ type: 'error', text: err.response?.data?.message || 'Failed to resend code.' });
+      setTimeout(() => setToastMessage(null), 3000);
     } finally {
       setLoading(false);
     }
@@ -109,9 +112,9 @@ export default function OTPVerification() {
     setLoading(true);
     try {
       // Call Verify OTP API
-      const response = await axios.post(`http://localhost:8080/api/v1/auth/verify-otp?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otpCode)}`);
+      const data = await authService.verifyOtp(email, otpCode);
 
-      setToastMessage({ type: 'success', text: response.data.message || 'Verification successful! Your account has been activated.' });
+      setToastMessage({ type: 'success', text: data?.message || 'Verification successful! Your account has been activated.' });
       setLoading(false);
       setTimeout(() => {
         navigate('/login');
@@ -249,7 +252,10 @@ export default function OTPVerification() {
 
               <button disabled={loading} type="submit" className="w-full py-3.5 px-4 bg-[var(--primary)] hover:bg-[var(--primary)] active:scale-[0.99] text-[color:var(--on-primary)] font-bold rounded-xl shadow-[var(--shadow)] transition-all duration-150 flex items-center justify-center gap-2 group text-base disabled:opacity-70">
                 {loading ? (
-                  <><span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span><span>{t("Verifying...")}</span></>
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
+                    <span>{t("Verifying...")}</span>
+                  </>
                 ) : (
                   <>
                     <span>{t("Verify Account")}</span>
@@ -260,7 +266,7 @@ export default function OTPVerification() {
                 )}
               </button>
 
-              <div className="text-center pt-1 text-sm text-[var(--text-muted)]">{t("Didn't receive the code?")}<button type="button" className="text-[var(--primary)] hover:text-[var(--primary)] font-semibold transition-colors focus:underline ml-1">{t("Resend Code")}</button>
+              <div className="text-center pt-1 text-sm text-[var(--text-muted)]">{t("Didn't receive the code?")}<button type="button" onClick={handleResend} disabled={resending} className="text-[var(--primary)] hover:text-[var(--primary)] font-semibold transition-colors focus:underline ml-1 disabled:opacity-50">{resending ? t("Sending...") : t("Resend Code")}</button>
               </div>
             </form>
 
@@ -281,7 +287,7 @@ export default function OTPVerification() {
           </div>
 
           <footer className="pt-8 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
-            <div>{t("Â© 2026 NEXUS Sports Technology Inc.")}</div>
+            <div>{t("© 2026 NEXUS Sports Technology Inc.")}</div>
             <div className="flex items-center gap-4">
               <button className="hover:text-[var(--text)] transition-colors">{t("Privacy Policy")}</button>
               <button className="hover:text-[var(--text)] transition-colors">{t("Safety Code")}</button>
@@ -293,8 +299,12 @@ export default function OTPVerification() {
 
       {toastMessage && (
         <div className={`fixed bottom-8 right-8 z-50 bg-[var(--surface)] border ${toastMessage.type === 'error' ? 'border-[var(--danger-soft)]' : 'border-[var(--primary-soft)]'} text-[var(--text)] rounded-xl p-4 shadow-[var(--shadow)] animate-fade-in-up flex items-center gap-3.5 max-w-sm`}>
-          <div className={`w-9 h-9 rounded-full ${toastMessage.type === 'error' ? 'bg-[var(--danger)]' : 'bg-[var(--primary)]'} flex items-center justify-center text-[var(--text)]`}>
-            <span className="material-symbols-outlined text-[20px]">{t(toastMessage.type === 'error' ? t('close') : t('check'))}</span>
+          <div className={`w-9 h-9 rounded-full ${toastMessage.type === 'error' ? 'bg-[var(--danger)]' : 'bg-[var(--primary)]'} flex items-center justify-center text-[var(--text)] shrink-0`}>
+            {toastMessage.type === 'error' ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Check className="w-5 h-5" />
+            )}
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-semibold text-[var(--text)]">{t(toastMessage.type === 'error' ? t('Error!') : t('Success!'))}</span>

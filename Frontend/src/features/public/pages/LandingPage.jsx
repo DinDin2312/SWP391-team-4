@@ -68,19 +68,19 @@ const LandingPage = () => {
       {/* Hero Section */}
       <AuroraBackground className="pt-32 pb-20 lg:pt-48 lg:pb-32 bg-[#060b17]">
         <motion.div 
-          initial={{ opacity: 0.0, y: 40 }}
+          initial={{ opacity: 0.0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{
-            delay: 0.3,
-            duration: 0.8,
-            ease: "easeInOut",
+            delay: 0.2,
+            duration: 1.2,
+            ease: "easeOut",
           }}
           className="max-w-7xl mx-auto px-6 relative z-10 w-full"
         >
           <div className="max-w-6xl mx-auto text-center space-y-8">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-semibold mx-auto">
               <Sparkles className="w-4 h-4" />
-              <ShinyText text={t("Premium Sports & Fitness Laboratory")} speed={3} className="tracking-wider" />
+              <ShinyText text={t("Premium Sports & Fitness Laboratory")} speed={7} className="tracking-wider" />
             </div>
             
             <TypewriterEffectSmooth 
@@ -175,7 +175,7 @@ const LandingPage = () => {
       )}
 
       {/* Featured Classes */}
-      <motion.section id="classes" className="py-24 bg-[#0a1122]" initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.7, ease: "easeOut" }}>
+      <motion.section id="classes" className="py-24 bg-[#0a1122]" initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 1.0, ease: "easeOut" }}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-12">
             <div>
@@ -270,7 +270,7 @@ const LandingPage = () => {
       </motion.section>
 
       {/* Testimonials */}
-      <motion.section className="py-20 bg-[#060b17] overflow-hidden flex flex-col items-center justify-center" initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.7, ease: "easeOut" }}>
+      <motion.section className="py-20 bg-[#060b17] overflow-hidden flex flex-col items-center justify-center" initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 1.0, ease: "easeOut" }}>
         <h2 className="text-3xl font-bold text-white mb-10 text-center">{t("What Our Athletes Say")}</h2>
         <InfiniteMovingCards
           key={language}
@@ -281,17 +281,17 @@ const LandingPage = () => {
       </motion.section>
 
       {/* Pricing / Packages CTA */}
-      <motion.section id="pricing" className="py-24 bg-[#0a1122]" initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.7, ease: "easeOut" }}>
+      <motion.section id="pricing" className="py-24 bg-[#0a1122]" initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 1.0, ease: "easeOut" }}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-5xl font-black mb-6"><ShinyText text={t("Membership Packages")} speed={3} /></h2>
+            <h2 className="text-3xl md:text-5xl font-black mb-6"><ShinyText text={t("Membership Packages")} speed={7} /></h2>
             <p className="text-slate-400 text-lg">{t("Choose the perfect plan to unlock your potential. No hidden fees.")}</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {packages.length > 0 ? (
               packages.map((pkg, idx) => (
-                <div key={pkg.packageId} className={`bg-[#060b17] border border-slate-800 rounded-3xl p-8 flex flex-col hover:-translate-y-6 hover:shadow-[0_20px_50px_rgba(59,130,246,0.3)] hover:scale-105 hover:border-blue-500/50 transition-all duration-500 cursor-pointer ${idx === 1 ? t('bg-gradient-to-b from-blue-900/40 to-[#060b17] border-blue-500 shadow-2xl shadow-blue-500/20 relative transform md:-translate-y-4 hover:-translate-y-10 hover:shadow-[0_20px_50px_rgba(59,130,246,0.5)]') : t('')}`}>
+                <div key={pkg.packageId} className={`bg-[#060b17] border border-slate-800 rounded-3xl p-8 flex flex-col hover:-translate-y-2 hover:shadow-xl hover:shadow-blue-500/20 hover:border-blue-500/40 transition-all duration-300 cursor-pointer ${idx === 1 ? t('bg-gradient-to-b from-blue-900/40 to-[#060b17] border-blue-500 shadow-2xl shadow-blue-500/20 relative transform md:-translate-y-2 hover:-translate-y-4 hover:shadow-2xl hover:shadow-blue-500/30') : t('')}`}>
                   {idx === 1 && <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-bold shadow-lg">{t("MOST POPULAR")}</div>}
                   <h3 className="text-xl font-bold text-white mb-2">{pkg.packageName}</h3>
                   <div className="text-3xl font-black text-blue-400 mb-6">{pkg.price.toLocaleString('vi-VN')}{' '}{t("₫")}<span className="text-sm font-normal text-slate-500">/ {pkg.durationDays}{' '}{t("days")}</span></div>

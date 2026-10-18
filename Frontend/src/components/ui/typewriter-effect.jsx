@@ -46,9 +46,9 @@ export const TypewriterEffectSmooth = ({
         whileInView={{ width: "fit-content" }}
         viewport={{ once: true }}
         transition={{
-          duration: 2,
-          ease: "linear",
-          delay: 0.5,
+          duration: 3.2,
+          ease: "easeInOut",
+          delay: 0.6,
         }}
       >
         <div
@@ -62,7 +62,7 @@ export const TypewriterEffectSmooth = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{
-          duration: 0.8,
+          duration: 1.2,
           repeat: Infinity,
           repeatType: "reverse",
         }}

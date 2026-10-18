@@ -2,6 +2,7 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDateTime } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Receipt, Dumbbell, CreditCard, RefreshCw } from 'lucide-react';
 
 const BillingHistory = () => {
   useLanguage();
@@ -31,7 +32,9 @@ const BillingHistory = () => {
     return (
       <div className="flex items-center justify-center w-full h-64">
         <div className="text-on-surface-variant flex items-center gap-2 font-semibold">
-          <span className="material-symbols-outlined animate-spin">sync</span>{t("Loading Billing History...")}</div>
+          <RefreshCw className="w-5 h-5 animate-spin" />
+          <span>{t("Loading Billing History...")}</span>
+        </div>
       </div>
     );
   }
@@ -69,7 +72,7 @@ const BillingHistory = () => {
         </div>
       ) : invoices.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 bg-surface-container-lowest rounded-xl border border-surface-container text-center">
-          <span className="material-symbols-outlined text-6xl text-on-surface-variant mb-4">receipt_long</span>
+          <Receipt className="w-16 h-16 text-on-surface-variant mb-4 opacity-50" />
           <h3 className="text-xl font-bold text-on-surface">{t("No invoices found")}</h3>
           <p className="text-sm text-on-surface-variant mt-2">{t("You haven't made any purchases yet.")}</p>
         </div>
@@ -81,7 +84,7 @@ const BillingHistory = () => {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-surface-container-low border-b border-surface-container">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-[24px]">receipt_long</span>
+                    <Receipt className="w-6 h-6 shrink-0" />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-on-surface flex items-center gap-2">{t("Invoice #")}{invoice.invoiceId.toString().padStart(6, '0')}
@@ -110,9 +113,11 @@ const BillingHistory = () => {
                     invoice.details.map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-surface-container-lowest border border-surface-container-high/50">
                         <div className="flex items-center gap-3">
-                          <span className="material-symbols-outlined text-tertiary text-[20px]">
-                            {t(item.itemType === 'CLASS' || item.itemType === 'CLASS_SCHEDULE' ? t('fitness_center') : t('card_membership'))}
-                          </span>
+                          {item.itemType === 'CLASS' || item.itemType === 'CLASS_SCHEDULE' ? (
+                            <Dumbbell className="w-5 h-5 text-tertiary shrink-0" />
+                          ) : (
+                            <CreditCard className="w-5 h-5 text-tertiary shrink-0" />
+                          )}
                           <span className="text-sm font-bold text-on-surface">{item.itemName}</span>
                         </div>
                         <span className="text-sm font-semibold text-on-surface-variant">{formatCurrency(item.unitPrice)}</span>

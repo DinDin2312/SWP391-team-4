@@ -3,8 +3,8 @@ import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dumbbell, LockKeyhole, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
-import axios from 'axios';
 import { AuthContext } from '../../../context/AuthContext';
+import authService from '../services/authService';
 import { useGoogleLogin } from '@react-oauth/google';
 import { BackgroundBeamsWithCollision } from '../../../components/ui/background-beams-with-collision';
 import { HoverBorderGradient } from '../../../components/ui/hover-border-gradient';
@@ -32,11 +32,9 @@ function LoginPage() {
     onSuccess: async (tokenResponse) => {
       try {
         setLoading(true);
-        const res = await axios.post('http://localhost:8080/api/v1/auth/google', {
-          token: tokenResponse.access_token,
-        });
+        const data = await authService.googleLogin(tokenResponse.access_token);
 
-        const { token, role, email: userEmail, fullName } = res.data;
+        const { token, role, email: userEmail, fullName } = data;
         login({ token, role, email: userEmail, fullName });
         const route = ROLE_ROUTES[role] || '/customer/dashboard';
         navigate(route);
@@ -65,12 +63,12 @@ function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8080/api/v1/auth/login', {
+      const data = await authService.login({
         email,
         password,
       });
 
-      const { token, role, email: userEmail, fullName } = response.data;
+      const { token, role, email: userEmail, fullName } = data;
 
       login({ token, role, email: userEmail, fullName });
 

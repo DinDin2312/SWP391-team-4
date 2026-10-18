@@ -1,6 +1,6 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDate as displayFormatDate, formatDateTime as displayFormatDateTime, formatMoney } from '../../../utils/displayFormat';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     X,
     User,
@@ -72,6 +72,33 @@ const MemberDetailModal = ({ member, onClose }) => {
     const [confirmingRenewal, setConfirmingRenewal] = useState(false);
     const [renewalFeedback, setRenewalFeedback] = useState(null);
 
+    const handleDismissModal = useCallback(() => {
+        if (window.history.state?.nexusModal === 'member-detail') {
+            window.history.back();
+        } else if (onClose) {
+            onClose();
+        }
+    }, [onClose]);
+
+    useEffect(() => {
+        if (!member) return undefined;
+        window.history.pushState({ nexusModal: 'member-detail', userId: member.userId }, '');
+        const handlePopState = () => {
+            if (onClose) onClose();
+        };
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                handleDismissModal();
+            }
+        };
+        window.addEventListener('popstate', handlePopState);
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [member, onClose, handleDismissModal]);
+
     if (!member) return null;
 
     const handleCopyPhone = () => {
@@ -136,7 +163,7 @@ const MemberDetailModal = ({ member, onClose }) => {
             setTimeout(() => {
                 setRenewalModalOpen(false);
                 setSuggestedClass(null);
-                if (onClose) onClose(); // Refresh or close
+                handleDismissModal();
             }, 1500);
         } catch (err) {
             const msg = err.response?.data?.message || err.response?.data || 'Failed to enroll into next class.';
@@ -155,11 +182,12 @@ const MemberDetailModal = ({ member, onClose }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'var(--surface-hover)',
-                backdropFilter: 'blur(8px)',
+                backgroundColor: 'rgba(15, 23, 42, 0.45)',
+                backdropFilter: 'blur(6px)',
+                WebkitBackdropFilter: 'blur(6px)',
                 padding: '1rem',
             }}
-            onClick={onClose}
+            onClick={handleDismissModal}
         >
             <div
                 style={{
@@ -275,7 +303,7 @@ const MemberDetailModal = ({ member, onClose }) => {
                     </div>
 
                     <button
-                        onClick={onClose}
+                        onClick={handleDismissModal}
                         style={{
                             background: 'var(--surface-hover)',
                             border: '1px solid var(--border)',
@@ -403,47 +431,113 @@ const MemberDetailModal = ({ member, onClose }) => {
                     {/* TAB 1: GÓI TẬP */}
                     {activeTab === 'packages' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                            {member.currentMembershipStatus === 'ACTIVE' && (
-                                <div
-                                    style={{
-                                        background: 'linear-gradient(135deg, var(--primary-soft) 0%, var(--success-soft) 100%)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '1rem',
-                                        padding: '1.25rem 1.5rem',
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-                                        <div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <Award style={{ width: '20px', height: '20px', color: 'var(--primary)' }} />
-                                                <span style={{ fontSize: '0.8rem', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{t("Currently Active Package")}</span>
+                            {member.currentMembershipStatus === 'ACTIVE' && (() => {
+                                const activePkgs = (member.memberships || []).filter((m) => m.active);
+                                const activePkg = activePkgs[0] || (member.memberships || [])[0];
+                                const sameTypeActive = activePkgs.filter((m) => !member.currentPackageType || m.packageType === member.currentPackageType);
+                                const targetList = sameTypeActive.length > 0 ? sameTypeActive : activePkgs;
+                                const stackedDuration = targetList.reduce((sum, m) => sum + (Number(m.durationDays) || 30), 0);
+                                const remainingDays = member.daysRemaining ?? 0;
+                                const totalDuration = Math.max(stackedDuration || 30, remainingDays);
+                                const pct = Math.min(100, Math.max(0, Math.round((remainingDays / Math.max(1, totalDuration)) * 100)));
+                                const isExpiringSoon = remainingDays <= 7;
+                                const earliestStart = targetList
+                                    .map((m) => m.startDate)
+                                    .filter(Boolean)
+                                    .sort()[0] || activePkg?.startDate;
+                                const latestEnd = targetList
+                                    .map((m) => m.endDate)
+                                    .filter(Boolean)
+                                    .sort()
+                                    .slice(-1)[0] || activePkg?.endDate;
+                                return (
+                                    <div
+                                        style={{
+                                            background: 'linear-gradient(135deg, var(--primary-soft) 0%, var(--success-soft) 100%)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '1rem',
+                                            padding: '1.25rem 1.5rem',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '0.85rem',
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <Award style={{ width: '20px', height: '20px', color: 'var(--primary)' }} />
+                                                    <span style={{ fontSize: '0.8rem', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{t("Currently Active Package")}</span>
+                                                </div>
+                                                <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text)', margin: '0.4rem 0 0.2rem' }}>
+                                                    {member.currentPackageName}
+                                                </h3>
+                                                <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                                                    {t("Type:")} <strong style={{ color: 'var(--text)' }}>{t(member.currentPackageType || 'COMBO_PROMO')}</strong>
+                                                    {earliestStart && latestEnd && (
+                                                        <span> • {formatDate(earliestStart)} → {formatDate(latestEnd)}</span>
+                                                    )}
+                                                </p>
                                             </div>
-                                            <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text)', margin: '0.4rem 0 0.2rem' }}>
-                                                {member.currentPackageName}
-                                            </h3>
-                                            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t("Type:")}<strong style={{ color: 'var(--text)' }}>{t(member.currentPackageType || 'COMBO_PROMO')}</strong>
-                                            </p>
+
+                                            <span
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.35rem',
+                                                    backgroundColor: isExpiringSoon ? 'var(--warning-soft)' : 'var(--success-soft)',
+                                                    color: isExpiringSoon ? 'var(--warning-text)' : 'var(--success-text)',
+                                                    border: '1px solid var(--border)',
+                                                    padding: '0.35rem 0.85rem',
+                                                    borderRadius: '9999px',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: 700,
+                                                }}
+                                            >
+                                                <Clock style={{ width: '14px', height: '14px' }} />
+                                                {remainingDays}{' '}{t("days left")}
+                                            </span>
                                         </div>
 
-                                        <span
-                                            style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '0.35rem',
-                                                backgroundColor: 'var(--success-soft)',
-                                                color: 'var(--success-text)',
-                                                border: '1px solid var(--border)',
-                                                padding: '0.35rem 0.85rem',
-                                                borderRadius: '9999px',
-                                                fontSize: '0.85rem',
-                                                fontWeight: 700,
-                                            }}
-                                        >
-                      <Clock style={{ width: '14px', height: '14px' }} />
-                                            {member.daysRemaining}{' '}{t("days left")}</span>
+                                        {/* Validity Progress Bar */}
+                                        <div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
+                                                <span>{t("Validity Remaining")}</span>
+                                                <strong>{remainingDays} / {totalDuration} {t("days")} ({pct}%)</strong>
+                                            </div>
+                                            <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--surface)', borderRadius: '9999px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                                <div
+                                                    style={{
+                                                        width: `${pct}%`,
+                                                        height: '100%',
+                                                        backgroundColor: isExpiringSoon ? 'var(--warning-text)' : 'var(--primary)',
+                                                        borderRadius: '9999px',
+                                                        transition: 'width 0.3s ease',
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {isExpiringSoon && (
+                                            <div
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.5rem',
+                                                    padding: '0.6rem 0.85rem',
+                                                    backgroundColor: 'var(--warning-soft)',
+                                                    color: 'var(--warning-text)',
+                                                    borderRadius: '0.5rem',
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                <AlertTriangle style={{ width: '15px', height: '15px', flexShrink: 0 }} />
+                                                <span>{t("This membership package will expire within 7 days. Please remind the member to renew.")}</span>
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            )}
+                                );
+                            })()}
 
                             {/* Package History */}
                             <div>
@@ -464,6 +558,7 @@ const MemberDetailModal = ({ member, onClose }) => {
                                                 <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Price")}</th>
                                                 <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Start Date")}</th>
                                                 <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("End Date")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Benefits & Quota")}</th>
                                                 <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Status")}</th>
                                             </tr>
                                             </thead>
@@ -474,11 +569,31 @@ const MemberDetailModal = ({ member, onClose }) => {
                                                     <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)' }}>{t(pkg.packageType || 'COMBO')}</td>
                                                     <td style={{ padding: '0.85rem 1rem', color: 'var(--text)' }}>{formatCurrency(pkg.price)}</td>
                                                     <td style={{ padding: '0.85rem 1rem', color: 'var(--text)' }}>{formatDate(pkg.startDate)}</td>
-                                                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text)' }}>{formatDate(pkg.endDate)}</td>
+                                                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text)' }}>
+                                                        <div>{formatDate(pkg.endDate)}</div>
+                                                        {pkg.active && (
+                                                            <span style={{ fontSize: '0.72rem', color: pkg.daysRemaining <= 7 ? 'var(--warning-text)' : 'var(--success-text)', fontWeight: 600 }}>
+                                                                ({pkg.daysRemaining} {t("days left")})
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '0.85rem 1rem', fontSize: '0.78rem', color: 'var(--text)' }}>
+                                                        {Array.isArray(pkg.benefits) && pkg.benefits.length > 0 ? (
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                                {pkg.benefits.map((b, bIdx) => (
+                                                                    <span key={bIdx} style={{ display: 'inline-block', padding: '0.15rem 0.45rem', backgroundColor: 'var(--surface-hover)', borderRadius: '0.35rem', border: '1px solid var(--border)' }}>
+                                                                        <strong>{b.subjectName}:</strong> {b.remainingSessions}/{b.sessionLimit} {t("sessions")}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <span style={{ color: 'var(--text-muted)' }}>{t("Gym & Facility Access")}</span>
+                                                        )}
+                                                    </td>
                                                     <td style={{ padding: '0.85rem 1rem' }}>
-                              <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '9999px', backgroundColor: pkg.active ? t('var(--success-soft)') : t('var(--primary-soft)'), color: pkg.active ? t('var(--success-text)') : t('var(--text-muted)') }}>
-                                {t(pkg.active ? t('Active') : t('Expired'))}
-                              </span>
+                                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '9999px', backgroundColor: pkg.active ? 'var(--success-soft)' : 'var(--primary-soft)', color: pkg.active ? 'var(--success-text)' : 'var(--text-muted)' }}>
+                                                            {t(pkg.active ? t('Active') : t('Expired'))}
+                                                        </span>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -609,7 +724,7 @@ const MemberDetailModal = ({ member, onClose }) => {
                 <div style={{ padding: '1rem 1.75rem', borderTop: '1px solid var(--border)', backgroundColor: 'var(--surface)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{t("NEXUS Sports Center Receptionist Portal")}</div>
                     <button
-                        onClick={onClose}
+                        onClick={handleDismissModal}
                         style={{ padding: '0.5rem 1.25rem', backgroundColor: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}
                     >{t("Close")}</button>
                 </div>
@@ -621,8 +736,9 @@ const MemberDetailModal = ({ member, onClose }) => {
                             position: 'fixed',
                             inset: 0,
                             zIndex: 10000,
-                            backgroundColor: 'var(--surface-hover)',
+                            backgroundColor: 'rgba(15, 23, 42, 0.45)',
                             backdropFilter: 'blur(5px)',
+                            WebkitBackdropFilter: 'blur(5px)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
