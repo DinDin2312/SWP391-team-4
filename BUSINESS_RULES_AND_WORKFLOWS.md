@@ -255,7 +255,7 @@ flowchart TD
 
 ## 6. Phân hệ 4: Đặt lịch Lớp học, Hủy lịch & Bảo lưu Hạn mức
 
-**Mã nguồn chính**: [`MemberServiceImpl.java`](Backend/src/main/java/com/team4/sportscenter/modules/member/services/impl/MemberServiceImpl.java), [`PackageBenefitsService.java`](Backend/src/main/java/com/team4/sportscenter/modules/member/services/PackageBenefitsService.java), [`ReceptionistScheduleServiceImpl.java`](Backend/src/main/java/com/team4/sportscenter/modules/receptionist/services/impl/ReceptionistScheduleServiceImpl.java)
+**Mã nguồn chính**: [`MemberServiceImpl.java`](Backend/src/main/java/com/team4/sportscenter/modules/member/services/impl/MemberServiceImpl.java), [`PackageBenefitsService.java`](Backend/src/main/java/com/team4/sportscenter/modules/member/services/PackageBenefitsService.java), [`ReceptionistMemberServiceImpl.java`](Backend/src/main/java/com/team4/sportscenter/modules/receptionist/services/impl/ReceptionistMemberServiceImpl.java)
 
 ### 6.1. Cơ chế Đặt Lớp theo Khóa học của Hội viên (`bookCourse`)
 Trên cổng Hội viên (`Member`), việc đăng ký lớp học được thực hiện theo **toàn bộ các buổi học tương lai của lớp đó**:
@@ -279,8 +279,8 @@ Trên cổng Hội viên (`Member`), việc đăng ký lớp học được th�
      - Nếu thỏa mãn: Tạo ngay các bản ghi `Booking` với `status = 'CONFIRMED'` (không cần qua giỏ hàng) và ghi liên kết vào bảng `BOOKING_BENEFITS`.
 
 ### 6.2. Công thức Tính & Hoàn Hạn mức Buổi học (`BOOKING_BENEFITS`)
-Số buổi đã sử dụng (`usedSessions`) của một quyền lợi bộ môn trong gói tập được tính trực tiếp bằng truy vấn SQL:
-```sql
+Số buổi đã sử dụng (`usedSessions`) của một quyền lợi bộ môn trong gói tập được tính trực tiếp bằng truy vấn:
+```text
 SELECT COUNT(*) FROM BOOKING_BENEFITS bb
 JOIN BOOKINGS b ON b.booking_id = bb.booking_id
 WHERE bb.membership_benefit_id = ?
@@ -297,14 +297,14 @@ WHERE bb.membership_benefit_id = ?
   - Hệ thống chỉ chuyển sang `status = 'CANCELLED'` đối với các buổi học **chưa điểm danh `PRESENT`** và **(còn ở tương lai `startTime > NOW()` hoặc đang `PENDING`)**.
   - Các buổi học đã diễn ra trong quá khứ hoặc đã được Coach điểm danh `PRESENT` được giữ nguyên lịch sử.
 
-### 6.4. Đặt Lịch & Bán Gói tại Quầy Lễ tân (`ReceptionistScheduleServiceImpl` & `ReceptionistMemberServiceImpl`)
-1. **Đặt từng buổi học tại quầy (`POST /api/receptionist/schedules/book`)**:
-   - Kiểm tra buổi học chưa qua giờ, chưa đầy chỗ và học viên chưa đặt buổi đó.
-   - **Nếu hội viên có gói tập `ACTIVE`** bao phủ ngày diễn ra buổi học: Tạo `Booking` với `status = 'CONFIRMED'`, cộng **+10 điểm tích lũy (`loyaltyPoints`)** và gửi thông báo.
-   - **Nếu hội viên không có gói tập phù hợp**: Tạo `Booking` (`status = 'PENDING'`), đồng thời tạo `Invoice` (`PAID`) + `InvoiceDetail` + `PaymentEntity` (`COMPLETED`, phương thức `CASH`) theo giá của lớp học và cộng **+50 điểm tích lũy (`loyaltyPoints`)**.
-2. **Bán Gói tập trực tiếp tại quầy (`POST /api/receptionist/members/{id}/packages`)**:
+### 6.4. Gia hạn Khóa học & Bán Gói tập tại Quầy Lễ tân (`ReceptionistMemberServiceImpl`)
+1. **Gợi ý & Xác nhận Gia hạn Lớp học tại Quầy (`suggestNextClassRenewal`, `confirmClassRenewal`)**:
+   - Từ một `bookingId` hiện tại của hội viên, hệ thống tìm các buổi học tương lai của các lớp cùng tên (`findUpcomingSchedulesByClassName`) bắt đầu sau thời điểm kết thúc khóa cũ, ưu tiên khớp đúng khung giờ học trong ngày và còn chỗ trống (`booked < maxSlots`).
+   - Khi Lễ tân xác nhận (`POST /api/receptionist/classes/confirm-renewal`), hệ thống khóa đồng thời (`lockOperations()`), kiểm tra chống đặt trùng và sĩ số, sau đó tạo `Booking` mới với `status = 'CONFIRMED'`, `attendance_status = 'NOT_YET'`.
+2. **Bán Gói tập trực tiếp tại quầy (`POST /api/receptionist/packages/subscribe`)**:
    - Kiểm tra quy tắc giới hạn mua (`commerce.checkPurchase`).
-   - Tạo `UserMembership` (`status = 'ACTIVE'`, `purchaseSource = 'COUNTER'`), chụp Snapshot quyền lợi, tính ngày bắt đầu/kết thúc cộng dồn, tạo `Invoice` (`PAID`) + `PaymentEntity` (`COMPLETED`, phương thức `CASH`), và cộng **+100 điểm tích lũy (`loyaltyPoints`)**.
+   - Cho phép chọn ngày bắt đầu (`startDate`, mặc định là hôm nay), tự tính `endDate = startDate + durationDays - 1`.
+   - Tạo `UserMembership` (`status = 'ACTIVE'`, `purchaseSource = 'COUNTER'`), chụp Snapshot quyền lợi (`snapshot` & `snapshotSubjects`), đồng thời tạo `Invoice` (`PAID`) + `InvoiceDetail` + `PaymentEntity` (`COMPLETED`, phương thức `CASH`, mã giao dịch `COUNTER-<invoiceId>`).
 
 ---
 
@@ -370,41 +370,42 @@ sequenceDiagram
 
 **Mã nguồn chính**: [`ReceptionistMemberServiceImpl.java`](Backend/src/main/java/com/team4/sportscenter/modules/receptionist/services/impl/ReceptionistMemberServiceImpl.java), [`CoachScheduleServiceImpl.java`](Backend/src/main/java/com/team4/sportscenter/modules/coach/services/impl/CoachScheduleServiceImpl.java), [`MemberCheckInView.jsx`](Frontend/src/features/receptionist/components/MemberCheckInView.jsx)
 
-### 8.1. Ma trận 4 Trường hợp Quyền lợi Check-in (`getCheckInContext`)
-Khi Lễ tân chọn một hội viên tại màn hình Check-in, hệ thống tự động phân tích quyền lợi hiện có trong ngày (không bắt lễ tân tự đoán mục đích):
-1. **Cách xác định quyền tập Gym tự do (`hasGymAccess`)**: Hội viên có ít nhất một gói `ACTIVE` còn hạn thuộc loại `GYM_ACCESS`, `COMBO`, hoặc gói chỉ có hiệu lực thời gian mà không bị giới hạn vào các bộ môn cụ thể (`!requiresSubjects` hoặc không có dòng giới hạn trong `MEMBERSHIP_SUBJECT_BENEFITS`).
-2. **Cách xác định lịch học trong ngày (`todayClasses`)**: Hội viên có booking trạng thái `CONFIRMED` cho buổi học diễn ra trong ngày hôm nay (`status != 'CANCELLED'`).
+### 8.1. Ma trận 4 Trường hợp Quyền lợi Check-in (`checkInMember`)
+Khi Lễ tân chọn một hội viên tại màn hình Check-in, hệ thống tự động phân tích quyền lợi hiện có trong ngày (không bắt lễ tân chọn thủ công giữa 2 mục đích cồng kềnh):
+1. **Kiểm tra trạng thái đang ở trong trung tâm**: Nếu hội viên đã có lượt `CHECKED_IN` trong ngày hôm nay và chưa `CHECK_OUT`, hệ thống chặn tạo lượt check-in trùng và yêu cầu Check-out trước (`POST /api/receptionist/checkin/{checkInId}/checkout`).
+2. **Hỗ trợ Kích hoạt sớm Gói tập (`activateEarly = true`)**: Nếu hội viên có gói `ACTIVE` nhưng ngày bắt đầu (`startDate`) ở tương lai, Lễ tân có thể tích chọn kích hoạt sớm để dời `startDate` về hôm nay (`today`) và cập nhật lại `endDate = today + duration - 1`.
+3. **Ma trận 4 trường hợp tự động**:
 
-| Trường hợp | Có gói Gym (`hasGymAccess`) | Có lịch lớp hôm nay (`hasClassToday`) | `entitlementCase` | Mục đích tự động (`checkinPurpose`) | Mã mở cửa phòng Gym (`accessCode`) | Hành vi Hệ thống & Giao diện Lễ tân |
-| :--- | :---: | :---: | :--- | :--- | :--- | :--- |
-| **TH 1** | ❌ Không | ❌ Không | `NONE` | *(Từ chối)* | `null` | **Khóa nút Check-in**. Hiển thị cảnh báo yêu cầu mua gói tập hoặc đăng ký lớp học trước. |
-| **TH 2** | ❌ Không | ✅ Có | `CLASS_ONLY` | `CLASS_ATTENDANCE` | **`null` (Không cấp mã)** | Chỉ cho phép vào lớp học đã đăng ký (tự động điền sẵn phòng học & `bookingId`). Không có mã quét cửa phòng Gym công cộng. |
-| **TH 3** | ✅ Có | ❌ Không | `GYM_ONLY` | `GYM_WORKOUT` | **`GYM-PASS-xxxx`** | Cấp mã QR/Vòng tay vào khu Gym tự do. Lễ tân chọn phòng Gym đang còn sức chứa để xác nhận check-in. |
-| **TH 4** | ✅ Có | ✅ Có | `BOTH` | `BOTH` | **`GYM-PASS-xxxx`** | **Toàn quyền**: Vừa cấp mã `GYM-PASS-xxxx` để tập Gym tự do trước/sau giờ học, vừa liên kết buổi học trong ngày để lên lớp điểm danh. |
+| Trường hợp | Có gói tập hiệu lực hôm nay (`hasGymAccess`) | Có lịch lớp hôm nay (`hasTodayClass`) | Phân loại (`checkInType`) | Mã mở cửa phòng Gym (`accessCode`) | Hành vi Hệ thống & Giao diện Lễ tân |
+| :--- | :---: | :---: | :--- | :--- | :--- |
+| **TH 1** | ❌ Không | ❌ Không | *(Từ chối)* | `null` | **Khóa nút Check-in**. Yêu cầu hội viên đăng ký gói tập hoặc lớp học trước khi vào trung tâm. |
+| **TH 2** | ❌ Không | ✅ Có | `CLASS_SESSION` | **`null` (Không cấp mã)** | Chỉ cấp quyền vào lớp học (`classAccessGranted = true`, `gymAccessGranted = false`). Tự động gắn `bookingId` và phòng học. Không cấp mã quét cửa khu Gym tự do. |
+| **TH 3** | ✅ Có | ❌ Không | `GYM_FACILITY` | **`GYM-PASS-<uid>-<4so>`** | Cấp quyền vào khu Gym tự do (`gymAccessGranted = true`, `classAccessGranted = false`) kèm mã QR/Vòng tay mở cửa. |
+| **TH 4** | ✅ Có | ✅ Có | `COMBO_ALL` | **`GYM-PASS-<uid>-<4so>`** | **Toàn quyền**: Cấp cả mã `GYM-PASS-...` để tập Gym tự do trước/sau giờ học lẫn liên kết `bookingId` để lên lớp điểm danh. |
 
-### 8.2. Kiểm soát Sức chứa Phòng Tập Thời gian thực (`getAvailableRoomsForCheckIn`)
-Để tránh quá tải phòng tập, sức chứa đang sử dụng (`currentOccupancy`) của mỗi phòng tại thời điểm check-in được tính bằng tổng của:
-1. Số lượt hội viên đã check-in vào phòng đó tại quầy Lễ tân trong vòng **2 giờ gần nhất** (`checkin_time >= NOW() - 2 HOURS`).
-2. Số lượng học viên đã đặt chỗ (`CONFIRMED`) của các lớp học **đang diễn ra ngay lúc này** tại phòng đó (`start_time <= NOW() AND end_time >= NOW() AND status <> 'CANCELLED'`).
-- **Quy tắc chặn**: Nếu `currentOccupancy >= room.capacity`, phòng đó bị đánh dấu **`available = false` (Đã đầy)** và hệ thống chặn không cho check-in thêm vào phòng đó.
+*(Mỗi lượt Check-in thành công tại quầy tự động cộng **+1 điểm tích lũy (`loyaltyPoints`)** cho hội viên và lưu bản ghi `entity_type = 'MEMBER_CHECKIN'` vào `AUDIT_LOGS`).*
+
+### 8.2. Kiểm soát Sức chứa Phòng Tập Thời gian thực (`getFacilityRooms`)
+Để theo dõi mật độ học viên trong từng phòng tập (`GET /api/receptionist/checkin/rooms`), số người hiện tại (`currentOccupancy`) của mỗi phòng được tính bằng tổng của:
+1. Số hội viên đang ở trạng thái `CHECKED_IN` (chưa Check-out) trong ngày hôm nay tại phòng đó.
+2. Số học viên có lịch học `CONFIRMED` (không vắng mặt `ABSENT`) của các ca học **đang diễn ra ngay tại thời điểm hiện tại** (`NOW() BETWEEN start_time AND end_time`) tại phòng đó — **loại trừ (`NOT IN`)** những học viên đã được đếm ở mục (1) để không bị cộng trùng.
 
 ### 8.3. Công nghệ Đối soát Chéo 2 Chiều giữa Lễ tân & Huấn luyện viên (`Bidirectional Cross-Checking`)
-Hệ thống tự động phát hiện 2 hành vi gian lận phổ biến tại trung tâm thể thao mà không cần nhân viên kiểm tra thủ công:
+Hệ thống kết nối trực tiếp dữ liệu Check-in tại Quầy Lễ tân và dữ liệu Điểm danh tại Lớp của Huấn luyện viên để chặn đứng 2 hành vi gian lận:
 
 ```mermaid
 flowchart LR
-    subgraph "Chiều 1: Phát hiện Lén vào lớp (Bỏ qua Quầy Lễ tân)"
-        C1["Coach điểm danh học viên = PRESENT trên lớp"] --> Q1{"Học viên đã Check-in tại Quầy Lễ tân hôm nay chưa?"}
-        Q1 -- "Đã Check-in" --> OK1["Gắn matched_booking_id vào bản ghi Check-in (NORMAL)"]
-        Q1 -- "Chưa Check-in tại quầy!" --> W1["Tự động tạo bản ghi RECEPTIONIST_CHECKINS<br/>anomaly_status = WARNING_NO_RECEPTION_CHECKIN<br/>Đẩy lên Bảng Cảnh báo An ninh Lễ tân"]
+    subgraph "Chiều 1: Chặn Học viên Lén vào lớp (Bỏ qua Quầy Lễ tân)"
+        C1["Coach bấm điểm danh học viên = PRESENT trên lớp"] --> Q1{"Học viên đã Check-in tại Quầy Lễ tân hôm nay chưa?"}
+        Q1 -- "Đã Check-in" --> OK1["Cho phép lưu PRESENT & Cộng +10 điểm Loyalty"]
+        Q1 -- "Chưa Check-in tại quầy!" --> W1["CHẶN điểm danh PRESENT ngay lập tức!<br/>Hiển thị thông báo yêu cầu học viên ra quầy Lễ tân Check-in trước"]
     end
 
-    subgraph "Chiều 2: Phát hiện Lấy cớ đi học để đi tập Gym chui (Không có gói Gym)"
-        R2["Học viên chỉ có lớp (CLASS_ONLY)<br/>Check-in tại quầy với mục đích CLASS_ATTENDANCE"] --> C2["Đến giờ học, Coach điểm danh học viên = ABSENT (Vắng mặt)"]
-        C2 --> W2["Hệ thống tự động quét các lượt Check-in CLASS_ATTENDANCE hôm nay của học viên<br/>Cập nhật anomaly_status = WARNING_SKIPPED_CLASS<br/>Báo động đỏ tại màn hình Lễ tân để kiểm tra khu vực Gym"]
+    subgraph "Chiều 2: Bắt bài Học viên Lấy cớ có lớp để đi tập Gym chui"
+        R2["Học viên có lịch lớp hôm nay<br/>Check-in qua cổng Lễ tân (Gắn bookingId)"] --> C2["Đến giờ học, Coach điểm danh học viên = ABSENT (Vắng mặt)"]
+        C2 --> W2["Hệ thống tự động bật cờ hasAnomaly = true trên bản ghi Check-in<br/>Tăng bộ đếm anomalyCount & Cảnh báo đỏ trên hồ sơ Hội viên tại màn hình Lễ tân"]
     end
 ```
-- Lễ tân theo dõi danh sách cảnh báo trực tiếp tại tab **Cảnh báo Đối soát (`GET /api/receptionist/checkin/anomalies`)** và nhấn **Đã xử lý (`POST /api/receptionist/checkin/anomalies/{checkinId}/resolve`)** sau khi đã kiểm tra thực tế.
 
 ---
 
@@ -416,10 +417,11 @@ flowchart LR
 1. **Ràng buộc Đổi Bộ môn Giảng dạy (`CoachProfileServiceImpl.updateCoachProfile`)**:
    - Mỗi Coach đăng ký bộ môn chuyên môn trong bảng `USER_SPECIALTIES`.
    - Nếu Coach muốn chuyển sang bộ môn khác, hệ thống kiểm tra `findActiveClassesByCoachAndSubject`. Nếu Coach vẫn còn bất kỳ lớp học nào đang `ACTIVE` hoặc còn lịch dạy `SCHEDULED` thuộc bộ môn cũ $\rightarrow$ **Chặn đổi bộ môn** (`canChangeSubject = false`) và liệt kê tên các lớp cần hoàn thành/bàn giao trước.
-2. **Quy tắc Điểm danh Lớp học (`CoachScheduleServiceImpl`)**:
-   - Chỉ Coach được gán phụ trách lớp của buổi học đó (`gymClass.getCoach().getEmail() == coachEmail`) mới có quyền xem danh sách học viên và cập nhật điểm danh.
-   - Danh sách điểm danh chỉ hiển thị các học viên có trạng thái đặt lịch `CONFIRMED` (bỏ qua `PENDING` và `CANCELLED`).
-   - Trạng thái điểm danh hợp lệ: `NOT_YET`, `PRESENT`, `ABSENT`.
+2. **Quy tắc Điểm danh Lớp học (`CoachScheduleServiceImpl.updateAttendance`)**:
+   - Chỉ Coach phụ trách lớp của buổi học đó mới có quyền cập nhật điểm danh.
+   - **Ràng buộc Ngày điểm danh nghiêm ngặt**: Chỉ cho phép điểm danh vào **đúng ngày diễn ra buổi học** (`sessionDate.isEqual(LocalDate.now())`). Chặn điểm danh cho buổi học ở tương lai hoặc chỉnh sửa buổi học đã qua trong quá khứ.
+   - **Ràng buộc Đối soát Lễ tân**: Học viên bắt buộc phải có lượt Check-in tại quầy Lễ tân trong ngày hôm nay thì Coach mới có thể tích chọn `PRESENT`.
+   - **Thưởng/Thu hồi Điểm tích lũy**: Khi chuyển sang `PRESENT`, học viên được cộng **+10 `loyaltyPoints`**; nếu đổi từ `PRESENT` sang `ABSENT`/`NOT_YET`, hệ thống thu hồi lại **-10 `loyaltyPoints`** (tối thiểu về `0`).
 
 ### 9.2. Giao Giáo án Tập luyện & Đánh giá Tiến độ Học viên (`Workout Plans & Assessments`)
 1. **Giao Giáo án (`CoachWorkoutServiceImpl.assignWorkoutPlan`)**:
@@ -473,5 +475,5 @@ Khi phát triển tính năng mới hoặc bảo trì hệ thống, cần tuân 
 | `PACKAGE_SUBJECT_NOT_COVERED` | Đặt lớp thuộc bộ môn không nằm trong `MEMBERSHIP_SUBJECT_BENEFITS` của gói | Gói tập không bao gồm bộ môn của lớp học này. |
 | `PACKAGE_ROOM_NOT_COVERED` | Đặt lớp hoặc Manager đổi phòng lớp sang phòng không nằm trong `MEMBERSHIP_BENEFIT_ROOMS` | Gói tập của học viên không có quyền học tại phòng tập này. |
 | `PACKAGE_QUOTA_EXCEEDED` | Số buổi còn lại (`allocated - used`) của bộ môn trong gói `<` Số buổi của khóa học | Không đủ số buổi còn lại trong gói tập để đăng ký toàn khóa. |
-| `WARNING_NO_RECEPTION_CHECKIN` | Coach điểm danh `PRESENT` nhưng học viên chưa check-in tại quầy Lễ tân hôm nay | Cảnh báo học viên đi thẳng lên lớp bỏ qua kiểm soát quầy Lễ tân. |
-| `WARNING_SKIPPED_CLASS` | Học viên check-in `CLASS_ATTENDANCE` (không có gói Gym) nhưng Coach điểm danh `ABSENT` | Cảnh báo học viên mượn cớ có lớp học để qua cổng rồi trốn lớp đi tập Gym chui. |
+| **Chặn Điểm danh khi Chưa Check-in Quầy** | Coach tích `PRESENT` nhưng học viên chưa có bản ghi `MEMBER_CHECKIN` hôm nay | Ngăn chặn học viên đi thẳng lên lớp bỏ qua kiểm soát quầy Lễ tân. |
+| **Cảnh báo Trốn Lớp (`hasAnomaly = true`)** | Học viên Check-in có gắn `bookingId` lớp học nhưng Coach điểm danh `ABSENT` | Phát hiện học viên mượn cớ có lịch học để vào trung tâm rồi trốn lớp đi tập chui. |

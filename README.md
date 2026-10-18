@@ -268,12 +268,13 @@ Hệ thống cung cấp các nhóm RESTful API chuẩn hóa theo phân hệ:
 *   `GET /api/v1/coach/profile` & `PUT /api/v1/coach/profile` : Quản lý hồ sơ và chuyên môn giảng dạy.
 
 ### 4. Phân hệ Lễ tân (`/api/receptionist`)
-*   `GET /api/receptionist/members`, `POST /api/receptionist/members`, `PUT /api/receptionist/members/{id}` : Tra cứu, tạo mới và cập nhật hồ sơ hội viên tại quầy.
-*   `POST /api/receptionist/members/{id}/packages` : Bán và kích hoạt gói tập trực tiếp tại quầy (`COUNTER`).
-*   `GET /api/receptionist/checkin/context/{userId}` & `GET /api/receptionist/checkin/rooms` : Tự động phân tích 4 trường hợp quyền lợi Check-in và kiểm tra sức chứa phòng thời gian thực.
-*   `POST /api/receptionist/checkin` & `GET /api/receptionist/checkin/today` : Xác nhận Check-in 1 chạm (cấp mã mở cửa `GYM-PASS-xxxx` nếu có quyền tập Gym) và xem lịch sử trong ngày.
-*   `GET /api/receptionist/checkin/anomalies` & `POST /api/receptionist/checkin/anomalies/{checkinId}/resolve` : Theo dõi và xử lý cảnh báo đối soát chéo (`WARNING_NO_RECEPTION_CHECKIN`, `WARNING_SKIPPED_CLASS`).
-*   `GET /api/receptionist/schedules` & `POST /api/receptionist/schedules/book` : Tra cứu lịch lớp và đặt buổi học tại quầy cho hội viên.
+*   `GET /api/receptionist/members/search` & `GET /api/receptionist/members/{userId}` : Tìm kiếm và xem hồ sơ 360° của hội viên (gói tập, lịch sử lớp học, quyền Check-in hôm nay, số lần vi phạm đối soát).
+*   `POST /api/receptionist/members/register` : Đăng ký trực tiếp tài khoản hội viên mới tại quầy.
+*   `GET /api/receptionist/packages` & `POST /api/receptionist/packages/subscribe` : Bán và kích hoạt gói tập trực tiếp tại quầy (`COUNTER`).
+*   `GET /api/receptionist/checkin/rooms` : Kiểm tra danh sách phòng tập và mật độ người tập thời gian thực.
+*   `POST /api/receptionist/checkin` & `POST /api/receptionist/checkin/{checkInId}/checkout` : Check-in tự động theo Ma trận 4 trường hợp quyền lợi (cấp mã mở cửa `GYM-PASS-...` nếu có gói Gym) và Check-out khi ra về.
+*   `GET /api/receptionist/checkin/history` : Tra cứu lịch sử Check-in và lọc các ca cảnh báo đối soát chéo (`status=ANOMALY`).
+*   `GET /api/receptionist/classes/suggest-renewal` & `POST /api/receptionist/classes/confirm-renewal` : Gợi ý và xác nhận gia hạn khóa học kế tiếp cho hội viên.
 
 ### 5. Phân hệ Quản lý Trung tâm (`/api/manager`)
 *   `GET /api/manager/dashboard` & `GET /api/manager/dashboard/overview` : Bảng điều khiển doanh thu, cảnh báo lớp ít học viên (`< 25%`), ca học khẩn cấp trong 6 giờ tới và thẻ sắp hết hạn.
