@@ -76,34 +76,37 @@ Dự án áp dụng mô hình phân tách rõ ràng theo kiến trúc **Feature-
 ```text
 SWP391_Code/
 │
+├── 📄 BUSINESS_RULES_AND_WORKFLOWS.md      # Tài liệu Quy tắc Nghiệp vụ & Luồng đi toàn dự án
 ├── Backend/                                # Mã nguồn Spring Boot
 │   └── src/main/java/com/team4/sportscenter/
-│       ├── common/                         # Cấu hình CORS, Exception Handler toàn cục, Utils
-│       ├── security/                       # Cấu hình JWT, Spring Security Filter Chain
+│       ├── config/                         # Cấu hình VNPayConfig, MoMoConfig
+│       ├── common/                         # Cấu hình SecurityConfig, CORS, Exception Handler toàn cục
+│       ├── security/                       # Cấu hình JWT, CustomUserDetails, JwtAuthenticationFilter
 │       └── modules/                        # Đóng gói logic theo từng phân hệ nghiệp vụ
-│           ├── auth/                       # Đăng ký, Đăng nhập, OTP Email, Quên MK
-│           ├── user/                       # Hồ sơ người dùng, Đổi mật khẩu, Avatar
-│           ├── member/                     # Đặt lớp, Lịch tập, Điểm danh, Gói hội viên
-│           ├── coach/                      # Lịch dạy, Điểm danh, Giáo án bài tập, Đánh giá thể lực
-│           ├── receptionist/               # Tra cứu hội viên, Đăng ký tại quầy, Gia hạn khóa học
-│           ├── manager/                    # Quản lý Bộ môn, Phòng, Lớp, Lịch, Gói tập, Audit Log
-│           ├── payment/                    # Tích hợp giỏ hàng, VNPay, MoMo, Hóa đơn
-│           └── ai/                         # Gemini AI Assistant, Nhận diện Intent & Action UI
+│           ├── auth/                       # Đăng ký, Đăng nhập, OTP Email, Google OAuth2, Đổi Email/MK
+│           ├── coach/                      # Lịch dạy, Điểm danh đối soát, Giáo án bài tập, Đánh giá thể lực, Hồ sơ HLV
+│           ├── guest/                      # API công khai xem Gói tập & Lịch học cho khách vãng lai
+│           ├── manager/                    # Quản trị Nhân sự, Bộ môn, Phòng, Lớp, Xếp lịch tự động, Gói tập, Sổ cái, Báo cáo, Audit Log
+│           ├── member/                     # Đặt lớp, Quyền lợi gói tập (Snapshot), Lịch tập, NEXUS AI Chat, Cron dọn booking
+│           ├── notification/               # Trung tâm thông báo & Cronjob nhắc lịch học / nhắc gia hạn thẻ
+│           ├── payment/                    # Giỏ hàng, Thanh toán VNPay / MoMo, Hậu kiểm hóa đơn (REVIEW)
+│           └── receptionist/               # Quản lý hội viên, Bán gói/Đặt lịch tại quầy, Check-in thông minh & Đối soát chéo
 │
 └── Frontend/                               # Mã nguồn React + Vite
     └── src/
-        ├── components/                     # UI components dùng chung (Navbar, AIChat, NotificationBell)
-        ├── context/                        # State toàn cục (AuthContext, CartContext)
-        ├── layouts/                        # Bố cục giao diện (MemberLayout, CoachLayout, ManagerLayout)
-        ├── routes/                         # Cấu hình Router & ProtectedRoute phân quyền theo Role
-        ├── i18n/                           # Hệ thống từ điển đa ngôn ngữ (messages.js)
+        ├── components/                     # UI components dùng chung (Navbar, Footer, Sidebar...)
+        ├── context/                        # State toàn cục (AuthContext, ThemeContext, LanguageContext)
+        ├── routes/                         # Cấu hình AppRoutes & ProtectedRoute phân quyền theo Role
+        ├── i18n/                           # Hệ thống từ điển đa ngôn ngữ Anh - Việt (messages.js)
         └── features/                       # Màn hình chức năng phân theo Actor
-            ├── auth/                       # Trang Login, Register, VerifyOtp, ForgotPassword
-            ├── member/                     # Dashboard, MySchedule, AttendanceHistory, Classes, Packages
-            ├── coach/                      # CoachDashboard, CoachSchedule, CoachStudents, WorkoutPlans
-            ├── receptionist/               # ReceptionistDashboard (Tra cứu, Đăng ký, Gia hạn)
-            ├── manager/                    # AnalyticsDashboard, ManageClasses, Rooms, Subjects, Schedules
-            └── public/                     # Landing Page giới thiệu, Bảng giá & Lịch học công khai
+            ├── auth/                       # Login, Register, Verify OTP, Forgot Password, Change First Password
+            ├── coach/                      # CoachDashboard, Lịch dạy, Điểm danh, Giáo án, Đánh giá, Hồ sơ
+            ├── guest/                      # HomePage giới thiệu, Bảng giá & Lịch học công khai
+            ├── manager/                    # ManagerPortalPage (Tổng quan, Tài khoản, Vận hành, Gói tập, Giao dịch, Báo cáo, Nhật ký)
+            ├── member/                     # MemberDashboard, Đặt lớp, Lịch tập, Cửa hàng gói tập, Hồ sơ, NEXUS AI Chat
+            ├── notification/               # NotificationPage
+            ├── payment/                    # CartPage, PaymentSuccessPage, InvoiceHistoryPage
+            └── receptionist/               # ReceptionistMembersPage, MemberCheckInView, ReceptionistSchedulePage
 ```
 
 ---
@@ -112,38 +115,41 @@ SWP391_Code/
 
 Hệ thống được thiết kế và chuẩn hóa dữ liệu cao cấp, loại bỏ hoàn toàn dư thừa dữ liệu:
 
-*   **`ROLES` & `USERS`**: Quản lý thông tin tài khoản, phân quyền 1 tài khoản gắn với 1 vai trò duy nhất (`role_id`: 1-Admin/Manager, 2-Receptionist, 3-Coach, 4-Member).
-*   **`USER_SUBJECTS`**: Kỹ năng chuyên môn của từng Huấn luyện viên (HLV nào dạy được môn nào).
+*   **`ROLES` & `USERS`**: Quản lý thông tin tài khoản, trạng thái (`PENDING`, `ACTIVE`, `INACTIVE`), cờ `force_password_change` và điểm tích lũy (`loyalty_points`).
+*   **`USER_SPECIALTIES`**: Kỹ năng chuyên môn của từng Huấn luyện viên (HLV nào phụ trách bộ môn nào).
 *   **`SUBJECTS`, `ROOMS`, `CLASSES`, `SCHEDULES`**:
-    *   `CLASSES` đóng vai trò là danh mục lớp học, gắn với Bộ môn (`subject_id`), đơn giá và số lượng học viên tối đa (`max_slots`).
-    *   `SCHEDULES` quản lý từng buổi học cụ thể, phân công Phòng tập (`room_id`) và Huấn luyện viên (`coach_id`) cho từng khung giờ (`start_time`, `end_time`).
-*   **`PACKAGES`, `PACKAGE_SUBJECT_BENEFITS`, `PACKAGE_BENEFIT_ROOMS`**:
-    *   Định nghĩa gói tập và ma trận quyền lợi: Thẻ tập này được check-in vào những phòng nào và được học những bộ môn nào.
-*   **`USER_MEMBERSHIPS`**: Thẻ hội viên được kích hoạt sau khi thanh toán, theo dõi ngày hiệu lực (`start_date`, `end_date`) và số buổi tập khả dụng (`remaining_sessions`).
-*   **`BOOKINGS`**: Ghi nhận lượt đăng ký lớp học của hội viên và trạng thái điểm danh (`attendance_status`: `PRESENT`, `ABSENT`, `NOT_YET`).
-*   **`INVOICES`, `INVOICE_DETAILS`, `PAYMENTS`**: Quản lý giỏ hàng, thông tin thanh toán, lưu vết mã giao dịch ngân hàng (`transaction_no`) phục vụ đối soát kế toán.
-*   **`COACH_WORKOUT_PLANS`, `COACH_PLAN_DETAILS`, `EXERCISES`**: Quản lý thư viện bài tập và giáo án phân bổ cho học viên.
-*   **`TRAINEE_ASSESSMENTS`**: Nhật ký đánh giá thể lực định kỳ của học viên.
-*   **`AUDIT_LOGS`**: Lưu lại vết mọi thao tác quản trị quan trọng trong hệ thống.
+    *   `CLASSES` quản lý danh mục lớp học gắn với Bộ môn (`subject_id`), Huấn luyện viên (`coach_id`), Phòng tập (`room_id`), đơn giá và sĩ số tối đa (`max_slots`).
+    *   `SCHEDULES` quản lý từng buổi học cụ thể theo khung giờ (`start_time`, `end_time`, `status`: `SCHEDULED`, `COMPLETED`, `CANCELLED`).
+*   **`PACKAGE_TYPES`, `PACKAGES`, `PACKAGE_SUBJECT_BENEFITS`, `PACKAGE_BENEFIT_ROOMS`**:
+    *   Định nghĩa gói tập (`SELLING` / `STOPPED`), giới hạn mua (`purchase_limit_per_member`) và ma trận quyền lợi bộ môn/phòng tập.
+*   **`USER_MEMBERSHIPS`, `MEMBERSHIP_SUBJECT_BENEFITS`, `MEMBERSHIP_BENEFIT_ROOMS`, `BOOKING_BENEFITS`**:
+    *   Lưu trữ **Bản chụp bất biến (Immutable Snapshot)** của gói tập tại thời điểm hội viên mua và theo dõi phân bổ hạn mức buổi học cho từng booking.
+*   **`BOOKINGS`**: Ghi nhận lượt đăng ký lớp học (`PENDING`, `CONFIRMED`, `CANCELLED`) và trạng thái điểm danh (`NOT_YET`, `PRESENT`, `ABSENT`).
+*   **`RECEPTIONIST_CHECKINS`**: Lưu lịch sử Check-in tại quầy Lễ tân, mục đích vào cửa (`GYM_WORKOUT`, `CLASS_ATTENDANCE`, `BOTH`), mã mở cửa khu Gym (`access_code`) và trạng thái đối soát chéo (`anomaly_status`).
+*   **`INVOICES`, `INVOICE_DETAILS`, `INVOICE_BOOKINGS`, `PAYMENTS`**: Quản lý giỏ hàng, thanh toán (`VNPAY`, `MOMO`, `CASH`, `FREE`), đối soát hậu kiểm (`REVIEW`) và mã giao dịch (`transaction_no`).
+*   **`COACH_WORKOUT_PLANS`, `COACH_PLAN_DETAILS`, `EXERCISES`, `TRAINEE_ASSESSMENTS`**: Quản lý thư viện bài tập, giáo án và nhật ký đánh giá thể lực học viên.
+*   **`AUDIT_LOGS` & `NOTIFICATIONS`**: Lưu vết kiểm toán toàn hệ thống và thông báo đa kênh.
 
 ---
 
 ## 5. QUY TẮC NGHIỆP VỤ CỐT LÕI (CORE BUSINESS RULES)
 
-1.  **Chống trùng lịch 3 Chiều (Three-way Conflict Check)**:
-    *   *Học viên:* Không thể đăng ký 2 lớp học có khung giờ chồng lấn nhau trong cùng 1 ngày.
-    *   *Huấn luyện viên:* Hệ thống chặn không cho phép xếp 1 HLV dạy 2 lớp cùng lúc.
-    *   *Phòng tập:* Không thể xếp 2 lớp vào cùng 1 phòng trong cùng một khung giờ.
-2.  **Ràng buộc Điểm danh (Attendance Date Rule)**:
-    *   Huấn luyện viên **chỉ được phép thực hiện điểm danh vào đúng ngày diễn ra ca học** (`sessionDate == today`).
-    *   Không cho phép điểm danh trước ngày học và khóa sửa đổi đối với các buổi đã chốt trong quá khứ.
-3.  **Quyền lợi Gói tập & Trừ buổi (Package Benefits & Deductions)**:
-    *   Khi hội viên đặt lớp học: Nếu sở hữu thẻ hội viên còn hạn (`today <= end_date`), còn lượt (`remaining_sessions > 0`), và bộ môn của lớp nằm trong danh mục ưu đãi của thẻ $\rightarrow$ Đặt lớp thành công với giá 0đ, trừ 1 buổi trong thẻ.
-    *   Hủy lớp trước giờ quy định: Hoàn trả lại 1 buổi vào thẻ và mở lại slot trống cho lớp.
-4.  **Kiểm soát Sĩ số Lớp học (Capacity Rule)**:
-    *   Số học viên ghi danh (`booked_slots`) không được vượt quá `max_slots` của lớp và `capacity` của phòng tập. Khi chạm ngưỡng, lớp tự động chuyển trạng thái `FULL`.
-5.  **Kích hoạt Thanh toán Tự động (IPN / Webhook Activation)**:
-    *   Hệ thống chỉ kích hoạt thẻ hội viên và sinh hóa đơn điện tử khi nhận được phản hồi thanh toán thành công với chữ ký SHA512 hợp lệ từ VNPay (`00`) hoặc MoMo (`0`).
+> 📖 **Tài liệu Đặc tả Đầy đủ**: Xem chi tiết toàn bộ quy tắc nghiệp vụ, máy trạng thái và sơ đồ luồng xử lý của cả 7 phân hệ tại **[`BUSINESS_RULES_AND_WORKFLOWS.md`](./BUSINESS_RULES_AND_WORKFLOWS.md)**.
+
+1.  **Chống trùng lịch 3 Chiều & Xếp lịch Tự động (`SchedulePlanner`)**:
+    *   *Học viên:* Không thể đăng ký khóa học có bất kỳ buổi nào giao nhau thời gian (`StartA < EndB AND StartB < EndA`) với lịch đã đặt.
+    *   *Huấn luyện viên & Phòng tập:* Không thể xếp 2 ca học trùng giờ cho cùng 1 HLV hoặc cùng 1 phòng. Công cụ xếp lịch tự động quét khung giờ ưu tiên theo bước nhảy 15 phút kèm thời gian nghỉ đệm (`breakMinutes`).
+2.  **Snapshot Quyền lợi Gói tập Bất biến & Hoàn trả Hạn mức (`PackageBenefitsService`)**:
+    *   Khi hội viên mua gói, toàn bộ thông tin giá, thời hạn, danh sách môn học, số buổi và phạm vi phòng được chụp cứng (`Snapshot`) vào `USER_MEMBERSHIPS`. Việc Manager chỉnh sửa gói gốc về sau không làm ảnh hưởng đến gói hội viên đã mua.
+    *   Hủy buổi học tương lai khi chưa điểm danh `PRESENT` sẽ tự động hoàn trả lại hạn mức buổi vào gói tập.
+3.  **Check-in Thông minh 4 Trường hợp & Đối soát Chéo Lễ tân ↔ Coach (`Smart Check-in & Cross-Checking`)**:
+    *   Tự động phân tích quyền lợi hội viên tại quầy: Chỉ cấp mã mở cửa khu Gym (`GYM-PASS-xxxx`) khi hội viên có gói Gym (`GYM_ONLY` hoặc `BOTH`). Hội viên chỉ đăng ký lớp (`CLASS_ONLY`) chỉ được hướng dẫn lên đúng phòng học, không cấp mã vào phòng Gym tự do.
+    *   **Đối soát chéo 2 chiều**: (1) Học viên được Coach điểm danh `PRESENT` nhưng chưa qua quầy Lễ tân $\rightarrow$ Tự động gắn cờ `WARNING_NO_RECEPTION_CHECKIN`; (2) Học viên check-in lấy cớ đi học (`CLASS_ATTENDANCE`, không có gói Gym) nhưng Coach điểm danh `ABSENT` $\rightarrow$ Tự động gắn cờ `WARNING_SKIPPED_CLASS` báo động tại màn hình Lễ tân.
+4.  **Khóa Giỏ hàng 15 Phút, Chiết khấu Hạng Thẻ & Hậu kiểm Thanh toán (`REVIEW` State)**:
+    *   Tự động giảm giá theo điểm tích lũy (`loyaltyPoints`): Silver (`>= 500` điểm: `-5%`), Gold (`>= 1500` điểm: `-10%`), Platinum (`>= 3000` điểm: `-15%`).
+    *   Khi callback VNPay/MoMo báo thu tiền thành công nhưng đơn hàng đã quá hạn 15 phút hoặc lớp vừa đầy chỗ, hệ thống giữ nguyên trạng thái thu tiền `COMPLETED` và chuyển hóa đơn sang `REVIEW` để Lễ tân đối soát/hoàn tiền, tuyệt đối không làm mất dấu giao dịch.
+5.  **Bảo vệ Toàn vẹn Vận hành (`Operational Safeguards`)**:
+    *   Không cho phép khóa/hạ quyền `Center Manager` đang hoạt động cuối cùng; không cho phép khóa/đổi quyền hoặc đổi bộ môn của `Coach` khi đang phụ trách lớp `ACTIVE` hoặc còn lịch dạy tương lai.
 
 ---
 
@@ -232,62 +238,59 @@ Hệ thống hỗ trợ truyền biến môi trường hoặc dùng giá trị m
 
 ## 9. DANH MỤC API ENDPOINTS
 
-Hệ thống cung cấp hơn 110 endpoints phân tầng chuẩn RESTful API:
+Hệ thống cung cấp các nhóm RESTful API chuẩn hóa theo phân hệ:
 
-### 1. Phân hệ Xác thực & Tài khoản (`/api/v1/auth`, `/api/v1/user`)
-*   `POST /api/v1/auth/register` : Đăng ký tài khoản hội viên mới.
-*   `POST /api/v1/auth/verify-otp` : Xác thực mã OTP kích hoạt tài khoản.
-*   `POST /api/v1/auth/login` : Đăng nhập hệ thống, trả về Token JWT và thông tin Role.
-*   `POST /api/v1/auth/forgot-password` : Yêu cầu liên kết khôi phục mật khẩu qua Email.
-*   `POST /api/v1/auth/reset-password` : Đặt lại mật khẩu mới với token xác nhận.
-*   `GET /api/v1/user/profile` : Lấy thông tin cá nhân của tài khoản đang đăng nhập.
-*   `PUT /api/v1/user/profile` : Cập nhật thông tin thể hình, số điện thoại, ngày sinh.
-*   `POST /api/v1/user/avatar` : Upload ảnh đại diện người dùng.
+### 1. Phân hệ Xác thực & Bảo mật Tài khoản (`/api/v1/auth`)
+*   `POST /api/v1/auth/register` : Đăng ký tài khoản hội viên mới (`status = PENDING`, gửi OTP 6 số).
+*   `POST /api/v1/auth/verify` : Xác thực mã OTP kích hoạt tài khoản (`status = ACTIVE`).
+*   `POST /api/v1/auth/login` & `POST /api/v1/auth/google` : Đăng nhập Email/Password hoặc Google OAuth2, trả về JWT Token.
+*   `POST /api/v1/auth/forgot-password` & `POST /api/v1/auth/reset-password` : Khôi phục mật khẩu qua OTP Email.
+*   `POST /api/v1/auth/change-first-password` : Đổi mật khẩu bắt buộc lần đầu đăng nhập.
+*   `POST /api/v1/auth/request-email-change` & `POST /api/v1/auth/confirm-email-change` : Đổi địa chỉ Email bảo mật bằng OTP và phát hành lại JWT mới.
 
-### 2. Phân hệ Hội viên (`/api/v1/member`, `/api/guest`)
-*   `GET /api/guest/packages` & `GET /api/guest/schedules` : Tra cứu gói tập và lịch học công khai.
-*   `GET /api/v1/member/memberships` : Danh sách các thẻ hội viên đang sở hữu và thời hạn sử dụng.
-*   `POST /api/v1/member/book-class/{classId}/with-package/{membershipId}` : Đặt lớp học sử dụng quyền lợi thẻ hội viên.
-*   `DELETE /api/v1/member/cancel-class/{classId}` : Hủy đăng ký lớp học và hoàn trả lượt.
-*   `GET /api/v1/member/my-schedule` : Lấy danh sách lịch tập cá nhân.
-*   `GET /api/v1/member/attendance-history` : Xem chi tiết lịch sử điểm danh các buổi học.
-*   `GET /api/v1/member/workout-plans` : Xem giáo án bài tập được Huấn luyện viên giao.
+### 2. Phân hệ Hội viên & Khách vãng lai (`/api/v1/member`, `/api/guest`)
+*   `GET /api/guest/packages`, `GET /api/guest/packages/{id}`, `GET /api/guest/schedules` : Tra cứu gói tập và lịch học công khai.
+*   `GET /api/v1/member/dashboard` & `GET /api/v1/member/my-packages` : Xem tổng quan hội viên, thẻ đang sở hữu và hạn mức buổi còn lại.
+*   `GET /api/v1/member/available-classes` & `GET /api/v1/member/packages` : Xem danh sách lớp học còn chỗ và gói tập đang mở bán (`SELLING`).
+*   `POST /api/v1/member/book-class/{classId}` : Đặt khóa học lẻ (đưa vào Giỏ hàng `PENDING`).
+*   `POST /api/v1/member/book-class/{classId}/with-package/{membershipId}` : Đặt khóa học trực tiếp bằng quyền lợi Gói tập (`CONFIRMED`).
+*   `POST /api/v1/member/cancel-class/{classId}` : Hủy các buổi học tương lai của khóa học và hoàn trả hạn mức buổi vào gói tập.
+*   `POST /api/v1/member/cart/add-package/{packageId}` : Thêm gói tập vào giỏ hàng (kèm chụp Snapshot quyền lợi).
+*   `GET /api/v1/member/my-schedule`, `GET /api/v1/member/enrolled-classes`, `GET /api/v1/member/my-workouts`, `GET /api/v1/member/my-assessments` : Xem lịch học, giáo án và đánh giá tiến độ từ HLV.
+*   `POST /api/v1/member/ai-chat` : Trò chuyện với trợ lý ảo **NEXUS AI** (tư vấn RAG thời gian thực + điều khiển giao diện tự động `ADD_CART`, `BOOK_CLASS`, `HIGHLIGHT_*`, `NAVIGATE`).
 
 ### 3. Phân hệ Huấn luyện viên (`/api/v1/coach`)
-*   `GET /api/v1/coach/schedules` : Tra cứu lịch dạy của HLV theo ngày/tuần/tháng.
-*   `PUT /api/v1/coach/schedules/{id}/attendance` : Thực hiện điểm danh học viên tại lớp.
-*   `GET /api/v1/coach/students` : Danh sách toàn bộ học viên đang theo học các lớp của HLV.
-*   `POST /api/v1/coach/workout-plans` : Soạn giáo án bài tập mới (Sets, Reps, Rest seconds).
-*   `POST /api/v1/coach/workout-plans/assign` : Gán giáo án cho học viên hoặc cho cả lớp.
-*   `POST /api/v1/coach/assessments` : Ghi nhận đánh giá chỉ số thể lực và nhận xét tiến độ học viên.
-*   `POST /api/v1/coach/notifications/send` : Gửi thông báo/nhắc nhở bài tập về nhà cho học viên.
+*   `GET /api/v1/coach/schedules` & `GET /api/v1/coach/schedules/{scheduleId}/students` : Xem lịch dạy và danh sách học viên của từng buổi.
+*   `PUT /api/v1/coach/bookings/{bookingId}/attendance` : Điểm danh học viên (`PRESENT` / `ABSENT` / `NOT_YET`) tích hợp **Đối soát chéo 2 chiều** với quầy Lễ tân.
+*   `GET /api/v1/coach/exercises` & `POST /api/v1/coach/exercises` : Quản lý thư viện bài tập.
+*   `POST /api/v1/coach/workout-plans/assign`, `GET /api/v1/coach/workout-plans`, `DELETE /api/v1/coach/workout-plans/{planId}` : Giao giáo án cho cá nhân hoặc cả lớp.
+*   `POST /api/v1/coach/assessments`, `GET /api/v1/coach/assessments`, `DELETE /api/v1/coach/assessments/{id}` : Đánh giá chỉ số hình thể & tiến độ học viên.
+*   `GET /api/v1/coach/profile` & `PUT /api/v1/coach/profile` : Quản lý hồ sơ và chuyên môn giảng dạy.
 
 ### 4. Phân hệ Lễ tân (`/api/receptionist`)
-*   `GET /api/receptionist/members/search` : Tìm kiếm hội viên theo Tên, SĐT, Email.
-*   `GET /api/receptionist/members/{userId}` : Xem chi tiết hồ sơ và gói tập của hội viên.
-*   `POST /api/receptionist/members/register` : Đăng ký trực tiếp tài khoản hội viên mới tại quầy.
-*   `GET /api/receptionist/classes/suggest-renewal` : Gợi ý khóa học sắp hết hạn cần gia hạn.
-*   `POST /api/receptionist/classes/confirm-renewal` : Xác nhận gia hạn khóa học cho hội viên.
-*   `POST /api/receptionist/packages/subscribe` : Đăng ký gói tập cho hội viên tại quầy.
+*   `GET /api/receptionist/members`, `POST /api/receptionist/members`, `PUT /api/receptionist/members/{id}` : Tra cứu, tạo mới và cập nhật hồ sơ hội viên tại quầy.
+*   `POST /api/receptionist/members/{id}/packages` : Bán và kích hoạt gói tập trực tiếp tại quầy (`COUNTER`).
+*   `GET /api/receptionist/checkin/context/{userId}` & `GET /api/receptionist/checkin/rooms` : Tự động phân tích 4 trường hợp quyền lợi Check-in và kiểm tra sức chứa phòng thời gian thực.
+*   `POST /api/receptionist/checkin` & `GET /api/receptionist/checkin/today` : Xác nhận Check-in 1 chạm (cấp mã mở cửa `GYM-PASS-xxxx` nếu có quyền tập Gym) và xem lịch sử trong ngày.
+*   `GET /api/receptionist/checkin/anomalies` & `POST /api/receptionist/checkin/anomalies/{checkinId}/resolve` : Theo dõi và xử lý cảnh báo đối soát chéo (`WARNING_NO_RECEPTION_CHECKIN`, `WARNING_SKIPPED_CLASS`).
+*   `GET /api/receptionist/schedules` & `POST /api/receptionist/schedules/book` : Tra cứu lịch lớp và đặt buổi học tại quầy cho hội viên.
 
-### 5. Phân hệ Quản lý Trung tâm (`/api/v1/manager`)
-*   `GET /api/v1/manager/analytics/dashboard` : Báo cáo doanh thu, tăng trưởng thành viên, tỷ lệ lấp đầy phòng.
-*   `GET /api/v1/manager/users` & `PATCH /api/v1/manager/users/toggle-status/{id}` : Quản trị và khóa/mở tài khoản.
-*   `GET/POST/PUT/DELETE /api/v1/manager/classes` : Quản trị danh mục Lớp học.
-*   `GET/POST/PUT/DELETE /api/v1/manager/schedules` : Quản trị và xếp lịch ca học (hỗ trợ tạo lịch hàng loạt).
-*   `GET/POST/PUT/DELETE /api/v1/manager/rooms` : Quản trị danh mục Phòng tập và sức chứa.
-*   `GET/POST/PUT/DELETE /api/v1/manager/subjects` : Quản trị danh mục Bộ môn thể thao.
-*   `GET/POST/PUT/DELETE /api/v1/manager/packages` : Quản trị Gói tập và phân quyền lợi phòng/môn học.
-*   `GET /api/v1/manager/audit-logs` : Tra cứu nhật ký kiểm toán hệ thống.
+### 5. Phân hệ Quản lý Trung tâm (`/api/manager`)
+*   `GET /api/manager/dashboard` & `GET /api/manager/dashboard/overview` : Bảng điều khiển doanh thu, cảnh báo lớp ít học viên (`< 25%`), ca học khẩn cấp trong 6 giờ tới và thẻ sắp hết hạn.
+*   `GET/POST/PUT/DELETE /api/manager/users` & `PATCH /api/manager/users/{id}/status` : Quản trị nhân sự, khóa/mở khóa tài khoản có kiểm tra bảo vệ Manager cuối cùng và Coach đang đứng lớp.
+*   `GET/POST/PUT /api/manager/subjects`, `/api/manager/rooms`, `/api/manager/classes` : Quản trị Bộ môn, Phòng tập và Lớp học.
+*   `GET/POST/PUT /api/manager/schedules`, `POST /api/manager/schedules/series` : Xếp lịch đơn lẻ hoặc theo chuỗi tuần.
+*   `POST /api/manager/schedules/plan/preview` & `POST /api/manager/schedules/plan/commit` : Công cụ xếp lịch tự động (`SchedulePlanner`) chống trùng giờ HLV & Phòng.
+*   `GET/POST/PUT /api/manager/packages`, `/api/manager/package-types`, `PATCH /api/manager/packages/{id}/selling-status` : Quản trị Gói tập, loại gói, phạm vi môn/phòng và trạng thái mở bán.
+*   `GET /api/manager/transactions` & `GET /api/manager/transactions/{id}` : Sổ cái đối soát Hóa đơn (`INVOICES`) và Giao dịch thanh toán (`PAYMENTS`).
+*   `GET /api/manager/reports` & `GET /api/manager/audit-logs` : Báo cáo phân tích chuyên sâu và nhật ký kiểm toán (`AUDIT_LOGS`).
 
-### 6. Phân hệ Thanh toán & Hóa đơn (`/api/v1/payment`)
-*   `POST /api/v1/payment/cart/checkout` : Tạo đơn hàng và sinh URL thanh toán VNPay / MoMo.
-*   `GET /api/v1/payment/vnpay-callback` : Tiếp nhận và xử lý kết quả thanh toán từ VNPay.
-*   `POST /api/v1/payment/vnpay-ipn` : Xử lý tín hiệu giao dịch ngầm an toàn (IPN Webhook).
-*   `GET /api/v1/payment/invoices` : Lịch sử hóa đơn và trạng thái thanh toán.
-
-### 7. Phân hệ Trợ lý Ảo AI (`/api/v1/ai`)
-*   `POST /api/v1/ai/chat` : Gửi tin nhắn tới Nexus AI, phân tích thể hình, nhận phản hồi tư vấn kèm lệnh điều khiển giao diện (**Agentic Actions**: `HIGHLIGHT_PACKAGE`, `HIGHLIGHT_CLASS`, `ADD_CART`).
+### 6. Phân hệ Thanh toán, Giỏ hàng & Thông báo (`/api/v1/payment`, `/api/v1/notifications`)
+*   `GET /api/v1/payment/cart`, `DELETE /api/v1/payment/cart/remove/{classId}`, `DELETE /api/v1/payment/cart/remove-package/{packageId}`, `DELETE /api/v1/payment/cart/clear` : Quản lý Giỏ hàng.
+*   `POST /api/v1/payment/checkout` : Khóa giỏ hàng 15 phút, áp dụng chiết khấu hạng thẻ (`Silver`/`Gold`/`Platinum`) và sinh URL thanh toán VNPay / MoMo.
+*   `GET /api/v1/payment/vnpay-return` & `GET /api/v1/payment/momo-return` : Xác thực chữ ký số, hậu kiểm điều kiện đơn hàng (`PAID` hoặc chuyển `REVIEW` nếu phát sinh xung đột).
+*   `GET /api/v1/payment/my-invoices` : Tra cứu lịch sử hóa đơn của hội viên.
+*   `GET /api/v1/notifications`, `PUT /api/v1/notifications/{id}/read`, `PUT /api/v1/notifications/read-all` : Quản lý thông báo người dùng.
 
 ---
 
