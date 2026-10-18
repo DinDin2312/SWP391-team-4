@@ -450,22 +450,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
 
         commerce.checkPurchase(user.getUserId(),pkg.getPackageId(),null,true);
         LocalDate today = LocalDate.now();
-        LocalDate baseStart = (request.getStartDate() != null && request.getStartDate().isAfter(today))
-                ? request.getStartDate()
-                : today;
-        for (UserMembership existing : userMembershipRepository.findByUser_UserId(user.getUserId())) {
-            if ("ACTIVE".equalsIgnoreCase(existing.getStatus())
-                    && existing.getEndDate() != null
-                    && !existing.getEndDate().isBefore(today)
-                    && pkg.getPackageType() != null
-                    && pkg.getPackageType().equalsIgnoreCase(existing.purchasedType())) {
-                LocalDate stackedStart = existing.getEndDate().plusDays(1);
-                if (stackedStart.isAfter(baseStart)) {
-                    baseStart = stackedStart;
-                }
-            }
-        }
-        LocalDate start = baseStart;
+        LocalDate start = request.getStartDate() != null ? request.getStartDate() : today;
         LocalDate end = start.plusDays((pkg.getDurationDays() != null ? pkg.getDurationDays() : 30)-1);
         LocalDateTime now = LocalDateTime.now();
 
