@@ -156,7 +156,7 @@ const FALLBACK_MEMBERS = [
   },
 ];
 
-const MemberManagementView = () => {
+const MemberManagementView = ({ onQuickCheckIn }) => {
   useLanguage();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -933,37 +933,65 @@ const MemberManagementView = () => {
 
                       {/* Thao Tác */}
                       <td style={{ padding: '1rem 1.25rem', textAlign: 'center' }}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewDetail(member.userId);
-                          }}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.4rem',
-                            padding: '0.5rem 0.85rem',
-                            backgroundColor: 'var(--surface)',
-                            color: 'var(--primary)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '0.5rem',
-                            fontSize: '0.8rem',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'var(--surface)';
-                            e.currentTarget.style.borderColor = 'var(--border)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'var(--surface)';
-                            e.currentTarget.style.borderColor = 'var(--border)';
-                          }}
-                        >
-                          <Eye style={{ width: '14px', height: '14px' }} />
-                          <span>{t("View Details")}</span>
-                        </button>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                          {onQuickCheckIn && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onQuickCheckIn(member.userId);
+                              }}
+                              title={t('Check-in')}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                padding: '0.5rem 0.75rem',
+                                backgroundColor: isCurrentActive ? 'var(--primary)' : 'var(--surface)',
+                                color: isCurrentActive ? '#fff' : 'var(--text-muted)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '0.5rem',
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                              }}
+                            >
+                              <UserCheck style={{ width: '14px', height: '14px' }} />
+                              <span>{t('Check-in')}</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewDetail(member.userId);
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.4rem',
+                              padding: '0.5rem 0.85rem',
+                              backgroundColor: 'var(--surface)',
+                              color: 'var(--primary)',
+                              border: '1px solid var(--border)',
+                              borderRadius: '0.5rem',
+                              fontSize: '0.8rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--surface)';
+                              e.currentTarget.style.borderColor = 'var(--border)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--surface)';
+                              e.currentTarget.style.borderColor = 'var(--border)';
+                            }}
+                          >
+                            <Eye style={{ width: '14px', height: '14px' }} />
+                            <span>{t("View Details")}</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

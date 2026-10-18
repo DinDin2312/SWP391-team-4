@@ -32,6 +32,16 @@ public class MemberDetailResponse {
     private Integer absentCount;
     private Integer upcomingCount;
 
+    // Entitlements & Today's schedule
+    private Boolean hasGymAccess;
+    private Boolean hasTodayClass;
+    private Integer todayBookingId;
+    private String todayClassName;
+    private String todayClassTime;
+    private String todayRoomName;
+    private Integer anomalyCount;
+    private String lastAnomalyNote;
+
     // Detailed lists
     private List<MemberMembershipDetail> memberships;
     private List<MemberBookingDetail> bookings;

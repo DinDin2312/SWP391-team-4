@@ -8,6 +8,7 @@ import {
   Users,
   UserPlus,
   CreditCard,
+  UserCheck,
   Dumbbell,
   LogOut,
   ShieldCheck,
@@ -39,6 +40,13 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
       label: t('Search & View Members'),
       icon: Users,
       badge: 'Primary',
+      isReady: true,
+    },
+    {
+      id: 'member-checkin',
+      label: t('Member Check-in (Gym & Facility)'),
+      icon: UserCheck,
+      badge: 'Live',
       isReady: true,
     },
     {

@@ -605,11 +605,22 @@ const CoachSchedule = () => {
                           {initials}
                         </div>
                         <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h5 className="font-bold text-[var(--text)] text-sm">{st.fullName}</h5>
                             <span className="px-2 py-0.5 rounded bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] text-[10px] font-semibold">
                               {t(st.bookingStatus || 'CONFIRMED')}
                             </span>
+                            {st.checkedInAtFrontDesk ? (
+                              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1" title={st.frontDeskCheckInTime ? `Check-in lúc ${st.frontDeskCheckInTime.slice(11, 16)}` : 'Đã qua quầy lễ tân'}>
+                                <Check className="w-3 h-3" />
+                                {t('Đã qua lễ tân')}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-medium flex items-center gap-1" title="Học viên chưa thực hiện Check-in tại quầy lễ tân hôm nay">
+                                <AlertCircle className="w-3 h-3 text-amber-400" />
+                                {t('Chưa qua lễ tân')}
+                              </span>
+                            )}
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
                             {st.email && (
@@ -643,13 +654,13 @@ const CoachSchedule = () => {
                           >{t("NOT YET")}</button>
                           <button
                             type="button"
-                            disabled={!isAllowed}
+                            disabled={!isAllowed || !st.checkedInAtFrontDesk}
                             onClick={() => handleStatusChange(key, 'PRESENT')}
                             className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${currentStatus === 'PRESENT'
                                 ? t('bg-[var(--success-hover)] text-[color:var(--on-primary)] border border-[var(--success-soft)] shadow shadow-[var(--shadow)]')
                                 : t('text-[var(--text-muted)] hover:text-[var(--success-text)] hover:bg-[var(--success-soft)]')
-                              } ${!isAllowed ? t('opacity-50 cursor-not-allowed') : t('cursor-pointer')}`}
-                            title={t(!isAllowed ? t('Chưa đến ngày học') : t('Điểm danh Có Mặt'))}
+                              } ${(!isAllowed || !st.checkedInAtFrontDesk) ? t('opacity-40 cursor-not-allowed') : t('cursor-pointer')}`}
+                            title={!isAllowed ? t('Chưa đến ngày học') : !st.checkedInAtFrontDesk ? t('Chưa qua lễ tân Check-in. Vui lòng nhắc học viên qua quầy lễ tân trước.') : t('Điểm danh Có Mặt')}
                           >
                             <Check className="w-3.5 h-3.5" />{t("Present")}</button>
                           <button

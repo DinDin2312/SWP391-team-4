@@ -31,23 +31,90 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
     private final com.team4.sportscenter.modules.auth.repositories.UserRepository userRepository;
     private final AiWorkoutPlanRepository aiWorkoutPlanRepository;
     private final CoachWorkoutPlanRepository coachWorkoutPlanRepository;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    private final com.fasterxml.jackson.databind.ObjectMapper jsonMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+    public static class FrontDeskCheckInInfo {
+        private final boolean checkedIn;
+        private final java.time.LocalDateTime checkInTime;
+        private final String checkInType;
+
+        public FrontDeskCheckInInfo(boolean checkedIn, java.time.LocalDateTime checkInTime, String checkInType) {
+            this.checkedIn = checkedIn;
+            this.checkInTime = checkInTime;
+            this.checkInType = checkInType;
+        }
+
+        public boolean isCheckedIn() { return checkedIn; }
+        public java.time.LocalDateTime getCheckInTime() { return checkInTime; }
+        public String getCheckInType() { return checkInType; }
+    }
+
+    private Map<Integer, FrontDeskCheckInInfo> getTodayFrontDeskCheckInsByUser() {
+        LocalDate today = LocalDate.now();
+        java.time.LocalDateTime startOfDay = today.atStartOfDay();
+        java.time.LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT entity_id, changes_json, created_at FROM AUDIT_LOGS " +
+                "WHERE entity_type = 'MEMBER_CHECKIN' AND created_at >= ? AND created_at < ?",
+                java.sql.Timestamp.valueOf(startOfDay),
+                java.sql.Timestamp.valueOf(endOfDay)
+        );
+
+        Map<Integer, FrontDeskCheckInInfo> userMap = new HashMap<>();
+        for (Map<String, Object> row : rows) {
+            String entityId = (String) row.get("entity_id");
+            String changesJson = (String) row.get("changes_json");
+            java.time.LocalDateTime createdAt = null;
+            Object createdObj = row.get("created_at");
+            if (createdObj instanceof java.sql.Timestamp ts) {
+                createdAt = ts.toLocalDateTime();
+            } else if (createdObj instanceof java.time.LocalDateTime ldt) {
+                createdAt = ldt;
+            }
+
+            Integer userId = null;
+            String checkInType = "CLASS_SESSION";
+            if (changesJson != null && !changesJson.isBlank()) {
+                try {
+                    Map<String, Object> map = jsonMapper.readValue(changesJson, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                    if (map.get("userId") instanceof Number n) userId = n.intValue();
+                    if (map.get("checkInType") instanceof String s) checkInType = s;
+                } catch (Exception ignored) {}
+            }
+            if (userId == null && entityId != null) {
+                try { userId = Integer.parseInt(entityId); } catch (Exception ignored) {}
+            }
+            if (userId != null) {
+                userMap.put(userId, new FrontDeskCheckInInfo(true, createdAt, checkInType));
+            }
+        }
+        return userMap;
+    }
 
     @Override
     public List<CoachScheduleResponse> getCoachSchedules(String coachEmail) {
         List<Schedule> schedules = coachScheduleRepository.findSchedulesByCoachEmail(coachEmail);
+        Map<Integer, FrontDeskCheckInInfo> frontDeskMap = getTodayFrontDeskCheckInsByUser();
 
         return schedules.stream().map(schedule -> {
             List<Booking> bookings = coachScheduleRepository.findBookingsByScheduleId(schedule.getScheduleId());
 
-            List<EnrolledStudentResponse> students = bookings.stream().map(b -> EnrolledStudentResponse.builder()
-                    .bookingId(b.getBookingId())
-                    .userId(b.getUser().getUserId())
-                    .fullName(b.getUser().getFullName())
-                    .email(b.getUser().getEmail())
-                    .phone(b.getUser().getPhone())
-                    .bookingStatus(b.getStatus())
-                    .attendanceStatus(b.getAttendanceStatus() != null ? b.getAttendanceStatus() : "NOT_YET")
-                    .build()).collect(Collectors.toList());
+            List<EnrolledStudentResponse> students = bookings.stream().map(b -> {
+                FrontDeskCheckInInfo fd = frontDeskMap.get(b.getUser().getUserId());
+                return EnrolledStudentResponse.builder()
+                        .bookingId(b.getBookingId())
+                        .userId(b.getUser().getUserId())
+                        .fullName(b.getUser().getFullName())
+                        .email(b.getUser().getEmail())
+                        .phone(b.getUser().getPhone())
+                        .bookingStatus(b.getStatus())
+                        .attendanceStatus(b.getAttendanceStatus() != null ? b.getAttendanceStatus() : "NOT_YET")
+                        .checkedInAtFrontDesk(fd != null && fd.isCheckedIn())
+                        .frontDeskCheckInTime(fd != null ? fd.getCheckInTime() : null)
+                        .frontDeskCheckInType(fd != null ? fd.getCheckInType() : null)
+                        .build();
+            }).collect(Collectors.toList());
 
             return CoachScheduleResponse.builder()
                     .scheduleId(schedule.getScheduleId())
@@ -113,15 +180,22 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
     @Override
     public List<EnrolledStudentResponse> getScheduleStudents(Integer scheduleId, String coachEmail) {
         List<Booking> bookings = coachScheduleRepository.findBookingsByScheduleId(scheduleId);
-        return bookings.stream().map(b -> EnrolledStudentResponse.builder()
-                .bookingId(b.getBookingId())
-                .userId(b.getUser().getUserId())
-                .fullName(b.getUser().getFullName())
-                .email(b.getUser().getEmail())
-                .phone(b.getUser().getPhone())
-                .bookingStatus(b.getStatus())
-                .attendanceStatus(b.getAttendanceStatus() != null ? b.getAttendanceStatus() : "NOT_YET")
-                .build()).collect(Collectors.toList());
+        Map<Integer, FrontDeskCheckInInfo> frontDeskMap = getTodayFrontDeskCheckInsByUser();
+        return bookings.stream().map(b -> {
+            FrontDeskCheckInInfo fd = frontDeskMap.get(b.getUser().getUserId());
+            return EnrolledStudentResponse.builder()
+                    .bookingId(b.getBookingId())
+                    .userId(b.getUser().getUserId())
+                    .fullName(b.getUser().getFullName())
+                    .email(b.getUser().getEmail())
+                    .phone(b.getUser().getPhone())
+                    .bookingStatus(b.getStatus())
+                    .attendanceStatus(b.getAttendanceStatus() != null ? b.getAttendanceStatus() : "NOT_YET")
+                    .checkedInAtFrontDesk(fd != null && fd.isCheckedIn())
+                    .frontDeskCheckInTime(fd != null ? fd.getCheckInTime() : null)
+                    .frontDeskCheckInType(fd != null ? fd.getCheckInType() : null)
+                    .build();
+        }).collect(Collectors.toList());
     }
 
     @Transactional
@@ -153,6 +227,7 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                 .collect(Collectors.toMap(Booking::getBookingId, b -> b, (b1, b2) -> b1));
         Map<Integer, Booking> bookingMapByUserId = bookings.stream()
                 .collect(Collectors.toMap(b -> b.getUser().getUserId(), b -> b, (b1, b2) -> b1));
+        Map<Integer, FrontDeskCheckInInfo> frontDeskMap = getTodayFrontDeskCheckInsByUser();
 
         for (UpdateAttendanceRequest.StudentAttendanceItem item : request.getAttendances()) {
             Booking booking = null;
@@ -168,6 +243,12 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                 String newStatus = item.getAttendanceStatus();
                 if (newStatus != null) {
                     newStatus = newStatus.trim().toUpperCase();
+                    if ("PRESENT".equals(newStatus)) {
+                        FrontDeskCheckInInfo fd = frontDeskMap.get(booking.getUser().getUserId());
+                        if (fd == null || !fd.isCheckedIn()) {
+                            throw new RuntimeException("Học viên " + booking.getUser().getFullName() + " chưa thực hiện Check-in tại quầy lễ tân hôm nay. Vui lòng nhắc học viên qua quầy lễ tân trước khi tham gia lớp.");
+                        }
+                    }
                     if (newStatus.equals("PRESENT") || newStatus.equals("ABSENT") || newStatus.equals("NOT_YET")) {
                         booking.setAttendanceStatus(newStatus);
                         bookingRepository.save(booking);

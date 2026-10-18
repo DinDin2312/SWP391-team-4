@@ -1,10 +1,12 @@
 package com.team4.sportscenter.modules.receptionist.services;
 
+import com.team4.sportscenter.modules.receptionist.dtos.request.MemberCheckInRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.MemberRegisterRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.RenewBookingRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.SubscribePackageRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.response.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface ReceptionistMemberService {
@@ -16,4 +18,10 @@ public interface ReceptionistMemberService {
     void confirmClassRenewal(RenewBookingRequest request);
     List<PackageResponse> getAllActivePackages();
     void subscribePackageForMember(SubscribePackageRequest request);
+
+    List<FacilityRoomResponse> getFacilityRooms();
+    MemberCheckInRecordResponse checkInMember(MemberCheckInRequest request);
+    MemberCheckInRecordResponse checkOutMember(Long checkInId);
+    List<MemberCheckInRecordResponse> getCheckInHistory(LocalDate date, String keyword, String statusFilter);
 }
+

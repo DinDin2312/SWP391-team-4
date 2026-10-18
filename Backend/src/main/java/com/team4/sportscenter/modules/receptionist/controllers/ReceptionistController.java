@@ -93,4 +93,43 @@ public class ReceptionistController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-}
+
+    @GetMapping("/checkin/rooms")
+    public ResponseEntity<?> getFacilityRooms() {
+        try {
+            return ResponseEntity.ok(memberService.getFacilityRooms());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/checkin/history")
+    public ResponseEntity<?> getCheckInHistory(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false, defaultValue = "ALL") String status) {
+        try {
+            return ResponseEntity.ok(memberService.getCheckInHistory(date, keyword, status));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/checkin")
+    public ResponseEntity<?> checkInMember(@RequestBody com.team4.sportscenter.modules.receptionist.dtos.request.MemberCheckInRequest request) {
+        try {
+            return ResponseEntity.ok(memberService.checkInMember(request));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/checkin/{checkInId}/checkout")
+    public ResponseEntity<?> checkOutMember(@PathVariable Long checkInId) {
+        try {
+            return ResponseEntity.ok(memberService.checkOutMember(checkInId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+}

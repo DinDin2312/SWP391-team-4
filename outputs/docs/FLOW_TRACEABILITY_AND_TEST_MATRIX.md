@@ -43,12 +43,12 @@
 3. **Tạo kế hoạch tập luyện cho cá nhân hoặc cho cả lớp:** `CoachWorkoutPlans.jsx` + Flyway `V6__add_class_to_coach_workout_plans.sql`.
 4. **Ghi nhận kết quả tập luyện của học viên sau mỗi buổi:** `TraineeAssessmentModal.jsx` + `CoachStudents.jsx`.
 5. **Đánh giá tiến độ của học viên và ghi nhận nhận xét:** Flyway `V5__trainee_progress_assessments.sql` (`TRAINEE_ASSESSMENTS`).
-6. **Điểm danh học viên trong từng buổi tập:** `CoachSchedule.jsx` (ràng buộc chỉ điểm danh đúng ngày học).
+6. **Điểm danh học viên trong từng buổi tập & Đối soát chéo với Quầy Lễ tân:** `CoachSchedule.jsx` + `CoachScheduleServiceImpl.java` (ràng buộc chỉ điểm danh đúng ngày học, chặn điểm danh `PRESENT` nếu học viên chưa Check-in tại quầy Lễ tân hôm nay, và tự động kích hoạt cảnh báo `hasAnomaly` nếu học viên Check-in lớp nhưng `ABSENT`).
 7. **Gửi thông báo hoặc bài tập về nhà cho học viên:** `SendNotificationModal.jsx` + `NOTIFICATIONS`.
-8. **Sử dụng AI để gợi ý bài tập phù hợp:** Tích hợp gợi ý bài tập theo mục tiêu và lịch sử tập luyện.
+8. **Sử dụng AI để gợi ý bài tập phù hợp & Quản lý chuyên môn:** `CoachSettings.jsx` + `CoachProfileServiceImpl.java`.
 
 ### 2.3. Member (Học viên / Thành viên)
-1. **Đăng ký tài khoản và cập nhật thông tin cá nhân:** `Register.jsx`, `OTPVerification.jsx`, `Settings.jsx` (kèm upload avatar).
+1. **Đăng ký tài khoản và cập nhật thông tin cá nhân:** `Register.jsx`, `OTPVerification.jsx`, `Settings.jsx` (kèm đổi Email OTP bảo mật & upload avatar).
 2. **Xem các gói thành viên và đăng ký/gia hạn gói tập:** `PackageStore.jsx`, `Memberships.jsx`, `PackageBenefits.jsx`.
 3. **Xem danh sách các lớp học và lịch học:** `BookClass.jsx`, `LandingPage.jsx`.
 4. **Đăng ký hoặc hủy đăng ký lớp học:** `BookClass.jsx`, `MySchedule.jsx` (hỗ trợ đặt lớp bằng quyền lợi thẻ hoặc giỏ hàng, hủy lớp hoàn lượt).
@@ -62,8 +62,10 @@
 1. **Tìm kiếm và xem thông tin thành viên:** `MemberManagementView.jsx`, `MemberDetailModal.jsx`.
 2. **Đăng ký thành viên mới tại quầy:** `RegisterMemberView.jsx` (`POST /api/receptionist/members/register`).
 3. **Quản lý đăng ký/gia hạn các gói thành viên:** `ManageMembershipsView.jsx` (`POST /api/receptionist/packages/subscribe`).
-4. **Kiểm tra trạng thái gói tập và thời hạn sử dụng:** `MemberDetailModal.jsx`.
-5. **Điểm danh thành viên / hỗ trợ tại quầy:** `ReceptionistDashboard.jsx`.
-6. **Đăng ký lớp học hoặc hỗ trợgia hạn/hủy lớp cho thành viên:** `/api/receptionist/classes/suggest-renewal`, `/api/receptionist/classes/confirm-renewal`.
+4. **Kiểm tra trạng thái gói tập và thời hạn sử dụng:** `MemberDetailModal.jsx`, `MemberCheckInView.jsx`.
+5. **Check-in thông minh theo Ma trận 4 Quyền lợi, Kiểm soát sức chứa phòng & Đối soát chéo:** `MemberCheckInView.jsx`, `ReceptionistDashboard.jsx` (`POST /api/receptionist/checkin`, `POST /api/receptionist/checkin/{checkInId}/checkout`, `GET /api/receptionist/checkin/history`, `GET /api/receptionist/checkin/rooms`).
+6. **Đăng ký lớp học hoặc hỗ trợ gia hạn/hủy lớp cho thành viên:** `/api/receptionist/classes/suggest-renewal`, `/api/receptionist/classes/confirm-renewal`.
 7. **Ghi nhận các khoản thanh toán và xuất hóa đơn:** Tích hợp tạo hóa đơn `INVOICES` & `PAYMENTS` khi đăng ký tại quầy.
-8. **Tiếp nhận và ghi nhận yêu cầu hỗ trợ từ thành viên:** Quản lý hồ sơ và thông báo hệ thống tại quầy.
+8. **Tiếp nhận và ghi nhận yêu cầu hỗ trợ từ thành viên:** Quản lý hồ sơ, cảnh báo vi phạm (`anomalyCount`) và thông báo hệ thống tại quầy.
+
+> 📖 **Tham khảo chi tiết toàn bộ quy tắc nghiệp vụ và luồng xử lý tại:** [`BUSINESS_RULES_AND_WORKFLOWS.md`](../../BUSINESS_RULES_AND_WORKFLOWS.md)
