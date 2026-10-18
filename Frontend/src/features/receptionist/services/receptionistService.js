@@ -54,6 +54,26 @@ export const receptionistService = {
   subscribePackage: async (data) => {
     return await axiosClient.post('/receptionist/packages/subscribe', data);
   },
+
+  getFacilityRooms: async () => {
+    return await axiosClient.get('/receptionist/checkin/rooms');
+  },
+
+  getCheckInHistory: async ({ date = '', keyword = '', status = 'ALL' } = {}) => {
+    const params = {};
+    if (date) params.date = date;
+    if (keyword && keyword.trim()) params.keyword = keyword.trim();
+    if (status && status !== 'ALL') params.status = status;
+    return await axiosClient.get('/receptionist/checkin/history', { params });
+  },
+
+  checkInMember: async (payload) => {
+    return await axiosClient.post('/receptionist/checkin', payload);
+  },
+
+  checkOutMember: async (checkInId) => {
+    return await axiosClient.post(`/receptionist/checkin/${checkInId}/checkout`);
+  },
 };
 
 export default receptionistService;

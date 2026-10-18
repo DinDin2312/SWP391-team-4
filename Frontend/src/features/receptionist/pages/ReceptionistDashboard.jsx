@@ -4,10 +4,12 @@ import ReceptionistLayout from '../../../layouts/ReceptionistLayout';
 import MemberManagementView from '../components/MemberManagementView';
 import RegisterMemberView from '../components/RegisterMemberView';
 import ManageMembershipsView from '../components/ManageMembershipsView';
+import MemberCheckInView from '../components/MemberCheckInView';
 
 const ReceptionistDashboard = () => {
   useLanguage();
   const [activeFeature, setActiveFeature] = useState('search-members');
+  const [checkinMemberId, setCheckinMemberId] = useState(null);
 
   const handleSelectFeature = useCallback((featureId) => {
     setActiveFeature((prev) => {
@@ -17,6 +19,11 @@ const ReceptionistDashboard = () => {
       return featureId;
     });
   }, []);
+
+  const handleQuickCheckIn = useCallback((userId) => {
+    setCheckinMemberId(userId);
+    handleSelectFeature('member-checkin');
+  }, [handleSelectFeature]);
 
   useEffect(() => {
     if (!window.history.state?.receptionistTab && !window.history.state?.nexusModal) {
@@ -33,7 +40,16 @@ const ReceptionistDashboard = () => {
 
   return (
     <ReceptionistLayout activeFeature={activeFeature} onSelectFeature={handleSelectFeature}>
-      {activeFeature === 'search-members' && <MemberManagementView />}
+      {activeFeature === 'search-members' && (
+        <MemberManagementView onQuickCheckIn={handleQuickCheckIn} />
+      )}
+
+      {activeFeature === 'member-checkin' && (
+        <MemberCheckInView
+          initialMemberId={checkinMemberId}
+          onSwitchToRenew={() => handleSelectFeature('manage-memberships')}
+        />
+      )}
 
       {activeFeature === 'register-member' && (
         <RegisterMemberView onSuccess={() => handleSelectFeature('search-members')} />

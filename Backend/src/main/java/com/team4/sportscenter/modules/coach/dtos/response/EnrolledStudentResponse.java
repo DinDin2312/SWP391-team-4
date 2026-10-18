@@ -17,4 +17,7 @@ public class EnrolledStudentResponse {
     private String phone;
     private String bookingStatus;
     private String attendanceStatus;
+    private Boolean checkedInAtFrontDesk;
+    private java.time.LocalDateTime frontDeskCheckInTime;
+    private String frontDeskCheckInType;
 }
