@@ -246,7 +246,7 @@ export default function ManageMembershipsView() {
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '350px', textAlign: 'center', color: 'var(--text-muted)' }}>
                             <Layers style={{ width: '48px', height: '48px', marginBottom: '1rem', opacity: 0.4 }} />
                             <h3 style={{ margin: '0 0 0.35rem', color: 'var(--text-muted)', fontSize: '1.1rem' }}>{t("No Member Selected")}</h3>
-                            <p style={{ margin: 0, fontSize: '0.85rem' }}>{t("Select a member from the left list to review their classes and process renewal.")}</p>
+                            <p style={{ margin: 0, fontSize: '0.85rem' }}>{t("Please select a member from the left list to review their classes and process renewal.")}</p>
                         </div>
                     ) : (
                         <div>

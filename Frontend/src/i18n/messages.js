@@ -530,7 +530,7 @@ Enrolling in a course automatically secures your spot for all scheduled sessions
 All sessions synced to your schedule.|Mọi buổi tập đã được thêm vào lịch của bạn.
 No courses found starting on this date.|Không có khóa học bắt đầu vào ngày này.
 This member has no past or current course enrolments.|Hội viên chưa có đăng ký khóa học trước đây hoặc hiện tại.
-Select a member from the left list to review their classes and process renewal.|Chọn hội viên từ danh sách bên trái để xem lớp và gia hạn.
+Please select a member from the left list to review their classes and process renewal.|Chọn hội viên từ danh sách bên trái để xem lớp và gia hạn.
 Teaching Management|Quản lý giảng dạy
 Teaching Schedule|Lịch giảng dạy
 Teaching Agenda|Lịch giảng dạy

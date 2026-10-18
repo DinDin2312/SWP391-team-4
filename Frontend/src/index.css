@@ -6,6 +6,7 @@
   color: var(--text);
   background: var(--surface);
   font-synthesis: none;
+  --marquee-duration: 95s;
 }
 
 * { box-sizing: border-box; }
