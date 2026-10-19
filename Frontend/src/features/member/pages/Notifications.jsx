@@ -12,7 +12,8 @@ import {
   Settings as SettingsIcon, 
   Calendar, 
   CreditCard, 
-  Megaphone 
+  Megaphone,
+  ShieldCheck 
 } from 'lucide-react';
 
 const Notifications = () => {
@@ -157,6 +158,7 @@ const Notifications = () => {
               'SYSTEM': SettingsIcon,
               'BOOKING': Calendar,
               'PAYMENT': CreditCard,
+              'MEMBERSHIP': ShieldCheck,
               'PROMOTION': Megaphone
             };
             const IconComponent = iconMap[notification.type] || Bell;

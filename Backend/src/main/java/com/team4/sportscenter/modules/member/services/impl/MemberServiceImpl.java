@@ -88,7 +88,7 @@ public class MemberServiceImpl implements MemberService {
 
         long totalRemainingDays = memberships.stream()
                 .filter(m -> targetType.equals(m.purchasedType()))
-                .map(m -> m.getEndDate())
+                .map(UserMembership::getEndDate)
                 .max(LocalDate::compareTo)
                 .map(date -> ChronoUnit.DAYS.between(LocalDate.now(), date))
                 .orElse(0L);
@@ -98,7 +98,7 @@ public class MemberServiceImpl implements MemberService {
 
         UserMembership bestMembership = memberships.stream()
                 .filter(m -> targetType.equals(m.purchasedType()))
-                .max((m1, m2) -> Integer.compare(m1.purchasedDuration(), m2.purchasedDuration()))
+                .max(Comparator.comparingInt(UserMembership::purchasedDuration))
                 .orElse(memberships.get(0));
 
         return MemberMembershipResponse.builder()
@@ -192,7 +192,8 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public List<AvailableClassResponse> getAvailableClasses() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth != null ? auth.getName() : null;
         LocalDateTime currentTime = LocalDateTime.now();
         List<Schedule> schedules = scheduleRepository.findAvailableSchedules(currentTime);
 
@@ -209,7 +210,7 @@ public class MemberServiceImpl implements MemberService {
             Schedule nextSession = classScheds.get(0);
 
             // Find max booked slots across all sessions
-            Integer bookedSlots = 0;
+            int bookedSlots = 0;
             for (Schedule s : classScheds) {
                 int booked = bookingRepository.countBookedSlots(s.getScheduleId());
                 if (booked > bookedSlots)
@@ -279,7 +280,7 @@ public class MemberServiceImpl implements MemberService {
         LocalDateTime currentTime = LocalDateTime.now();
         List<Schedule> schedules = scheduleRepository.findAvailableSchedules(currentTime).stream()
                 .filter(s -> s.getGymClass().getClassId().equals(classId))
-                .collect(Collectors.toList());
+                .toList();
 
         if (schedules.isEmpty())
             throw new RuntimeException("No future sessions found for this class.");
@@ -299,7 +300,7 @@ public class MemberServiceImpl implements MemberService {
 
         // --- NEW: Time Overlap Validation ---
         List<Booking> myExistingBookings = bookingRepository.findAllBookingsByEmail(email)
-                .stream().filter(b -> !b.getStatus().equals("CANCELLED")).collect(Collectors.toList());
+                .stream().filter(b -> !b.getStatus().equals("CANCELLED")).toList();
 
         for (Schedule newSched : schedules) {
             for (Booking myB : myExistingBookings) {
@@ -335,6 +336,19 @@ public class MemberServiceImpl implements MemberService {
                         schedule.getEndTime());
             }
         }
+
+        if (benefitId != null && !schedules.isEmpty()) {
+            try {
+                notificationRepository.save(Notification.builder()
+                        .user(user)
+                        .title("Đăng ký khóa học thành công / Course Booked")
+                        .message("Bạn đã đăng ký thành công khóa học: " + schedules.get(0).getGymClass().getClassName()
+                                + " (" + schedules.size() + " buổi) sử dụng quyền lợi gói hội viên. Vui lòng kiểm tra lịch học trong My Schedule.")
+                        .type("BOOKING")
+                        .isRead(false)
+                        .build());
+            } catch (Exception ignored) {}
+        }
     }
 
     @Override
@@ -344,7 +358,7 @@ public class MemberServiceImpl implements MemberService {
         List<Booking> myExistingBookings = bookingRepository.findAllBookingsByEmail(email).stream()
                 .filter(b -> b.getSchedule().getGymClass().getClassId().equals(classId))
                 .filter(b -> !b.getStatus().equals("CANCELLED"))
-                .collect(Collectors.toList());
+                .toList();
 
         if (myExistingBookings.isEmpty()) {
             throw new RuntimeException("You are not currently booked in this class.");

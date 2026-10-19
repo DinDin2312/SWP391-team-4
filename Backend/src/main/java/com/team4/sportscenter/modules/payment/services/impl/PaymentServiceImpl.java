@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings({"SqlResolve", "SqlNoDataSourceInspection"})
 public class PaymentServiceImpl implements PaymentService {
 
     private final BookingRepository bookingRepository;
@@ -326,7 +327,10 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
                 .toList();
                 
         if (!pendingBookings.isEmpty()) {
-            for(var b:pendingBookings){if(jdbc.queryForObject("SELECT COUNT(*) FROM INVOICE_BOOKINGS WHERE booking_id=?",Integer.class,b.getBookingId())>0){b.setStatus("CANCELLED");bookingRepository.save(b);}else bookingRepository.delete(b);}
+            for(var b:pendingBookings){
+                Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM INVOICE_BOOKINGS WHERE booking_id=?",Integer.class,b.getBookingId());
+                if(count != null && count > 0){b.setStatus("CANCELLED");bookingRepository.save(b);}else bookingRepository.delete(b);
+            }
         }
     }
 
@@ -363,9 +367,11 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     @Transactional
     public void handleMoMoCallback(Map<String,String> query){
         bookingRepository.lockOperations();
-        String raw="accessKey="+MoMoConfig.ACCESS_KEY;
-        for(String key:List.of("amount","extraData","message","orderId","orderInfo","orderType","partnerCode","payType","requestId","responseTime","resultCode","transId"))raw+="&"+key+"="+query.getOrDefault(key,"");
-        try{if(query.get("signature")==null||!java.security.MessageDigest.isEqual(MoMoConfig.signHmacSHA256(raw,MoMoConfig.SECRET_KEY).getBytes(StandardCharsets.UTF_8),query.get("signature").getBytes(StandardCharsets.UTF_8)))throw new IllegalArgumentException("Invalid signature");}
+        StringBuilder raw = new StringBuilder("accessKey=").append(MoMoConfig.ACCESS_KEY);
+        for(String key:List.of("amount","extraData","message","orderId","orderInfo","orderType","partnerCode","payType","requestId","responseTime","resultCode","transId")) {
+            raw.append("&").append(key).append("=").append(query.getOrDefault(key, ""));
+        }
+        try{if(query.get("signature")==null||!java.security.MessageDigest.isEqual(MoMoConfig.signHmacSHA256(raw.toString(),MoMoConfig.SECRET_KEY).getBytes(StandardCharsets.UTF_8),query.get("signature").getBytes(StandardCharsets.UTF_8)))throw new IllegalArgumentException("Invalid signature");}
         catch(IllegalArgumentException e){throw e;}catch(Exception e){throw new IllegalStateException(e);}
         var invoice=invoiceRepository.findById(Integer.parseInt(query.get("orderId").split("_")[0])).orElseThrow();
         if(!"MOMO".equals(paymentMethod(invoice)))throw new IllegalArgumentException("Payment method mismatch");
@@ -376,8 +382,8 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     private String paymentMethod(Invoice invoice){return paymentRepository.findAll().stream().filter(p->p.getInvoice().getInvoiceId().equals(invoice.getInvoiceId())).findFirst().orElseThrow().getPaymentMethod();}
 
     private void assertCartMutable(String email){
-        int held=jdbc.queryForObject("SELECT COUNT(*) FROM INVOICES i JOIN USERS u ON u.user_id=i.user_id WHERE u.email=? AND i.status='PENDING' AND i.created_at>DATE_SUB(NOW(),INTERVAL 15 MINUTE)",Integer.class,email);
-        if(held>0)throw new com.team4.sportscenter.common.exception.PackageRuleException("PACKAGE_CHECKOUT_PENDING","A checkout is awaiting payment. Complete it or wait 15 minutes before changing the cart.");
+        Integer held=jdbc.queryForObject("SELECT COUNT(*) FROM INVOICES i JOIN USERS u ON u.user_id=i.user_id WHERE u.email=? AND i.status='PENDING' AND i.created_at>DATE_SUB(NOW(),INTERVAL 15 MINUTE)",Integer.class,email);
+        if(held != null && held > 0)throw new com.team4.sportscenter.common.exception.PackageRuleException("PACKAGE_CHECKOUT_PENDING","A checkout is awaiting payment. Complete it or wait 15 minutes before changing the cart.");
     }
 
     private void finishPayment(Invoice invoice,boolean success,String transaction){
@@ -387,14 +393,14 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         payment.setStatus("COMPLETED");payment.setTransactionNo(transaction);paymentRepository.save(payment);
         String issue=null;
         var purchased=userMembershipRepository.findAll().stream().filter(m->invoice.getInvoiceId().equals(m.getCheckoutInvoiceId())).toList();
-        var bookingIds=jdbc.queryForList("SELECT booking_id FROM INVOICE_BOOKINGS WHERE invoice_id=?",Integer.class,invoice.getInvoiceId());
+        List<Integer> bookingIds=jdbc.queryForList("SELECT booking_id FROM INVOICE_BOOKINGS WHERE invoice_id=?",Integer.class,invoice.getInvoiceId());
         var booked=bookingRepository.findAllById(bookingIds);
         try{
             if(!"PENDING".equals(invoice.getStatus())||invoice.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(15)))throw new IllegalArgumentException("Checkout expired or previously failed");
-            int expected=jdbc.queryForObject("SELECT COUNT(*) FROM INVOICE_DETAILS WHERE invoice_id=? AND package_id IS NOT NULL",Integer.class,invoice.getInvoiceId());
-            if(expected!=purchased.size())throw new IllegalArgumentException("Invoice membership association missing");
-            int expectedClasses=jdbc.queryForObject("SELECT COUNT(*) FROM INVOICE_DETAILS WHERE invoice_id=? AND class_id IS NOT NULL",Integer.class,invoice.getInvoiceId());
-            if(expectedClasses>0&&booked.isEmpty())throw new IllegalArgumentException("Invoice booking association missing");
+            Integer expected=jdbc.queryForObject("SELECT COUNT(*) FROM INVOICE_DETAILS WHERE invoice_id=? AND package_id IS NOT NULL",Integer.class,invoice.getInvoiceId());
+            if(expected != null && expected != purchased.size())throw new IllegalArgumentException("Invoice membership association missing");
+            Integer expectedClasses=jdbc.queryForObject("SELECT COUNT(*) FROM INVOICE_DETAILS WHERE invoice_id=? AND class_id IS NOT NULL",Integer.class,invoice.getInvoiceId());
+            if(expectedClasses != null && expectedClasses > 0 && booked.isEmpty())throw new IllegalArgumentException("Invoice booking association missing");
             for(var m:purchased){if(!"PENDING".equals(m.getStatus()))throw new IllegalArgumentException("Purchase is no longer pending");commerce.checkPurchase(m.getUser().getUserId(),m.getAPackage().getPackageId(),invoice.getInvoiceId(),false);}
             for(var b:booked){if(!"PENDING".equals(b.getStatus())||!"SCHEDULED".equals(b.getSchedule().getStatus())||b.getSchedule().getStartTime().isBefore(LocalDateTime.now())||bookingRepository.countBookedSlots(b.getSchedule().getScheduleId())>=b.getSchedule().getGymClass().getMaxSlots())throw new IllegalArgumentException("Session unavailable");}
         }catch(IllegalArgumentException e){issue=e.getMessage();}
@@ -409,5 +415,29 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         }
         invoice.setStatus("PAID");invoiceRepository.save(invoice);
         notificationService.createNotification(invoice.getUser().getEmail(),"Payment Successful","Your invoice "+invoice.getInvoiceId()+" is complete.","PAYMENT");
+        if (!purchased.isEmpty()) {
+            for (var m : purchased) {
+                String pkgName = m.getAPackage() != null ? m.getAPackage().getPackageName() : "Gói hội viên";
+                int duration = m.purchasedDuration() > 0 ? m.purchasedDuration() : 30;
+                notificationService.createNotification(
+                    invoice.getUser().getEmail(),
+                    "Đăng ký gói hội viên thành công / Package Activated",
+                    "Gói hội viên '" + pkgName + "' (" + duration + " ngày) của bạn đã được kích hoạt thành công. "
+                        + "Thời hạn sử dụng từ " + m.getStartDate() + " đến " + m.getEndDate() + ". "
+                        + "Vui lòng kiểm tra quyền lợi trong mục Package Benefits.",
+                    "PAYMENT"
+                );
+            }
+        }
+        if (!booked.isEmpty()) {
+            String className = booked.get(0).getSchedule() != null && booked.get(0).getSchedule().getGymClass() != null
+                ? booked.get(0).getSchedule().getGymClass().getClassName() : "khóa học";
+            notificationService.createNotification(
+                invoice.getUser().getEmail(),
+                "Đăng ký lớp học thành công / Class Enrolled",
+                "Bạn đã thanh toán và đăng ký thành công khóa học: " + className + " (" + booked.size() + " buổi). Vui lòng kiểm tra lịch học trong My Schedule.",
+                "BOOKING"
+            );
+        }
     }
 }

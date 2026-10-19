@@ -14,4 +14,12 @@ public class SubscribePackageRequest {
     private Integer userId;
     private Integer packageId;
     private LocalDate startDate; // Ngày bắt đầu có hiệu lực (nếu null lấy ngày hiện tại)
+    private String paymentMethod; // Phương thức thanh toán tại quầy ("CASH" hoặc "TRANSFER")
+
+    public SubscribePackageRequest(Integer userId, Integer packageId, LocalDate startDate) {
+        this.userId = userId;
+        this.packageId = packageId;
+        this.startDate = startDate;
+        this.paymentMethod = "CASH";
+    }
 }

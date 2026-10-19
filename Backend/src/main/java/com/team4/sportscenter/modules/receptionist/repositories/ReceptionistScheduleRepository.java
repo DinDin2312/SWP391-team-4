@@ -23,4 +23,28 @@ public interface ReceptionistScheduleRepository extends JpaRepository<Schedule, 
     List<Schedule> findUpcomingSchedulesByClassName(
             @Param("className") String className,
             @Param("afterTime") LocalDateTime afterTime);
+
+    @Query("SELECT s FROM Schedule s " +
+            "JOIN FETCH s.gymClass c " +
+            "LEFT JOIN FETCH c.coach coach " +
+            "LEFT JOIN FETCH c.room r " +
+            "WHERE (LOWER(c.className) LIKE LOWER(CONCAT(:baseName, '%')) OR LOWER(c.className) = LOWER(:className)) " +
+            "AND c.classId <> :excludeClassId " +
+            "AND s.startTime >= :afterTime " +
+            "AND s.status = 'SCHEDULED' " +
+            "ORDER BY s.startTime ASC")
+    List<Schedule> findUpcomingSchedulesByBaseName(
+            @Param("baseName") String baseName,
+            @Param("className") String className,
+            @Param("excludeClassId") Integer excludeClassId,
+            @Param("afterTime") LocalDateTime afterTime);
+
+    @Query("SELECT s FROM Schedule s " +
+            "JOIN FETCH s.gymClass c " +
+            "LEFT JOIN FETCH c.coach coach " +
+            "LEFT JOIN FETCH c.room r " +
+            "WHERE c.classId = :classId " +
+            "AND s.status = 'SCHEDULED' " +
+            "ORDER BY s.startTime ASC")
+    List<Schedule> findAllSchedulesByClassId(@Param("classId") Integer classId);
 }

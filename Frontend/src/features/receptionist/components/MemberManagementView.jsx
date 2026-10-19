@@ -3,22 +3,15 @@ import { formatDate as displayFormatDate } from '../../../utils/displayFormat';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search,
-  Filter,
   RefreshCw,
   Eye,
   CreditCard,
-  Calendar,
   Phone,
   Mail,
   UserCheck,
   AlertCircle,
   Users,
-  Activity,
-  CheckCircle,
   Clock,
-  ChevronRight,
-  Shield,
-  Sparkles,
   UserX,
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
@@ -160,7 +153,6 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
   useLanguage();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   // Filters
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -169,12 +161,10 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
 
   // Detail Modal State
   const [selectedMemberDetail, setSelectedMemberDetail] = useState(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
 
   // Fetch Members
   const fetchMembers = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await receptionistService.searchMembers({
         keyword: searchKeyword,
@@ -231,7 +221,6 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
 
   // Handle View Member Detail
   const handleViewDetail = async (userId) => {
-    setLoadingDetail(true);
     try {
       const detail = await receptionistService.getMemberDetail(userId);
       setSelectedMemberDetail(detail);
@@ -287,8 +276,6 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
           ],
         });
       }
-    } finally {
-      setLoadingDetail(false);
     }
   };
 
@@ -649,10 +636,10 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
               }}
             >
               <option value="ALL">{t("All Package Status")}</option>
-              <option value="ACTIVE">{t("🟢 Active Package")}</option>
-              <option value="EXPIRING_SOON">{t("🟠 Expiring Soon (≤ 7 days)")}</option>
-              <option value="EXPIRED">{t("🔴 Expired Package")}</option>
-              <option value="NO_MEMBERSHIP">{t("⚪ No Package")}</option>
+              <option value="ACTIVE">{t("Active Package")}</option>
+              <option value="EXPIRING_SOON">{t("Expiring Soon (≤ 7 days)")}</option>
+              <option value="EXPIRED">{t("Expired Package")}</option>
+              <option value="NO_MEMBERSHIP">{t("No Package")}</option>
             </select>
           </div>
         </div>
@@ -893,7 +880,7 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
                               }}
                             >
                               <Clock style={{ width: '12px', height: '12px' }} />
-                              {member.daysRemaining}{' '}{t("days left")}</span>
+                              {member.daysRemaining === 1 ? t("1 day left (Expires today)") : `${member.daysRemaining} ${t("days left")}`}</span>
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t("Expires on:")}{' '}{formatDate(member.membershipEndDate)}
                             </span>
                           </div>

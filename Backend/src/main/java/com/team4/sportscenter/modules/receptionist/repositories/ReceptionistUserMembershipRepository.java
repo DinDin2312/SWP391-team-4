@@ -10,9 +10,6 @@ import java.util.List;
 @Repository
 public interface ReceptionistUserMembershipRepository extends JpaRepository<UserMembership, Integer> {
 
-    @Query("SELECT um FROM UserMembership um LEFT JOIN FETCH um.aPackage p WHERE um.user.userId = :userId ORDER BY um.startDate DESC")
+    @Query("SELECT um FROM UserMembership um LEFT JOIN FETCH um.aPackage p WHERE um.user.userId = :userId ORDER BY um.startDate DESC, um.endDate DESC")
     List<UserMembership> findByUser_UserId(@Param("userId") Integer userId);
-
-    @Query("SELECT um FROM UserMembership um LEFT JOIN FETCH um.aPackage p WHERE um.user.userId = :userId AND um.status = 'ACTIVE' ORDER BY um.endDate DESC")
-    List<UserMembership> findActiveMembershipsByUserId(@Param("userId") Integer userId);
 }
