@@ -28,16 +28,22 @@ public final class ManagerRequests {
             @Pattern(regexp = "(?s)(|.{6,72})", message = "Password must contain between 6 and 72 characters") String password,
             @NotNull Integer roleId,
             @NotBlank String status,
-            Boolean forcePasswordChange) {
+            Boolean forcePasswordChange,
+            @Size(max=100) List<@NotNull @Min(1) Integer> subjectIds) {
+        public UserRequest(String fullName, String email, String phone, String password, Integer roleId, String status, Boolean forcePasswordChange) {
+            this(fullName,email,phone,password,roleId,status,forcePasswordChange,null);
+        }
         public UserRequest(String fullName, String email, String phone, String password, Integer roleId, String status) {
-            this(fullName, email, phone, password, roleId, status, false);
+            this(fullName, email, phone, password, roleId, status, false, null);
         }
     }
 
     public record UserStatusRequest(@NotBlank String status, @Size(max = 500) String reason) {
     }
 
-    public record SubjectRequest(@NotBlank @Size(max = 255) String subjectName, @Size(max = 10000) String description) {
+    public record SubjectRequest(@NotBlank @Size(max = 255) String subjectName, @Size(max = 10000) String description,
+            @Min(15) @Max(240) Integer durationMinutes, @Size(max=48) List<@NotNull LocalTime> slotStarts) {
+        public SubjectRequest(String subjectName,String description) {this(subjectName,description,null,null);}
     }
 
     public record RoomRequest(@NotBlank @Size(max = 255) String roomName, @NotNull @Min(1) Integer capacity) {
@@ -97,7 +103,15 @@ public final class ManagerRequests {
             @NotNull LocalTime availableFrom, @NotNull LocalTime availableTo,
             @NotNull LocalTime preferredTime,
             @NotNull @Min(0) @Max(120) Integer breakMinutes,
-            @NotNull @Size(max=366) List<@NotNull LocalDate> excludedDates) { }
+            @NotNull @Size(max=366) List<@NotNull LocalDate> excludedDates,
+            @Size(max=7) java.util.Map<Integer, LocalTime> weekdaySlots,
+            @Size(max=52) java.util.Map<LocalDate, LocalDateTime> overrides) {
+        public SchedulePlanRequest(Integer classId, LocalDate fromDate, LocalDate toDate, Integer sessions,
+                Integer durationMinutes,List<Integer> weekdays,LocalTime availableFrom,LocalTime availableTo,
+                LocalTime preferredTime,Integer breakMinutes,List<LocalDate> excludedDates) {
+            this(classId,fromDate,toDate,sessions,durationMinutes,weekdays,availableFrom,availableTo,preferredTime,breakMinutes,excludedDates,null,null);
+        }
+    }
 
     public record PlannedSession(@NotNull LocalDateTime startTime, @NotNull LocalDateTime endTime) { }
 

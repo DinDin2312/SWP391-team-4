@@ -45,7 +45,7 @@ class ManagerIntegrationTests {
     List<Integer> userIds = new ArrayList<>(), classIds = new ArrayList<>();
     List<Integer> packageIds = new ArrayList<>();
     List<String> typeCodes = new ArrayList<>();
-    LocalDateTime start = LocalDateTime.of(2040, 6, 1, 9, 0);
+    LocalDateTime start = LocalDateTime.of(2040, 6, 1, 6, 0);
 
     int role(String name) { return jdbc.queryForObject("SELECT role_id FROM ROLES WHERE role_name=?", Integer.class, name); }
     int user(String name, String role) {
@@ -55,12 +55,14 @@ class ManagerIntegrationTests {
     }
 
     @BeforeEach void fixtures() {
+        jdbc.update("UPDATE CENTER_SCHEDULE_POLICY SET opens_at='06:00:00',closes_at='22:00:00',break_minutes=15 WHERE policy_id=1");
         actor = "-qa-" + UUID.randomUUID() + "@example.test";
         admin = user("admin", "Center Manager");
         coach = user("coach", "Coach");
         member = user("member", "Member");
         subject = service.saveSubject(null, new SubjectRequest("QA " + actor, "Integration fixture"), actor);
         room = service.saveRoom(null, new RoomRequest("QA " + actor, 10), actor);
+        jdbc.update("INSERT INTO USER_SUBJECTS(user_id,subject_id) VALUES (?,?)",coach,subject);
         course = newClass("QA class", 5);
     }
 
@@ -73,7 +75,7 @@ class ManagerIntegrationTests {
         return new ClassRequest(name, subject, coach, room, new BigDecimal("100000"), slots, status);
     }
     int schedule(LocalDateTime time) {
-        return service.saveSchedule(null, new ScheduleRequest(course, time, time.plusHours(1), "SCHEDULED"), actor);
+        return service.saveSchedule(null, new ScheduleRequest(course, time, time.plusMinutes(90), "SCHEDULED"), actor);
     }
     void booking(int schedule, String status) {
         jdbc.update("INSERT INTO BOOKINGS(user_id,schedule_id,status,attendance_status,booking_time) VALUES (?,?,?,'NOT_YET',NOW())", member, schedule, status);
@@ -156,11 +158,14 @@ class ManagerIntegrationTests {
     }
 
     HttpResponse<String> packagePhotoRequest(String method,Integer id,String details,byte[] image,boolean remove,String auth) throws Exception {
+        return resourceWithPhotoRequest("packages",method,id,details,image,remove,auth);
+    }
+    HttpResponse<String> resourceWithPhotoRequest(String resource,String method,Integer id,String details,byte[] image,boolean remove,String auth) throws Exception {
         String boundary="package-"+UUID.randomUUID();var output=new java.io.ByteArrayOutputStream();
         output.write(("--"+boundary+"\r\nContent-Disposition: form-data; name=\"details\"\r\nContent-Type: application/json\r\n\r\n"+details+"\r\n--"+boundary+"\r\nContent-Disposition: form-data; name=\"removeImage\"\r\n\r\n"+remove+"\r\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
         if(image!=null){output.write(("--"+boundary+"\r\nContent-Disposition: form-data; name=\"image\"; filename=\"photo.png\"\r\nContent-Type: image/png\r\n\r\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));output.write(image);output.write("\r\n".getBytes());}
         output.write(("--"+boundary+"--\r\n").getBytes());
-        var builder=HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/manager/packages/"+(id==null?"":id+"/")+"with-image")).header("Content-Type","multipart/form-data; boundary="+boundary);
+        var builder=HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/manager/"+resource+"/"+(id==null?"":id+"/")+"with-image")).header("Content-Type","multipart/form-data; boundary="+boundary);
         if(auth!=null)builder.header("Authorization","Bearer "+auth);
         return HttpClient.newHttpClient().send(builder.method(method,HttpRequest.BodyPublishers.ofByteArray(output.toByteArray())).build(),HttpResponse.BodyHandlers.ofString());
     }
@@ -192,6 +197,78 @@ class ManagerIntegrationTests {
         assertEquals(before,count("SELECT COUNT(*) FROM PACKAGES"));
     }
 
+    @Test void operationEditorsSaveInformationAndPhotoInOneTransaction() throws Exception {
+        var image=ResourceImageStorageServiceTests.image(24,12,"png");
+        var resources=List.of("subjects","rooms","classes");
+        var payloads=List.of("{\"subjectName\":\"QA merged subject\",\"description\":\"Test\"}",
+            "{\"roomName\":\"QA merged room\",\"capacity\":20}",
+            "{\"className\":\"QA merged class\",\"subjectId\":"+subject+",\"coachId\":"+coach+",\"roomId\":"+room+",\"maxSlots\":5,\"price\":100,\"status\":\"ACTIVE\"}");
+        for(int i=0;i<resources.size();i++) {
+            String resource=resources.get(i),details=payloads.get(i),table=resource.toUpperCase();
+            String column=List.of("subject_id","room_id","class_id").get(i);
+            int before=count("SELECT COUNT(*) FROM "+table);
+            assertEquals(403,resourceWithPhotoRequest(resource,"POST",null,details,image,false,token(coach)).statusCode());
+            assertEquals(400,resourceWithPhotoRequest(resource,"POST",null,details,"invalid".getBytes(),false,token(admin)).statusCode());
+            assertEquals(before,count("SELECT COUNT(*) FROM "+table));
+            var response=resourceWithPhotoRequest(resource,"POST",null,details,image,false,token(admin));
+            assertEquals(200,response.statusCode(),response.body());
+            var matcher=java.util.regex.Pattern.compile("\"id\"\\s*:\\s*(\\d+)").matcher(response.body());
+            assertTrue(matcher.find());int id=Integer.parseInt(matcher.group(1));
+            try {
+                String original=jdbc.queryForObject("SELECT image_path FROM "+table+" WHERE "+column+"=?",String.class,id);
+                assertNotNull(original);
+                assertEquals(400,resourceWithPhotoRequest(resource,"PUT",id,details.replace("merged","changed"),"invalid".getBytes(),false,token(admin)).statusCode());
+                assertEquals(original,jdbc.queryForObject("SELECT image_path FROM "+table+" WHERE "+column+"=?",String.class,id));
+                assertEquals(1,count("SELECT COUNT(*) FROM "+table+" WHERE "+column+"=? AND "+List.of("subject_name","room_name","class_name").get(i)+" LIKE '%merged%'",id));
+                assertEquals(200,resourceWithPhotoRequest(resource,"PUT",id,details.replace("merged","changed"),image,false,token(admin)).statusCode());
+                assertEquals(404,request("GET","/api/resource-images/"+original,null,null).statusCode());
+                assertEquals(200,resourceWithPhotoRequest(resource,"PUT",id,details,null,true,token(admin)).statusCode());
+                assertNull(jdbc.queryForObject("SELECT image_path FROM "+table+" WHERE "+column+"=?",String.class,id));
+            } finally {service.removeResourceImage(resource,id,actor);jdbc.update("DELETE FROM "+table+" WHERE "+column+"=?",id);}
+        }
+    }
+
+    @Test void coachSubjectAssignmentsFilterUsersAndRejectWrongSubjectAndUnsafeRemoval() {
+        int other=service.saveSubject(null,new SubjectRequest("Other "+actor,""),actor);
+        try {
+            assertThrows(IllegalArgumentException.class,()->service.saveClass(null,new ClassRequest("Wrong",other,coach,room,BigDecimal.TEN,5,"ACTIVE"),actor));
+            var row=service.users("coach"+actor,"Coach","ACTIVE").stream().filter(u->((Number)u.get("userId")).intValue()==coach).findFirst().orElseThrow();
+            assertEquals(List.of(subject),row.get("subjectIds"));
+            service.updateUser(coach,new UserRequest("coach","coach"+actor,null,"",role("Coach"),"ACTIVE",false,List.of(subject,other)),actor);
+            assertDoesNotThrow(()->service.saveClass(course,new ClassRequest("Allowed",other,coach,room,BigDecimal.TEN,5,"ACTIVE"),actor));
+            assertThrows(IllegalArgumentException.class,()->service.updateUser(coach,new UserRequest("coach","coach"+actor,null,"",role("Coach"),"ACTIVE",false,List.of(subject)),actor));
+            assertTrue(repository.coachTeachesSubject(coach,other));
+            service.saveClass(course,classRequest("Restored",5,"ACTIVE"),actor);
+            service.updateUser(coach,new UserRequest("coach","coach"+actor,null,"",role("Coach"),"ACTIVE",false,List.of(subject)),actor);
+            assertFalse(repository.coachTeachesSubject(coach,other));
+        } finally {jdbc.update("UPDATE CLASSES SET subject_id=? WHERE class_id=?",subject,course);jdbc.update("DELETE FROM USER_SUBJECTS WHERE subject_id=?",other);jdbc.update("DELETE FROM SUBJECTS WHERE subject_id=?",other);}
+    }
+
+    @Test void subjectTimetablesControlClassSlotsAndCheckConflictsAcrossDurations() {
+        int other=service.saveSubject(null,new SubjectRequest("Short "+actor,"",60,List.of(java.time.LocalTime.of(7,30),java.time.LocalTime.of(9,0))),actor);
+        try {
+            jdbc.update("INSERT INTO USER_SUBJECTS(user_id,subject_id) VALUES (?,?)",coach,other);
+            int shortClass=service.saveClass(null,new ClassRequest("Short class",other,coach,room,BigDecimal.TEN,5,"ACTIVE"),actor);classIds.add(shortClass);
+            service.saveSubject(subject,new SubjectRequest("Long "+actor,"",135,List.of(java.time.LocalTime.of(6,0),java.time.LocalTime.of(8,30))),actor);
+            assertEquals(135,service.classSlotPolicy(course).get("durationMinutes"));
+            int longSession=service.saveSchedule(null,new ScheduleRequest(course,start,start.plusMinutes(135),"SCHEDULED"),actor);
+            assertThrows(IllegalArgumentException.class,()->service.saveSchedule(null,new ScheduleRequest(shortClass,start.plusMinutes(90),start.plusMinutes(150),"SCHEDULED"),actor));
+            assertDoesNotThrow(()->service.saveSchedule(null,new ScheduleRequest(shortClass,start.plusHours(3),start.plusHours(4),"SCHEDULED"),actor));
+            assertThrows(IllegalArgumentException.class,()->service.saveSchedule(null,new ScheduleRequest(course,start.plusDays(1),start.plusDays(1).plusMinutes(90),"SCHEDULED"),actor));
+            assertThrows(IllegalArgumentException.class,()->service.saveSubject(subject,new SubjectRequest("Invalid","",135,List.of(java.time.LocalTime.of(6,0),java.time.LocalTime.of(7,0))),actor));
+            assertEquals(135,service.classSlotPolicy(course).get("durationMinutes"));
+            service.saveSubject(subject,new SubjectRequest("Changed "+actor,"",60,List.of()),actor);
+            assertEquals(start.plusMinutes(135),repository.schedule(longSession).get("endTime"));
+            assertDoesNotThrow(()->service.saveSchedule(longSession,new ScheduleRequest(course,start,start.plusMinutes(135),"CANCELLED"),actor));
+        } finally {
+            jdbc.update("DELETE b FROM BOOKINGS b JOIN SCHEDULES s ON s.schedule_id=b.schedule_id JOIN CLASSES c ON c.class_id=s.class_id WHERE c.subject_id=?",other);
+            jdbc.update("DELETE s FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id WHERE c.subject_id=?",other);
+            jdbc.update("DELETE FROM CLASSES WHERE subject_id=?",other);
+            jdbc.update("DELETE FROM USER_SUBJECTS WHERE subject_id=?",other);
+            jdbc.update("DELETE FROM SUBJECTS WHERE subject_id=?",other);
+        }
+    }
+
     @AfterEach void cleanup() {
         for(Integer id:userIds){
             jdbc.update("DELETE ib FROM INVOICE_BOOKINGS ib JOIN INVOICES i ON i.invoice_id=ib.invoice_id WHERE i.user_id=?",id);
@@ -212,6 +289,7 @@ class ManagerIntegrationTests {
         }
         for(String code:typeCodes)jdbc.update("DELETE FROM PACKAGE_TYPES WHERE type_code=?",code);
         jdbc.update("DELETE FROM ROOMS WHERE room_id=?", room);
+        jdbc.update("DELETE FROM USER_SUBJECTS WHERE subject_id=?",subject);
         jdbc.update("DELETE FROM SUBJECTS WHERE subject_id=?", subject);
         for (Integer id : userIds) jdbc.update("DELETE FROM USERS WHERE user_id=?", id);
         jdbc.update("DELETE FROM AUDIT_LOGS WHERE actor_email=? OR actor_email=?", actor, "admin" + actor);
@@ -359,7 +437,7 @@ class ManagerIntegrationTests {
         service.savePackage(pkg,new PackageRequest("Old client edit","SUBJECT_ACCESS",30,BigDecimal.TEN,List.of(new SubjectBenefitRequest(subject,4))),actor);
         assertEquals(List.of(otherRoom),benefits.packageBenefits(pkg).get(0).get("roomIds"));
         assertThrows(IllegalArgumentException.class,()->service.savePackage(pkg,new PackageRequest("Invalid room","SUBJECT_ACCESS",30,BigDecimal.TEN,List.of(new SubjectBenefitRequest(subject,4,List.of(Integer.MAX_VALUE)))),actor));
-        schedule(LocalDateTime.now().plusDays(2).withHour(9).withMinute(0).withSecond(0).withNano(0));
+        schedule(LocalDateTime.now().plusDays(2).withHour(6).withMinute(0).withSecond(0).withNano(0));
         jdbc.update("UPDATE CLASSES SET room_id=? WHERE class_id=?",otherRoom,course);
         assertThrows(IllegalArgumentException.class,()->members.bookClassUsingPackage("member"+actor,course,membership));
         assertEquals(0,count("SELECT COUNT(*) FROM BOOKINGS WHERE user_id=?",member));
@@ -396,7 +474,7 @@ class ManagerIntegrationTests {
     }
 
     @Test void packageCourseBookingReservesQuotaRejectsInvalidUseAndRefundsOnlyFutureCancellation() throws Exception {
-        var time=LocalDateTime.now().plusDays(2).withHour(9).withMinute(0).withSecond(0).withNano(0);
+        var time=LocalDateTime.now().plusDays(2).withHour(6).withMinute(0).withSecond(0).withNano(0);
         int first=schedule(time),second=schedule(time.plusDays(1));
         int pkg=subjectPackage(2),membership=purchasedPackage(pkg);
         assertEquals(403,request("POST","/api/v1/member/book-class/"+course+"/with-package/"+membership,token(coach),"{}").statusCode());
@@ -409,9 +487,9 @@ class ManagerIntegrationTests {
         assertEquals(0,((Number)benefits.membershipBenefits(membership).get(0).get("remainingSessions")).intValue());
         assertEquals(0,payments.getCartItems("member"+actor).getItems().size());
         int other=newClass("Another course",5);
-        service.saveSchedule(null,new ScheduleRequest(other,time.plusDays(4),time.plusDays(4).plusHours(1),"SCHEDULED"),actor);
+        service.saveSchedule(null,new ScheduleRequest(other,time.plusDays(4),time.plusDays(4).plusMinutes(90),"SCHEDULED"),actor);
         assertThrows(IllegalArgumentException.class,()->members.bookClassUsingPackage("member"+actor,other,membership));
-        assertThrows(IllegalArgumentException.class,()->service.saveSchedule(second,new ScheduleRequest(course,time.plusDays(40),time.plusDays(40).plusHours(1),"SCHEDULED"),actor));
+        assertThrows(IllegalArgumentException.class,()->service.saveSchedule(second,new ScheduleRequest(course,time.plusDays(40),time.plusDays(40).plusMinutes(90),"SCHEDULED"),actor));
         jdbc.update("UPDATE SCHEDULES SET start_time=DATE_SUB(NOW(),INTERVAL 2 HOUR),end_time=DATE_SUB(NOW(),INTERVAL 1 HOUR) WHERE schedule_id=?",first);
         jdbc.update("UPDATE BOOKINGS SET attendance_status='PRESENT' WHERE schedule_id=? AND user_id=?",first,member);
         members.cancelClass("member"+actor,course);
@@ -421,7 +499,7 @@ class ManagerIntegrationTests {
         members.bookClassUsingPackage("member"+actor,other,membership);
         assertEquals(0,((Number)benefits.membershipBenefits(membership).get(0).get("remainingSessions")).intValue());
         int otherSchedule=jdbc.queryForObject("SELECT schedule_id FROM SCHEDULES WHERE class_id=?",Integer.class,other);
-        service.saveSchedule(otherSchedule,new ScheduleRequest(other,time.plusDays(4),time.plusDays(4).plusHours(1),"CANCELLED"),actor);
+        service.saveSchedule(otherSchedule,new ScheduleRequest(other,time.plusDays(4),time.plusDays(4).plusMinutes(90),"CANCELLED"),actor);
         assertEquals(1,((Number)benefits.membershipBenefits(membership).get(0).get("remainingSessions")).intValue());
     }
 
@@ -441,9 +519,9 @@ class ManagerIntegrationTests {
 
     @Test void simultaneousBookingsCannotSpendTheLastSessionTwice() throws Exception {
         int pkg=subjectPackage(1),membership=purchasedPackage(pkg),other=newClass("Other course",5);
-        var time=LocalDateTime.now().plusDays(2).withHour(9).withMinute(0).withSecond(0).withNano(0);
+        var time=LocalDateTime.now().plusDays(2).withHour(6).withMinute(0).withSecond(0).withNano(0);
         schedule(time);
-        service.saveSchedule(null,new ScheduleRequest(other,time.plusDays(1),time.plusDays(1).plusHours(1),"SCHEDULED"),actor);
+        service.saveSchedule(null,new ScheduleRequest(other,time.plusDays(1),time.plusDays(1).plusMinutes(90),"SCHEDULED"),actor);
         var gate=new java.util.concurrent.CountDownLatch(1);
         var pool=java.util.concurrent.Executors.newFixedThreadPool(2);
         try {
@@ -466,9 +544,9 @@ class ManagerIntegrationTests {
         java.time.LocalDate today = now.toLocalDate();
         for(int i=0;i<10;i++) {
             LocalDateTime urgent = now.plusMinutes(10+i*10);
-            jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,'SCHEDULED')",course,urgent,urgent.plusHours(1));
+            jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,'SCHEDULED')",course,urgent,urgent.plusMinutes(90));
             LocalDateTime later = today.plusDays(2).atTime(8,0).plusMinutes(i*10);
-            jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,'SCHEDULED')",course,later,later.plusHours(1));
+            jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,'SCHEDULED')",course,later,later.plusMinutes(90));
         }
         Map<String,Object> overview = service.dashboard();
         List<Map<String,Object>> urgentRows = (List<Map<String,Object>>) overview.get("urgentSessions");
@@ -587,10 +665,25 @@ class ManagerIntegrationTests {
         assertThrows(IllegalArgumentException.class, () -> service.saveClass(course, classRequest("QA", 5, "INACTIVE"), actor));
     }
 
+    @Test void fixedSlotsRejectArbitraryTimesAndPreserveLegacySessions() throws Exception {
+        assertThrows(IllegalArgumentException.class,()->service.saveSchedule(null,new ScheduleRequest(course,start,start.plusMinutes(60),"SCHEDULED"),actor));
+        assertThrows(IllegalArgumentException.class,()->schedule(start.plusMinutes(15)));
+        int id=schedule(start);
+        assertEquals(15,repository.schedule(id).get("changeoverMinutes"));
+        // Legacy off-grid 60-minute sessions can still be cancelled, without moving their times.
+        int legacy=repository.saveSchedule(null,new ScheduleRequest(course,start.plusDays(1).plusMinutes(10),start.plusDays(1).plusMinutes(70),"SCHEDULED"));
+        service.saveSchedule(legacy,new ScheduleRequest(course,start.plusDays(1).plusMinutes(10),start.plusDays(1).plusMinutes(70),"CANCELLED"),actor);
+        assertEquals(0,repository.schedule(legacy).get("changeoverMinutes"));
+        assertEquals(403,request("PUT","/api/manager/schedule-policy",token(member),"{\"opensAt\":\"06:00\",\"closesAt\":\"22:00\",\"breakMinutes\":15}").statusCode());
+        // Changing policy must not shrink the old session's reserved changeover.
+        service.saveSlotPolicy(new com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy(java.time.LocalTime.of(6,0),java.time.LocalTime.of(22,0),0),actor);
+        assertThrows(IllegalArgumentException.class,()->schedule(start.plusMinutes(90)));
+        assertEquals(15,repository.schedule(id).get("changeoverMinutes"));
+    }
     @Test void overlappingSchedulesFailButAdjacentSchedulesSucceed() {
         schedule(start);
         assertThrows(IllegalArgumentException.class, () -> schedule(start.plusMinutes(30)));
-        assertDoesNotThrow(() -> schedule(start.plusHours(1)));
+        assertDoesNotThrow(() -> schedule(start.plusMinutes(105)));
         assertThrows(IllegalArgumentException.class, () -> schedule(LocalDateTime.now().minusDays(1)));
     }
 
@@ -598,13 +691,13 @@ class ManagerIntegrationTests {
         schedule(start.plusWeeks(1));
         int before = count("SELECT COUNT(*) FROM AUDIT_LOGS WHERE actor_email=?", actor);
         assertThrows(IllegalArgumentException.class, () -> service.createScheduleSeries(
-                new ScheduleSeriesRequest(course, start, start.plusHours(1), 3, 1), actor));
+                new ScheduleSeriesRequest(course, start, start.plusMinutes(90), 3, 1), actor));
         assertEquals(1, count("SELECT COUNT(*) FROM SCHEDULES WHERE class_id=?", course));
         assertEquals(before, count("SELECT COUNT(*) FROM AUDIT_LOGS WHERE actor_email=?", actor));
     }
 
     @Test void recurringSchedulesKeepLocalTimeAndPersistEveryOccurrence() {
-        var ids = service.createScheduleSeries(new ScheduleSeriesRequest(course, start, start.plusHours(1), 3, 2), actor);
+        var ids = service.createScheduleSeries(new ScheduleSeriesRequest(course, start, start.plusMinutes(90), 3, 2), actor);
         assertEquals(3, ids.size());
         assertEquals(start.plusWeeks(4), repository.schedule(ids.get(2)).get("startTime"));
         var rows = service.schedules(start.toLocalDate(), start.plusWeeks(4).toLocalDate());
@@ -612,17 +705,17 @@ class ManagerIntegrationTests {
     }
 
     SchedulePlanRequest planRules() {
-        return new SchedulePlanRequest(course,start.toLocalDate(),start.plusDays(14).toLocalDate(),3,60,List.of(1,2,3,4,5,6,7),java.time.LocalTime.of(9,0),java.time.LocalTime.of(12,0),java.time.LocalTime.of(10,0),15,List.of(start.plusDays(1).toLocalDate()));
+        return new SchedulePlanRequest(course,start.toLocalDate(),start.plusDays(14).toLocalDate(),3,90,List.of(1,2,3,4,5,6,7),java.time.LocalTime.of(6,0),java.time.LocalTime.of(12,0),java.time.LocalTime.of(6,0),15,List.of(start.plusDays(1).toLocalDate()));
     }
     @SuppressWarnings("unchecked")
     List<PlannedSession> planned(Map<String,Object> preview) {return (List<PlannedSession>)preview.get("sessions");}
 
     @Test void automaticPreviewAvoidsOccupiedResourcesAndCommitIsAtomic() {
         int other=newClass("Busy class",5);
-        service.saveSchedule(null,new ScheduleRequest(other,start,start.plusHours(1),"SCHEDULED"),actor);
+        service.saveSchedule(null,new ScheduleRequest(other,start,start.plusMinutes(90),"SCHEDULED"),actor);
         var rules=planRules();var preview=service.previewSchedulePlan(rules);
         assertEquals(0,preview.get("missing"));assertEquals(0,count("SELECT COUNT(*) FROM SCHEDULES WHERE class_id=?",course));
-        var sessions=planned(preview);assertEquals(start.plusHours(1).plusMinutes(15),sessions.get(0).startTime());
+        var sessions=planned(preview);assertEquals(start.plusMinutes(105),sessions.get(0).startTime());
         assertEquals(start.plusDays(2).toLocalDate(),sessions.get(1).startTime().toLocalDate());
         // Someone takes a later slot after preview; no earlier session or audit can leak through.
         var taken=sessions.get(1);
@@ -637,6 +730,28 @@ class ManagerIntegrationTests {
         assertEquals(3,count("SELECT COUNT(*) FROM SCHEDULES WHERE class_id=?",course));
     }
 
+    @Test void weeklyCourseRequiresExplicitConflictResolutionAndRejectsTamperedCommit() {
+        int other=newClass("Busy weekly course",5);
+        service.saveSchedule(null,new ScheduleRequest(other,start,start.plusMinutes(90),"SCHEDULED"),actor);
+        var base=planRules();
+        Map<Integer,java.time.LocalTime> slots=new HashMap<>();
+        base.weekdays().forEach(day->slots.put(day,java.time.LocalTime.of(6,0)));
+        var weekly=new SchedulePlanRequest(course,base.fromDate(),base.toDate(),3,90,base.weekdays(),base.availableFrom(),base.availableTo(),base.preferredTime(),15,base.excludedDates(),slots,Map.of());
+        @SuppressWarnings("unchecked") var available=(List<com.team4.sportscenter.modules.manager.services.CourseSchedulePlanner.SlotAvailability>)service.scheduleAvailability(weekly).get("slots");
+        assertTrue(available.stream().anyMatch(s->s.conflictDates().contains(start.toLocalDate())));
+        assertEquals(0,count("SELECT COUNT(*) FROM SCHEDULES WHERE class_id=?",course));
+        var conflict=service.previewSchedulePlan(weekly);
+        assertEquals(1,conflict.get("missing"));
+        assertThrows(IllegalArgumentException.class,()->service.commitSchedulePlan(new SchedulePlanCommitRequest(weekly,coach,room,planned(conflict)),actor));
+        var corrected=new SchedulePlanRequest(course,base.fromDate(),base.toDate(),3,90,base.weekdays(),base.availableFrom(),base.availableTo(),base.preferredTime(),15,base.excludedDates(),slots,Map.of(start.toLocalDate(),start.plusMinutes(105)));
+        var preview=service.previewSchedulePlan(corrected);assertEquals(0,preview.get("missing"));
+        var sessions=planned(preview);var tampered=new ArrayList<>(sessions);
+        var first=tampered.get(0);tampered.set(0,new PlannedSession(first.startTime().plusMinutes(105),first.endTime().plusMinutes(105)));
+        assertThrows(IllegalArgumentException.class,()->service.commitSchedulePlan(new SchedulePlanCommitRequest(corrected,coach,room,tampered),actor));
+        assertEquals(0,count("SELECT COUNT(*) FROM SCHEDULES WHERE class_id=?",course));
+        assertEquals(3,service.commitSchedulePlan(new SchedulePlanCommitRequest(corrected,coach,room,sessions),actor).size());
+    }
+
     @Test void automaticPlanRejectsRegistrationIncompleteAndTamperedSessions() {
         var rules=planRules();var sessions=planned(service.previewSchedulePlan(rules));
         assertThrows(IllegalArgumentException.class,()->service.commitSchedulePlan(new SchedulePlanCommitRequest(rules,coach,room,sessions.subList(0,2)),actor));
@@ -649,14 +764,20 @@ class ManagerIntegrationTests {
     }
 
     @Test void automaticPlanEndpointsRequireManagerAndValidateInput() throws Exception {
-        var body="{\"classId\":"+course+",\"fromDate\":\"2040-06-01\",\"toDate\":\"2040-06-15\",\"sessions\":3,\"durationMinutes\":60,\"weekdays\":[1,2,3,4,5,6,7],\"availableFrom\":\"09:00\",\"availableTo\":\"12:00\",\"preferredTime\":\"10:00\",\"breakMinutes\":15,\"excludedDates\":[]}";
+        var body="{\"classId\":"+course+",\"fromDate\":\"2040-06-01\",\"toDate\":\"2040-06-15\",\"sessions\":3,\"durationMinutes\":90,\"weekdays\":[1,2,3,4,5,6,7],\"availableFrom\":\"06:00\",\"availableTo\":\"12:00\",\"preferredTime\":\"06:00\",\"breakMinutes\":15,\"excludedDates\":[]}";
         assertEquals(401,request("POST","/api/manager/schedules/plan/preview",null,body).statusCode());
+        var weeklyBody=body.substring(0,body.length()-1)+",\"weekdaySlots\":{\"1\":\"06:00\",\"2\":\"06:00\",\"3\":\"06:00\",\"4\":\"06:00\",\"5\":\"06:00\",\"6\":\"06:00\",\"7\":\"06:00\"}}";
+        assertEquals(401,request("POST","/api/manager/schedules/plan/availability",null,weeklyBody).statusCode());
+        assertEquals(403,request("POST","/api/manager/schedules/plan/availability",token(coach),weeklyBody).statusCode());
+        assertEquals(200,request("POST","/api/manager/schedules/plan/availability",token(admin),weeklyBody).statusCode());
         assertEquals(403,request("POST","/api/manager/schedules/plan/preview",token(coach),body).statusCode());
         var previewResponse=request("POST","/api/manager/schedules/plan/preview",token(admin),body);
-        assertEquals(200,previewResponse.statusCode());assertTrue(previewResponse.body().contains("2040-06-01T10:00"),previewResponse.body());
+        assertEquals(200,previewResponse.statusCode());assertTrue(previewResponse.body().contains("2040-06-01T06:00"),previewResponse.body());
         assertEquals(400,request("POST","/api/manager/schedules/plan/preview",token(admin),body.replace("\"sessions\":3","\"sessions\":0")).statusCode());
+        assertEquals(400,request("POST","/api/manager/schedules/plan/preview",token(admin),body.replace("\"sessions\":3","\"sessions\":2.5")).statusCode());
+        assertEquals(400,request("POST","/api/manager/subjects",token(admin),"{\"subjectName\":\"Fractional duration\",\"durationMinutes\":90.5}").statusCode());
         assertEquals(400,request("POST","/api/manager/schedules/plan",token(admin),"{}").statusCode());
-        var batch="{\"rules\":"+body+",\"coachId\":"+coach+",\"roomId\":"+room+",\"sessions\":[{\"startTime\":\"2040-06-01T10:00:00\",\"endTime\":\"2040-06-01T11:00:00\"},{\"startTime\":\"2040-06-02T10:00:00\",\"endTime\":\"2040-06-02T11:00:00\"},{\"startTime\":\"2040-06-03T10:00:00\",\"endTime\":\"2040-06-03T11:00:00\"}]}";
+        var batch="{\"rules\":"+body+",\"coachId\":"+coach+",\"roomId\":"+room+",\"sessions\":[{\"startTime\":\"2040-06-01T06:00:00\",\"endTime\":\"2040-06-01T07:30:00\"},{\"startTime\":\"2040-06-02T06:00:00\",\"endTime\":\"2040-06-02T07:30:00\"},{\"startTime\":\"2040-06-03T06:00:00\",\"endTime\":\"2040-06-03T07:30:00\"}]}";
         assertEquals(403,request("POST","/api/manager/schedules/plan",token(coach),batch).statusCode());
         var saved=request("POST","/api/manager/schedules/plan",token(admin),batch);
         assertEquals(200,saved.statusCode(),saved.body());
@@ -667,31 +788,31 @@ class ManagerIntegrationTests {
     @Test void cancellationUpdatesBookingsNotifiesOnceAndCannotReopen() {
         int id = schedule(start);
         booking(id, "CONFIRMED");
-        var cancelled = new ScheduleRequest(course, start, start.plusHours(1), "CANCELLED");
+        var cancelled = new ScheduleRequest(course, start, start.plusMinutes(90), "CANCELLED");
         service.saveSchedule(id, cancelled, actor);
         assertEquals("CANCELLED", jdbc.queryForObject("SELECT status FROM BOOKINGS WHERE schedule_id=?", String.class, id));
         assertEquals(1, count("SELECT COUNT(*) FROM NOTIFICATIONS WHERE user_id=?", member));
         assertThrows(IllegalArgumentException.class, () -> service.saveSchedule(id, cancelled, actor));
-        assertThrows(IllegalArgumentException.class, () -> service.saveSchedule(id, new ScheduleRequest(course, start, start.plusHours(1), "SCHEDULED"), actor));
+        assertThrows(IllegalArgumentException.class, () -> service.saveSchedule(id, new ScheduleRequest(course, start, start.plusMinutes(90), "SCHEDULED"), actor));
         assertEquals(1, count("SELECT COUNT(*) FROM NOTIFICATIONS WHERE user_id=?", member));
     }
 
     @Test void bookedSessionCannotChangeClassOrConflictWithStudents() {
-        int first = schedule(start), second = schedule(start.plusHours(2));
+        int first = schedule(start), second = schedule(start.plusMinutes(105));
         booking(first, "CONFIRMED"); booking(second, "PENDING");
         int another = newClass("Other class", 5);
         assertThrows(IllegalArgumentException.class, () -> service.saveSchedule(first,
-                new ScheduleRequest(another, start, start.plusHours(1), "SCHEDULED"), actor));
+                new ScheduleRequest(another, start, start.plusMinutes(90), "SCHEDULED"), actor));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> service.saveSchedule(first,
-                new ScheduleRequest(course, start.plusHours(2), start.plusHours(3), "SCHEDULED"), actor)).getMessage().contains("registered student"));
-        service.saveSchedule(first, new ScheduleRequest(course, start.plusDays(1), start.plusDays(1).plusHours(1), "SCHEDULED"), actor);
+                new ScheduleRequest(course, start.plusMinutes(105), start.plusMinutes(195), "SCHEDULED"), actor)).getMessage().contains("registered student"));
+        service.saveSchedule(first, new ScheduleRequest(course, start.plusDays(1), start.plusDays(1).plusMinutes(90), "SCHEDULED"), actor);
         assertEquals(1, count("SELECT COUNT(*) FROM NOTIFICATIONS WHERE user_id=?", member));
     }
 
     @Test void occupancyCountsSeatsAcrossSessionsAndExcludesCancelledSessions() {
         int first = schedule(start), second = schedule(start.plusDays(1)), cancelled = schedule(start.plusDays(2));
         booking(first, "CONFIRMED"); booking(second, "CONFIRMED"); booking(cancelled, "CONFIRMED");
-        service.saveSchedule(cancelled, new ScheduleRequest(course, start.plusDays(2), start.plusDays(2).plusHours(1), "CANCELLED"), actor);
+        service.saveSchedule(cancelled, new ScheduleRequest(course, start.plusDays(2), start.plusDays(2).plusMinutes(90), "CANCELLED"), actor);
         var result = service.report(start.toLocalDate(), start.plusDays(2).toLocalDate());
         @SuppressWarnings("unchecked") var occupancy = (List<Map<String, Object>>) result.get("classOccupancy");
         var row = occupancy.stream().filter(value -> ((Number) value.get("classId")).intValue() == course).findFirst().orElseThrow();
@@ -703,7 +824,7 @@ class ManagerIntegrationTests {
 
     @Test void cannotCompleteFutureSessionAndDateRangeIsBounded() {
         int id = schedule(start);
-        assertThrows(IllegalArgumentException.class, () -> service.saveSchedule(id, new ScheduleRequest(course, start, start.plusHours(1), "COMPLETED"), actor));
+        assertThrows(IllegalArgumentException.class, () -> service.saveSchedule(id, new ScheduleRequest(course, start, start.plusMinutes(90), "COMPLETED"), actor));
         assertThrows(IllegalArgumentException.class, () -> service.report(start.toLocalDate(), start.minusDays(1).toLocalDate()));
         assertThrows(IllegalArgumentException.class, () -> service.schedules(start.toLocalDate(), start.plusYears(2).toLocalDate()));
     }

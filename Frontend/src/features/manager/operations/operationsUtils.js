@@ -92,6 +92,8 @@ export function operationPayload(type, form) {
       subjectId: form.subjectId,
       subjectName: form.subjectName.trim(),
       description: form.description || "",
+      durationMinutes:Number(form.durationMinutes || 90),
+      slotStarts:form.slotStarts || [],
     };
   if (type === "room")
     return {

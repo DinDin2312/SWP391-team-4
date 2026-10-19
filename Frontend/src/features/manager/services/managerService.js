@@ -1,6 +1,18 @@
 import axiosClient from '../../../services/axiosClient';
 
+function saveOperationResource(resource,id,payload,photo={}) {
+  const path=`/manager/${resource}${id?`/${id}`:''}`;
+  if(!photo.file && !photo.remove)return id?axiosClient.put(path,payload):axiosClient.post(path,payload);
+  const body=new FormData();
+  body.append('details',new Blob([JSON.stringify(payload)],{type:'application/json'}));
+  if(photo.file)body.append('image',photo.file);
+  body.append('removeImage',String(Boolean(photo.remove)));
+  return id?axiosClient.put(`${path}/with-image`,body,{headers:{'Content-Type':'multipart/form-data'}}):axiosClient.post(`${path}/with-image`,body,{headers:{'Content-Type':'multipart/form-data'}});
+}
+
 const managerService = {
+  schedulePolicy: classId => axiosClient.get(classId?`/manager/classes/${classId}/schedule-policy`:'/manager/schedule-policy'),
+  saveSchedulePolicy: payload => axiosClient.put('/manager/schedule-policy',payload),
   uploadResourceImage: (resource, id, image) => {
     const body = new FormData();
     body.append('image', image);
@@ -24,21 +36,16 @@ const managerService = {
   deleteUser: (id) => axiosClient.delete(`/manager/users/${id}`),
 
   subjects: () => axiosClient.get('/manager/subjects'),
-  saveSubject: (payload) => payload.subjectId
-    ? axiosClient.put(`/manager/subjects/${payload.subjectId}`, payload)
-    : axiosClient.post('/manager/subjects', payload),
+  saveSubject: (payload,photo) => saveOperationResource('subjects',payload.subjectId,payload,photo),
   rooms: () => axiosClient.get('/manager/rooms'),
-  saveRoom: (payload) => payload.roomId
-    ? axiosClient.put(`/manager/rooms/${payload.roomId}`, payload)
-    : axiosClient.post('/manager/rooms', payload),
+  saveRoom: (payload,photo) => saveOperationResource('rooms',payload.roomId,payload,photo),
   classes: () => axiosClient.get('/manager/classes'),
-  saveClass: (payload) => payload.classId
-    ? axiosClient.put(`/manager/classes/${payload.classId}`, payload)
-    : axiosClient.post('/manager/classes', payload),
+  saveClass: (payload,photo) => saveOperationResource('classes',payload.classId,payload,photo),
   schedules: (from, to, extra = {}) => axiosClient.get('/manager/schedules', { params: { from, to, ...extra } }),
   scheduleBookings: (id) => axiosClient.get(`/manager/schedules/${id}/bookings`),
   createScheduleSeries: (payload) => axiosClient.post('/manager/schedules/series', payload),
   previewSchedulePlan: (payload) => axiosClient.post('/manager/schedules/plan/preview', payload),
+  scheduleAvailability: (payload) => axiosClient.post('/manager/schedules/plan/availability', payload),
   commitSchedulePlan: (payload) => axiosClient.post('/manager/schedules/plan', payload),
   saveSchedule: (payload) => payload.scheduleId
     ? axiosClient.put(`/manager/schedules/${payload.scheduleId}`, payload)

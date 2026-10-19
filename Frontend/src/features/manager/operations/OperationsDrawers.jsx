@@ -2,6 +2,7 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import { useEffect, useId, useRef, useState } from "react";
 import { AlertTriangle, CalendarDays, MapPin, Users, X } from "lucide-react";
 import managerService from "../services/managerService";
+import { useTeachingSlots, slotEnd, slotLabel } from './teachingSlots';
 import { initialForm } from "../managerUtils";
 import {
   formatDate,
@@ -17,6 +18,8 @@ import {
 import { Occupancy, OperationStatus } from "./OperationsUI";
 import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
 import StaffAvatar from '../staff/StaffAvatar';
+import OperationPhotoField from './OperationPhotoField';
+import SubjectSlotFields from './SubjectSlotFields';
 
 function useOperationDialog(onClose, busy) {
   const ref = useRef(null);
@@ -108,14 +111,14 @@ export function Drawer({ title, subtitle, onClose, busy = false, children, class
   );
 }
 
-export function ClassDrawer({ row, upcomingInRange, onClose, edit, recurring, photo }) {
+export function ClassDrawer({ row, upcomingInRange, onClose, edit, recurring, supplementary }) {
   useLanguage();
-  return <Drawer title={row.className} subtitle={row.subjectName} onClose={onClose}><div className="ops-drawer-body"><ResourcePhoto imagePath={row.imagePath} name={row.className} variant="hero"/><div className="ops-session-facts"><div className="ops-coach-identity"><StaffAvatar user={{fullName:row.coachName,avatarPath:row.coachAvatarPath}} className="ops-coach-avatar"/>{t('Coach')}: {row.coachName}</div><p>{t('Room')}: {row.roomName}</p><p>{t('Capacity')}: {row.maxSlots}</p><p>{t('Tuition / class registration')}: {formatMoney(row.price)}</p><OperationStatus status={row.status}/></div>{upcomingInRange > 0 && <p className="ops-warning">{t('{0} upcoming sessions in the loaded range. Cancel these before deactivating.',[upcomingInRange])}</p>}<p className="ops-note">{t('Classes with future sessions cannot be deactivated; cancel those sessions first.')}</p><div className="ops-detail-actions"><button className="manager-secondary" onClick={edit}>{t('Edit')}</button><button className="manager-secondary" onClick={photo}>{t('Manage photo')}</button><button className="manager-secondary" disabled={row.status!=='ACTIVE'} onClick={recurring}>{t('Automatic scheduling')}</button></div></div><footer><button className="manager-secondary" onClick={onClose}>{t('Close')}</button></footer></Drawer>;
+  return <Drawer title={row.className} subtitle={row.subjectName} onClose={onClose}><div className="ops-drawer-body"><ResourcePhoto imagePath={row.imagePath} name={row.className} variant="hero"/><div className="ops-session-facts"><div className="ops-coach-identity"><StaffAvatar user={{fullName:row.coachName,avatarPath:row.coachAvatarPath}} className="ops-coach-avatar"/>{t('Coach')}: {row.coachName}</div><p>{t('Room')}: {row.roomName}</p><p>{t('Capacity')}: {row.maxSlots}</p><p>{t('Tuition / class registration')}: {formatMoney(row.price)}</p><OperationStatus status={row.status}/></div>{upcomingInRange > 0 && <p className="ops-warning">{t('{0} upcoming sessions in the loaded range. Cancel these before deactivating.',[upcomingInRange])}</p>}<p className="ops-note">{t('Classes with future sessions cannot be deactivated; cancel those sessions first.')}</p><div className="ops-detail-actions"><button className="manager-secondary" onClick={edit}>{t('Edit')}</button><button className="manager-secondary" disabled={row.status!=='ACTIVE'} onClick={recurring}>{t('Schedule course')}</button><button className="manager-secondary" disabled={row.status!=='ACTIVE'} onClick={supplementary}>{t('Add supplementary session')}</button></div></div><footer><button className="manager-secondary" onClick={onClose}>{t('Close')}</button></footer></Drawer>;
 }
 
-export function RoomDrawer({ row, onClose, edit, photo }) {
+export function RoomDrawer({ row, onClose, edit }) {
   useLanguage();
-  return <Drawer title={row.roomName} subtitle={t('Room details')} onClose={onClose}><div className="ops-drawer-body"><ResourcePhoto imagePath={row.imagePath} name={row.roomName} variant="hero"/><div className="ops-session-facts"><p>{t('Capacity')}: {row.capacity}</p><p>{t('Classes')}: {row.classCount || 0}</p></div><div className="ops-detail-actions"><button className="manager-secondary" onClick={edit}>{t('Edit')}</button><button className="manager-secondary" onClick={photo}>{t('Manage photo')}</button></div></div><footer><button className="manager-secondary" onClick={onClose}>{t('Close')}</button></footer></Drawer>;
+  return <Drawer title={row.roomName} subtitle={t('Room details')} onClose={onClose}><div className="ops-drawer-body"><ResourcePhoto imagePath={row.imagePath} name={row.roomName} variant="hero"/><div className="ops-session-facts"><p>{t('Capacity')}: {row.capacity}</p><p>{t('Classes')}: {row.classCount || 0}</p></div><div className="ops-detail-actions"><button className="manager-secondary" onClick={edit}>{t('Edit')}</button></div></div><footer><button className="manager-secondary" onClick={onClose}>{t('Close')}</button></footer></Drawer>;
 }
 export function SessionGroupDrawer({ cell, onClose, open }) {
   useLanguage();
@@ -177,6 +180,7 @@ function validate(type, form) {
   if (form[name]?.length > 255) errors[name] = "Use at most 255 characters.";
   if (form.description?.length > 10000)
     errors.description = "Use at most 10,000 characters.";
+  if(type==='subject' && (!Number.isInteger(Number(form.durationMinutes ?? 90)) || Number(form.durationMinutes ?? 90)<15 || Number(form.durationMinutes ?? 90)>240))errors.durationMinutes='Choose a duration from 15 to 240 minutes.';
   for (const key of type === "class"
     ? ["maxSlots"]
     : type === "room"
@@ -228,13 +232,24 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
     ...initialForm(type, config.item),
     ...config.initial,
   }));
+  const {policy,error:policyError}=useTeachingSlots(['schedule','series'].includes(type)?(form.classId || undefined):undefined);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
   const editing = Boolean(config.item);
-  const title = `${editing ? "Edit" : "Create"} ${type === "series" ? "repeating sessions" : type === "schedule" ? "session" : type}`;
+  const [photo,setPhoto]=useState({file:null,remove:false});
+  const [photoError,setPhotoError]=useState('');
+  useEffect(()=>{
+    if(!policy || editing || !['schedule','series'].includes(type))return;
+    setForm(current=>{if(!current.startTime)return current;
+      const time=policy.starts.find(t=>t.slice(0,5)>=current.startTime.slice(11,16)) || policy.starts[0];
+      const start=current.startTime.slice(0,10)+'T'+time.slice(0,5);
+      return {...current,startTime:start,endTime:slotEnd(start,policy.durationMinutes)};
+    });
+  },[policy,editing,type]);
+  const title = config.supplementary ? "Add supplementary session" : `${editing ? "Edit" : "Create"} ${type === "series" ? "repeating sessions" : type === "schedule" ? "session" : type}`;
   const set = (key, value) => {
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => ({ ...current, [key]: value, ...(type==='class' && key==='subjectId'?{coachId:''}:{}), ...(['schedule','series'].includes(type) && key==='classId'?{startTime:'',endTime:''}:{}), ...((type==='schedule' || type==='series') && key==='startTime'?{endTime:slotEnd(value,policy?.durationMinutes || 90)}:{}) }));
     setErrors((current) => ({ ...current, [key]: undefined }));
   };
   const candidates =
@@ -245,16 +260,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
   const selectedRoom = data.rooms.find(
     (row) => String(row.roomId) === String(form.roomId),
   );
-  const coaches = [...data.coaches];
-  if (
-    editing &&
-    type === "class" &&
-    !coaches.some((row) => row.userId === form.coachId)
-  )
-    coaches.push({
-      userId: form.coachId,
-      fullName: `${config.item.coachName} (inactive; reassign before saving)`,
-    });
+  const coaches = data.coaches.filter(coach=>(coach.subjectIds || []).map(Number).includes(Number(form.subjectId)));
   const input = (key, label, attrs = {}, help) => (
     <Field key={key} name={key} label={t(label)} error={errors[key]} help={help}>
       {(id, aria) => (
@@ -291,7 +297,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
   );
   const submit = async (event) => {
     event.preventDefault();
-    if (saving) return;
+    if (saving || photoError) return;
     const invalid = validate(type, form);
     setErrors(invalid);
     setError("");
@@ -310,7 +316,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
         schedule: "saveSchedule",
         series: "createScheduleSeries",
       };
-      await managerService[methods[type]](operationPayload(type, form));
+      await managerService[methods[type]](operationPayload(type, form),photo);
       await onSaved(
         type === "series"
           ? `${form.occurrences} sessions created. The last session starts on ${formatDate(addDays(sessionDay(form.startTime), (Number(form.occurrences) - 1) * Number(form.intervalWeeks) * 7))}. Change the date range to view it.`
@@ -347,9 +353,12 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
             </div>
           )}
           <fieldset className="ops-editor-fields" disabled={saving}>
+            {['subject','room','class'].includes(type) && <OperationPhotoField imagePath={config.item?.imagePath} name={form[`${type}Name`]} value={photo} onChange={setPhoto} onError={setPhotoError}/> }
             {type === "subject" && (
               <>
                 {input("subjectName", "Subject name", { maxLength: 255 })}
+                <SubjectSlotFields form={form} set={set} policy={policy}/>
+                {errors.durationMinutes && <p role="alert" className="manager-field-error">{t(errors.durationMinutes)}</p>}
                 <Field
                   name="description"
                   label={t("Description")}
@@ -387,6 +396,9 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                   "Subject",
                   data.subjects.map((row) => [row.subjectId, row.subjectName]),
                 )}
+                {form.subjectId && <p className="ops-note">{t('Inherited subject timetable')}: {t('{0} minutes per session',[data.subjects.find(subject=>String(subject.subjectId)===String(form.subjectId))?.durationMinutes || 90])}</p>}
+                {form.subjectId && !coaches.length && <p className="ops-warning" role="status">{t('No coaches are assigned to this subject. Assign teaching subjects in Staff & Roles first.')}</p>}
+                {form.coachId && !coaches.some(c=>String(c.userId)===String(form.coachId)) && <p className="ops-warning" role="alert">{t('The selected coach is not assigned to this subject.')}</p>}
                 {select(
                   "coachId",
                   "Coach",
@@ -460,13 +472,17 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                       {formatMoney(selectedClass.price)}{' '}{t("/ class")}</span>
                   </div>
                 )}
-                {input("startTime", "Start time", {
-                  type: "datetime-local",
-                  step: 60,
-                })}
+                <p className="ops-note">{t('{0} minutes per session',[policy?.durationMinutes || '—'])}</p>
+                {policyError && <p role="alert">{t(policyError)}</p>}
+                <label className="ops-field">{t('Date')}<input required type="date" value={form.startTime?.slice(0,10) || ''} onInput={e=>set('startTime',e.target.value+'T'+(form.startTime?.slice(11,16)||policy?.starts[0]?.slice(0,5)||'07:00'))} onChange={e=>set('startTime',e.target.value+'T'+(form.startTime?.slice(11,16)||policy?.starts[0]?.slice(0,5)||'07:00'))}/></label>
+                <label className="ops-field">{t('Teaching slot')}<select required disabled={!policy} value={form.startTime?.slice(11,16)||''} onChange={e=>set('startTime',(form.startTime?.slice(0,10)||'')+'T'+e.target.value)}>
+                  <option value="">{t('Select')}</option>
+                  {editing && form.startTime===initialForm(type,config.item).startTime && !policy?.starts.some(time=>time.slice(0,5)===form.startTime?.slice(11,16)) && <option value={form.startTime?.slice(11,16)}>{t('Existing session')} · {form.startTime?.slice(11,16)}</option>}
+                  {policy?.starts.map((time,index)=><option key={time} value={time.slice(0,5)}>{slotLabel(time,index,policy.durationMinutes)}</option>)}
+                </select></label>
                 {input("endTime", "End time", {
                   type: "datetime-local",
-                  step: 60,
+                  readOnly: true,
                 })}
                 {editing && (
                   <p className="ops-note">{t("Moving the session sends a notification to its booked members. The backend also checks their timetable.")}</p>
@@ -515,7 +531,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
           <button
             className="manager-primary"
             disabled={
-              saving ||
+              saving || Boolean(photoError) ||
               ((type === "series" || type === "schedule") &&
                 !editing &&
                 !candidates.length)

@@ -135,7 +135,7 @@ public class ManagerRepository {
     }
 
     public Map<String, Object> schedule(Integer id) {
-        return localTimes(jdbc.queryForMap("SELECT schedule_id scheduleId,class_id classId,start_time startTime,end_time endTime,status FROM SCHEDULES WHERE schedule_id=?", id));
+        return localTimes(jdbc.queryForMap("SELECT schedule_id scheduleId,class_id classId,start_time startTime,end_time endTime,changeover_minutes changeoverMinutes,status FROM SCHEDULES WHERE schedule_id=?", id));
     }
 
     public List<Map<String, Object>> scheduleBookings(Integer id) {
@@ -236,7 +236,7 @@ public class ManagerRepository {
 
     public List<Map<String, Object>> users(String keyword, String role, String status) {
         String search = "%" + (keyword == null ? "" : keyword.trim()) + "%";
-        return jdbc.queryForList("""
+        var rows=jdbc.queryForList("""
                 SELECT u.user_id userId,u.full_name fullName,u.email,u.phone,u.status,u.avatar_path avatarPath,
                        u.force_password_change forcePasswordChange,u.created_at joinedAt,
                        r.role_id roleId,r.role_name roleName
@@ -245,6 +245,23 @@ public class ManagerRepository {
                   AND (?='ALL' OR r.role_name=?) AND (?='ALL' OR u.status=?)
                 ORDER BY u.user_id DESC
                 """, search, search, search, role, role, status, status);
+        var specialties=jdbc.queryForList("SELECT user_id userId,subject_id subjectId FROM USER_SUBJECTS ORDER BY subject_id");
+        for(var row:rows)row.put("subjectIds",specialties.stream().filter(s->s.get("userId").equals(row.get("userId"))).map(s->((Number)s.get("subjectId")).intValue()).toList());
+        return rows;
+    }
+
+    public boolean coachTeachesSubject(Integer coachId,Integer subjectId) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM USER_SUBJECTS WHERE user_id=? AND subject_id=?",Integer.class,coachId,subjectId)>0;
+    }
+    public List<Integer> activeCoachSubjects(Integer coachId) {
+        return jdbc.queryForList("SELECT DISTINCT subject_id FROM CLASSES WHERE coach_id=? AND status='ACTIVE'",Integer.class,coachId);
+    }
+    public void saveCoachSubjects(Integer coachId,List<Integer> subjects) {
+        jdbc.update("DELETE FROM USER_SUBJECTS WHERE user_id=?",coachId);
+        for(var subjectId:new java.util.HashSet<>(subjects)) {
+            requireSubject(subjectId);
+            jdbc.update("INSERT INTO USER_SUBJECTS(user_id,subject_id) VALUES (?,?)",coachId,subjectId);
+        }
     }
 
     public List<Map<String, Object>> roles() {
@@ -252,19 +269,30 @@ public class ManagerRepository {
     }
 
     public List<Map<String, Object>> subjects() {
-        return jdbc.queryForList("""
-                SELECT s.subject_id subjectId,s.subject_name subjectName,s.description,s.image_path imagePath,
-                       COUNT(c.class_id) classCount
-                FROM SUBJECTS s LEFT JOIN CLASSES c ON c.subject_id=s.subject_id
-                GROUP BY s.subject_id,s.subject_name,s.description,s.image_path ORDER BY s.subject_name
-                """);
+        var rows=jdbc.queryForList("""
+            SELECT s.subject_id subjectId,s.subject_name subjectName,s.description,s.image_path imagePath,
+                s.duration_minutes durationMinutes,s.slot_starts slotStarts,COUNT(c.class_id) classCount
+            FROM SUBJECTS s LEFT JOIN CLASSES c ON c.subject_id=s.subject_id
+            GROUP BY s.subject_id,s.subject_name,s.description,s.image_path,s.duration_minutes,s.slot_starts ORDER BY s.subject_name
+            """);
+        rows.forEach(row->row.put("slotStarts",parseStarts((String)row.get("slotStarts"))));return rows;
     }
-
+    private List<java.time.LocalTime> parseStarts(String starts) {
+        return starts==null || starts.isBlank()?List.of():java.util.Arrays.stream(starts.split(",")).map(java.time.LocalTime::parse).toList();
+    }
+    public com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy subjectPolicy(Integer subjectId) {
+        var base=slotPolicy();
+        var row=jdbc.queryForMap("SELECT duration_minutes,slot_starts FROM SUBJECTS WHERE subject_id=?",subjectId);
+        return new com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy(base.opensAt(),base.closesAt(),base.breakMinutes(),((Number)row.get("duration_minutes")).intValue(),parseStarts((String)row.get("slot_starts")));
+    }
+    public com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy classSlotPolicy(Integer classId) {
+        return subjectPolicy(jdbc.queryForObject("SELECT subject_id FROM CLASSES WHERE class_id=?",Integer.class,classId));
+    }
     public int saveSubject(Integer id, ManagerRequests.SubjectRequest request) {
-        if (id == null) {
-            return insert("INSERT INTO SUBJECTS(subject_name,description) VALUES (?,?)", request.subjectName(), request.description());
-        }
-        jdbc.update("UPDATE SUBJECTS SET subject_name=?,description=? WHERE subject_id=?", request.subjectName(), request.description(), id);
+        if(id==null)id=insert("INSERT INTO SUBJECTS(subject_name,description) VALUES (?,?)",request.subjectName(),request.description());
+        else jdbc.update("UPDATE SUBJECTS SET subject_name=?,description=? WHERE subject_id=?",request.subjectName(),request.description(),id);
+        if(request.durationMinutes()!=null)jdbc.update("UPDATE SUBJECTS SET duration_minutes=? WHERE subject_id=?",request.durationMinutes(),id);
+        if(request.slotStarts()!=null)jdbc.update("UPDATE SUBJECTS SET slot_starts=? WHERE subject_id=?",String.join(",",request.slotStarts().stream().sorted().map(Object::toString).toList()),id);
         return id;
     }
 
@@ -321,7 +349,7 @@ public class ManagerRepository {
                 SELECT COUNT(*) FROM SCHEDULES own_sc
                 JOIN SCHEDULES other_sc ON other_sc.schedule_id <> own_sc.schedule_id
                   AND other_sc.status <> 'CANCELLED'
-                  AND other_sc.start_time < own_sc.end_time AND other_sc.end_time > own_sc.start_time
+                  AND other_sc.start_time < TIMESTAMPADD(MINUTE,own_sc.changeover_minutes,own_sc.end_time) AND TIMESTAMPADD(MINUTE,other_sc.changeover_minutes,other_sc.end_time) > own_sc.start_time
                 JOIN CLASSES other_c ON other_c.class_id=other_sc.class_id
                 WHERE own_sc.class_id=? AND own_sc.status <> 'CANCELLED'
                   AND other_c.class_id <> ? AND (other_c.coach_id=? OR other_c.room_id=?)
@@ -347,11 +375,19 @@ public class ManagerRepository {
         return jdbc.queryForMap("SELECT subject_id subjectId,coach_id coachId,room_id roomId,status,class_name className FROM CLASSES WHERE class_id=?", classId);
     }
 
+    public com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy slotPolicy() {
+        return jdbc.queryForObject("SELECT opens_at,closes_at,break_minutes FROM CENTER_SCHEDULE_POLICY WHERE policy_id=1",
+            (rs,n)->new com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy(rs.getTime(1).toLocalTime(),rs.getTime(2).toLocalTime(),rs.getInt(3)));
+    }
+    public void saveSlotPolicy(com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy p) {
+        jdbc.update("UPDATE CENTER_SCHEDULE_POLICY SET opens_at=?,closes_at=?,break_minutes=? WHERE policy_id=1",p.opensAt(),p.closesAt(),p.breakMinutes());
+    }
+    public void setChangeover(int id,int minutes) { jdbc.update("UPDATE SCHEDULES SET changeover_minutes=? WHERE schedule_id=?",minutes,id); }
     public boolean hasScheduleConflict(Integer scheduleId, Integer coachId, Integer roomId, LocalDateTime start, LocalDateTime end) {
         Integer count = jdbc.queryForObject("""
                 SELECT COUNT(*) FROM SCHEDULES sc JOIN CLASSES c ON c.class_id=sc.class_id
                 WHERE sc.status <> 'CANCELLED' AND sc.schedule_id <> COALESCE(?, -1)
-                  AND (c.coach_id=? OR c.room_id=?) AND sc.start_time < ? AND sc.end_time > ?
+                  AND (c.coach_id=? OR c.room_id=?) AND sc.start_time < ? AND TIMESTAMPADD(MINUTE,sc.changeover_minutes,sc.end_time) > ?
                 """, Integer.class, scheduleId, coachId, roomId, end, start);
         return count != null && count > 0;
     }
@@ -393,7 +429,7 @@ public class ManagerRepository {
 
     public List<com.team4.sportscenter.modules.manager.services.SchedulePlanner.BusyPeriod> occupiedSlots(
             Integer coachId, Integer roomId, LocalDateTime from, LocalDateTime to) {
-        return jdbc.query("SELECT s.start_time,s.end_time FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id WHERE s.status<>'CANCELLED' AND (c.coach_id=? OR c.room_id=?) AND s.start_time < ? AND s.end_time > ?",
+        return jdbc.query("SELECT s.start_time,TIMESTAMPADD(MINUTE,s.changeover_minutes,s.end_time) FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id WHERE s.status<>'CANCELLED' AND (c.coach_id=? OR c.room_id=?) AND s.start_time < ? AND TIMESTAMPADD(MINUTE,s.changeover_minutes,s.end_time) > ?",
                 (rs,n)->new com.team4.sportscenter.modules.manager.services.SchedulePlanner.BusyPeriod(rs.getTimestamp(1).toLocalDateTime(),rs.getTimestamp(2).toLocalDateTime()),coachId,roomId,to,from);
     }
 
