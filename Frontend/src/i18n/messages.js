@@ -114,10 +114,10 @@ Enter your full name|Nhập họ và tên
 Enter full name|Nhập họ và tên
 Enter phone number|Nhập số điện thoại
 Enter new email address|Nhập địa chỉ email mới
-Create NEXUS Account|Tạo tài khoản NEXUS
+Create Nexus Account|Tạo tài khoản Nexus
 Create Account|Tạo tài khoản
 Creating Account...|Đang tạo tài khoản...
-Join NEXUS|Tham gia NEXUS
+Join Nexus|Tham gia Nexus
 Create New Password|Tạo mật khẩu mới
 Send Verification Code|Gửi mã xác minh
 Send Verification OTP|Gửi mã OTP xác minh
@@ -143,7 +143,7 @@ Update Password & Sign In|Cập nhật mật khẩu và đăng nhập
 Return to Member Sign In|Quay lại đăng nhập hội viên
 Password Successfully Updated!|Đã cập nhật mật khẩu!
 Your identity has been verified. Enter a strong, fresh security phrase.|Danh tính đã được xác minh. Hãy nhập mật khẩu mới đủ mạnh.
-Your NEXUS account credentials have been synchronized. You can now log into your member dashboard.|Tài khoản NEXUS đã được cập nhật. Bạn có thể đăng nhập vào trang hội viên.
+Your Nexus account credentials have been synchronized. You can now log into your member dashboard.|Tài khoản Nexus đã được cập nhật. Bạn có thể đăng nhập vào trang hội viên.
 Minimum 8 characters|Ít nhất 8 ký tự
 6–72 characters|6–72 ký tự
 Continue demo as|Tiếp tục bản demo với vai trò
@@ -385,7 +385,7 @@ Book New Session|Đăng ký buổi mới
 Book Session|Đăng ký buổi tập
 Book PT Session|Đăng ký tập cá nhân
 Package Store|Cửa hàng gói
-NEXUS Package Store|Cửa hàng gói NEXUS
+Nexus Package Store|Cửa hàng gói Nexus
 Billing & Invoices|Thanh toán và hóa đơn
 Billing History|Lịch sử thanh toán
 Attendance History|Lịch sử điểm danh
@@ -675,9 +675,9 @@ Potential|tiềm năng của bạn
 Need assistance?|Bạn cần hỗ trợ?
 Questions? Contact Nexus Support at Desk 1.|Bạn có thắc mắc? Liên hệ hỗ trợ Nexus tại quầy 1.
 2026 Nexus Sports Lab. All rights reserved.|2026 Nexus Sports Lab. Bảo lưu mọi quyền.
-Ask NEXUS AI|Hỏi NEXUS AI
+Ask Nexus AI|Hỏi Nexus AI
 Ask anything...|Nhập câu hỏi...
-NEXUS AI can make mistakes. Verify before buying.|NEXUS AI có thể sai. Hãy kiểm tra trước khi mua.
+Nexus AI can make mistakes. Verify before buying.|Nexus AI có thể sai. Hãy kiểm tra trước khi mua.
 Minimize (Keep history)|Thu nhỏ (giữ lịch sử)
 Close (Clear history)|Đóng (xóa lịch sử)
 Export CSV|Xuất CSV
@@ -794,7 +794,7 @@ Available Slots:|Chỗ còn trống:
 Avg HR|Nhịp tim trung bình
 Biometric|Sinh trắc học
 Biometric Gear|Thiết bị sinh trắc học
-Book courts, join classes, and track your athletic performance with real-time biometric integration at NEXUS.|Đặt sân, tham gia lớp và theo dõi hiệu suất thể thao với dữ liệu sinh trắc học trực tiếp tại NEXUS.
+Book courts, join classes, and track your athletic performance with real-time biometric integration at Nexus.|Đặt sân, tham gia lớp và theo dõi hiệu suất thể thao với dữ liệu sinh trắc học trực tiếp tại Nexus.
 Capacity:|Sức chứa:
 Check-in|Ghi nhận vào tập
 Check-in QR|Mã QR vào tập
@@ -818,7 +818,7 @@ Elite Pro Member|Hội viên Elite Pro
 Email updates require OTP verification. Changing it will log you out.|Đổi email cần xác minh OTP. Bạn sẽ được đăng xuất sau khi thay đổi.
 Email:|Email:
 Enrolled:|Đã đăng ký:
-Enter the email associated with your NEXUS membership. We will send a 6-digit dynamic authentication PIN.|Nhập email tài khoản NEXUS. Chúng tôi sẽ gửi mã PIN xác thực 6 chữ số.
+Enter the email associated with your Nexus membership. We will send a 6-digit dynamic authentication PIN.|Nhập email tài khoản Nexus. Chúng tôi sẽ gửi mã PIN xác thực 6 chữ số.
 Equip your company or semi-pro sports franchise with pooled court access, biomechanical telemetry passes, and private training bookings.|Cung cấp cho doanh nghiệp hoặc đội thể thao quyền dùng sân chung, phân tích chuyển động và đăng ký huấn luyện riêng.
 Explore and enroll in high-performance courses and training packages.|Khám phá và đăng ký các khóa học và gói huấn luyện chuyên sâu.
 Express Actions|Thao tác nhanh
@@ -855,7 +855,7 @@ Master the big three lifts with expert form correction and progressive overload 
 Member & Name|Hội viên và tên
 Member ID|Mã hội viên
 Member ID: #MEM-|Mã hội viên: #MEM-
-NEXUS Sports Center Receptionist Portal|Cổng lễ tân trung tâm thể thao NEXUS
+Nexus Sports Center Receptionist Portal|Cổng lễ tân trung tâm thể thao Nexus
 NFC READY|NFC SẴN SÀNG
 Nexus Certified Athletic Coach|Huấn luyện viên được Nexus chứng nhận
 Nexus Points|Điểm Nexus
@@ -937,7 +937,7 @@ none|không có
 present|có mặt
 present /|có mặt /
 seats ·|chỗ ·
-Â© 2026 NEXUS Sports Technology Inc.|© 2026 NEXUS Sports Technology Inc.
+Â© 2026 Nexus Sports Technology Inc.|© 2026 Nexus Sports Technology Inc.
 `;
 for(const line of extra.trim().split('\n')) { const i=line.indexOf('|'); const en=line.slice(0,i),vi=line.slice(i+1); translations[en]=[en,vi]; }
 const vietnameseEntries = [
@@ -1097,7 +1097,7 @@ From the equipment to the environment, Nexus provides a premium experience that 
 Full access|Toàn quyền truy cập
 Full facility access|Sử dụng toàn bộ cơ sở
 Full name is required.|Cần nhập họ và tên.
-Hello! I am NEXUS AI. How can I assist you with your fitness journey today? (e.g. "I want to lose 5kg", "Which yoga class is good?")|Xin chào! Tôi là NEXUS AI. Tôi có thể hỗ trợ gì cho việc tập luyện của bạn? (Ví dụ: "Tôi muốn giảm 5kg", "Lớp yoga nào phù hợp?")
+Hello! I am Nexus AI. How can I assist you with your fitness journey today? (e.g. "I want to lose 5kg", "Which yoga class is good?")|Xin chào! Tôi là Nexus AI. Tôi có thể hỗ trợ gì cho việc tập luyện của bạn? (Ví dụ: "Tôi muốn giảm 5kg", "Lớp yoga nào phù hợp?")
 Hide password|Ẩn mật khẩu
 I've tried many gyms, but the AI-driven insights and personalized programs here are on another level. Worth every penny.|Tôi đã thử nhiều phòng gym, nhưng phân tích AI và chương trình cá nhân hóa ở đây vượt trội. Rất đáng tiền.
 Invalid OTP|OTP không hợp lệ
@@ -1419,7 +1419,7 @@ Object.assign(translations, {
 });
 
 Object.assign(translations, {
-  'NEXUS AI can make mistakes. Verify before buying.': ['NEXUS AI can make mistakes. Verify before buying.', 'NEXUS AI có thể mắc lỗi. Vui lòng kiểm tra kỹ trước khi mua.'],
+  'Nexus AI can make mistakes. Verify before buying.': ['Nexus AI can make mistakes. Verify before buying.', 'Nexus AI có thể mắc lỗi. Vui lòng kiểm tra kỹ trước khi mua.'],
 });
 
 Object.assign(translations, {'Gain full access for ': ['Gain full access for ', 'Sử dụng toàn bộ dịch vụ trong ']});
@@ -2512,3 +2512,117 @@ for (const [en, vi] of Object.entries(workoutDictionary)) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }
+
+const teachingSlotTranslations = {
+  'Teaching slot settings':'Cấu hình ca học',
+  '90 minutes per session':'90 phút mỗi buổi',
+  'Opening time':'Giờ mở cửa', 'Closing time':'Giờ đóng cửa',
+  'Changeover (minutes)':'Thời gian chuyển ca (phút)',
+  'Save settings':'Lưu cấu hình', 'Current saved slots':'Các ca đã lưu',
+  'Teaching slot':'Ca học','Existing session':'Buổi học hiện có','minutes changeover':'phút chuyển ca',
+  'Each teaching slot lasts 90 minutes. Changeover time is reserved after each session.':'Mỗi ca học kéo dài 90 phút. Thời gian chuyển ca được giữ sau mỗi buổi.',
+  'Changes apply to new or rescheduled sessions only. Existing sessions keep their times and reserved changeover.':'Thay đổi chỉ áp dụng cho buổi mới hoặc đổi lịch. Buổi hiện có giữ nguyên giờ và thời gian chuyển ca.',
+  'Settings saved. Reopen scheduling forms to load the new slots.':'Đã lưu. Mở lại biểu mẫu tạo lịch để tải các ca mới.',
+  'Unable to load teaching slots. Reload this page.':'Không tải được ca học. Vui lòng tải lại trang.',
+  'Invalid operating hours or changeover time.':'Giờ hoạt động hoặc thời gian chuyển ca không hợp lệ.',
+  'Choose a configured 90-minute teaching slot.':'Vui lòng chọn ca học 90 phút đã cấu hình.',
+  'Scheduling settings changed. Reload the fixed teaching slots.':'Cấu hình lịch đã thay đổi. Vui lòng tải lại ca học.',
+  'The system selects configured 90-minute teaching slots and reserves changeover time. Existing coach and room schedules remain blocked.':'Hệ thống chọn ca 90 phút đã cấu hình và giữ thời gian chuyển ca. Lịch phòng và huấn luyện viên hiện có vẫn được kiểm tra.',
+  'All sessions and current teaching slots are checked again when saving; one conflict prevents the entire batch.':'Mọi buổi và ca học được kiểm tra lại khi lưu; một xung đột sẽ chặn toàn bộ chuỗi.'
+};
+for(const [en,vi] of Object.entries(teachingSlotTranslations)){translations[en]=[en,vi];translations[vi]=[en,vi];}
+
+translations['Choose a teaching slot on {0} for {1}']=['Choose a teaching slot on {0} for {1}','Chọn ca học ngày {0} cho {1}'];
+
+const courseScheduleTranslations={
+'Schedule course':'Xếp lịch khóa học',
+'Add supplementary session':'Thêm buổi bổ sung',
+'Choose weekly slots once. Review the whole course before saving.':'Chọn thứ và slot cố định mỗi tuần, kiểm tra cả khóa trước khi lưu.',
+'Schedule the full course before accepting registrations. Use supplementary sessions for make-up lessons afterwards.':'Xếp đủ lịch khóa học trước khi nhận đăng ký. Sau đó dùng buổi bổ sung khi cần học bù.',
+'Course start date':'Ngày bắt đầu khóa học',
+'Total course sessions':'Tổng số buổi của khóa',
+'Weekly teaching slots':'Thứ học và slot mỗi tuần',
+'Slot for {0}':'Slot cho {0}',
+'Weekly slots stay fixed. Conflicts require your decision; times never change automatically.':'Giữ cố định slot mỗi tuần. Nếu trùng lịch, quản lý chọn cách xử lý; hệ thống không tự đổi giờ.',
+'Expected course end':'Ngày kết thúc dự kiến',
+'Resolve conflicts or adjust the weekly rules before saving.':'Hãy xử lý buổi trùng lịch hoặc chỉnh quy tắc tuần trước khi lưu.',
+'Choose a make-up session':'Chọn ca hoặc ngày học bù',
+'Select an alternative':'Chọn phương án thay thế',
+'No suggested alternative in the next 7 days. Change the weekly rules or excluded dates.':'Không có phương án phù hợp trong 7 ngày tiếp theo. Hãy chỉnh lịch tuần hoặc ngày nghỉ.',
+'Make-up for {0}':'Học bù cho ngày {0}',
+'Confirm course schedule':'Xác nhận lịch khóa học',
+'Selected slot conflicts with the coach or room.':'Slot đã chọn bị trùng lịch huấn luyện viên hoặc phòng.',
+'Two lessons cannot share the same date.':'Không thể xếp hai buổi của cùng lớp trong một ngày.',
+'Choose one configured slot for each selected weekday.':'Chọn một slot hợp lệ cho mỗi thứ học.',
+'Make-up sessions must use a future non-excluded date inside the planning range.':'Buổi học bù phải trong tương lai, trong khoảng xếp lịch và không trùng ngày nghỉ.',
+'Only planned lessons can be overridden.':'Chỉ được đổi những buổi thuộc lịch khóa học.',
+'The weekly plan changed or contains conflicts. Generate a new preview.':'Lịch khóa học đã thay đổi hoặc bị trùng. Vui lòng xem trước lại.'
+};
+for(const [en,vi] of Object.entries(courseScheduleTranslations)){translations[en]=[en,vi];translations[vi]=[en,vi];}
+const slotAvailabilityTranslations={
+'Select a class, start date and session count to check slots.':'Chọn lớp, ngày bắt đầu và số buổi để kiểm tra slot.',
+'Availability checked across the entire course.':'Đã kiểm tra slot trên toàn bộ khóa học.',
+'Checking slots across the entire course…':'Đang kiểm tra slot trên toàn bộ khóa học…',
+'Unable to check slot availability.':'Không thể kiểm tra slot trống. Vui lòng mở lại form hoặc thay đổi thông tin để thử lại.',
+'Allow slots that require make-up sessions':'Cho phép chọn slot có buổi cần học bù',
+'No lessons on this weekday':'Không có buổi học vào thứ này',
+'Conflicts: {0}/{1}':'Trùng {0}/{1} buổi',
+'Free for the whole course':'Trống toàn khóa',
+'Coach or room occupied on:':'Huấn luyện viên hoặc phòng bận ngày:',
+'Choose another slot.':'Hãy chọn slot khác.',
+'Make-up sessions must be resolved before saving.':'Phải xếp buổi học bù trước khi lưu.'
+};
+for(const [en,vi] of Object.entries(slotAvailabilityTranslations)){translations[en]=[en,vi];translations[vi]=[en,vi];}
+
+const courseReviewTranslations={
+'Course overview':'Tổng quan khóa học',
+'Course dates':'Thời gian khóa học',
+'{0} sessions need attention':'{0} buổi cần xử lý',
+'{0}/{1} sessions ready':'{0}/{1} buổi hợp lệ — có thể xác nhận',
+'Sessions needing attention':'Buổi cần xử lý',
+'Weekly course schedule':'Lịch học theo tuần',
+'Week {0}':'Tuần {0}',
+'Day off':'Nghỉ',
+'Conflict':'Trùng lịch',
+'Scheduling steps':'Các bước xếp lịch',
+'Set up schedule':'Thiết lập lịch',
+'Review and confirm':'Kiểm tra và xác nhận',
+'Back to schedule settings':'Quay lại chỉnh lịch',
+'Preview course schedule':'Xem trước lịch khóa học',
+'Confirm {0} sessions':'Xác nhận {0} buổi'
+};
+for(const [en,vi] of Object.entries(courseReviewTranslations)){translations[en]=[en,vi];translations[vi]=[en,vi];}
+
+translations['Photo']=['Photo','Ảnh minh họa'];
+translations['Ảnh minh họa']=['Photo','Ảnh minh họa'];
+
+const coachSubjectTranslations={
+'Teaching subjects':'Bộ môn giảng dạy',
+'Only assigned subjects can be selected when assigning this coach to a class.':'HLV chỉ được phân công vào lớp thuộc các bộ môn đã chọn. Có thể chọn nhiều bộ môn.',
+'Create subjects in Center Operations first.':'Hãy tạo bộ môn trong Vận hành trung tâm trước.',
+'No coaches are assigned to this subject. Assign teaching subjects in Staff & Roles first.':'Chưa có HLV được phân công cho bộ môn này. Hãy thiết lập bộ môn giảng dạy tại Nhân sự và phân quyền.',
+'The selected coach is not assigned to this subject.':'HLV đã chọn chưa được phân công giảng dạy bộ môn này.',
+"Reassign or deactivate active classes before removing their coach's subject.":'Hãy bàn giao hoặc ngừng hoạt động các lớp liên quan trước khi gỡ bộ môn của HLV.'
+};
+for(const [en,vi] of Object.entries(coachSubjectTranslations)){translations[en]=[en,vi];translations[vi]=[en,vi];}
+
+const subjectSlotTranslations={
+'Subject teaching slots':'Ca học của bộ môn',
+'Session duration (minutes)':'Thời lượng mỗi buổi (phút)',
+'Classes inherit these slots. Saved sessions keep their original times.':'Các lớp thuộc bộ môn kế thừa ca học này. Buổi đã lưu giữ nguyên giờ cũ.',
+'Slot start time':'Giờ bắt đầu slot',
+'Add slot':'Thêm slot',
+'Generate slots from operating hours':'Tạo slot theo giờ hoạt động',
+'Use automatic slots':'Dùng slot tự động',
+'Automatic slots follow opening time, session duration and changeover.':'Slot tự động được tính theo giờ mở cửa, thời lượng và thời gian chuyển ca.',
+'Remove slot {0}':'Xóa slot {0}',
+'Choose a duration from 15 to 240 minutes.':'Chọn thời lượng từ 15 đến 240 phút.',
+'Duration and slots are configured per subject':'Thời lượng và slot được cấu hình tại bộ môn',
+'{0} minutes per session':'{0} phút mỗi buổi',
+'Choose a configured teaching slot for this subject.':'Hãy chọn slot đúng theo cấu hình ca học của bộ môn.',
+'Subject slots must fit operating hours and cannot overlap, including changeover.':'Slot của bộ môn phải nằm trong giờ hoạt động và không chồng lấn, kể cả thời gian chuyển ca.'
+};
+for(const [en,vi] of Object.entries(subjectSlotTranslations)){translations[en]=[en,vi];translations[vi]=[en,vi];}
+
+translations['Inherited subject timetable']=['Inherited subject timetable','Kế thừa ca học của bộ môn'];
+
