@@ -649,10 +649,10 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
               }}
             >
               <option value="ALL">{t("All Package Status")}</option>
-              <option value="ACTIVE">{t("🟢 Active Package")}</option>
-              <option value="EXPIRING_SOON">{t("🟠 Expiring Soon (≤ 7 days)")}</option>
-              <option value="EXPIRED">{t("🔴 Expired Package")}</option>
-              <option value="NO_MEMBERSHIP">{t("⚪ No Package")}</option>
+              <option value="ACTIVE">{t("Active Package")}</option>
+              <option value="EXPIRING_SOON">{t("Expiring Soon (≤ 7 days)")}</option>
+              <option value="EXPIRED">{t("Expired Package")}</option>
+              <option value="NO_MEMBERSHIP">{t("No Package")}</option>
             </select>
           </div>
         </div>
@@ -893,7 +893,7 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
                               }}
                             >
                               <Clock style={{ width: '12px', height: '12px' }} />
-                              {member.daysRemaining}{' '}{t("days left")}</span>
+                              {member.daysRemaining === 1 ? t("1 day left (Expires today)") : `${member.daysRemaining} ${t("days left")}`}</span>
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t("Expires on:")}{' '}{formatDate(member.membershipEndDate)}
                             </span>
                           </div>

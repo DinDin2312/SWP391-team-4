@@ -74,6 +74,24 @@ export const receptionistService = {
   checkOutMember: async (checkInId) => {
     return await axiosClient.post(`/receptionist/checkin/${checkInId}/checkout`);
   },
+
+  getAvailableClassesForMember: async (userId) => {
+    return await axiosClient.get('/receptionist/classes/available', {
+      params: { userId }
+    });
+  },
+
+  enrollMemberToClass: async (data) => {
+    return await axiosClient.post('/receptionist/classes/enroll', data);
+  },
+
+  cancelBookingForMember: async (data) => {
+    return await axiosClient.post('/receptionist/classes/cancel-booking', data);
+  },
+
+  cancelCourseForMember: async (data) => {
+    return await axiosClient.post('/receptionist/classes/cancel-course', data);
+  },
 };
 
 export default receptionistService;

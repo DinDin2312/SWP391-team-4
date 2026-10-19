@@ -9,5 +9,5 @@ class SportscenterApplicationTests {
 	@Test
 	void contextLoads() {
 	}
-
 }
+

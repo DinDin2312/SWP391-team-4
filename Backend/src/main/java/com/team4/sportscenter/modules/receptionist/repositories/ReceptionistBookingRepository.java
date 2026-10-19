@@ -30,4 +30,10 @@ public interface ReceptionistBookingRepository extends JpaRepository<Booking, In
 
     @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.userId = :userId AND b.schedule.scheduleId = :scheduleId AND b.status != 'CANCELLED'")
     boolean existsByUserIdAndScheduleId(@Param("userId") Integer userId, @Param("scheduleId") Integer scheduleId);
+
+    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.userId = :userId AND b.schedule.gymClass.classId = :classId AND b.status != 'CANCELLED'")
+    boolean existsByUserIdAndClassId(@Param("userId") Integer userId, @Param("classId") Integer classId);
+
+    @Query("SELECT COUNT(DISTINCT b.user.userId) FROM Booking b WHERE b.schedule.gymClass.classId = :classId AND b.status IN ('CONFIRMED', 'PENDING')")
+    Integer countBookedUsersByClassId(@Param("classId") Integer classId);
 }

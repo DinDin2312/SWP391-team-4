@@ -13,4 +13,5 @@ public class RenewBookingRequest {
     private Integer userId;
     private Integer newScheduleId;
     private Integer previousBookingId;
+    private String paymentMethod;
 }

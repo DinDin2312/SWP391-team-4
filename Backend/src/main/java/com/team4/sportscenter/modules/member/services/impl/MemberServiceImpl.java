@@ -335,6 +335,19 @@ public class MemberServiceImpl implements MemberService {
                         schedule.getEndTime());
             }
         }
+
+        if (benefitId != null && !schedules.isEmpty()) {
+            try {
+                notificationRepository.save(Notification.builder()
+                        .user(user)
+                        .title("Đăng ký khóa học thành công / Course Booked")
+                        .message("Bạn đã đăng ký thành công khóa học: " + schedules.get(0).getGymClass().getClassName()
+                                + " (" + schedules.size() + " buổi) sử dụng quyền lợi gói hội viên. Vui lòng kiểm tra lịch học trong My Schedule.")
+                        .type("BOOKING")
+                        .isRead(false)
+                        .build());
+            } catch (Exception ignored) {}
+        }
     }
 
     @Override

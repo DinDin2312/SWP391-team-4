@@ -23,5 +23,10 @@ public interface ReceptionistMemberService {
     MemberCheckInRecordResponse checkInMember(MemberCheckInRequest request);
     MemberCheckInRecordResponse checkOutMember(Long checkInId);
     List<MemberCheckInRecordResponse> getCheckInHistory(LocalDate date, String keyword, String statusFilter);
+
+    void cancelBookingForMember(com.team4.sportscenter.modules.receptionist.dtos.request.CancelClassBookingRequest request);
+    int cancelCourseForMember(com.team4.sportscenter.modules.receptionist.dtos.request.CancelClassBookingRequest request);
+    void enrollMemberToClass(com.team4.sportscenter.modules.receptionist.dtos.request.EnrollClassRequest request);
+    List<com.team4.sportscenter.modules.member.dtos.response.AvailableClassResponse> getAvailableClassesForMember(Integer userId);
 }
 

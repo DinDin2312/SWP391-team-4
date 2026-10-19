@@ -409,5 +409,29 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         }
         invoice.setStatus("PAID");invoiceRepository.save(invoice);
         notificationService.createNotification(invoice.getUser().getEmail(),"Payment Successful","Your invoice "+invoice.getInvoiceId()+" is complete.","PAYMENT");
+        if (!purchased.isEmpty()) {
+            for (var m : purchased) {
+                String pkgName = m.getAPackage() != null ? m.getAPackage().getPackageName() : "Gói hội viên";
+                int duration = m.purchasedDuration() > 0 ? m.purchasedDuration() : 30;
+                notificationService.createNotification(
+                    invoice.getUser().getEmail(),
+                    "Đăng ký gói hội viên thành công / Package Activated",
+                    "Gói hội viên '" + pkgName + "' (" + duration + " ngày) của bạn đã được kích hoạt thành công. "
+                        + "Thời hạn sử dụng từ " + m.getStartDate() + " đến " + m.getEndDate() + ". "
+                        + "Vui lòng kiểm tra quyền lợi trong mục Package Benefits.",
+                    "PAYMENT"
+                );
+            }
+        }
+        if (!booked.isEmpty()) {
+            String className = booked.get(0).getSchedule() != null && booked.get(0).getSchedule().getGymClass() != null
+                ? booked.get(0).getSchedule().getGymClass().getClassName() : "khóa học";
+            notificationService.createNotification(
+                invoice.getUser().getEmail(),
+                "Đăng ký lớp học thành công / Class Enrolled",
+                "Bạn đã thanh toán và đăng ký thành công khóa học: " + className + " (" + booked.size() + " buổi). Vui lòng kiểm tra lịch học trong My Schedule.",
+                "BOOKING"
+            );
+        }
     }
 }

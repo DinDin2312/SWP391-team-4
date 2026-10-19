@@ -8,6 +8,8 @@ import com.team4.sportscenter.modules.member.entities.GymClass;
 import com.team4.sportscenter.modules.member.entities.Schedule;
 import com.team4.sportscenter.modules.member.entities.UserMembership;
 import com.team4.sportscenter.modules.member.repositories.UserMembershipRepository;
+import com.team4.sportscenter.modules.receptionist.dtos.request.CancelClassBookingRequest;
+import com.team4.sportscenter.modules.receptionist.dtos.request.EnrollClassRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.MemberRegisterRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.RenewBookingRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.SubscribePackageRequest;
@@ -19,8 +21,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -59,8 +64,11 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                     boolean isStarted = um.getStartDate() == null || !um.getStartDate().isAfter(today);
                     boolean isNotExpired = um.getEndDate() == null || !um.getEndDate().isBefore(today);
                     if (isStarted && isNotExpired) {
-                        activeMembership = um;
-                        break;
+                        if (activeMembership == null) {
+                            activeMembership = um;
+                        } else if (um.getEndDate() != null && (activeMembership.getEndDate() == null || um.getEndDate().isAfter(activeMembership.getEndDate()))) {
+                            activeMembership = um;
+                        }
                     }
                 }
             }
@@ -83,7 +91,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 startDate = activeMembership.getStartDate();
                 endDate = activeMembership.getEndDate();
                 if (endDate != null) {
-                    daysRemaining = ChronoUnit.DAYS.between(today, endDate);
+                    daysRemaining = ChronoUnit.DAYS.between(today, endDate) + 1L;
                     if (daysRemaining < 0) daysRemaining = 0L;
                 }
             } else if (latestMembership != null) {
@@ -155,8 +163,11 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             boolean isUpcoming = "ACTIVE".equalsIgnoreCase(um.getStatus()) && !isStarted && isNotExpired;
             long remaining = 0L;
             if (um.getEndDate() != null) {
-                remaining = ChronoUnit.DAYS.between(today, um.getEndDate());
-                if (remaining < 0) remaining = 0L;
+                if (isNotExpired) {
+                    remaining = ChronoUnit.DAYS.between(today, um.getEndDate()) + 1L;
+                } else {
+                    remaining = 0L;
+                }
             }
             return MemberMembershipDetail.builder()
                     .membershipId(um.getMembershipId())
@@ -174,10 +185,16 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                     .build();
         }).collect(Collectors.toList());
 
-        // Ưu tiên gói đang có hiệu lực trong ngày hôm nay lên đầu
+        // Ưu tiên gói đang có hiệu lực trong ngày hôm nay lên đầu, xếp theo hạn sử dụng xa nhất (endDate DESC)
         membershipDetails.sort((a, b) -> {
             if (Boolean.TRUE.equals(a.getActive()) && !Boolean.TRUE.equals(b.getActive())) return -1;
             if (!Boolean.TRUE.equals(a.getActive()) && Boolean.TRUE.equals(b.getActive())) return 1;
+            if (a.getEndDate() != null && b.getEndDate() != null) {
+                int cmp = b.getEndDate().compareTo(a.getEndDate());
+                if (cmp != 0) return cmp;
+            }
+            if (a.getEndDate() != null) return -1;
+            if (b.getEndDate() != null) return 1;
             return 0;
         });
 
@@ -333,8 +350,11 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             boolean isUpcoming = "ACTIVE".equalsIgnoreCase(um.getStatus()) && !isStarted && isNotExpired;
             long remaining = 0L;
             if (um.getEndDate() != null) {
-                remaining = ChronoUnit.DAYS.between(today, um.getEndDate());
-                if (remaining < 0) remaining = 0L;
+                if (isNotExpired) {
+                    remaining = ChronoUnit.DAYS.between(today, um.getEndDate()) + 1L;
+                } else {
+                    remaining = 0L;
+                }
             }
             return MemberMembershipDetail.builder()
                     .membershipId(um.getMembershipId())
@@ -352,10 +372,16 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                     .build();
         }).collect(Collectors.toList());
 
-        // Ưu tiên gói đang có hiệu lực trong ngày hôm nay lên đầu
+        // Ưu tiên gói đang có hiệu lực trong ngày hôm nay lên đầu, xếp theo hạn sử dụng xa nhất (endDate DESC)
         list.sort((a, b) -> {
             if (Boolean.TRUE.equals(a.getActive()) && !Boolean.TRUE.equals(b.getActive())) return -1;
             if (!Boolean.TRUE.equals(a.getActive()) && Boolean.TRUE.equals(b.getActive())) return 1;
+            if (a.getEndDate() != null && b.getEndDate() != null) {
+                int cmp = b.getEndDate().compareTo(a.getEndDate());
+                if (cmp != 0) return cmp;
+            }
+            if (a.getEndDate() != null) return -1;
+            if (b.getEndDate() != null) return 1;
             return 0;
         });
         return list;
@@ -401,68 +427,81 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             throw new RuntimeException("Current course details are missing for this booking.");
         }
 
-        String className = curSchedule.getGymClass().getClassName();
-        LocalDateTime curEndTime = curSchedule.getEndTime() != null ? curSchedule.getEndTime() : LocalDateTime.now();
+        GymClass curClass = curSchedule.getGymClass();
+        String className = curClass.getClassName();
+        Integer curClassId = curClass.getClassId();
 
-        // Tìm các lớp kế tiếp cùng tên có thời gian bắt đầu sau thời điểm kết thúc khóa cũ
-        List<Schedule> futureSchedules = scheduleRepository.findUpcomingSchedulesByClassName(className, curEndTime);
+        // Tách tên gốc của khóa học (bỏ hậu tố " - Đợt 1", " (Đợt 1)", v.v.)
+        String baseName = className.replaceAll("(?i)\\s*[-–]?\\s*Đợt\\s*\\d+.*", "").trim();
 
-        Schedule bestMatch = null;
-        int bookedSlots = 0;
-        int maxSlots = 0;
+        // Tìm thời gian kết thúc của buổi cuối cùng trong khóa học hiện tại
+        List<Schedule> curClassSchedules = scheduleRepository.findAllSchedulesByClassId(curClassId);
+        LocalDateTime curEndTime = curClassSchedules.stream()
+                .map(Schedule::getEndTime)
+                .filter(java.util.Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(curSchedule.getEndTime() != null ? curSchedule.getEndTime() : LocalDateTime.now());
 
+        // Tìm các lịch học của đợt tiếp theo (bắt đầu sau hoặc sát thời điểm khóa hiện tại kết thúc)
+        List<Schedule> futureSchedules = scheduleRepository.findUpcomingSchedulesByBaseName(
+                baseName, className, curClassId, curEndTime.minusDays(2));
+
+        if (futureSchedules.isEmpty()) {
+            throw new RuntimeException("Không tìm thấy đợt mở lớp tiếp theo cho khóa học: " + className);
+        }
+
+        // Nhóm các lịch học theo từng GymClass (từng đợt mở lớp)
+        Map<Integer, List<Schedule>> schedulesByClass = new java.util.LinkedHashMap<>();
         for (Schedule s : futureSchedules) {
-            // Khớp cùng khung giờ bắt đầu trong ngày (+- 1 tiếng hoặc đúng giờ)
-            if (s.getStartTime() != null && curSchedule.getStartTime() != null) {
-                if (s.getStartTime().toLocalTime().equals(curSchedule.getStartTime().toLocalTime())) {
-                    int booked = bookingRepository.countBookedSlots(s.getScheduleId());
-                    int max = (s.getGymClass().getMaxSlots() != null) ? s.getGymClass().getMaxSlots() : 30;
+            schedulesByClass.computeIfAbsent(s.getGymClass().getClassId(), k -> new java.util.ArrayList<>()).add(s);
+        }
 
-                    // Kiểm tra còn chỗ trống
-                    if (booked < max) {
-                        bestMatch = s;
-                        bookedSlots = booked;
-                        maxSlots = max;
-                        break;
-                    }
-                }
+        GymClass targetClass = null;
+        Schedule targetFirstSession = null;
+        int maxSlots = 0;
+        int bookedMembers = 0;
+
+        for (Map.Entry<Integer, List<Schedule>> entry : schedulesByClass.entrySet()) {
+            GymClass candidateClass = entry.getValue().get(0).getGymClass();
+
+            // Kiểm tra xem hội viên này đã đăng ký/gia hạn vào đợt mới này chưa
+            boolean alreadyEnrolled = bookingRepository.existsByUserIdAndClassId(userId, candidateClass.getClassId());
+            if (alreadyEnrolled) {
+                throw new IllegalArgumentException("Hội viên đã được đăng ký/gia hạn vào đợt tiếp theo (" + candidateClass.getClassName() + ") rồi!");
+            }
+
+            int candidateMax = (candidateClass.getMaxSlots() != null) ? candidateClass.getMaxSlots() : 30;
+            int candidateBooked = bookingRepository.countBookedUsersByClassId(candidateClass.getClassId());
+
+            if (candidateBooked < candidateMax) {
+                targetClass = candidateClass;
+                targetFirstSession = entry.getValue().get(0);
+                maxSlots = candidateMax;
+                bookedMembers = candidateBooked;
+                break;
             }
         }
 
-        // Nếu không có lớp đúng chuẩn từng phút, lấy lớp cùng tên gần nhất còn chỗ
-        if (bestMatch == null) {
-            for (Schedule s : futureSchedules) {
-                int booked = bookingRepository.countBookedSlots(s.getScheduleId());
-                int max = (s.getGymClass().getMaxSlots() != null) ? s.getGymClass().getMaxSlots() : 30;
-                if (booked < max) {
-                    bestMatch = s;
-                    bookedSlots = booked;
-                    maxSlots = max;
-                    break;
-                }
-            }
-        }
-
-        if (bestMatch == null) {
-            throw new RuntimeException("No available upcoming schedule found for course: " + className);
+        if (targetClass == null || targetFirstSession == null) {
+            throw new RuntimeException("Đợt mở lớp tiếp theo của khóa học '" + className + "' hiện đã kín chỗ.");
         }
 
         return ClassRenewalSuggestionResponse.builder()
                 .currentBookingId(currentBooking.getBookingId())
                 .currentClassName(className)
                 .currentEndTime(curEndTime)
-                .suggestedScheduleId(bestMatch.getScheduleId())
-                .classId(bestMatch.getGymClass().getClassId())
-                .className(bestMatch.getGymClass().getClassName())
-                .coachName(bestMatch.getGymClass().getCoach() != null ? bestMatch.getGymClass().getCoach().getFullName() : "N/A")
-                .coachEmail(bestMatch.getGymClass().getCoach() != null ? bestMatch.getGymClass().getCoach().getEmail() : null)
-                .roomName(bestMatch.getGymClass().getRoom() != null ? bestMatch.getGymClass().getRoom().getRoomName() : "N/A")
-                .startTime(bestMatch.getStartTime())
-                .endTime(bestMatch.getEndTime())
-                .price(bestMatch.getGymClass().getPrice())
+                .suggestedScheduleId(targetFirstSession.getScheduleId())
+                .classId(targetClass.getClassId())
+                .className(targetClass.getClassName())
+                .coachName(targetClass.getCoach() != null ? targetClass.getCoach().getFullName() : "N/A")
+                .coachEmail(targetClass.getCoach() != null ? targetClass.getCoach().getEmail() : null)
+                .roomName(targetClass.getRoom() != null ? targetClass.getRoom().getRoomName() : "N/A")
+                .startTime(targetFirstSession.getStartTime())
+                .endTime(targetFirstSession.getEndTime())
+                .price(targetClass.getPrice())
                 .maxSlots(maxSlots)
-                .bookedSlots(bookedSlots)
-                .availableSlots(maxSlots - bookedSlots)
+                .bookedSlots(bookedMembers)
+                .availableSlots(maxSlots - bookedMembers)
                 .build();
     }
 
@@ -476,25 +515,90 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         Schedule schedule = scheduleRepository.findById(request.getNewScheduleId())
                 .orElseThrow(() -> new RuntimeException("Target schedule not found with ID: " + request.getNewScheduleId()));
 
-        if (bookingRepository.existsByUserIdAndScheduleId(user.getUserId(), schedule.getScheduleId())) {
-            throw new IllegalArgumentException("This member is already registered for this schedule.");
+        GymClass targetClass = schedule.getGymClass();
+        if (targetClass == null) {
+            throw new RuntimeException("Target class information is missing.");
         }
 
-        int bookedSlots = bookingRepository.countBookedSlots(schedule.getScheduleId());
-        int maxSlots = (schedule.getGymClass().getMaxSlots() != null) ? schedule.getGymClass().getMaxSlots() : 30;
-        if (bookedSlots >= maxSlots) {
-            throw new IllegalStateException("Class is fully booked. Cannot complete renewal.");
+        if (bookingRepository.existsByUserIdAndClassId(user.getUserId(), targetClass.getClassId())) {
+            throw new IllegalArgumentException("Hội viên đã được đăng ký/gia hạn vào khóa học này rồi (" + targetClass.getClassName() + ").");
         }
 
-        Booking newBooking = Booking.builder()
+        int maxSlots = (targetClass.getMaxSlots() != null) ? targetClass.getMaxSlots() : 30;
+        int bookedMembers = bookingRepository.countBookedUsersByClassId(targetClass.getClassId());
+        if (bookedMembers >= maxSlots) {
+            throw new IllegalStateException("Lớp học đã đủ số lượng học viên (" + maxSlots + "/" + maxSlots + "). Không thể gia hạn.");
+        }
+
+        List<Schedule> allBatchSchedules = scheduleRepository.findAllSchedulesByClassId(targetClass.getClassId());
+        if (allBatchSchedules.isEmpty()) {
+            throw new RuntimeException("Không tìm thấy danh sách buổi học của khóa học đợt mới.");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        List<Booking> createdBookings = new ArrayList<>();
+        for (Schedule s : allBatchSchedules) {
+            if (!bookingRepository.existsByUserIdAndScheduleId(user.getUserId(), s.getScheduleId())) {
+                Booking newBooking = Booking.builder()
+                        .user(user)
+                        .schedule(s)
+                        .status("CONFIRMED")
+                        .attendanceStatus("NOT_YET")
+                        .bookingTime(now)
+                        .build();
+                newBooking = bookingRepository.save(newBooking);
+                createdBookings.add(newBooking);
+            }
+        }
+
+        // Ghi nhận thanh toán tại quầy (Invoice & Payment)
+        java.math.BigDecimal amount = (targetClass.getPrice() != null)
+                ? targetClass.getPrice()
+                : java.math.BigDecimal.ZERO;
+
+        String method = (request.getPaymentMethod() != null && !request.getPaymentMethod().trim().isEmpty())
+                ? request.getPaymentMethod().trim().toUpperCase()
+                : "CASH";
+
+        com.team4.sportscenter.modules.payment.entities.Invoice invoice = com.team4.sportscenter.modules.payment.entities.Invoice.builder()
                 .user(user)
-                .schedule(schedule)
-                .status("CONFIRMED")
-                .attendanceStatus("NOT_YET")
-                .bookingTime(LocalDateTime.now())
+                .totalAmount(amount)
+                .status("PAID")
+                .createdAt(now)
                 .build();
+        invoice = invoiceRepository.saveAndFlush(invoice);
 
-        bookingRepository.save(newBooking);
+        for (Booking b : createdBookings) {
+            jdbcTemplate.update("INSERT INTO INVOICE_BOOKINGS(invoice_id, booking_id) VALUES(?, ?)", invoice.getInvoiceId(), b.getBookingId());
+        }
+
+        com.team4.sportscenter.modules.payment.entities.InvoiceDetail detail = com.team4.sportscenter.modules.payment.entities.InvoiceDetail.builder()
+                .invoice(invoice)
+                .gymClass(targetClass)
+                .unitPrice(amount)
+                .build();
+        invoiceDetailRepository.save(detail);
+
+        com.team4.sportscenter.modules.payment.entities.PaymentEntity payment = com.team4.sportscenter.modules.payment.entities.PaymentEntity.builder()
+                .invoice(invoice)
+                .amount(amount)
+                .paymentMethod(method)
+                .transactionNo("COUNTER-RENEWAL-" + invoice.getInvoiceId())
+                .status("COMPLETED")
+                .paymentDate(now)
+                .build();
+        paymentRepository.saveAndFlush(payment);
+
+        if (notificationService != null && user.getEmail() != null) {
+            try {
+                notificationService.createNotification(
+                        user.getEmail(),
+                        "Gia hạn khóa học thành công tại quầy / Class Renewed",
+                        "Lễ tân đã hỗ trợ bạn gia hạn thành công khóa học: " + targetClass.getClassName() + ". Học phí: " + amount + " đ (" + method + "). Vui lòng kiểm tra lịch học trong My Schedule.",
+                        "PAYMENT"
+                );
+            } catch (Exception ignored) {}
+        }
     }
 
     @Override
@@ -566,15 +670,34 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 .build();
         invoiceDetailRepository.save(detail);
 
+        String method = (request.getPaymentMethod() != null && !request.getPaymentMethod().isBlank())
+                ? request.getPaymentMethod().toUpperCase()
+                : "CASH";
+
         com.team4.sportscenter.modules.payment.entities.PaymentEntity payment = com.team4.sportscenter.modules.payment.entities.PaymentEntity.builder()
                 .invoice(invoice)
                 .amount(amount)
-                .paymentMethod("CASH")
-                .transactionNo("COUNTER-" + invoice.getInvoiceId())
+                .paymentMethod(method)
+                .transactionNo("COUNTER-PKG-" + invoice.getInvoiceId())
                 .status("COMPLETED")
                 .paymentDate(now)
                 .build();
         paymentRepository.saveAndFlush(payment);
+
+        if (notificationService != null && user.getEmail() != null) {
+            try {
+                notificationService.createNotification(
+                        user.getEmail(),
+                        "Đăng ký gói hội viên thành công tại quầy / Package Subscribed",
+                        "Lễ tân đã hỗ trợ bạn đăng ký thành công gói hội viên: " + pkg.getPackageName()
+                                + " (" + (pkg.getDurationDays() != null ? pkg.getDurationDays() : 30) + " ngày). "
+                                + "Thời hạn kích hoạt từ " + start + " đến " + end + ". "
+                                + "Số tiền: " + amount + " đ (" + method + "). "
+                                + "Vui lòng kiểm tra quyền lợi trong mục Package Benefits.",
+                        "PAYMENT"
+                );
+            } catch (Exception ignored) {}
+        }
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -582,6 +705,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.team4.sportscenter.modules.notification.services.NotificationService notificationService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.team4.sportscenter.modules.member.services.MemberService memberService;
 
     private final com.fasterxml.jackson.databind.ObjectMapper jsonMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
@@ -1084,5 +1210,397 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         return builder.build();
     }
 
+    @Override
+    @Transactional
+    public void cancelBookingForMember(CancelClassBookingRequest request) {
+        if (request.getBookingId() == null) {
+            throw new IllegalArgumentException("Booking ID is required for cancelling a session.");
+        }
+        bookingRepository.lockOperations();
+
+        Booking booking = bookingRepository.findById(request.getBookingId())
+                .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + request.getBookingId()));
+
+        if (request.getUserId() != null && !booking.getUser().getUserId().equals(request.getUserId())) {
+            throw new IllegalArgumentException("This booking does not belong to the selected member.");
+        }
+
+        if ("CANCELLED".equalsIgnoreCase(booking.getStatus())) {
+            throw new IllegalStateException("This session is already cancelled.");
+        }
+
+        if ("PRESENT".equalsIgnoreCase(booking.getAttendanceStatus())) {
+            throw new IllegalStateException("Cannot cancel a session that the member has already attended.");
+        }
+
+        Schedule schedule = booking.getSchedule();
+        if (schedule != null && schedule.getEndTime() != null && schedule.getEndTime().isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("Cannot cancel a past session.");
+        }
+
+        booking.setStatus("CANCELLED");
+        bookingRepository.save(booking);
+
+        User member = booking.getUser();
+        String className = (schedule != null && schedule.getGymClass() != null)
+                ? schedule.getGymClass().getClassName() : "Class Session";
+        String sessionTime = (schedule != null && schedule.getStartTime() != null)
+                ? schedule.getStartTime().toString().replace('T', ' ') : "";
+
+        // Send in-app notification to member
+        if (notificationService != null && member != null && member.getEmail() != null) {
+            try {
+                String reasonSuffix = (request.getReason() != null && !request.getReason().isBlank())
+                        ? " Lý do: " + request.getReason().trim() + "." : "";
+                notificationService.createNotification(
+                        member.getEmail(),
+                        "Lịch tập đã được hủy tại quầy / Session Cancelled",
+                        "Lễ tân đã hỗ trợ hủy buổi tập lớp " + className + " (" + sessionTime + ")."
+                                + reasonSuffix + " Lượt tập đã được hoàn trả vào gói hội viên của bạn.",
+                        "SYSTEM"
+                );
+            } catch (Exception ignored) {}
+        }
+
+        // Record Audit Log
+        try {
+            org.springframework.security.core.Authentication auth =
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            String actorEmail = (auth != null && auth.getName() != null) ? auth.getName() : "receptionist@nexus.com";
+            java.util.Map<String, Object> auditData = new java.util.HashMap<>();
+            auditData.put("bookingId", booking.getBookingId());
+            auditData.put("userId", member != null ? member.getUserId() : null);
+            auditData.put("className", className);
+            auditData.put("sessionTime", sessionTime);
+            auditData.put("reason", request.getReason());
+            auditData.put("actionType", "CANCEL_SINGLE_SESSION");
+
+            jdbcTemplate.update(
+                    "INSERT INTO AUDIT_LOGS (actor_email, action, entity_type, entity_id, details, changes_json, created_at) " +
+                            "VALUES (?, 'CANCEL_BOOKING_SUPPORT', 'BOOKING', ?, ?, ?, ?)",
+                    actorEmail,
+                    String.valueOf(booking.getBookingId()),
+                    "Receptionist cancelled single session for member " + (member != null ? member.getFullName() : ""),
+                    jsonMapper.writeValueAsString(auditData),
+                    LocalDateTime.now()
+            );
+        } catch (Exception ignored) {}
+    }
+
+    @Override
+    @Transactional
+    public int cancelCourseForMember(CancelClassBookingRequest request) {
+        if (request.getUserId() == null || request.getClassId() == null) {
+            throw new IllegalArgumentException("User ID and Class ID are required to cancel a course.");
+        }
+        bookingRepository.lockOperations();
+
+        User member = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new RuntimeException("Member not found with ID: " + request.getUserId()));
+
+        List<Booking> userBookings = bookingRepository.findByUserIdWithDetails(request.getUserId()).stream()
+                .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
+                        && request.getClassId().equals(b.getSchedule().getGymClass().getClassId()))
+                .filter(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus()))
+                .toList();
+
+        if (userBookings.isEmpty()) {
+            throw new IllegalStateException("Member does not have any active bookings in this class.");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        List<Booking> cancellableBookings = userBookings.stream()
+                .filter(b -> !"PRESENT".equalsIgnoreCase(b.getAttendanceStatus()))
+                .filter(b -> b.getSchedule() != null && b.getSchedule().getEndTime() != null && b.getSchedule().getEndTime().isAfter(now))
+                .toList();
+
+        if (cancellableBookings.isEmpty()) {
+            throw new IllegalStateException("Cannot cancel: All upcoming sessions are already attended or in the past.");
+        }
+
+        for (Booking b : cancellableBookings) {
+            b.setStatus("CANCELLED");
+            bookingRepository.save(b);
+        }
+
+        String className = cancellableBookings.get(0).getSchedule().getGymClass().getClassName();
+        int cancelledCount = cancellableBookings.size();
+
+        // Send Notification
+        if (notificationService != null && member.getEmail() != null) {
+            try {
+                String reasonSuffix = (request.getReason() != null && !request.getReason().isBlank())
+                        ? " Lý do: " + request.getReason().trim() + "." : "";
+                notificationService.createNotification(
+                        member.getEmail(),
+                        "Khóa học đã được hủy tại quầy / Course Cancelled",
+                        "Lễ tân đã hỗ trợ hủy " + cancelledCount + " buổi học còn lại của khóa " + className + "."
+                                + reasonSuffix + " Toàn bộ số lượt tập tương ứng đã được hoàn trả vào gói hội viên của bạn.",
+                        "SYSTEM"
+                );
+            } catch (Exception ignored) {}
+        }
+
+        // Record Audit log
+        try {
+            org.springframework.security.core.Authentication auth =
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            String actorEmail = (auth != null && auth.getName() != null) ? auth.getName() : "receptionist@nexus.com";
+            java.util.Map<String, Object> auditData = new java.util.HashMap<>();
+            auditData.put("classId", request.getClassId());
+            auditData.put("userId", member.getUserId());
+            auditData.put("className", className);
+            auditData.put("cancelledSessionsCount", cancelledCount);
+            auditData.put("reason", request.getReason());
+            auditData.put("actionType", "CANCEL_ENTIRE_COURSE");
+
+            jdbcTemplate.update(
+                    "INSERT INTO AUDIT_LOGS (actor_email, action, entity_type, entity_id, details, changes_json, created_at) " +
+                            "VALUES (?, 'CANCEL_COURSE_SUPPORT', 'CLASSES', ?, ?, ?, ?)",
+                    actorEmail,
+                    String.valueOf(request.getClassId()),
+                    "Receptionist cancelled " + cancelledCount + " sessions of " + className + " for member " + member.getFullName(),
+                    jsonMapper.writeValueAsString(auditData),
+                    LocalDateTime.now()
+            );
+        } catch (Exception ignored) {}
+
+        return cancelledCount;
+    }
+
+    @Override
+    public List<com.team4.sportscenter.modules.member.dtos.response.AvailableClassResponse> getAvailableClassesForMember(Integer userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID is required.");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Member not found with ID: " + userId));
+
+        // Get all active classes
+        List<Map<String, Object>> activeClassRows = jdbcTemplate.queryForList("""
+            SELECT c.class_id, c.class_name, c.price, c.max_slots, c.subject_id,
+                   u.user_id as coach_id, u.full_name as coach_name,
+                   r.room_id, r.room_name
+            FROM CLASSES c
+            LEFT JOIN USERS u ON u.user_id = c.coach_id
+            LEFT JOIN ROOMS r ON r.room_id = c.room_id
+            WHERE c.status = 'ACTIVE'
+            ORDER BY c.class_name ASC
+        """);
+
+        // Set of classIds member already booked and NOT cancelled
+        Set<Integer> bookedClassIds = bookingRepository.findByUserIdWithDetails(userId).stream()
+                .filter(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus()))
+                .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null)
+                .map(b -> b.getSchedule().getGymClass().getClassId())
+                .collect(Collectors.toSet());
+
+        List<com.team4.sportscenter.modules.member.dtos.response.AvailableClassResponse> results = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, HH:mm");
+
+        for (Map<String, Object> crow : activeClassRows) {
+            Integer classId = (Integer) crow.get("class_id");
+            String className = (String) crow.get("class_name");
+            java.math.BigDecimal price = (java.math.BigDecimal) crow.get("price");
+            Integer maxSlots = crow.get("max_slots") != null ? ((Number) crow.get("max_slots")).intValue() : 20;
+            Integer subjectId = crow.get("subject_id") != null ? ((Number) crow.get("subject_id")).intValue() : null;
+            String coachName = (String) crow.get("coach_name");
+            Integer roomId = crow.get("room_id") != null ? ((Number) crow.get("room_id")).intValue() : null;
+            String roomName = (String) crow.get("room_name");
+
+            // Query future schedules for this class
+            List<Map<String, Object>> scheduleRows = jdbcTemplate.queryForList("""
+                SELECT schedule_id, start_time, end_time, status
+                FROM SCHEDULES
+                WHERE class_id = ? AND start_time >= NOW() AND status = 'SCHEDULED'
+                ORDER BY start_time ASC
+            """, classId);
+
+            if (scheduleRows.isEmpty()) {
+                // If there are no future schedules, skip so receptionist only sees classes that can actually be booked
+                continue;
+            }
+
+            int bookedSlots = 0;
+            List<LocalDateTime> startTimes = new ArrayList<>();
+            List<LocalDateTime> endTimes = new ArrayList<>();
+            List<String> formattedDates = new ArrayList<>();
+            Set<DayOfWeek> days = new HashSet<>();
+
+            for (Map<String, Object> srow : scheduleRows) {
+                Integer scheduleId = ((Number) srow.get("schedule_id")).intValue();
+                Object stObj = srow.get("start_time");
+                Object etObj = srow.get("end_time");
+
+                LocalDateTime st = null;
+                if (stObj instanceof java.sql.Timestamp ts) st = ts.toLocalDateTime();
+                else if (stObj instanceof LocalDateTime ldt) st = ldt;
+
+                LocalDateTime et = null;
+                if (etObj instanceof java.sql.Timestamp ts) et = ts.toLocalDateTime();
+                else if (etObj instanceof LocalDateTime ldt) et = ldt;
+
+                if (st != null) {
+                    startTimes.add(st);
+                    days.add(st.getDayOfWeek());
+                    formattedDates.add(st.format(formatter));
+                }
+                if (et != null) {
+                    endTimes.add(et);
+                }
+
+                // Count booked slots for this schedule
+                Integer bCount = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM BOOKINGS WHERE schedule_id = ? AND status = 'CONFIRMED'",
+                        Integer.class, scheduleId
+                );
+                if (bCount != null && bCount > bookedSlots) {
+                    bookedSlots = bCount;
+                }
+            }
+
+            LocalDateTime nextSessionTime = startTimes.isEmpty() ? null : startTimes.get(0);
+            LocalDateTime lastSessionTime = endTimes.isEmpty() ? nextSessionTime : endTimes.stream().max(LocalDateTime::compareTo).orElse(nextSessionTime);
+
+            int durationMinutes = 60;
+            if (nextSessionTime != null && !endTimes.isEmpty() && endTimes.get(0) != null) {
+                durationMinutes = (int) ChronoUnit.MINUTES.between(nextSessionTime, endTimes.get(0));
+            }
+
+            String pattern = days.stream()
+                    .sorted()
+                    .map(d -> d.getDisplayName(TextStyle.SHORT, Locale.ENGLISH))
+                    .collect(Collectors.joining(", "));
+
+            boolean isBooked = bookedClassIds.contains(classId);
+
+            results.add(com.team4.sportscenter.modules.member.dtos.response.AvailableClassResponse.builder()
+                    .classId(classId)
+                    .subjectId(subjectId)
+                    .roomId(roomId)
+                    .lastSessionTime(lastSessionTime)
+                    .className(className)
+                    .coachName(coachName != null ? coachName : "Chưa phân công")
+                    .roomName(roomName != null ? roomName : "Phòng tập")
+                    .price(price)
+                    .maxSlots(maxSlots)
+                    .bookedSlots(bookedSlots)
+                    .isBookedByMe(isBooked)
+                    .totalSessions(scheduleRows.size())
+                    .nextSessionTime(nextSessionTime)
+                    .durationMinutes(durationMinutes)
+                    .schedulePattern(pattern)
+                    .upcomingDates(formattedDates)
+                    .build());
+        }
+
+        results.sort(Comparator.comparing(
+                com.team4.sportscenter.modules.member.dtos.response.AvailableClassResponse::getNextSessionTime,
+                Comparator.nullsLast(Comparator.naturalOrder())
+        ));
+        return results;
+    }
+
+    @Override
+    @Transactional
+    public void enrollMemberToClass(EnrollClassRequest request) {
+        if (request.getUserId() == null || request.getClassId() == null) {
+            throw new IllegalArgumentException("User ID and Class ID are required to enroll.");
+        }
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new RuntimeException("Member not found with ID: " + request.getUserId()));
+
+        if (memberService == null) {
+            throw new IllegalStateException("MemberService is not available.");
+        }
+
+        // Check if member already booked this course and not cancelled
+        boolean alreadyBooked = bookingRepository.findByUserIdWithDetails(user.getUserId()).stream()
+                .anyMatch(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus())
+                        && b.getSchedule() != null
+                        && b.getSchedule().getGymClass() != null
+                        && b.getSchedule().getGymClass().getClassId().equals(request.getClassId()));
+        if (alreadyBooked) {
+            throw new IllegalArgumentException("Hội viên đã tham gia lớp học này rồi / Member is already enrolled in this class.");
+        }
+
+        List<Schedule> allClassSchedules = scheduleRepository.findAllSchedulesByClassId(request.getClassId());
+        GymClass gymClass = (!allClassSchedules.isEmpty()) ? allClassSchedules.get(0).getGymClass() : null;
+        if (gymClass == null) {
+            throw new RuntimeException("Không tìm thấy thông tin lớp học / Class not found.");
+        }
+
+        int maxSlots = (gymClass.getMaxSlots() != null) ? gymClass.getMaxSlots() : 30;
+        int bookedMembers = bookingRepository.countBookedUsersByClassId(gymClass.getClassId());
+        if (bookedMembers >= maxSlots) {
+            throw new IllegalStateException("Lớp học đã đủ số lượng học viên (" + maxSlots + "/" + maxSlots + ").");
+        }
+
+        // Đặt lớp trực tiếp cho hội viên (tạo các bản ghi bookings)
+        memberService.bookClass(user.getEmail(), request.getClassId());
+
+        // Cập nhật tất cả các booking PENDING vừa tạo thành CONFIRMED
+        List<Booking> createdBookings = bookingRepository.findByUserIdWithDetails(user.getUserId()).stream()
+                .filter(b -> "PENDING".equalsIgnoreCase(b.getStatus())
+                        && b.getSchedule() != null
+                        && b.getSchedule().getGymClass() != null
+                        && b.getSchedule().getGymClass().getClassId().equals(request.getClassId()))
+                .toList();
+
+        for (Booking b : createdBookings) {
+            b.setStatus("CONFIRMED");
+            bookingRepository.save(b);
+        }
+
+        // Ghi nhận hóa đơn & thanh toán trực tiếp tại quầy (Invoice & Payment)
+        java.math.BigDecimal amount = (gymClass.getPrice() != null)
+                ? gymClass.getPrice()
+                : java.math.BigDecimal.ZERO;
+
+        LocalDateTime now = LocalDateTime.now();
+        String method = (request.getPaymentMethod() != null && !request.getPaymentMethod().trim().isEmpty())
+                ? request.getPaymentMethod().trim().toUpperCase()
+                : "CASH";
+
+        com.team4.sportscenter.modules.payment.entities.Invoice invoice = com.team4.sportscenter.modules.payment.entities.Invoice.builder()
+                .user(user)
+                .totalAmount(amount)
+                .status("PAID")
+                .createdAt(now)
+                .build();
+        invoice = invoiceRepository.saveAndFlush(invoice);
+
+        for (Booking b : createdBookings) {
+            jdbcTemplate.update("INSERT INTO INVOICE_BOOKINGS(invoice_id, booking_id) VALUES(?, ?)", invoice.getInvoiceId(), b.getBookingId());
+        }
+
+        com.team4.sportscenter.modules.payment.entities.InvoiceDetail detail = com.team4.sportscenter.modules.payment.entities.InvoiceDetail.builder()
+                .invoice(invoice)
+                .gymClass(gymClass)
+                .unitPrice(amount)
+                .build();
+        invoiceDetailRepository.save(detail);
+
+        com.team4.sportscenter.modules.payment.entities.PaymentEntity payment = com.team4.sportscenter.modules.payment.entities.PaymentEntity.builder()
+                .invoice(invoice)
+                .amount(amount)
+                .paymentMethod(method)
+                .transactionNo("COUNTER-CLASS-" + invoice.getInvoiceId())
+                .status("COMPLETED")
+                .paymentDate(now)
+                .build();
+        paymentRepository.saveAndFlush(payment);
+
+        if (notificationService != null && user.getEmail() != null) {
+            try {
+                notificationService.createNotification(
+                        user.getEmail(),
+                        "Đăng ký lớp học thành công tại quầy / Class Enrolled",
+                        "Lễ tân đã hỗ trợ bạn đăng ký thành công vào lớp học: " + gymClass.getClassName() + ". Học phí: " + amount + " đ (" + method + "). Vui lòng kiểm tra lịch học trong My Schedule.",
+                        "PAYMENT"
+                );
+            } catch (Exception ignored) {}
+        }
+    }
 }
 

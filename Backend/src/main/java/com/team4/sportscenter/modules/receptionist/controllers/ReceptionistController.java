@@ -1,5 +1,7 @@
 package com.team4.sportscenter.modules.receptionist.controllers;
 
+import com.team4.sportscenter.modules.receptionist.dtos.request.CancelClassBookingRequest;
+import com.team4.sportscenter.modules.receptionist.dtos.request.EnrollClassRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.MemberRegisterRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.RenewBookingRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.SubscribePackageRequest;
@@ -132,4 +134,43 @@ public class ReceptionistController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-}
+
+    @GetMapping("/classes/available")
+    public ResponseEntity<?> getAvailableClassesForMember(@RequestParam Integer userId) {
+        try {
+            return ResponseEntity.ok(memberService.getAvailableClassesForMember(userId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/classes/enroll")
+    public ResponseEntity<?> enrollMemberToClass(@RequestBody EnrollClassRequest request) {
+        try {
+            memberService.enrollMemberToClass(request);
+            return ResponseEntity.ok("Member enrolled into class successfully!");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/classes/cancel-booking")
+    public ResponseEntity<?> cancelBookingForMember(@RequestBody CancelClassBookingRequest request) {
+        try {
+            memberService.cancelBookingForMember(request);
+            return ResponseEntity.ok("Session cancelled successfully. Remaining quota refunded to member's package.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/classes/cancel-course")
+    public ResponseEntity<?> cancelCourseForMember(@RequestBody CancelClassBookingRequest request) {
+        try {
+            int count = memberService.cancelCourseForMember(request);
+            return ResponseEntity.ok("Cancelled " + count + " upcoming session(s). Quota refunded to member's package.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+}
