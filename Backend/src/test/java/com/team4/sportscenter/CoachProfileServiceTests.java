@@ -77,95 +77,43 @@ class CoachProfileServiceTests {
     }
 
     @Test
-    @DisplayName("Lấy hồ sơ HLV: Hiển thị bộ môn hiện tại và số lớp đang dạy")
+    @DisplayName("Profile exposes only manager-assigned subjects and disables self assignment")
     void testGetCoachProfile() {
         when(userRepository.findByEmail("coach@example.com")).thenReturn(Optional.of(testCoach));
-        when(coachClassRepository.findActiveClassesByCoachAndSubject(10, 1)).thenReturn(List.of());
-        when(subjectRepository.findAll()).thenReturn(List.of(gymSubject, yogaSubject));
-
-        CoachProfileResponse response = coachProfileService.getCoachProfile("coach@example.com");
-
-        assertNotNull(response);
-        assertEquals("Coach John", response.getFullName());
-        assertEquals("coach@example.com", response.getEmail());
-        assertEquals(1, response.getCurrentSubjectId());
-        assertEquals("Gym", response.getCurrentSubjectName());
-        assertTrue(response.isCanChangeSubject());
-        assertEquals(0, response.getActiveClassesCount());
-        assertEquals(2, response.getAvailableSubjects().size());
+        when(coachClassRepository.findActiveClassesByCoachAndSubject(10,1)).thenReturn(List.of());
+        var response=coachProfileService.getCoachProfile("coach@example.com");
+        assertEquals("Coach John",response.getFullName());
+        assertEquals(1,response.getCurrentSubjectId());
+        assertFalse(response.isCanChangeSubject());
+        assertEquals(1,response.getAvailableSubjects().size());
+        assertEquals(1,response.getAvailableSubjects().get(0).getSubjectId());
+        assertNotNull(response.getWarningMessage());
     }
-
     @Test
-    @DisplayName("Đổi môn thành công: Cho phép đổi khi không còn lớp học nào đang dạy")
-    void testUpdateCoachProfile_SuccessWhenNoActiveClasses() {
+    @DisplayName("Personal details may change without changing teaching assignments")
+    void testUpdatePersonalDetailsKeepsSubjects() {
+        testCoach.getSpecialties().add(yogaSubject);
         when(userRepository.findByEmail("coach@example.com")).thenReturn(Optional.of(testCoach));
-        when(subjectRepository.findById(2)).thenReturn(Optional.of(yogaSubject));
-        when(coachClassRepository.findActiveClassesByCoachAndSubject(10, 1)).thenReturn(List.of());
-
-        UpdateCoachProfileRequest request = UpdateCoachProfileRequest.builder()
-                .fullName("Coach John Updated")
-                .phone("0123456789")
-                .bio("Updated bio")
-                .subjectId(2)
-                .build();
-
-        coachProfileService.updateCoachProfile("coach@example.com", request);
-
-        assertEquals("Coach John Updated", testCoach.getFullName());
-        assertEquals("0123456789", testCoach.getPhone());
-        assertEquals("Updated bio", testCoach.getBio());
-        assertEquals(1, testCoach.getSpecialties().size());
-        assertEquals(2, testCoach.getSpecialties().get(0).getSubjectId());
-        assertEquals("Yoga", testCoach.getSpecialties().get(0).getSubjectName());
-
+        var request=UpdateCoachProfileRequest.builder().fullName("Updated").phone("0123456789").bio("Updated bio").subjectId(1).build();
+        coachProfileService.updateCoachProfile("coach@example.com",request);
+        assertEquals("Updated",testCoach.getFullName());assertEquals(2,testCoach.getSpecialties().size());
         verify(userRepository).save(testCoach);
-        verify(notificationService).createNotification(eq("coach@example.com"), anyString(), anyString(), eq("SYSTEM"));
+        verify(notificationService).createNotification(eq("coach@example.com"),anyString(),anyString(),eq("SYSTEM"));
     }
-
     @Test
-    @DisplayName("Chặn đổi môn: Báo lỗi IllegalStateException khi còn lớp đang dạy thuộc môn hiện tại")
-    void testUpdateCoachProfile_ThrowsExceptionWhenActiveClassesExist() {
+    @DisplayName("A coach cannot self assign an existing unassigned subject even without active classes")
+    void testCannotSelfAssignSubject() {
         when(userRepository.findByEmail("coach@example.com")).thenReturn(Optional.of(testCoach));
-        when(subjectRepository.findById(2)).thenReturn(Optional.of(yogaSubject));
-
-        GymClass activeClass = GymClass.builder()
-                .classId(101)
-                .className("Gym Nâng Cao")
-                .coach(testCoach)
-                .subject(gymSubject)
-                .status("ACTIVE")
-                .build();
-
-        when(coachClassRepository.findActiveClassesByCoachAndSubject(10, 1)).thenReturn(List.of(activeClass));
-
-        UpdateCoachProfileRequest request = UpdateCoachProfileRequest.builder()
-                .subjectId(2)
-                .build();
-
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
-            coachProfileService.updateCoachProfile("coach@example.com", request);
-        });
-
-        assertTrue(exception.getMessage().contains("Không thể đổi bộ môn!"));
-        assertTrue(exception.getMessage().contains("Gym Nâng Cao"));
-        verify(userRepository, never()).save(any());
+        assertThrows(IllegalArgumentException.class,()->coachProfileService.updateCoachProfile("coach@example.com",UpdateCoachProfileRequest.builder().subjectId(2).build()));
+        assertEquals(1,testCoach.getSpecialties().get(0).getSubjectId());
+        verify(userRepository,never()).save(any());
     }
-
     @Test
-    @DisplayName("Chặn đổi môn: Báo lỗi IllegalArgumentException khi môn mới không tồn tại trên hệ thống")
-    void testUpdateCoachProfile_ThrowsExceptionWhenSubjectNotFound() {
+    @DisplayName("Unknown subject requests cannot bypass manager assignment")
+    void testUnknownSubjectRejected() {
         when(userRepository.findByEmail("coach@example.com")).thenReturn(Optional.of(testCoach));
-        when(subjectRepository.findById(999)).thenReturn(Optional.empty());
-
-        UpdateCoachProfileRequest request = UpdateCoachProfileRequest.builder()
-                .subjectId(999)
-                .build();
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            coachProfileService.updateCoachProfile("coach@example.com", request);
-        });
-
-        assertTrue(exception.getMessage().contains("Bộ môn được chọn không tồn tại"));
-        verify(userRepository, never()).save(any());
+        var error=assertThrows(IllegalArgumentException.class,()->coachProfileService.updateCoachProfile("coach@example.com",UpdateCoachProfileRequest.builder().subjectId(999).build()));
+        assertTrue(error.getMessage().contains("quản lý"));
+        verify(userRepository,never()).save(any());
     }
 }

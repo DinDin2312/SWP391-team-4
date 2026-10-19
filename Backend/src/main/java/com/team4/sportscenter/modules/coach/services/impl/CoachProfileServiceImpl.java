@@ -63,14 +63,10 @@ public class CoachProfileServiceImpl implements CoachProfileService {
                 .map(GymClass::getClassName)
                 .collect(Collectors.toList());
 
-        boolean canChangeSubject = activeClasses.isEmpty();
-        String warningMessage = null;
-        if (!canChangeSubject && currentSubject != null) {
-            warningMessage = "Bạn hiện đang phụ trách " + activeClasses.size() + " lớp học thuộc môn \""
-                    + currentSubject.getSubjectName() + "\". Bạn chỉ có thể đổi môn khi các lớp này hoàn tất hoặc được chuyển giao.";
-        }
-
-        List<SubjectOptionResponse> availableSubjects = getAllSubjects();
+        boolean canChangeSubject = false;
+        String warningMessage = "Bộ môn giảng dạy do quản lý trung tâm phân công. Vui lòng liên hệ quản lý để thay đổi.";
+        List<SubjectOptionResponse> availableSubjects = coach.getSpecialties()==null?List.of():coach.getSpecialties().stream()
+            .map(subject->SubjectOptionResponse.builder().subjectId(subject.getSubjectId()).subjectName(subject.getSubjectName()).build()).toList();
 
         return CoachProfileResponse.builder()
                 .userId(coach.getUserId())
@@ -107,42 +103,8 @@ public class CoachProfileServiceImpl implements CoachProfileService {
         }
 
         if (request.getSubjectId() != null) {
-            Subject targetSubject = subjectRepository.findById(request.getSubjectId())
-                    .orElseThrow(() -> new IllegalArgumentException("Bộ môn được chọn không tồn tại trên hệ thống (ID: " + request.getSubjectId() + ")"));
-
-            Subject currentSubject = (coach.getSpecialties() != null && !coach.getSpecialties().isEmpty())
-                    ? coach.getSpecialties().get(0)
-                    : null;
-
-            // Nếu huấn luyện viên chọn bộ môn khác với bộ môn hiện tại
-            if (currentSubject != null && !currentSubject.getSubjectId().equals(targetSubject.getSubjectId())) {
-                List<GymClass> activeClasses = coachClassRepository.findActiveClassesByCoachAndSubject(
-                        coach.getUserId(),
-                        currentSubject.getSubjectId()
-                );
-
-                if (!activeClasses.isEmpty()) {
-                    String classList = activeClasses.stream()
-                            .map(GymClass::getClassName)
-                            .collect(Collectors.joining(", "));
-                    throw new IllegalStateException("Không thể đổi bộ môn! Bạn vẫn còn " + activeClasses.size()
-                            + " lớp học đang hoạt động hoặc có lịch dạy liên quan đến bộ môn \""
-                            + currentSubject.getSubjectName() + "\": [" + classList
-                            + "]. Vui lòng hoàn thành hoặc bàn giao các lớp học này trước khi đổi môn.");
-                }
-
-                // Đủ điều kiện đổi môn -> Cập nhật sang môn mới
-                coach.getSpecialties().clear();
-                coach.getSpecialties().add(targetSubject);
-                log.info("HLV {} đã đổi bộ môn từ {} sang {}", coachEmail, currentSubject.getSubjectName(), targetSubject.getSubjectName());
-            } else if (currentSubject == null) {
-                // Chưa có môn nào -> Gán môn mới
-                if (coach.getSpecialties() == null) {
-                    coach.setSpecialties(new ArrayList<>());
-                }
-                coach.getSpecialties().add(targetSubject);
-                log.info("HLV {} đã đăng ký bộ môn giảng dạy: {}", coachEmail, targetSubject.getSubjectName());
-            }
+            if(coach.getSpecialties()==null || coach.getSpecialties().stream().noneMatch(subject->subject.getSubjectId().equals(request.getSubjectId())))
+                throw new IllegalArgumentException("Bộ môn giảng dạy do quản lý trung tâm phân công. Vui lòng liên hệ quản lý để thay đổi.");
         }
 
         userRepository.save(coach);
