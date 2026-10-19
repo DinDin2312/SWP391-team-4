@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
+@SuppressWarnings({"SqlResolve", "SqlNoDataSourceInspection"})
 public interface ReceptionistBookingRepository extends JpaRepository<Booking, Integer> {
     @Query(value="SELECT role_id FROM ROLES WHERE role_name='Center Manager' FOR UPDATE",nativeQuery=true)
     List<Integer> lockOperations();
@@ -24,9 +25,6 @@ public interface ReceptionistBookingRepository extends JpaRepository<Booking, In
 
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.user.userId = :userId")
     Long countByUserId(@Param("userId") Integer userId);
-
-    @Query("SELECT COUNT(b) FROM Booking b WHERE b.schedule.scheduleId = :scheduleId AND b.status IN ('CONFIRMED', 'PENDING')")
-    Integer countBookedSlots(@Param("scheduleId") Integer scheduleId);
 
     @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.userId = :userId AND b.schedule.scheduleId = :scheduleId AND b.status != 'CANCELLED'")
     boolean existsByUserIdAndScheduleId(@Param("userId") Integer userId, @Param("scheduleId") Integer scheduleId);

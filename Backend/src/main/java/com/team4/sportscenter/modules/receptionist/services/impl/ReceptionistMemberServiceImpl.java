@@ -7,7 +7,6 @@ import com.team4.sportscenter.modules.member.entities.Booking;
 import com.team4.sportscenter.modules.member.entities.GymClass;
 import com.team4.sportscenter.modules.member.entities.Schedule;
 import com.team4.sportscenter.modules.member.entities.UserMembership;
-import com.team4.sportscenter.modules.member.repositories.UserMembershipRepository;
 import com.team4.sportscenter.modules.receptionist.dtos.request.CancelClassBookingRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.EnrollClassRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.MemberRegisterRequest;
@@ -33,6 +32,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@SuppressWarnings({"SqlResolve", "SqlNoDataSourceInspection"})
 public class ReceptionistMemberServiceImpl implements ReceptionistMemberService {
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
@@ -79,7 +79,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             String currentPackageType = null;
             LocalDate startDate = null;
             LocalDate endDate = null;
-            Long daysRemaining = 0L;
+            long daysRemaining = 0L;
 
             if (activeMembership != null) {
                 currentMembershipStatus = "ACTIVE";
@@ -162,12 +162,8 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             boolean isActive = "ACTIVE".equalsIgnoreCase(um.getStatus()) && isStarted && isNotExpired;
             boolean isUpcoming = "ACTIVE".equalsIgnoreCase(um.getStatus()) && !isStarted && isNotExpired;
             long remaining = 0L;
-            if (um.getEndDate() != null) {
-                if (isNotExpired) {
-                    remaining = ChronoUnit.DAYS.between(today, um.getEndDate()) + 1L;
-                } else {
-                    remaining = 0L;
-                }
+            if (um.getEndDate() != null && isNotExpired) {
+                remaining = ChronoUnit.DAYS.between(today, um.getEndDate()) + 1L;
             }
             return MemberMembershipDetail.builder()
                     .membershipId(um.getMembershipId())
@@ -183,10 +179,8 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                     .active(isActive)
                     .benefits(um.getMembershipId() != null ? packageBenefits.membershipBenefits(um.getMembershipId()) : List.of())
                     .build();
-        }).collect(Collectors.toList());
-
-        // Ưu tiên gói đang có hiệu lực trong ngày hôm nay lên đầu, xếp theo hạn sử dụng xa nhất (endDate DESC)
-        membershipDetails.sort((a, b) -> {
+        })
+        .sorted((a, b) -> {
             if (Boolean.TRUE.equals(a.getActive()) && !Boolean.TRUE.equals(b.getActive())) return -1;
             if (!Boolean.TRUE.equals(a.getActive()) && Boolean.TRUE.equals(b.getActive())) return 1;
             if (a.getEndDate() != null && b.getEndDate() != null) {
@@ -196,7 +190,8 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             if (a.getEndDate() != null) return -1;
             if (b.getEndDate() != null) return 1;
             return 0;
-        });
+        })
+        .toList();
 
         // Find active or latest
         MemberMembershipDetail currentActive = membershipDetails.stream()
@@ -292,7 +287,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 String cJson = (String) aRow.get("changes_json");
                 if (cJson != null && !cJson.isBlank()) {
                     try {
-                        java.util.Map<String, Object> map = jsonMapper.readValue(cJson, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+                        java.util.Map<String, Object> map = jsonMapper.readValue(cJson, new com.fasterxml.jackson.core.type.TypeReference<>() {});
                         if (map.get("bookingId") instanceof Number n) {
                             Integer bId = n.intValue();
                             Optional<Booking> optB = bookingRepository.findById(bId);
@@ -349,12 +344,8 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             boolean isActive = "ACTIVE".equalsIgnoreCase(um.getStatus()) && isStarted && isNotExpired;
             boolean isUpcoming = "ACTIVE".equalsIgnoreCase(um.getStatus()) && !isStarted && isNotExpired;
             long remaining = 0L;
-            if (um.getEndDate() != null) {
-                if (isNotExpired) {
-                    remaining = ChronoUnit.DAYS.between(today, um.getEndDate()) + 1L;
-                } else {
-                    remaining = 0L;
-                }
+            if (um.getEndDate() != null && isNotExpired) {
+                remaining = ChronoUnit.DAYS.between(today, um.getEndDate()) + 1L;
             }
             return MemberMembershipDetail.builder()
                     .membershipId(um.getMembershipId())
@@ -370,10 +361,8 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                     .active(isActive)
                     .benefits(um.getMembershipId() != null ? packageBenefits.membershipBenefits(um.getMembershipId()) : List.of())
                     .build();
-        }).collect(Collectors.toList());
-
-        // Ưu tiên gói đang có hiệu lực trong ngày hôm nay lên đầu, xếp theo hạn sử dụng xa nhất (endDate DESC)
-        list.sort((a, b) -> {
+        })
+        .sorted((a, b) -> {
             if (Boolean.TRUE.equals(a.getActive()) && !Boolean.TRUE.equals(b.getActive())) return -1;
             if (!Boolean.TRUE.equals(a.getActive()) && Boolean.TRUE.equals(b.getActive())) return 1;
             if (a.getEndDate() != null && b.getEndDate() != null) {
@@ -383,7 +372,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             if (a.getEndDate() != null) return -1;
             if (b.getEndDate() != null) return 1;
             return 0;
-        });
+        })
+        .toList();
+
         return list;
     }
 
@@ -894,7 +885,6 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             checkInType = "CLASS_SESSION";
             gymAccessGranted = false;
             classAccessGranted = true;
-            accessCode = null;
             bookingId = todayClassBooking.getBookingId();
             String cName = todayClassBooking.getSchedule().getGymClass() != null
                     ? todayClassBooking.getSchedule().getGymClass().getClassName() : "Lớp học";
@@ -1176,7 +1166,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             try {
                 java.util.Map<String, Object> map = jsonMapper.readValue(
                         changesJson,
-                        new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {}
+                        new com.fasterxml.jackson.core.type.TypeReference<>() {}
                 );
                 if (map.get("userId") instanceof Number n) builder.userId(n.intValue());
                 if (map.get("memberName") instanceof String s) builder.memberName(s);
@@ -1373,8 +1363,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         if (userId == null) {
             throw new IllegalArgumentException("User ID is required.");
         }
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Member not found with ID: " + userId));
+        if (!userRepository.existsById(userId)) {
+            throw new RuntimeException("Member not found with ID: " + userId);
+        }
 
         // Get all active classes
         List<Map<String, Object>> activeClassRows = jdbcTemplate.queryForList("""
@@ -1385,7 +1376,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             LEFT JOIN USERS u ON u.user_id = c.coach_id
             LEFT JOIN ROOMS r ON r.room_id = c.room_id
             WHERE c.status = 'ACTIVE'
-            ORDER BY c.class_name ASC
+            ORDER BY c.class_name
         """);
 
         // Set of classIds member already booked and NOT cancelled
@@ -1413,7 +1404,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 SELECT schedule_id, start_time, end_time, status
                 FROM SCHEDULES
                 WHERE class_id = ? AND start_time >= NOW() AND status = 'SCHEDULED'
-                ORDER BY start_time ASC
+                ORDER BY start_time
             """, classId);
 
             if (scheduleRows.isEmpty()) {

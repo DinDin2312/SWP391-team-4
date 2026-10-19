@@ -20,7 +20,6 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
   const { userInfo, logout } = useContext(AuthContext);
 
   const fullName = userInfo?.fullName || 'Lễ Tân Thúy Kiều';
-  const email = userInfo?.email || 'letan@sport.com';
   const initials = fullName
     .split(' ')
     .filter(Boolean)

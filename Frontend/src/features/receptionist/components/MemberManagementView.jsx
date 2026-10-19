@@ -3,22 +3,15 @@ import { formatDate as displayFormatDate } from '../../../utils/displayFormat';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search,
-  Filter,
   RefreshCw,
   Eye,
   CreditCard,
-  Calendar,
   Phone,
   Mail,
   UserCheck,
   AlertCircle,
   Users,
-  Activity,
-  CheckCircle,
   Clock,
-  ChevronRight,
-  Shield,
-  Sparkles,
   UserX,
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
@@ -160,7 +153,6 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
   useLanguage();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   // Filters
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -169,12 +161,10 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
 
   // Detail Modal State
   const [selectedMemberDetail, setSelectedMemberDetail] = useState(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
 
   // Fetch Members
   const fetchMembers = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await receptionistService.searchMembers({
         keyword: searchKeyword,
@@ -231,7 +221,6 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
 
   // Handle View Member Detail
   const handleViewDetail = async (userId) => {
-    setLoadingDetail(true);
     try {
       const detail = await receptionistService.getMemberDetail(userId);
       setSelectedMemberDetail(detail);
@@ -287,8 +276,6 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
           ],
         });
       }
-    } finally {
-      setLoadingDetail(false);
     }
   };
 

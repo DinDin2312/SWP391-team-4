@@ -5,23 +5,17 @@ import {
     X,
     User,
     CreditCard,
-    Calendar,
     CheckCircle2,
-    XCircle,
     Clock,
     Phone,
     Mail,
-    Shield,
     FileText,
     AlertTriangle,
     Award,
     CalendarDays,
-    MapPin,
-    Flame,
     Check,
     RotateCw,
     RefreshCw,
-    Users,
     ChevronDown,
     ChevronUp,
     Ban,
@@ -123,7 +117,7 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
 
         const courses = Object.values(grouped);
         // Sắp xếp các khóa học: 2 lớp cùng môn/cùng khóa (Đợt 1 & Đợt 2) luôn nằm liền kề nhau
-        const cleanBaseName = (name = '') => name.replace(/(?:\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\))/i, '').trim();
+        const cleanBaseName = (name = '') => name.replace(/\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\)/i, '').trim();
         courses.sort((a, b) => {
             const baseA = cleanBaseName(a.courseName);
             const baseB = cleanBaseName(b.courseName);
@@ -796,7 +790,7 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                                         <tbody>
                                         {(() => {
                                             const allCourses = groupBookingsByCourse(member?.bookings || []);
-                                            const cleanBaseName = (name = '') => name.replace(/(?:\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\))/i, '').trim();
+                                            const cleanBaseName = (name = '') => name.replace(/\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\)/i, '').trim();
 
                                             return allCourses.map((course, idx) => {
                                                 const isExpanded = expandedCourseKey === course.courseName;

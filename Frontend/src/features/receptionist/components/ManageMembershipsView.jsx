@@ -6,9 +6,7 @@ import {
     RotateCw,
     RefreshCw,
     CheckCircle2,
-    XCircle,
     User,
-    Shield,
     Layers,
     X,
     BookOpen,
@@ -127,7 +125,7 @@ export default function ManageMembershipsView() {
 
         const courses = Object.values(grouped);
         // Sắp xếp các khóa học: 2 lớp cùng môn/cùng khóa (Đợt 1 & Đợt 2) luôn nằm liền kề nhau
-        const cleanBaseName = (name = '') => name.replace(/(?:\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\))/i, '').trim();
+        const cleanBaseName = (name = '') => name.replace(/\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\)/i, '').trim();
         courses.sort((a, b) => {
             const baseA = cleanBaseName(a.courseName);
             const baseB = cleanBaseName(b.courseName);
@@ -627,7 +625,7 @@ export default function ManageMembershipsView() {
                                                     <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
                                                         <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'center' }}>
                                                             {(() => {
-                                                                const cleanBaseName = (name = '') => name.replace(/(?:\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\))/i, '').trim();
+                                                                const cleanBaseName = (name = '') => name.replace(/\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\)/i, '').trim();
                                                                 const baseName = cleanBaseName(c.courseName || c.className);
                                                                 const nextBatch = memberBookings.find(other =>
                                                                     other !== c &&
