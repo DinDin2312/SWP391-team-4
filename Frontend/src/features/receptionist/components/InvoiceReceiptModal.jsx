@@ -69,7 +69,7 @@ export default function InvoiceReceiptModal({ isOpen, onClose, receipt }) {
     doc.open();
     doc.write(`
       <!DOCTYPE html>
-      <html>
+      <html lang="vi">
         <head>
           <meta charset="utf-8" />
           <title>${invCode}</title>

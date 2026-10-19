@@ -2234,7 +2234,6 @@ const receptionistDictionary = {
   "Search by invoice code (#INV-...), member name, phone...": "Tìm theo mã HĐ (#INV-...), tên khách hàng, số điện thoại...",
   "All Methods": "Tất cả phương thức",
   "All Time": "Tất cả thời gian",
-  "Today": "Hôm nay",
   "Last 7 Days": "7 ngày qua",
   "This Month": "Tháng này",
   "Newest": "Mới nhất",
@@ -2247,11 +2246,8 @@ const receptionistDictionary = {
   "Date & Time": "Thời gian",
   "Customer": "Khách hàng",
   "Service": "Dịch vụ",
-  "Payment Method": "Hình thức",
   "Amount": "Số tiền",
   "Cashier": "Người lập",
-  "Status": "Trạng thái",
-  "Action": "Thao tác",
   "Print Receipt": "In HĐ",
   "Print Invoice": "In hóa đơn",
   "View / Print Receipt": "Xem / In Hóa đơn",
@@ -2273,9 +2269,7 @@ const receptionistDictionary = {
   "Payer / Customer": "Người nộp tiền / Khách hàng",
   "(Signature & Full Name)": "(Ký, ghi rõ họ tên)",
   "Thank you for using our services at Nexus Sport Center!": "Cảm ơn Quý khách đã sử dụng dịch vụ tại Nexus Sport Center!",
-  "Cash": "Tiền mặt",
   "Cash (CASH)": "Tiền mặt (CASH)",
-  "Bank Transfer": "Chuyển khoản",
   "Bank Transfer (TRANSFER)": "Chuyển khoản (TRANSFER)",
   "PAID": "ĐÃ THANH TOÁN",
   "COMPLETED": "HOÀN TẤT",
@@ -2283,9 +2277,7 @@ const receptionistDictionary = {
   "Total Receipts": "Tổng phiếu thu",
   "Loading invoice list...": "Đang tải danh sách hóa đơn...",
   "Refresh": "Làm mới",
-  "Recent Transactions": "Giao dịch gần đây",
-  "days": "ngày",
-  "sessions": "buổi"
+  "Recent Transactions": "Giao dịch gần đây"
 };
 
 const workoutDictionary = {

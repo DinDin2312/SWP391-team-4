@@ -11,6 +11,7 @@ import java.util.List;
 @Repository
 @SuppressWarnings({"SqlResolve", "SqlNoDataSourceInspection"})
 public interface ReceptionistBookingRepository extends JpaRepository<Booking, Integer> {
+    @SuppressWarnings("UnusedReturnValue")
     @Query(value="SELECT role_id FROM ROLES WHERE role_name='Center Manager' FOR UPDATE",nativeQuery=true)
     List<Integer> lockOperations();
 

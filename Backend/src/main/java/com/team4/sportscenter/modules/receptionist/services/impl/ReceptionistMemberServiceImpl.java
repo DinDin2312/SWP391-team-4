@@ -103,7 +103,6 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 }
                 startDate = latestMembership.getStartDate();
                 endDate = latestMembership.getEndDate();
-                daysRemaining = 0L;
             }
 
             // Apply membershipFilter if requested
@@ -337,8 +336,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
     @Override
     public List<MemberMembershipDetail> getMemberMemberships(Integer userId) {
         LocalDate today = LocalDate.now();
-        List<UserMembership> memberships = userMembershipRepository.findByUser_UserId(userId);
-        List<MemberMembershipDetail> list = memberships.stream().map(um -> {
+        return userMembershipRepository.findByUser_UserId(userId).stream().map(um -> {
             boolean isStarted = um.getStartDate() == null || !um.getStartDate().isAfter(today);
             boolean isNotExpired = um.getEndDate() == null || !um.getEndDate().isBefore(today);
             boolean isActive = "ACTIVE".equalsIgnoreCase(um.getStatus()) && isStarted && isNotExpired;
@@ -374,8 +372,6 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             return 0;
         })
         .toList();
-
-        return list;
     }
 
     @Override

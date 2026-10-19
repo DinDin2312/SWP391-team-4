@@ -337,7 +337,7 @@ public class MemberServiceImpl implements MemberService {
             }
         }
 
-        if (benefitId != null && !schedules.isEmpty()) {
+        if (benefitId != null) {
             try {
                 notificationRepository.save(Notification.builder()
                         .user(user)
