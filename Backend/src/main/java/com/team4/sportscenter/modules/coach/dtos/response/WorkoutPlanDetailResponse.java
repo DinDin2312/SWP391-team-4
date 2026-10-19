@@ -13,7 +13,14 @@ public class WorkoutPlanDetailResponse {
     private String exerciseName;
     private String muscleGroup;
     private String videoUrl;
+    private Integer weekNumber;
+    private String dayOfWeek;
+    private String dayLabel;
     private Integer sets;
     private Integer reps;
     private Integer restSeconds;
+    private Integer durationMinutes;
+    private java.math.BigDecimal weightKg;
+    private String coachNote;
+    private Integer sortOrder;
 }

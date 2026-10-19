@@ -14,8 +14,14 @@ public interface CoachWorkoutPlanRepository extends JpaRepository<CoachWorkoutPl
     @Query("SELECT DISTINCT p FROM CoachWorkoutPlan p LEFT JOIN FETCH p.planDetails d LEFT JOIN FETCH d.exercise WHERE p.coach.email = :coachEmail ORDER BY p.createdAt DESC")
     List<CoachWorkoutPlan> findByCoachEmailOrderByCreatedAtDesc(@Param("coachEmail") String coachEmail);
 
+    @Query("SELECT DISTINCT p FROM CoachWorkoutPlan p LEFT JOIN FETCH p.planDetails d LEFT JOIN FETCH d.exercise WHERE p.coach.email = :coachEmail AND (:planType IS NULL OR p.planType = :planType) ORDER BY p.createdAt DESC")
+    List<CoachWorkoutPlan> findByCoachEmailAndPlanTypeOrderByCreatedAtDesc(@Param("coachEmail") String coachEmail, @Param("planType") String planType);
+
     @Query("SELECT DISTINCT p FROM CoachWorkoutPlan p LEFT JOIN FETCH p.planDetails d LEFT JOIN FETCH d.exercise WHERE p.coach.email = :coachEmail AND p.user.userId = :userId ORDER BY p.createdAt DESC")
     List<CoachWorkoutPlan> findByCoachEmailAndUserIdOrderByCreatedAtDesc(@Param("coachEmail") String coachEmail, @Param("userId") Integer userId);
+
+    @Query("SELECT DISTINCT p FROM CoachWorkoutPlan p LEFT JOIN FETCH p.planDetails d LEFT JOIN FETCH d.exercise WHERE p.coach.email = :coachEmail AND p.user.userId = :userId AND (:planType IS NULL OR p.planType = :planType) ORDER BY p.createdAt DESC")
+    List<CoachWorkoutPlan> findByCoachEmailAndUserIdAndPlanTypeOrderByCreatedAtDesc(@Param("coachEmail") String coachEmail, @Param("userId") Integer userId, @Param("planType") String planType);
 
     @Query("SELECT DISTINCT p FROM CoachWorkoutPlan p LEFT JOIN FETCH p.planDetails d LEFT JOIN FETCH d.exercise LEFT JOIN FETCH p.gymClass c LEFT JOIN FETCH p.coach coach WHERE p.user.email = :userEmail AND (p.gymClass.classId = :classId OR (p.gymClass IS NULL AND p.coach.userId = :coachId)) ORDER BY p.createdAt DESC")
     List<CoachWorkoutPlan> findByUserEmailAndClassOrCoach(@Param("userEmail") String userEmail, @Param("classId") Integer classId, @Param("coachId") Integer coachId);

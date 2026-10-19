@@ -25,7 +25,16 @@ public class AssignWorkoutPlanRequest {
      */
     private Integer classId;
 
+    /**
+     * "SINGLE" (default) or "TRAINING_PLAN"
+     */
+    private String planType;
+
     private String title;
+    private String goal;
+    private java.time.LocalDate startDate;
+    private java.time.LocalDate endDate;
+    private Integer totalWeeks;
     private String note;
 
     private List<WorkoutPlanDetailRequest> exerciseDetails;

@@ -551,8 +551,75 @@ public class MemberServiceImpl implements MemberService {
                         .sets(d.getSets())
                         .reps(d.getReps())
                         .restSeconds(d.getRestSeconds())
+                        .weekNumber(d.getWeekNumber() != null ? d.getWeekNumber() : 1)
+                        .dayOfWeek(d.getDayOfWeek())
+                        .dayLabel(d.getDayLabel())
+                        .durationMinutes(d.getDurationMinutes())
+                        .weightKg(d.getWeightKg())
+                        .coachNote(d.getCoachNote())
+                        .sortOrder(d.getSortOrder() != null ? d.getSortOrder() : 0)
                         .build()).collect(Collectors.toList())
                 : Collections.emptyList();
+
+        // Chỉ nhóm bài tập theo mốc tuần nếu là TRAINING_PLAN
+        List<MemberWorkoutPlanResponse.MemberPlanWeekGroup> weeks = new ArrayList<>();
+        boolean isTrainingPlan = "TRAINING_PLAN".equalsIgnoreCase(p.getPlanType());
+        if (isTrainingPlan && p.getPlanDetails() != null && !p.getPlanDetails().isEmpty()) {
+            Map<Integer, List<com.team4.sportscenter.modules.coach.entities.CoachPlanDetail>> byWeek = p.getPlanDetails().stream()
+                    .collect(Collectors.groupingBy(d -> d.getWeekNumber() != null ? d.getWeekNumber() : 1, java.util.TreeMap::new, Collectors.toList()));
+
+            for (Map.Entry<Integer, List<com.team4.sportscenter.modules.coach.entities.CoachPlanDetail>> entry : byWeek.entrySet()) {
+                Integer weekNum = entry.getKey();
+                List<com.team4.sportscenter.modules.coach.entities.CoachPlanDetail> weekDetails = entry.getValue();
+
+                Map<String, List<com.team4.sportscenter.modules.coach.entities.CoachPlanDetail>> byDay = weekDetails.stream()
+                        .collect(Collectors.groupingBy(d -> d.getDayOfWeek() != null ? d.getDayOfWeek() : "OTHER", java.util.LinkedHashMap::new, Collectors.toList()));
+
+                List<MemberWorkoutPlanResponse.MemberPlanDayGroup> days = new ArrayList<>();
+                for (Map.Entry<String, List<com.team4.sportscenter.modules.coach.entities.CoachPlanDetail>> dayEntry : byDay.entrySet()) {
+                    List<com.team4.sportscenter.modules.coach.entities.CoachPlanDetail> dayDetails = dayEntry.getValue();
+                    dayDetails.sort(Comparator.comparingInt(d -> d.getSortOrder() != null ? d.getSortOrder() : 0));
+
+                    String label = dayDetails.stream()
+                            .map(com.team4.sportscenter.modules.coach.entities.CoachPlanDetail::getDayLabel)
+                            .filter(l -> l != null && !l.trim().isEmpty())
+                            .findFirst()
+                            .orElse(dayEntry.getKey());
+
+                    List<MemberWorkoutExerciseResponse> dayExercises = dayDetails.stream()
+                            .map(d -> MemberWorkoutExerciseResponse.builder()
+                                    .detailId(d.getDetailId())
+                                    .exerciseId(d.getExercise() != null ? d.getExercise().getExerciseId() : null)
+                                    .exerciseName(d.getExercise() != null ? d.getExercise().getExerciseName() : "Bài tập")
+                                    .muscleGroup(d.getExercise() != null ? d.getExercise().getMuscleGroup() : "")
+                                    .videoUrl(d.getExercise() != null ? d.getExercise().getVideoUrl() : null)
+                                    .sets(d.getSets())
+                                    .reps(d.getReps())
+                                    .restSeconds(d.getRestSeconds())
+                                    .weekNumber(d.getWeekNumber() != null ? d.getWeekNumber() : 1)
+                                    .dayOfWeek(d.getDayOfWeek())
+                                    .dayLabel(d.getDayLabel())
+                                    .durationMinutes(d.getDurationMinutes())
+                                    .weightKg(d.getWeightKg())
+                                    .coachNote(d.getCoachNote())
+                                    .sortOrder(d.getSortOrder() != null ? d.getSortOrder() : 0)
+                                    .build())
+                            .collect(Collectors.toList());
+
+                    days.add(MemberWorkoutPlanResponse.MemberPlanDayGroup.builder()
+                            .dayOfWeek(dayEntry.getKey())
+                            .dayLabel(label)
+                            .exercises(dayExercises)
+                            .build());
+                }
+
+                weeks.add(MemberWorkoutPlanResponse.MemberPlanWeekGroup.builder()
+                        .weekNumber(weekNum)
+                        .weekTitle("Tuần " + weekNum)
+                        .days(days)
+                        .build());
+            }
+        }
 
         return MemberWorkoutPlanResponse.builder()
                 .planId(p.getPlanId())
@@ -565,8 +632,14 @@ public class MemberServiceImpl implements MemberService {
                 .title(p.getTitle())
                 .note(p.getNote())
                 .status(p.getStatus())
+                .planType(p.getPlanType() != null ? p.getPlanType() : "SINGLE")
+                .goal(p.getGoal())
+                .startDate(p.getStartDate())
+                .endDate(p.getEndDate())
+                .totalWeeks(p.getTotalWeeks() != null ? p.getTotalWeeks() : 1)
                 .createdAt(p.getCreatedAt())
                 .exercises(exercises)
+                .weeks(weeks)
                 .build();
     }
 
