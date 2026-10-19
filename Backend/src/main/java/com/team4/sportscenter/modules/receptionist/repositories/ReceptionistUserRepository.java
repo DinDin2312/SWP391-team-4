@@ -26,4 +26,5 @@ public interface ReceptionistUserRepository extends JpaRepository<User, Integer>
     List<User> findAllMembers();
 
     boolean existsByEmail(String email);
+    java.util.Optional<User> findByEmail(String email);
 }

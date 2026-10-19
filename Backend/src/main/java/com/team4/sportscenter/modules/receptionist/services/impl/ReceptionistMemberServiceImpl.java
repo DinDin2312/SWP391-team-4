@@ -422,8 +422,8 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         String className = curClass.getClassName();
         Integer curClassId = curClass.getClassId();
 
-        // Tách tên gốc của khóa học (bỏ hậu tố " - Đợt 1", " (Đợt 1)", v.v.)
-        String baseName = className.replaceAll("(?i)\\s*[-–]?\\s*Đợt\\s*\\d+.*", "").trim();
+        // Tách tên gốc của khóa học (bỏ hậu tố " - Đợt 1", " (Đợt 1)", " - Tháng 10", " - T10", " - K01", v.v.)
+        String baseName = className.replaceAll("(?i)\\s*[-–(]?\\s*(Đợt|Khóa|K|Tháng|T)\\s*\\d+.*[)]?", "").trim();
 
         // Tìm thời gian kết thúc của buổi cuối cùng trong khóa học hiện tại
         List<Schedule> curClassSchedules = scheduleRepository.findAllSchedulesByClassId(curClassId);
@@ -432,6 +432,14 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 .filter(java.util.Objects::nonNull)
                 .max(LocalDateTime::compareTo)
                 .orElse(curSchedule.getEndTime() != null ? curSchedule.getEndTime() : LocalDateTime.now());
+
+        // Lấy các thứ trong tuần và giờ học của khóa học hiện tại để so khớp lịch tương tự
+        java.util.Set<java.time.DayOfWeek> curDaysOfWeek = curClassSchedules.stream()
+                .map(s -> s.getStartTime().getDayOfWeek())
+                .collect(Collectors.toSet());
+        java.time.LocalTime curStartTime = (curSchedule.getStartTime() != null)
+                ? curSchedule.getStartTime().toLocalTime()
+                : java.time.LocalTime.of(18, 0);
 
         // Tìm các lịch học của đợt tiếp theo (bắt đầu sau hoặc sát thời điểm khóa hiện tại kết thúc)
         List<Schedule> futureSchedules = scheduleRepository.findUpcomingSchedulesByBaseName(
@@ -447,18 +455,49 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             schedulesByClass.computeIfAbsent(s.getGymClass().getClassId(), k -> new java.util.ArrayList<>()).add(s);
         }
 
+        // Sắp xếp các lớp ứng viên cho kỳ sau theo độ tương đồng lịch học cao nhất:
+        // 1. Trùng nhiều ngày trong tuần nhất (ví dụ cùng Thứ 2, 4, 6)
+        // 2. Giờ bắt đầu lớp học tương tự nhất (chênh lệch ít phút nhất so với ca học cũ)
+        // 3. Khai giảng sớm nhất tiếp nối khóa cũ
+        List<Map.Entry<Integer, List<Schedule>>> rankedCandidateClasses = new java.util.ArrayList<>(schedulesByClass.entrySet());
+        rankedCandidateClasses.sort((e1, e2) -> {
+            List<Schedule> list1 = e1.getValue();
+            List<Schedule> list2 = e2.getValue();
+
+            java.util.Set<java.time.DayOfWeek> days1 = list1.stream().map(s -> s.getStartTime().getDayOfWeek()).collect(Collectors.toSet());
+            java.util.Set<java.time.DayOfWeek> days2 = list2.stream().map(s -> s.getStartTime().getDayOfWeek()).collect(Collectors.toSet());
+
+            long matchCount1 = days1.stream().filter(curDaysOfWeek::contains).count();
+            long matchCount2 = days2.stream().filter(curDaysOfWeek::contains).count();
+
+            if (matchCount1 != matchCount2) {
+                return Long.compare(matchCount2, matchCount1); // Ưu tiên trùng ngày nhiều hơn
+            }
+
+            java.time.LocalTime t1 = list1.get(0).getStartTime().toLocalTime();
+            java.time.LocalTime t2 = list2.get(0).getStartTime().toLocalTime();
+            long diff1 = Math.abs(java.time.temporal.ChronoUnit.MINUTES.between(curStartTime, t1));
+            long diff2 = Math.abs(java.time.temporal.ChronoUnit.MINUTES.between(curStartTime, t2));
+
+            if (diff1 != diff2) {
+                return Long.compare(diff1, diff2); // Ưu tiên khung giờ tập tương tự
+            }
+
+            return list1.get(0).getStartTime().compareTo(list2.get(0).getStartTime());
+        });
+
         GymClass targetClass = null;
         Schedule targetFirstSession = null;
         int maxSlots = 0;
         int bookedMembers = 0;
 
-        for (Map.Entry<Integer, List<Schedule>> entry : schedulesByClass.entrySet()) {
+        for (Map.Entry<Integer, List<Schedule>> entry : rankedCandidateClasses) {
             GymClass candidateClass = entry.getValue().get(0).getGymClass();
 
             // Kiểm tra xem hội viên này đã đăng ký/gia hạn vào đợt mới này chưa
             boolean alreadyEnrolled = bookingRepository.existsByUserIdAndClassId(userId, candidateClass.getClassId());
             if (alreadyEnrolled) {
-                throw new IllegalArgumentException("Hội viên đã được đăng ký/gia hạn vào đợt tiếp theo (" + candidateClass.getClassName() + ") rồi!");
+                continue; // Bỏ qua nếu đã đăng ký đợt này, tiếp tục tìm đợt tiếp theo phù hợp
             }
 
             int candidateMax = (candidateClass.getMaxSlots() != null) ? candidateClass.getMaxSlots() : 30;
@@ -498,7 +537,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
 
     @Override
     @Transactional
-    public void confirmClassRenewal(RenewBookingRequest request) {
+    public ReceiptResponse confirmClassRenewal(RenewBookingRequest request) {
         bookingRepository.lockOperations();
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("Member not found with ID: " + request.getUserId()));
@@ -590,6 +629,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 );
             } catch (Exception ignored) {}
         }
+        return buildReceiptResponse(invoice);
     }
 
     @Override
@@ -612,7 +652,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
 
     @Override
     @Transactional
-    public void subscribePackageForMember(SubscribePackageRequest request) {
+    public ReceiptResponse subscribePackageForMember(SubscribePackageRequest request) {
         bookingRepository.lockOperations();
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("Member not found with ID: " + request.getUserId()));
@@ -689,6 +729,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 );
             } catch (Exception ignored) {}
         }
+        return buildReceiptResponse(invoice);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -1494,7 +1535,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
 
     @Override
     @Transactional
-    public void enrollMemberToClass(EnrollClassRequest request) {
+    public ReceiptResponse enrollMemberToClass(EnrollClassRequest request) {
         if (request.getUserId() == null || request.getClassId() == null) {
             throw new IllegalArgumentException("User ID and Class ID are required to enroll.");
         }
@@ -1592,6 +1633,107 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 );
             } catch (Exception ignored) {}
         }
+        return buildReceiptResponse(invoice);
+    }
+
+    @Override
+    public ReceiptResponse getInvoiceReceipt(Integer invoiceId) {
+        com.team4.sportscenter.modules.payment.entities.Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new RuntimeException("Invoice not found with ID: " + invoiceId));
+        return buildReceiptResponse(invoice);
+    }
+
+    @Override
+    public List<ReceiptResponse> getMemberInvoices(Integer userId) {
+        List<com.team4.sportscenter.modules.payment.entities.Invoice> invoices = invoiceRepository.findByUser_UserIdOrderByCreatedAtDesc(userId);
+        return invoices.stream().map(this::buildReceiptResponse).toList();
+    }
+
+    @Override
+    public List<ReceiptResponse> getAllInvoices() {
+        List<com.team4.sportscenter.modules.payment.entities.Invoice> invoices = invoiceRepository.findAllByOrderByCreatedAtDesc();
+        return invoices.stream().map(this::buildReceiptResponse).toList();
+    }
+
+    private ReceiptResponse buildReceiptResponse(com.team4.sportscenter.modules.payment.entities.Invoice invoice) {
+        if (invoice == null) return null;
+        User user = invoice.getUser();
+
+        com.team4.sportscenter.modules.payment.entities.PaymentEntity payment = paymentRepository
+                .findByInvoice_InvoiceId(invoice.getInvoiceId())
+                .orElse(null);
+
+        List<com.team4.sportscenter.modules.payment.entities.InvoiceDetail> details = invoiceDetailRepository
+                .findByInvoice_InvoiceId(invoice.getInvoiceId());
+
+        List<ReceiptResponse.ReceiptItem> items = new ArrayList<>();
+        for (com.team4.sportscenter.modules.payment.entities.InvoiceDetail d : details) {
+            String itemName = "Dịch vụ thể thao";
+            String itemType = "SERVICE";
+            Integer durationDays = null;
+            Integer totalSessions = null;
+
+            if (d.getAPackage() != null) {
+                itemName = d.getAPackage().getPackageName();
+                itemType = "PACKAGE";
+                durationDays = d.getAPackage().getDurationDays();
+            } else if (d.getGymClass() != null) {
+                itemName = d.getGymClass().getClassName();
+                itemType = "CLASS";
+                try {
+                    List<Schedule> scheds = scheduleRepository.findAllSchedulesByClassId(d.getGymClass().getClassId());
+                    totalSessions = (scheds != null && !scheds.isEmpty()) ? scheds.size() : null;
+                } catch (Exception ignored) {}
+            }
+
+            items.add(ReceiptResponse.ReceiptItem.builder()
+                    .itemName(itemName)
+                    .itemType(itemType)
+                    .durationDays(durationDays)
+                    .totalSessions(totalSessions)
+                    .unitPrice(d.getUnitPrice() != null ? d.getUnitPrice() : invoice.getTotalAmount())
+                    .amount(d.getUnitPrice() != null ? d.getUnitPrice() : invoice.getTotalAmount())
+                    .build());
+        }
+
+        if (items.isEmpty()) {
+            items.add(ReceiptResponse.ReceiptItem.builder()
+                    .itemName("Dịch vụ thể thao / Sports Service")
+                    .itemType("OTHER")
+                    .unitPrice(invoice.getTotalAmount())
+                    .amount(invoice.getTotalAmount())
+                    .build());
+        }
+
+        String cashier = "Lễ tân quầy / Front Desk";
+        try {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getName() != null && !auth.getName().equalsIgnoreCase("anonymousUser")) {
+                User cashierUser = userRepository.findByEmail(auth.getName()).orElse(null);
+                if (cashierUser != null && cashierUser.getFullName() != null && !cashierUser.getFullName().isBlank()) {
+                    cashier = cashierUser.getFullName();
+                } else if (auth.getName() != null) {
+                    cashier = auth.getName();
+                }
+            }
+        } catch (Exception ignored) {}
+
+        return ReceiptResponse.builder()
+                .invoiceId(invoice.getInvoiceId())
+                .invoiceCode(String.format("INV-%06d", invoice.getInvoiceId()))
+                .createdAt(invoice.getCreatedAt())
+                .status(invoice.getStatus())
+                .totalAmount(invoice.getTotalAmount())
+                .userId(user != null ? user.getUserId() : null)
+                .memberName(user != null ? user.getFullName() : null)
+                .memberEmail(user != null ? user.getEmail() : null)
+                .memberPhone(user != null ? user.getPhone() : null)
+                .paymentMethod(payment != null ? payment.getPaymentMethod() : "CASH")
+                .transactionNo(payment != null ? payment.getTransactionNo() : ("INV-" + invoice.getInvoiceId()))
+                .paymentDate(payment != null ? payment.getPaymentDate() : invoice.getCreatedAt())
+                .cashierName(cashier)
+                .items(items)
+                .build();
     }
 }
 

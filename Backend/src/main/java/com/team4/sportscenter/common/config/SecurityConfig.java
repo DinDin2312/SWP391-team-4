@@ -67,12 +67,12 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, exception) -> {
                             response.setStatus(401);
                             response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\":\"PhiĂ„â€Ă‚Âªn Ä‚â€Ă¢â‚¬ËœÄ‚â€Ă†â€™ng nhÄ‚Â¡Ă‚ÂºĂ‚Â­p khĂ„â€Ă‚Â´ng hÄ‚Â¡Ă‚Â»Ă‚Â£p lÄ‚Â¡Ă‚Â»Ă¢â‚¬Â¡ hoÄ‚Â¡Ă‚ÂºĂ‚Â·c tĂ„â€Ă‚Â i khoÄ‚Â¡Ă‚ÂºĂ‚Â£n Ä‚â€Ă¢â‚¬ËœĂ„â€Ă‚Â£ bÄ‚Â¡Ă‚Â»Ă¢â‚¬Â¹ khĂ„â€Ă‚Â³a.\"}");
+                            response.getWriter().write("{\"message\":\"Phiên đăng nhập không hợp lệ hoặc tài khoản đã bị khóa.\"}");
                         })
                         .accessDeniedHandler((request, response, exception) -> {
                             response.setStatus(403);
                             response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\":\"BÄ‚Â¡Ă‚ÂºĂ‚Â¡n khĂ„â€Ă‚Â´ng cĂ„â€Ă‚Â³ quyÄ‚Â¡Ă‚Â»Ă‚Ân thÄ‚Â¡Ă‚Â»Ă‚Â±c hiÄ‚Â¡Ă‚Â»Ă¢â‚¬Â¡n thao tĂ„â€Ă‚Â¡c nĂ„â€Ă‚Â y.\"}");
+                            response.getWriter().write("{\"message\":\"Bạn không có quyền thực hiện thao tác này.\"}");
                         }))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

@@ -23,9 +23,14 @@ import {
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
 import MemberDetailModal from './MemberDetailModal';
+import InvoiceReceiptModal from './InvoiceReceiptModal';
 
 export default function ManageMembershipsView() {
   useLanguage();
+    // Receipt Modal States
+    const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+    const [currentReceipt, setCurrentReceipt] = useState(null);
+
     // Package Subscription States
     const [packagesList, setPackagesList] = useState([]);
     const [packageModalOpen, setPackageModalOpen] = useState(false);
@@ -84,15 +89,16 @@ export default function ManageMembershipsView() {
         handleSearch();
     }, []);
 
-    // Gom nhóm các buổi lẻ (sessions) thành từng khóa học (course)
+    // Gom nhóm các buổi lẻ (sessions) thành từng khóa học (course) phân biệt theo classId
     const groupBookingsByCourse = (bookingsList) => {
         const grouped = {};
         const now = new Date();
         (bookingsList || []).forEach((b) => {
-            const key = b.className || 'Unknown Course';
+            const key = b.classId ? `class_${b.classId}` : (b.className || 'Unknown Course');
             if (!grouped[key]) {
                 grouped[key] = {
-                    courseName: key,
+                    key: key,
+                    courseName: b.className || 'Unknown Course',
                     classId: b.classId,
                     coachName: b.coachName || 'N/A',
                     roomName: b.roomName || 'N/A',
@@ -106,6 +112,12 @@ export default function ManageMembershipsView() {
             grouped[key].sessionsCount += 1;
             if (b.classId && !grouped[key].classId) {
                 grouped[key].classId = b.classId;
+            }
+            if (b.coachName && grouped[key].coachName === 'N/A') {
+                grouped[key].coachName = b.coachName;
+            }
+            if (b.roomName && grouped[key].roomName === 'N/A') {
+                grouped[key].roomName = b.roomName;
             }
 
             const sessionEnd = b.endTime ? new Date(b.endTime) : (b.startTime ? new Date(b.startTime) : null);
@@ -124,8 +136,8 @@ export default function ManageMembershipsView() {
         });
 
         const courses = Object.values(grouped);
-        // Sắp xếp các khóa học: 2 lớp cùng môn/cùng khóa (Đợt 1 & Đợt 2) luôn nằm liền kề nhau
-        const cleanBaseName = (name = '') => name.replace(/\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\)/i, '').trim();
+        // Sắp xếp các khóa học: 2 lớp cùng môn/cùng khóa (Tháng 10 & Tháng 11, Đợt 1 & Đợt 2) luôn nằm liền kề nhau
+        const cleanBaseName = (name = '') => name.replace(/\s*[-–(]?\s*(?:Đợt|Khóa|K|Tháng|T)\s*\d+.*[)]?/i, '').trim();
         courses.sort((a, b) => {
             const baseA = cleanBaseName(a.courseName);
             const baseB = cleanBaseName(b.courseName);
@@ -198,16 +210,22 @@ export default function ManageMembershipsView() {
         setEnrolling(true);
         setEnrollFeedback(null);
         try {
-            await receptionistService.enrollMemberToClass({
+            const receipt = await receptionistService.enrollMemberToClass({
                 userId: selectedMember.userId,
                 classId: Number(selectedClassId),
                 paymentMethod: paymentMethod,
             });
             setEnrollFeedback({ type: 'success', message: t('Member enrolled into class successfully!') });
+            if (receipt && receipt.invoiceId) {
+                setCurrentReceipt(receipt);
+            }
             setTimeout(() => {
                 setEnrollModalOpen(false);
                 handleSelectMember(selectedMember);
-            }, 1200);
+                if (receipt && receipt.invoiceId) {
+                    setReceiptModalOpen(true);
+                }
+            }, 800);
         } catch (err) {
             const msg = err.response?.data?.message || err.response?.data || 'Failed to enroll member into class.';
             setEnrollFeedback({ type: 'error', message: msg });
@@ -274,7 +292,7 @@ export default function ManageMembershipsView() {
         setFeedback(null);
 
         try {
-            await receptionistService.confirmClassRenewal({
+            const receipt = await receptionistService.confirmClassRenewal({
                 userId: selectedMember.userId,
                 newScheduleId: suggestedClass.suggestedScheduleId,
                 previousBookingId: suggestedClass.currentBookingId,
@@ -282,11 +300,17 @@ export default function ManageMembershipsView() {
             });
 
             setFeedback({ type: 'success', message: t('Successfully renewed and enrolled into the next class!') });
+            if (receipt && receipt.invoiceId) {
+                setCurrentReceipt(receipt);
+            }
             setTimeout(() => {
                 setRenewalModalOpen(false);
                 setSuggestedClass(null);
                 handleSelectMember(selectedMember); // Reload bookings list
-            }, 1300);
+                if (receipt && receipt.invoiceId) {
+                    setReceiptModalOpen(true);
+                }
+            }, 800);
         } catch (err) {
             const msg = err.response?.data?.message || err.response?.data || 'Failed to complete renewal.';
             setFeedback({ type: 'error', message: msg });
@@ -302,7 +326,7 @@ export default function ManageMembershipsView() {
             setPackagesList(Array.isArray(data) ? data : []);
             if (data && data.length > 0) setSelectedPackageId(data[0].packageId);
             setPackageModalOpen(true);
-        } catch (err) {
+        } catch {
             alert('Failed to load packages list.');
         }
     };
@@ -312,17 +336,23 @@ export default function ManageMembershipsView() {
         setSubscribing(true);
         setPkgFeedback(null);
         try {
-            await receptionistService.subscribePackage({
+            const receipt = await receptionistService.subscribePackage({
                 userId: selectedMember.userId,
                 packageId: Number(selectedPackageId),
                 startDate: startDateInput,
                 paymentMethod: paymentMethod,
             });
             setPkgFeedback({ type: 'success', message: t('Combo Package subscribed successfully!') });
+            if (receipt && receipt.invoiceId) {
+                setCurrentReceipt(receipt);
+            }
             setTimeout(() => {
                 setPackageModalOpen(false);
                 handleSelectMember(selectedMember);
-            }, 1200);
+                if (receipt && receipt.invoiceId) {
+                    setReceiptModalOpen(true);
+                }
+            }, 800);
         } catch (err) {
             const msg = err.response?.data?.message || err.response?.data || 'Failed to subscribe package.';
             setPkgFeedback({ type: 'error', message: msg });
@@ -625,7 +655,7 @@ export default function ManageMembershipsView() {
                                                     <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
                                                         <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'center' }}>
                                                             {(() => {
-                                                                const cleanBaseName = (name = '') => name.replace(/\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\)/i, '').trim();
+                                                                const cleanBaseName = (name = '') => name.replace(/\s*[-–(]?\s*(?:Đợt|Khóa|K|Tháng|T)\s*\d+.*[)]?/i, '').trim();
                                                                 const baseName = cleanBaseName(c.courseName || c.className);
                                                                 const nextBatch = memberBookings.find(other =>
                                                                     other !== c &&
@@ -1172,7 +1202,7 @@ export default function ManageMembershipsView() {
                             </button>
                         </div>
 
-                        {/* Scrollable Content Body (Single Scrollbar) */}
+                        {/* Scrollable Class List Section */}
                         <div style={{
                             flex: 1,
                             minHeight: 0,
@@ -1180,7 +1210,7 @@ export default function ManageMembershipsView() {
                             padding: '1.25rem 1.5rem',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '1rem'
+                            gap: '0.85rem'
                         }}>
                             {enrollFeedback && (
                                 <div style={{ padding: '0.75rem', borderRadius: '0.5rem', backgroundColor: enrollFeedback.type === 'success' ? 'var(--success-soft)' : 'var(--danger-soft)', color: enrollFeedback.type === 'success' ? 'var(--success-text)' : 'var(--danger-text)', border: '1px solid var(--border)', fontSize: '0.85rem' }}>
@@ -1198,7 +1228,7 @@ export default function ManageMembershipsView() {
                                     <p style={{ fontSize: '0.85rem', margin: 0 }}>{t("No upcoming open classes found at this time.")}</p>
                                 </div>
                             ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                         {t("Select an upcoming class to enroll member")} <strong>{selectedMember?.fullName}</strong>.
                                     </div>
@@ -1272,65 +1302,78 @@ export default function ManageMembershipsView() {
                                     </div>
                                 </div>
                             )}
+                        </div>
 
-                            {selectedClassId && (() => {
-                                const sel = availableClasses.find(c => String(c.classId) === String(selectedClassId));
-                                if (!sel) return null;
-                                return (
-                                    <div style={{ padding: '0.85rem 1rem', backgroundColor: 'var(--surface-hover)', borderRadius: '0.65rem', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t("Selected Class:")} <strong style={{ color: 'var(--text)' }}>{sel.className}</strong></span>
-                                            <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--success-text)' }}>{formatMoney(sel.price || 0)}</span>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.45rem', borderTop: '1px dashed var(--border)' }}>
-                                            <span style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--text)' }}>{t("Payment method at counter:")}</span>
-                                            <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPaymentMethod('CASH')}
-                                                    style={{
-                                                        padding: '0.35rem 0.75rem',
-                                                        borderRadius: '0.4rem',
-                                                        fontSize: '0.78rem',
-                                                        fontWeight: 600,
-                                                        border: paymentMethod === 'CASH' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                                        backgroundColor: paymentMethod === 'CASH' ? 'var(--primary-soft)' : 'var(--surface)',
-                                                        color: paymentMethod === 'CASH' ? 'var(--primary)' : 'var(--text)',
-                                                        cursor: 'pointer',
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        gap: '0.35rem'
-                                                    }}
-                                                >
-                                                    <Banknote style={{ width: '13px', height: '13px' }} />
-                                                    <span>{t("Cash")}</span>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPaymentMethod('TRANSFER')}
-                                                    style={{
-                                                        padding: '0.35rem 0.75rem',
-                                                        borderRadius: '0.4rem',
-                                                        fontSize: '0.78rem',
-                                                        fontWeight: 600,
-                                                        border: paymentMethod === 'TRANSFER' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                                        backgroundColor: paymentMethod === 'TRANSFER' ? 'var(--primary-soft)' : 'var(--surface)',
-                                                        color: paymentMethod === 'TRANSFER' ? 'var(--primary)' : 'var(--text)',
-                                                        cursor: 'pointer',
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        gap: '0.35rem'
-                                                    }}
-                                                >
-                                                    <CreditCard style={{ width: '13px', height: '13px' }} />
-                                                    <span>{t("Bank Transfer")}</span>
-                                                </button>
-                                            </div>
+                        {/* PINNED: Selected Class Summary & Payment Method Selection (Always visible, no scrolling needed) */}
+                        {selectedClassId && (() => {
+                            const sel = availableClasses.find(c => String(c.classId) === String(selectedClassId));
+                            if (!sel) return null;
+                            return (
+                                <div style={{
+                                    padding: '0.85rem 1.5rem',
+                                    backgroundColor: 'var(--surface-hover)',
+                                    borderTop: '1px solid var(--border)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.55rem',
+                                    flexShrink: 0
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                            {t("Selected Class:")} <strong style={{ color: 'var(--text)', fontSize: '0.9rem' }}>{sel.className}</strong>
+                                        </span>
+                                        <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--success-text)' }}>
+                                            {formatMoney(sel.price || 0)}
+                                        </span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.45rem', borderTop: '1px dashed var(--border)' }}>
+                                        <span style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--text)' }}>{t("Payment method at counter:")}</span>
+                                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPaymentMethod('CASH')}
+                                                style={{
+                                                    padding: '0.35rem 0.75rem',
+                                                    borderRadius: '0.4rem',
+                                                    fontSize: '0.78rem',
+                                                    fontWeight: 600,
+                                                    border: paymentMethod === 'CASH' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
+                                                    backgroundColor: paymentMethod === 'CASH' ? 'var(--primary-soft)' : 'var(--surface)',
+                                                    color: paymentMethod === 'CASH' ? 'var(--primary)' : 'var(--text)',
+                                                    cursor: 'pointer',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.35rem'
+                                                }}
+                                            >
+                                                <Banknote style={{ width: '13px', height: '13px' }} />
+                                                <span>{t("Cash")}</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPaymentMethod('TRANSFER')}
+                                                style={{
+                                                    padding: '0.35rem 0.75rem',
+                                                    borderRadius: '0.4rem',
+                                                    fontSize: '0.78rem',
+                                                    fontWeight: 600,
+                                                    border: paymentMethod === 'TRANSFER' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
+                                                    backgroundColor: paymentMethod === 'TRANSFER' ? 'var(--primary-soft)' : 'var(--surface)',
+                                                    color: paymentMethod === 'TRANSFER' ? 'var(--primary)' : 'var(--text)',
+                                                    cursor: 'pointer',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.35rem'
+                                                }}
+                                            >
+                                                <CreditCard style={{ width: '13px', height: '13px' }} />
+                                                <span>{t("Bank Transfer")}</span>
+                                            </button>
                                         </div>
                                     </div>
-                                );
-                            })()}
-                        </div>
+                                </div>
+                            );
+                        })()}
 
                         {/* Fixed Footer with Action Buttons */}
                         <div style={{
@@ -1380,6 +1423,13 @@ export default function ManageMembershipsView() {
                     }}
                 />
             )}
+
+            {/* Modal In & Xem hóa đơn/biên lai */}
+            <InvoiceReceiptModal
+                isOpen={receiptModalOpen}
+                onClose={() => setReceiptModalOpen(false)}
+                receipt={currentReceipt}
+            />
         </div>
     );
 }

@@ -5,6 +5,7 @@ import MemberManagementView from '../components/MemberManagementView';
 import RegisterMemberView from '../components/RegisterMemberView';
 import ManageMembershipsView from '../components/ManageMembershipsView';
 import MemberCheckInView from '../components/MemberCheckInView';
+import InvoiceManagementView from '../components/InvoiceManagementView';
 
 const ReceptionistDashboard = () => {
   useLanguage();
@@ -56,6 +57,8 @@ const ReceptionistDashboard = () => {
       )}
 
       {activeFeature === 'manage-memberships' && <ManageMembershipsView />}
+
+      {activeFeature === 'manage-invoices' && <InvoiceManagementView />}
     </ReceptionistLayout>
   );
 };

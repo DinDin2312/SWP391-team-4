@@ -20,15 +20,24 @@ import {
     ChevronUp,
     Ban,
     Info,
-    Banknote
+    Banknote,
+    Receipt,
+    Printer
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
+import InvoiceReceiptModal from './InvoiceReceiptModal';
 
 const MemberDetailModal = ({ member: initialMember, onClose }) => {
   useLanguage();
     const [member, setMemberData] = useState(initialMember);
-    const [activeTab, setActiveTab] = useState('packages'); // 'packages' | 'bookings' | 'profile'
+    const [activeTab, setActiveTab] = useState('packages'); // 'packages' | 'bookings' | 'invoices' | 'profile'
     const [copiedPhone, setCopiedPhone] = useState(false);
+
+    // Invoices Tab States
+    const [invoices, setInvoices] = useState([]);
+    const [loadingInvoices, setLoadingInvoices] = useState(false);
+    const [activeReceipt, setActiveReceipt] = useState(null);
+    const [receiptModalOpen, setReceiptModalOpen] = useState(false);
 
     useEffect(() => {
         setMemberData(initialMember);
@@ -44,15 +53,29 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
         }
     };
 
+    useEffect(() => {
+        if (activeTab === 'invoices' && member?.userId) {
+            setLoadingInvoices(true);
+            receptionistService.getMemberInvoices(member.userId)
+                .then((data) => setInvoices(Array.isArray(data) ? data : []))
+                .catch((err) => {
+                    console.error('Failed to load member invoices:', err);
+                    setInvoices([]);
+                })
+                .finally(() => setLoadingInvoices(false));
+        }
+    }, [activeTab, member?.userId]);
+
     // Helper gom các buổi học lẻ thành từng khóa học kèm danh sách buổi chi tiết
     const groupBookingsByCourse = (bookingsList) => {
         const grouped = {};
         const now = new Date();
         (bookingsList || []).forEach((b) => {
-            const key = b.className || 'Unknown Course';
+            const key = b.classId ? `class_${b.classId}` : (b.className || 'Unknown Course');
             if (!grouped[key]) {
                 grouped[key] = {
-                    courseName: key,
+                    key: key,
+                    courseName: b.className || 'Unknown Course',
                     classId: b.classId,
                     coachName: b.coachName || 'N/A',
                     roomName: b.roomName || 'N/A',
@@ -71,6 +94,12 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
             grouped[key].sessionsCount += 1;
             if (b.classId && !grouped[key].classId) {
                 grouped[key].classId = b.classId;
+            }
+            if (b.coachName && grouped[key].coachName === 'N/A') {
+                grouped[key].coachName = b.coachName;
+            }
+            if (b.roomName && grouped[key].roomName === 'N/A') {
+                grouped[key].roomName = b.roomName;
             }
 
             const sessionEnd = b.endTime ? new Date(b.endTime) : (b.startTime ? new Date(b.startTime) : null);
@@ -116,8 +145,8 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
         });
 
         const courses = Object.values(grouped);
-        // Sắp xếp các khóa học: 2 lớp cùng môn/cùng khóa (Đợt 1 & Đợt 2) luôn nằm liền kề nhau
-        const cleanBaseName = (name = '') => name.replace(/\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\)/i, '').trim();
+        // Sắp xếp các khóa học: 2 lớp cùng môn/cùng khóa (Tháng 10 & Tháng 11, Đợt 1 & Đợt 2) luôn nằm liền kề nhau
+        const cleanBaseName = (name = '') => name.replace(/\s*[-–(]?\s*(?:Đợt|Khóa|K|Tháng|T)\s*\d+.*[)]?/i, '').trim();
         courses.sort((a, b) => {
             const baseA = cleanBaseName(a.courseName);
             const baseB = cleanBaseName(b.courseName);
@@ -562,6 +591,26 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                     </button>
 
                     <button
+                        onClick={() => setActiveTab('invoices')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.65rem 1rem',
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            color: activeTab === 'invoices' ? 'var(--primary)' : 'var(--text-muted)',
+                            borderBottom: activeTab === 'invoices' ? '2px solid var(--primary)' : '2px solid transparent',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        <Receipt style={{ width: '16px', height: '16px' }} />
+                        <span>{t("Hóa đơn & Biên lai")}</span>
+                    </button>
+
+                    <button
                         onClick={() => setActiveTab('profile')}
                         style={{
                             display: 'flex',
@@ -790,10 +839,11 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                                         <tbody>
                                         {(() => {
                                             const allCourses = groupBookingsByCourse(member?.bookings || []);
-                                            const cleanBaseName = (name = '') => name.replace(/\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\)/i, '').trim();
+                                            const cleanBaseName = (name = '') => name.replace(/\s*[-–(]?\s*(?:Đợt|Khóa|K|Tháng|T)\s*\d+.*[)]?/i, '').trim();
 
                                             return allCourses.map((course, idx) => {
-                                                const isExpanded = expandedCourseKey === course.courseName;
+                                                const courseKey = course.key || (course.classId ? `class_${course.classId}` : course.courseName);
+                                                const isExpanded = expandedCourseKey === courseKey;
                                                 const baseName = cleanBaseName(course.courseName || course.className);
                                                 const nextBatch = allCourses.find(other =>
                                                     other !== course &&
@@ -807,7 +857,7 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => setExpandedCourseKey(isExpanded ? null : course.courseName)}
+                                                                        onClick={() => setExpandedCourseKey(isExpanded ? null : courseKey)}
                                                                         style={{
                                                                             background: 'none',
                                                                             border: 'none',
@@ -1007,6 +1057,162 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                                             );
                                         });
                                         })()}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* TAB: INVOICES */}
+                    {activeTab === 'invoices' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
+                                        {t("Lịch sử hóa đơn & phiếu thu")}
+                                    </h4>
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>
+                                        {t("Tất cả các giao dịch thanh toán gói tập và khóa học đã thực hiện của hội viên")}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        if (member?.userId) {
+                                            setLoadingInvoices(true);
+                                            receptionistService.getMemberInvoices(member.userId)
+                                                .then((data) => setInvoices(Array.isArray(data) ? data : []))
+                                                .catch((e) => console.error(e))
+                                                .finally(() => setLoadingInvoices(false));
+                                        }
+                                    }}
+                                    disabled={loadingInvoices}
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.35rem',
+                                        padding: '0.4rem 0.75rem',
+                                        fontSize: '0.78rem',
+                                        fontWeight: 500,
+                                        backgroundColor: 'var(--surface)',
+                                        color: 'var(--text)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '0.4rem',
+                                        cursor: loadingInvoices ? 'not-allowed' : 'pointer'
+                                    }}
+                                >
+                                    <RefreshCw style={{ width: '13px', height: '13px', animation: loadingInvoices ? 'spin 1s linear infinite' : 'none' }} />
+                                    <span>{t("Làm mới")}</span>
+                                </button>
+                            </div>
+
+                            {loadingInvoices ? (
+                                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                                    <RotateCw style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite', margin: '0 auto 0.75rem' }} />
+                                    <div>{t("Đang tải danh sách hóa đơn...")}</div>
+                                </div>
+                            ) : invoices.length === 0 ? (
+                                <div style={{
+                                    padding: '3rem',
+                                    textAlign: 'center',
+                                    backgroundColor: 'var(--surface-hover)',
+                                    border: '1px dashed var(--border)',
+                                    borderRadius: '0.75rem',
+                                    color: 'var(--text-muted)',
+                                    fontSize: '0.875rem'
+                                }}>
+                                    <Receipt style={{ width: '36px', height: '36px', margin: '0 auto 0.75rem', color: 'var(--text-muted)', opacity: 0.5 }} />
+                                    <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '0.25rem' }}>
+                                        {t("Chưa có hóa đơn nào")}
+                                    </div>
+                                    <div style={{ fontSize: '0.78rem' }}>
+                                        {t("Hội viên chưa có lịch sử thanh toán hoặc hóa đơn được ghi nhận trên hệ thống.")}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div style={{
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '0.75rem',
+                                    overflow: 'hidden',
+                                    backgroundColor: 'var(--surface)'
+                                }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
+                                        <thead>
+                                            <tr style={{ backgroundColor: 'var(--surface-hover)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Mã HĐ")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Thời gian")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Nội dung dịch vụ")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Hình thức")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'right' }}>{t("Số tiền")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'center' }}>{t("Trạng thái")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'center' }}>{t("Thao tác")}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {invoices.map((inv) => (
+                                                <tr key={inv.invoiceId} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                    <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--primary)' }}>
+                                                        {inv.invoiceCode || `#INV-${inv.invoiceId}`}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', color: 'var(--text)' }}>
+                                                        {displayFormatDateTime(inv.createdAt)}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', color: 'var(--text)', fontWeight: 500 }}>
+                                                        {inv.items && inv.items.length > 0
+                                                            ? inv.items.map(it => it.itemName).join(', ')
+                                                            : t("Dịch vụ thể thao")}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', color: 'var(--text-muted)' }}>
+                                                        {inv.paymentMethod === 'CASH'
+                                                            ? t("Tiền mặt")
+                                                            : inv.paymentMethod === 'BANK_TRANSFER'
+                                                            ? t("Chuyển khoản")
+                                                            : (inv.paymentMethod || 'CASH')}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700, color: 'var(--text)' }}>
+                                                        {formatMoney(inv.totalAmount)}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                                                        <span style={{
+                                                            display: 'inline-block',
+                                                            padding: '0.2rem 0.55rem',
+                                                            borderRadius: '9999px',
+                                                            fontSize: '0.72rem',
+                                                            fontWeight: 600,
+                                                            backgroundColor: inv.status === 'PAID' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                                                            color: inv.status === 'PAID' ? '#16a34a' : '#ca8a04'
+                                                        }}>
+                                                            {inv.status === 'PAID' ? t("Đã thanh toán") : inv.status}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                                                        <button
+                                                            onClick={() => {
+                                                                setActiveReceipt(inv);
+                                                                setReceiptModalOpen(true);
+                                                            }}
+                                                            type="button"
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '0.35rem',
+                                                                padding: '0.35rem 0.65rem',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 600,
+                                                                backgroundColor: 'var(--surface-hover)',
+                                                                color: 'var(--primary)',
+                                                                border: '1px solid var(--border)',
+                                                                borderRadius: '0.4rem',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                            title={t("Xem và in hóa đơn/biên lai")}
+                                                        >
+                                                            <Printer style={{ width: '13px', height: '13px' }} />
+                                                            <span>{t("In HĐ")}</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>
@@ -1456,6 +1662,13 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                         </div>
                     </div>
                 )}
+
+                {/* Modal In & Xem hóa đơn/biên lai */}
+                <InvoiceReceiptModal
+                    isOpen={receiptModalOpen}
+                    onClose={() => setReceiptModalOpen(false)}
+                    receipt={activeReceipt}
+                />
             </div>
         </div>
     );

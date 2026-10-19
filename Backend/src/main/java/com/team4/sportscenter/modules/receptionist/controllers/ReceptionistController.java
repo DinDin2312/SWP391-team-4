@@ -70,8 +70,7 @@ public class ReceptionistController {
     @PostMapping("/classes/confirm-renewal")
     public ResponseEntity<?> confirmClassRenewal(@RequestBody RenewBookingRequest request) {
         try {
-            memberService.confirmClassRenewal(request);
-            return ResponseEntity.ok("Course renewed and enrolled successfully!");
+            return ResponseEntity.ok(memberService.confirmClassRenewal(request));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -89,8 +88,7 @@ public class ReceptionistController {
     @PostMapping("/packages/subscribe")
     public ResponseEntity<?> subscribePackage(@RequestBody SubscribePackageRequest request) {
         try {
-            memberService.subscribePackageForMember(request);
-            return ResponseEntity.ok("Combo package subscribed successfully!");
+            return ResponseEntity.ok(memberService.subscribePackageForMember(request));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -147,8 +145,7 @@ public class ReceptionistController {
     @PostMapping("/classes/enroll")
     public ResponseEntity<?> enrollMemberToClass(@RequestBody EnrollClassRequest request) {
         try {
-            memberService.enrollMemberToClass(request);
-            return ResponseEntity.ok("Member enrolled into class successfully!");
+            return ResponseEntity.ok(memberService.enrollMemberToClass(request));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -169,6 +166,33 @@ public class ReceptionistController {
         try {
             int count = memberService.cancelCourseForMember(request);
             return ResponseEntity.ok("Cancelled " + count + " upcoming session(s). Quota refunded to member's package.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/invoices")
+    public ResponseEntity<?> getAllInvoices() {
+        try {
+            return ResponseEntity.ok(memberService.getAllInvoices());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/invoices/{invoiceId}")
+    public ResponseEntity<?> getInvoiceReceipt(@PathVariable Integer invoiceId) {
+        try {
+            return ResponseEntity.ok(memberService.getInvoiceReceipt(invoiceId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/members/{userId}/invoices")
+    public ResponseEntity<?> getMemberInvoices(@PathVariable Integer userId) {
+        try {
+            return ResponseEntity.ok(memberService.getMemberInvoices(userId));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

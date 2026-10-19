@@ -92,6 +92,18 @@ export const receptionistService = {
   cancelCourseForMember: async (data) => {
     return await axiosClient.post('/receptionist/classes/cancel-course', data);
   },
+
+  getInvoiceReceipt: async (invoiceId) => {
+    return await axiosClient.get(`/receptionist/invoices/${invoiceId}`);
+  },
+
+  getMemberInvoices: async (userId) => {
+    return await axiosClient.get(`/receptionist/members/${userId}/invoices`);
+  },
+
+  getAllInvoices: async () => {
+    return await axiosClient.get('/receptionist/invoices');
+  },
 };
 
 export default receptionistService;
