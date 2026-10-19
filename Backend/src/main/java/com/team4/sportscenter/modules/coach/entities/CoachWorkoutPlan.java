@@ -34,8 +34,25 @@ public class CoachWorkoutPlan {
     @JoinColumn(name = "class_id")
     private com.team4.sportscenter.modules.member.entities.GymClass gymClass;
 
+    @Column(name = "plan_type")
+    @Builder.Default
+    private String planType = "SINGLE";
+
     @Column(name = "title")
     private String title;
+
+    @Column(name = "goal")
+    private String goal;
+
+    @Column(name = "start_date")
+    private java.time.LocalDate startDate;
+
+    @Column(name = "end_date")
+    private java.time.LocalDate endDate;
+
+    @Column(name = "total_weeks")
+    @Builder.Default
+    private Integer totalWeeks = 1;
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;

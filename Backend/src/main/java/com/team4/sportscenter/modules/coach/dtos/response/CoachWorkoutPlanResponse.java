@@ -23,5 +23,33 @@ public class CoachWorkoutPlanResponse {
     private LocalDateTime createdAt;
     private Integer classId;
     private String className;
+    private String planType;
+    private String goal;
+    private java.time.LocalDate startDate;
+    private java.time.LocalDate endDate;
+    private Integer totalWeeks;
     private List<WorkoutPlanDetailResponse> details;
+    private List<PlanWeekGroup> weeks;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class PlanWeekGroup {
+        private Integer weekNumber;
+        private String weekTitle;
+        private List<PlanDayGroup> days;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class PlanDayGroup {
+        private String dayOfWeek;
+        private String dayLabel;
+        private List<WorkoutPlanDetailResponse> exercises;
+    }
 }

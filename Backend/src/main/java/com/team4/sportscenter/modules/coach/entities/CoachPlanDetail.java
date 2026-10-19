@@ -25,6 +25,16 @@ public class CoachPlanDetail {
     @JoinColumn(name = "exercise_id")
     private Exercise exercise;
 
+    @Column(name = "week_number")
+    @Builder.Default
+    private Integer weekNumber = 1;
+
+    @Column(name = "day_of_week")
+    private String dayOfWeek;
+
+    @Column(name = "day_label")
+    private String dayLabel;
+
     @Column(name = "sets")
     private Integer sets;
 
@@ -33,4 +43,17 @@ public class CoachPlanDetail {
 
     @Column(name = "rest_seconds")
     private Integer restSeconds;
+
+    @Column(name = "duration_minutes")
+    private Integer durationMinutes;
+
+    @Column(name = "weight_kg")
+    private java.math.BigDecimal weightKg;
+
+    @Column(name = "coach_note")
+    private String coachNote;
+
+    @Column(name = "sort_order")
+    @Builder.Default
+    private Integer sortOrder = 0;
 }

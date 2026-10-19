@@ -135,34 +135,56 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
         List<CoachWorkoutPlan> savedPlans = new ArrayList<>();
         List<Notification> notificationsToSave = new ArrayList<>();
 
-        String notifTitle = "[Bài tập mới từ HLV " + coach.getFullName() + "] " + request.getTitle().trim();
-        String notifMessage = "HLV " + coach.getFullName() + " vừa giao cho bạn giáo án tập luyện mới: \""
-                + request.getTitle().trim() + "\"" + classInfo
-                + (request.getNote() != null && !request.getNote().trim().isEmpty()
-                        ? ". Ghi chú: " + request.getNote().trim()
-                        : "");
+        boolean isTrainingPlan = "TRAINING_PLAN".equalsIgnoreCase(request.getPlanType());
+        String planType = isTrainingPlan ? "TRAINING_PLAN" : "SINGLE";
+        Integer totalWeeks = request.getTotalWeeks() != null && request.getTotalWeeks() > 0 ? request.getTotalWeeks() : 1;
+
+        String notifTitle = isTrainingPlan
+                ? "[Kế hoạch tập luyện mới từ HLV " + coach.getFullName() + "] " + request.getTitle().trim()
+                : "[Bài tập mới từ HLV " + coach.getFullName() + "] " + request.getTitle().trim();
+
+        String notifMessage = isTrainingPlan
+                ? "HLV " + coach.getFullName() + " vừa giao cho bạn kế hoạch tập luyện: \""
+                        + request.getTitle().trim() + "\" (" + totalWeeks + " tuần)" + classInfo
+                        + (request.getGoal() != null && !request.getGoal().trim().isEmpty() ? ". Mục tiêu: " + request.getGoal().trim() : "")
+                        + (request.getNote() != null && !request.getNote().trim().isEmpty() ? ". Ghi chú: " + request.getNote().trim() : "")
+                : "HLV " + coach.getFullName() + " vừa giao cho bạn giáo án tập luyện mới: \""
+                        + request.getTitle().trim() + "\"" + classInfo
+                        + (request.getNote() != null && !request.getNote().trim().isEmpty() ? ". Ghi chú: " + request.getNote().trim() : "");
 
         for (User student : targetStudents) {
             CoachWorkoutPlan plan = CoachWorkoutPlan.builder()
                     .coach(coach)
                     .user(student)
                     .gymClass(assignedGymClass)
+                    .planType(planType)
                     .title(request.getTitle().trim())
+                    .goal(request.getGoal() != null ? request.getGoal().trim() : null)
+                    .startDate(request.getStartDate())
+                    .endDate(request.getEndDate())
+                    .totalWeeks(totalWeeks)
                     .note(request.getNote() != null ? request.getNote().trim() : "")
                     .status("ACTIVE")
                     .createdAt(now)
                     .build();
 
             List<CoachPlanDetail> details = new ArrayList<>();
+            int defaultOrder = 0;
             for (WorkoutPlanDetailRequest dReq : request.getExerciseDetails()) {
                 Exercise ex = exerciseMap.get(dReq.getExerciseId());
                 CoachPlanDetail detail = CoachPlanDetail.builder()
                         .workoutPlan(plan)
                         .exercise(ex)
+                        .weekNumber(dReq.getWeekNumber() != null && dReq.getWeekNumber() > 0 ? dReq.getWeekNumber() : 1)
+                        .dayOfWeek(dReq.getDayOfWeek())
+                        .dayLabel(dReq.getDayLabel())
                         .sets(dReq.getSets() != null && dReq.getSets() > 0 ? dReq.getSets() : 3)
                         .reps(dReq.getReps() != null && dReq.getReps() > 0 ? dReq.getReps() : 10)
-                        .restSeconds(dReq.getRestSeconds() != null && dReq.getRestSeconds() >= 0 ? dReq.getRestSeconds()
-                                : 60)
+                        .restSeconds(dReq.getRestSeconds() != null && dReq.getRestSeconds() >= 0 ? dReq.getRestSeconds() : 60)
+                        .durationMinutes(dReq.getDurationMinutes())
+                        .weightKg(dReq.getWeightKg())
+                        .coachNote(dReq.getCoachNote())
+                        .sortOrder(dReq.getSortOrder() != null ? dReq.getSortOrder() : defaultOrder++)
                         .build();
                 details.add(detail);
             }
@@ -185,7 +207,7 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
         notificationRepository.saveAll(notificationsToSave);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "Giao bài tập và gửi thông báo thành công!");
+        response.put("message", isTrainingPlan ? "Tạo kế hoạch tập luyện và gửi thông báo thành công!" : "Giao bài tập và gửi thông báo thành công!");
         response.put("assignedStudentsCount", targetStudents.size());
         response.put("plansCreated", savedPlans.size());
         return response;
@@ -193,11 +215,16 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
 
     @Override
     public List<CoachWorkoutPlanResponse> getCoachWorkoutPlans(String coachEmail, Integer studentUserId) {
+        return getCoachWorkoutPlans(coachEmail, studentUserId, null);
+    }
+
+    @Override
+    public List<CoachWorkoutPlanResponse> getCoachWorkoutPlans(String coachEmail, Integer studentUserId, String planType) {
         List<CoachWorkoutPlan> plans;
         if (studentUserId != null) {
-            plans = coachWorkoutPlanRepository.findByCoachEmailAndUserIdOrderByCreatedAtDesc(coachEmail, studentUserId);
+            plans = coachWorkoutPlanRepository.findByCoachEmailAndUserIdAndPlanTypeOrderByCreatedAtDesc(coachEmail, studentUserId, planType);
         } else {
-            plans = coachWorkoutPlanRepository.findByCoachEmailOrderByCreatedAtDesc(coachEmail);
+            plans = coachWorkoutPlanRepository.findByCoachEmailAndPlanTypeOrderByCreatedAtDesc(coachEmail, planType);
         }
 
         return plans.stream().map(this::mapToCoachWorkoutPlanResponse).collect(Collectors.toList());
@@ -237,19 +264,76 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
                 .build();
     }
 
+    private WorkoutPlanDetailResponse mapToWorkoutPlanDetailResponse(CoachPlanDetail d) {
+        return WorkoutPlanDetailResponse.builder()
+                .detailId(d.getDetailId())
+                .exerciseId(d.getExercise() != null ? d.getExercise().getExerciseId() : null)
+                .exerciseName(d.getExercise() != null ? d.getExercise().getExerciseName() : "Bài tập")
+                .muscleGroup(d.getExercise() != null ? d.getExercise().getMuscleGroup() : "")
+                .videoUrl(d.getExercise() != null ? d.getExercise().getVideoUrl() : null)
+                .weekNumber(d.getWeekNumber() != null ? d.getWeekNumber() : 1)
+                .dayOfWeek(d.getDayOfWeek())
+                .dayLabel(d.getDayLabel())
+                .sets(d.getSets())
+                .reps(d.getReps())
+                .restSeconds(d.getRestSeconds())
+                .durationMinutes(d.getDurationMinutes())
+                .weightKg(d.getWeightKg())
+                .coachNote(d.getCoachNote())
+                .sortOrder(d.getSortOrder() != null ? d.getSortOrder() : 0)
+                .build();
+    }
+
     private CoachWorkoutPlanResponse mapToCoachWorkoutPlanResponse(CoachWorkoutPlan plan) {
         List<WorkoutPlanDetailResponse> detailResponses = plan.getPlanDetails() != null
-                ? plan.getPlanDetails().stream().map(d -> WorkoutPlanDetailResponse.builder()
-                        .detailId(d.getDetailId())
-                        .exerciseId(d.getExercise().getExerciseId())
-                        .exerciseName(d.getExercise().getExerciseName())
-                        .muscleGroup(d.getExercise().getMuscleGroup())
-                        .videoUrl(d.getExercise().getVideoUrl())
-                        .sets(d.getSets())
-                        .reps(d.getReps())
-                        .restSeconds(d.getRestSeconds())
-                        .build()).collect(Collectors.toList())
+                ? plan.getPlanDetails().stream()
+                        .map(this::mapToWorkoutPlanDetailResponse)
+                        .collect(Collectors.toList())
                 : Collections.emptyList();
+
+        // Nhóm theo mốc tuần (weeks) và ngày (days) nếu là TRAINING_PLAN
+        List<CoachWorkoutPlanResponse.PlanWeekGroup> weeks = new ArrayList<>();
+        boolean isTrainingPlan = "TRAINING_PLAN".equalsIgnoreCase(plan.getPlanType());
+        if (isTrainingPlan && plan.getPlanDetails() != null && !plan.getPlanDetails().isEmpty()) {
+            Map<Integer, List<CoachPlanDetail>> byWeek = plan.getPlanDetails().stream()
+                    .collect(Collectors.groupingBy(d -> d.getWeekNumber() != null ? d.getWeekNumber() : 1, TreeMap::new, Collectors.toList()));
+
+            for (Map.Entry<Integer, List<CoachPlanDetail>> entry : byWeek.entrySet()) {
+                Integer weekNum = entry.getKey();
+                List<CoachPlanDetail> weekDetails = entry.getValue();
+
+                Map<String, List<CoachPlanDetail>> byDay = weekDetails.stream()
+                        .collect(Collectors.groupingBy(d -> d.getDayOfWeek() != null ? d.getDayOfWeek() : "OTHER", LinkedHashMap::new, Collectors.toList()));
+
+                List<CoachWorkoutPlanResponse.PlanDayGroup> days = new ArrayList<>();
+                for (Map.Entry<String, List<CoachPlanDetail>> dayEntry : byDay.entrySet()) {
+                    List<CoachPlanDetail> dayDetails = dayEntry.getValue();
+                    dayDetails.sort(Comparator.comparingInt(d -> d.getSortOrder() != null ? d.getSortOrder() : 0));
+
+                    String label = dayDetails.stream()
+                            .map(CoachPlanDetail::getDayLabel)
+                            .filter(l -> l != null && !l.trim().isEmpty())
+                            .findFirst()
+                            .orElse(dayEntry.getKey());
+
+                    List<WorkoutPlanDetailResponse> exercises = dayDetails.stream()
+                            .map(this::mapToWorkoutPlanDetailResponse)
+                            .collect(Collectors.toList());
+
+                    days.add(CoachWorkoutPlanResponse.PlanDayGroup.builder()
+                            .dayOfWeek(dayEntry.getKey())
+                            .dayLabel(label)
+                            .exercises(exercises)
+                            .build());
+                }
+
+                weeks.add(CoachWorkoutPlanResponse.PlanWeekGroup.builder()
+                        .weekNumber(weekNum)
+                        .weekTitle("Tuần " + weekNum)
+                        .days(days)
+                        .build());
+            }
+        }
 
         return CoachWorkoutPlanResponse.builder()
                 .planId(plan.getPlanId())
@@ -263,8 +347,14 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
                 .status(plan.getStatus())
                 .classId(plan.getGymClass() != null ? plan.getGymClass().getClassId() : null)
                 .className(plan.getGymClass() != null ? plan.getGymClass().getClassName() : null)
+                .planType(plan.getPlanType() != null ? plan.getPlanType() : "SINGLE")
+                .goal(plan.getGoal())
+                .startDate(plan.getStartDate())
+                .endDate(plan.getEndDate())
+                .totalWeeks(plan.getTotalWeeks() != null ? plan.getTotalWeeks() : 1)
                 .createdAt(plan.getCreatedAt())
                 .details(detailResponses)
+                .weeks(weeks)
                 .build();
     }
 }

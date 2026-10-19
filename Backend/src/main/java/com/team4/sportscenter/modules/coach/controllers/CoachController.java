@@ -149,9 +149,10 @@ public class CoachController {
     @GetMapping("/workouts")
     public ResponseEntity<List<CoachWorkoutPlanResponse>> getCoachWorkoutPlans(
             @RequestParam(required = false) Integer studentUserId,
+            @RequestParam(required = false) String planType,
             Authentication authentication) {
         String coachEmail = authentication.getName();
-        return ResponseEntity.ok(coachWorkoutService.getCoachWorkoutPlans(coachEmail, studentUserId));
+        return ResponseEntity.ok(coachWorkoutService.getCoachWorkoutPlans(coachEmail, studentUserId, planType));
     }
 
     @GetMapping("/workouts/{planId}")

@@ -17,6 +17,8 @@ public interface CoachWorkoutService {
 
     List<CoachWorkoutPlanResponse> getCoachWorkoutPlans(String coachEmail, Integer studentUserId);
 
+    List<CoachWorkoutPlanResponse> getCoachWorkoutPlans(String coachEmail, Integer studentUserId, String planType);
+
     CoachWorkoutPlanResponse getWorkoutPlanById(Integer planId, String coachEmail);
 
     void deleteWorkoutPlan(Integer planId, String coachEmail);
