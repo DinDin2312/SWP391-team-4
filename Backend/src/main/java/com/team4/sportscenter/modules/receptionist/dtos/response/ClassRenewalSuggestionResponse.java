@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -17,8 +18,11 @@ public class ClassRenewalSuggestionResponse {
     private Integer currentBookingId;
     private String currentClassName;
     private LocalDateTime currentEndTime;
+    private Integer subjectId;
+    private String subjectName;
+    private String currentSchedulePattern;
 
-    // Suggested next class details
+    // Suggested next class details (best match)
     private Integer suggestedScheduleId;
     private Integer classId;
     private String className;
@@ -31,4 +35,7 @@ public class ClassRenewalSuggestionResponse {
     private Integer maxSlots;
     private Integer bookedSlots;
     private Integer availableSlots;
+
+    // List of all upcoming course options in this subject
+    private List<ClassRenewalOptionItem> options;
 }

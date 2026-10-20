@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
@@ -548,73 +549,155 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 .filter(b -> b.getSchedule().getGymClass() == null || !curClassId.equals(b.getSchedule().getGymClass().getClassId()))
                 .toList();
 
-        GymClass targetClass = null;
-        Schedule targetFirstSession = null;
-        int maxSlots = 0;
-        int bookedMembers = 0;
+        // 1. Chuỗi mô tả thói quen tập luyện của lớp hiện tại
+        LocalTime curEndTimeOfDay = (curSchedule.getEndTime() != null) ? curSchedule.getEndTime().toLocalTime() : curStartTime.plusMinutes(90);
+        String currentSchedulePattern = formatDaysOfWeek(curDaysOfWeek) + " (" + formatTimeSlot(curStartTime, curEndTimeOfDay) + ")";
+
+        // 2. Danh sách tất cả các lớp ứng viên cho kỳ tiếp theo (Direction 1: Chọn lớp có gắn sao gợi ý)
+        List<ClassRenewalOptionItem> options = new ArrayList<>();
+        DateTimeFormatter conflictFmt = DateTimeFormatter.ofPattern("HH:mm dd/MM");
 
         for (Map.Entry<Integer, List<Schedule>> entry : rankedCandidateClasses) {
             List<Schedule> candidateSchedules = entry.getValue();
+            if (candidateSchedules.isEmpty()) continue;
+            candidateSchedules.sort(Comparator.comparing(Schedule::getStartTime));
             GymClass candidateClass = candidateSchedules.get(0).getGymClass();
 
-            // Kiểm tra xem hội viên này đã đăng ký/gia hạn vào đợt mới này chưa
-            boolean alreadyEnrolled = bookingRepository.existsByUserIdAndClassId(userId, candidateClass.getClassId());
-            if (alreadyEnrolled) {
-                continue; // Bỏ qua nếu đã đăng ký đợt này, tiếp tục tìm đợt tiếp theo phù hợp
-            }
+            Schedule firstSession = candidateSchedules.get(0);
+            Schedule lastSession = candidateSchedules.get(candidateSchedules.size() - 1);
 
-            // Kiểm tra trùng lịch với các khóa học khác mà hội viên đang theo học
+            Set<DayOfWeek> candDays = candidateSchedules.stream()
+                    .map(s -> s.getStartTime().getDayOfWeek())
+                    .collect(Collectors.toSet());
+            LocalTime candStartTime = firstSession.getStartTime().toLocalTime();
+            LocalTime candEndTime = (firstSession.getEndTime() != null)
+                    ? firstSession.getEndTime().toLocalTime()
+                    : candStartTime.plusMinutes(90);
+
+            boolean isBest = candDays.equals(curDaysOfWeek)
+                    && Math.abs(ChronoUnit.MINUTES.between(curStartTime, candStartTime)) <= 15;
+
+            boolean alreadyEnrolled = bookingRepository.existsByUserIdAndClassId(userId, candidateClass.getClassId());
+
             boolean hasConflict = false;
+            String conflictReason = null;
             for (Schedule candSched : candidateSchedules) {
                 if (candSched.getStartTime() == null || candSched.getEndTime() == null) continue;
                 for (Booking existB : activeMemberBookings) {
                     Schedule existSched = existB.getSchedule();
-                    if (existSched.getStartTime() != null && existSched.getEndTime() != null
+                    if (existSched != null && existSched.getStartTime() != null && existSched.getEndTime() != null
                             && candSched.getStartTime().isBefore(existSched.getEndTime())
                             && existSched.getStartTime().isBefore(candSched.getEndTime())) {
                         hasConflict = true;
+                        String conflictName = (existSched.getGymClass() != null) ? existSched.getGymClass().getClassName() : "Lớp khác";
+                        conflictReason = "Trùng giờ với '" + conflictName + "' (" + existSched.getStartTime().format(conflictFmt) + ")";
                         break;
                     }
                 }
                 if (hasConflict) break;
             }
-            if (hasConflict) {
-                continue;
-            }
 
             int candidateMax = (candidateClass.getMaxSlots() != null) ? candidateClass.getMaxSlots() : 30;
             int candidateBooked = bookingRepository.countBookedUsersByClassId(candidateClass.getClassId());
+            int candidateAvail = Math.max(0, candidateMax - candidateBooked);
 
-            if (candidateBooked < candidateMax) {
-                targetClass = candidateClass;
-                targetFirstSession = candidateSchedules.get(0);
-                maxSlots = candidateMax;
-                bookedMembers = candidateBooked;
-                break;
+            ClassRenewalOptionItem item = ClassRenewalOptionItem.builder()
+                    .classId(candidateClass.getClassId())
+                    .suggestedScheduleId(firstSession.getScheduleId())
+                    .className(candidateClass.getClassName())
+                    .coachName(candidateClass.getCoach() != null ? candidateClass.getCoach().getFullName() : "N/A")
+                    .coachEmail(candidateClass.getCoach() != null ? candidateClass.getCoach().getEmail() : null)
+                    .roomName(candidateClass.getRoom() != null ? candidateClass.getRoom().getRoomName() : "N/A")
+                    .startTime(firstSession.getStartTime())
+                    .endTime(lastSession.getEndTime())
+                    .price(candidateClass.getPrice())
+                    .maxSlots(candidateMax)
+                    .bookedSlots(candidateBooked)
+                    .availableSlots(candidateAvail)
+                    .daysOfWeekText(formatDaysOfWeek(candDays))
+                    .timeSlotText(formatTimeSlot(candStartTime, candEndTime))
+                    .isBestMatch(isBest)
+                    .matchBadge(isBest ? "⭐ Gợi ý khớp lịch cũ nhất" : null)
+                    .alreadyEnrolled(alreadyEnrolled)
+                    .hasConflict(hasConflict)
+                    .conflictReason(conflictReason)
+                    .build();
+
+            options.add(item);
+        }
+
+        // Sắp xếp danh sách options:
+        // 1. isBestMatch lên đầu
+        // 2. Các lớp chưa đăng ký và còn chỗ
+        // 3. Khởi hành sớm nhất
+        options.sort((o1, o2) -> {
+            if (o1.isBestMatch() != o2.isBestMatch()) {
+                return o1.isBestMatch() ? -1 : 1;
             }
+            if (o1.isAlreadyEnrolled() != o2.isAlreadyEnrolled()) {
+                return o1.isAlreadyEnrolled() ? 1 : -1;
+            }
+            return o1.getStartTime().compareTo(o2.getStartTime());
+        });
+
+        // 3. Chọn default target class cho backward compatibility (lấy option khả dụng đầu tiên)
+        ClassRenewalOptionItem defaultTarget = options.stream()
+                .filter(o -> !o.isAlreadyEnrolled() && !o.isHasConflict() && o.getAvailableSlots() > 0)
+                .findFirst()
+                .orElse(options.isEmpty() ? null : options.get(0));
+
+        if (defaultTarget == null) {
+            throw new RuntimeException("Không tìm thấy lớp học tiếp theo phù hợp cho khóa học: " + className);
         }
 
-        if (targetClass == null || targetFirstSession == null) {
-            throw new RuntimeException("Lớp học tiếp theo của khóa học '" + className + "' hiện đã kín chỗ.");
-        }
+        Integer subjectId = curClass.getSubjectId() != null
+                ? curClass.getSubjectId()
+                : (curClass.getSubject() != null ? curClass.getSubject().getSubjectId() : null);
+        String subjectName = (curClass.getSubject() != null)
+                ? curClass.getSubject().getSubjectName()
+                : null;
 
         return ClassRenewalSuggestionResponse.builder()
                 .currentBookingId(currentBooking.getBookingId())
                 .currentClassName(className)
                 .currentEndTime(curEndTime)
-                .suggestedScheduleId(targetFirstSession.getScheduleId())
-                .classId(targetClass.getClassId())
-                .className(targetClass.getClassName())
-                .coachName(targetClass.getCoach() != null ? targetClass.getCoach().getFullName() : "N/A")
-                .coachEmail(targetClass.getCoach() != null ? targetClass.getCoach().getEmail() : null)
-                .roomName(targetClass.getRoom() != null ? targetClass.getRoom().getRoomName() : "N/A")
-                .startTime(targetFirstSession.getStartTime())
-                .endTime(targetFirstSession.getEndTime())
-                .price(targetClass.getPrice())
-                .maxSlots(maxSlots)
-                .bookedSlots(bookedMembers)
-                .availableSlots(maxSlots - bookedMembers)
+                .subjectId(subjectId)
+                .subjectName(subjectName)
+                .currentSchedulePattern(currentSchedulePattern)
+                .suggestedScheduleId(defaultTarget.getSuggestedScheduleId())
+                .classId(defaultTarget.getClassId())
+                .className(defaultTarget.getClassName())
+                .coachName(defaultTarget.getCoachName())
+                .coachEmail(defaultTarget.getCoachEmail())
+                .roomName(defaultTarget.getRoomName())
+                .startTime(defaultTarget.getStartTime())
+                .endTime(defaultTarget.getEndTime())
+                .price(defaultTarget.getPrice())
+                .maxSlots(defaultTarget.getMaxSlots())
+                .bookedSlots(defaultTarget.getBookedSlots())
+                .availableSlots(defaultTarget.getAvailableSlots())
+                .options(options)
                 .build();
+    }
+
+    private String formatDaysOfWeek(Set<DayOfWeek> days) {
+        if (days == null || days.isEmpty()) return "";
+        List<String> list = new ArrayList<>();
+        if (days.contains(DayOfWeek.MONDAY)) list.add("T2");
+        if (days.contains(DayOfWeek.TUESDAY)) list.add("T3");
+        if (days.contains(DayOfWeek.WEDNESDAY)) list.add("T4");
+        if (days.contains(DayOfWeek.THURSDAY)) list.add("T5");
+        if (days.contains(DayOfWeek.FRIDAY)) list.add("T6");
+        if (days.contains(DayOfWeek.SATURDAY)) list.add("T7");
+        if (days.contains(DayOfWeek.SUNDAY)) list.add("CN");
+        return "Thứ " + String.join(", ", list);
+    }
+
+    private String formatTimeSlot(LocalTime start, LocalTime end) {
+        if (start == null) return "";
+        DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
+        if (end == null) return start.format(timeFmt);
+        return start.format(timeFmt) + " - " + end.format(timeFmt);
     }
 
     @Override

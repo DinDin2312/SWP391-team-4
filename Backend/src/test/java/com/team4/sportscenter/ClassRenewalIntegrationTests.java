@@ -20,6 +20,12 @@ class ClassRenewalIntegrationTests {
         // Booking ID: 10348
         ClassRenewalSuggestionResponse response = receptionistMemberService.suggestNextClassRenewal(6, 10348);
 
+        if (response.getOptions() != null) {
+            response.getOptions().forEach(o -> {
+                System.out.println("DEBUG_OPTION: id=" + o.getClassId() + ", name=" + o.getClassName() + ", isBestMatch=" + o.isBestMatch() + ", alreadyEnrolled=" + o.isAlreadyEnrolled() + ", hasConflict=" + o.isHasConflict() + ", start=" + o.getStartTime());
+            });
+        }
+
         assertNotNull(response, "Response should not be null");
         assertEquals(101, response.getClassId(), "Should match Class 101 which is in the future on T2-4-6 at 07:00");
         assertEquals("Yoga Vinyasa Nâng Cao & Tái Tạo Khí Lực", response.getClassName());
