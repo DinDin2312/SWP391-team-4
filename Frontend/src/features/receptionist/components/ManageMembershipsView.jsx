@@ -44,6 +44,7 @@ export default function ManageMembershipsView() {
     const [loading, setLoading] = useState(false);
     const [selectedMember, setSelectedMember] = useState(null);
     const [memberBookings, setMemberBookings] = useState([]);
+    const [memberCartBookings, setMemberCartBookings] = useState([]);
     const [loadingBookings, setLoadingBookings] = useState(false);
 
     // Renewal Modal States
@@ -183,16 +184,18 @@ export default function ManageMembershipsView() {
         }
     };
 
-    const handleOpenEnrollModal = async () => {
+    const handleOpenEnrollModal = async (preselectedClassId = null) => {
         if (!selectedMember) return;
         setEnrollFeedback(null);
-        setSelectedClassId('');
+        setSelectedClassId(preselectedClassId ? String(preselectedClassId) : '');
         setEnrollModalOpen(true);
         setLoadingAvailableClasses(true);
         try {
             const data = await receptionistService.getAvailableClassesForMember(selectedMember.userId);
             setAvailableClasses(Array.isArray(data) ? data : []);
-            if (data && data.length > 0) {
+            if (preselectedClassId) {
+                setSelectedClassId(String(preselectedClassId));
+            } else if (data && data.length > 0) {
                 const unbooked = data.find((c) => !c.isBookedByMe);
                 if (unbooked) setSelectedClassId(String(unbooked.classId));
                 else setSelectedClassId(String(data[0].classId));
@@ -239,12 +242,16 @@ export default function ManageMembershipsView() {
         setSelectedMember(m);
         setLoadingBookings(true);
         setMemberBookings([]);
+        setMemberCartBookings([]);
         try {
             const detail = await receptionistService.getMemberDetail(m.userId);
             setSelectedMemberDetail(detail);
             const rawBookings = detail.bookings || [];
+            const confirmedList = rawBookings.filter(b => b.bookingStatus === 'CONFIRMED');
+            const pendingList = rawBookings.filter(b => b.bookingStatus === 'PENDING');
             // Gom nhóm trước khi lưu vào state
-            setMemberBookings(groupBookingsByCourse(rawBookings));
+            setMemberBookings(groupBookingsByCourse(confirmedList));
+            setMemberCartBookings(groupBookingsByCourse(pendingList));
         } catch (err) {
             console.error('Failed to load member classes:', err);
             setSelectedMemberDetail(null);
