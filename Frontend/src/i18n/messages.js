@@ -2678,3 +2678,17 @@ for(const [en,vi] of Object.entries(subjectSlotTranslations)){translations[en]=[
 
 translations['Inherited subject timetable']=['Inherited subject timetable','Kế thừa ca học của bộ môn'];
 
+
+// Payment first-come first-served translations
+translations['In Cart - Pay Now'] = ['In Cart - Pay Now', 'Trong giỏ hàng · Thanh toán ngay'];
+translations['Trong giỏ hàng · Thanh toán ngay'] = ['In Cart - Pay Now', 'Trong giỏ hàng · Thanh toán ngay'];
+translations['Seat reserved upon payment'] = ['Seat reserved upon payment', 'Chưa giữ chỗ. Suất học xác nhận sau khi thanh toán.'];
+translations['Chưa giữ chỗ. Suất học xác nhận sau khi thanh toán.'] = ['Seat reserved upon payment', 'Chưa giữ chỗ. Suất học xác nhận sau khi thanh toán.'];
+translations['Courses in cart are first-come, first-served. Complete payment to secure your spot.'] = ['Courses in cart are first-come, first-served. Complete payment to secure your spot.', 'Suất học ưu tiên người hoàn tất thanh toán trước. Vui lòng thanh toán sớm để đảm bảo vị trí.'];
+translations['Suất học ưu tiên người hoàn tất thanh toán trước. Vui lòng thanh toán sớm để đảm bảo vị trí.'] = ['Courses in cart are first-come, first-served. Complete payment to secure your spot.', 'Suất học ưu tiên người hoàn tất thanh toán trước. Vui lòng thanh toán sớm để đảm bảo vị trí.'];
+translations['Only the assigned coach can record attendance. Enrolled members are confirmed upon payment.'] = ['Only the assigned coach can record attendance. Enrolled members are confirmed upon payment.', 'Chỉ huấn luyện viên được phân công mới có thể điểm danh. Danh sách học viên được xác nhận sau khi thanh toán.'];
+translations['Chỉ huấn luyện viên được phân công mới có thể điểm danh. Danh sách học viên được xác nhận sau khi thanh toán.'] = ['Only the assigned coach can record attendance. Enrolled members are confirmed upon payment.', 'Chỉ huấn luyện viên được phân công mới có thể điểm danh. Danh sách học viên được xác nhận sau khi thanh toán.'];
+translations['Checkout failed! The class is now fully booked by others.'] = ['Checkout failed! The class is now fully booked by others.', 'Thanh toán không thành công! Lớp học vừa được người khác thanh toán trước nên đã hết chỗ.'];
+translations['Thanh toán không thành công! Lớp học vừa được người khác thanh toán trước nên đã hết chỗ.'] = ['Checkout failed! The class is now fully booked by others.', 'Thanh toán không thành công! Lớp học vừa được người khác thanh toán trước nên đã hết chỗ.'];
+translations['This course is already in your cart. Please go to checkout to complete payment.'] = ['This course is already in your cart. Please go to checkout to complete payment.', 'Khóa học này đã có trong giỏ hàng của bạn. Vui lòng vào giỏ hàng để hoàn tất thanh toán.'];
+translations['Khóa học này đã có trong giỏ hàng của bạn. Vui lòng vào giỏ hàng để hoàn tất thanh toán.'] = ['This course is already in your cart. Please go to checkout to complete payment.', 'Khóa học này đã có trong giỏ hàng của bạn. Vui lòng vào giỏ hàng để hoàn tất thanh toán.'];

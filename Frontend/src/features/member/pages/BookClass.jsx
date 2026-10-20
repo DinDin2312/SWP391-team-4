@@ -3,12 +3,14 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import { packageBookingOptions } from '../packageBookingOptions';
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar, Sparkles } from 'lucide-react';
+import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar, Sparkles, ShoppingCart } from 'lucide-react';
 
 const BookClass = () => {
   useLanguage();
+  const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [packages,setPackages]=useState([]),[paymentChoices,setPaymentChoices]=useState({}),[booking,setBooking]=useState(null),[benefitsError,setBenefitsError]=useState(false);
   const [loading, setLoading] = useState(true);
@@ -220,6 +222,7 @@ const BookClass = () => {
               const spotsLeft = course.maxSlots - (course.bookedSlots || 0);
               const progressWidth = ((course.maxSlots - spotsLeft) / course.maxSlots) * 100;
               const isBooked = course.isBookedByMe;
+              const isPending = !!course.isPendingPayment;
               const isFull = spotsLeft <= 0;
               const isAiSelected = Number(aiHighlightedClassId) === Number(course.classId);
 
@@ -332,20 +335,51 @@ const BookClass = () => {
                     </div>
 
                     {benefitsError && <p className="text-xs mt-2" role="alert">{t('Package benefits could not be loaded. Refresh to use a package.')}</p>}
-                    {!isBooked && <label className="text-xs mt-3 flex flex-col gap-1">{t('Booking payment')}
+                    {!isBooked && !isPending && <label className="text-xs mt-3 flex flex-col gap-1">{t('Booking payment')}
                       <select aria-label={t('Booking payment for {0}',[course.className])} value={paymentChoices[course.classId]||''} disabled={booking!==null || isFull} onChange={event=>setPaymentChoices(current=>({...current,[course.classId]:event.target.value}))} className="w-full rounded-lg text-xs bg-surface border border-surface-container-highest">
                         <option value="">{t('Buy this course separately')}</option>
                         {packageBookingOptions(packages,course,new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())).map(option=><option key={option.membershipId} value={option.membershipId}>{t('{0} · {1} sessions remaining',[option.packageName,option.remainingSessions])}</option>)}
                       </select>
                       <small>{t('A package must cover every session and have enough remaining sessions for the whole course.')}</small>
                     </label>}
-                    <button
-                      onClick={() => handleBook(course.classId)}
-                      disabled={isBooked || isFull || booking!==null}
-                      className={`mt-4 sm:mt-auto w-full py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-[var(--shadow)] ${isBooked ? t('bg-surface-container-highest text-on-surface-variant cursor-not-allowed shadow-none') : isFull ? t('bg-[var(--danger-soft)] text-[var(--danger-text)] cursor-not-allowed shadow-none') : t('bg-primary text-on-primary hover:bg-primary/90 shadow-primary/20')}`}
-                    >
-                      {t(isBooked ? t('Enrolled') : isFull ? t('Full') : t('Enroll Now'))}
-                    </button>
+                    {isBooked ? (
+                      <button
+                        disabled
+                        className="mt-4 sm:mt-auto w-full py-2.5 rounded-lg font-bold text-sm bg-surface-container-highest text-on-surface-variant cursor-not-allowed shadow-none flex items-center justify-center gap-2"
+                      >
+                        {t('Enrolled')}
+                      </button>
+                    ) : isPending ? (
+                      <div className="mt-4 sm:mt-auto flex flex-col gap-1 w-full">
+                        <button
+                          type="button"
+                          onClick={() => navigate('/member/cart')}
+                          className="w-full py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-[var(--shadow)] bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20"
+                        >
+                          <ShoppingCart className="w-4 h-4" />
+                          {t('In Cart - Pay Now')}
+                        </button>
+                        <span className="text-[10px] text-amber-500 font-medium text-center leading-tight">
+                          {t('Seat reserved upon payment')}
+                        </span>
+                      </div>
+                    ) : isFull ? (
+                      <button
+                        disabled
+                        className="mt-4 sm:mt-auto w-full py-2.5 rounded-lg font-bold text-sm bg-[var(--danger-soft)] text-[var(--danger-text)] cursor-not-allowed shadow-none flex items-center justify-center gap-2"
+                      >
+                        {t('Full')}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleBook(course.classId)}
+                        disabled={booking !== null}
+                        className="mt-4 sm:mt-auto w-full py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-[var(--shadow)] bg-primary text-on-primary hover:bg-primary/90 shadow-primary/20"
+                      >
+                        {t(booking === course.classId ? 'Enrolling...' : 'Enroll Now')}
+                      </button>
+                    )}
                   </div>
                 </div>
               );

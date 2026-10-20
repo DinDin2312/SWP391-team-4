@@ -23,8 +23,8 @@ public class ManagerRepository {
     private static final java.time.ZoneId CENTER_ZONE = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
     private LocalDateTime centerNow() { return LocalDateTime.now(CENTER_ZONE); }
 
-    // Pending and confirmed bookings both reserve seats; the threshold is strictly below 25%.
-    private static final String BOOKED_SQL = "(SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id=s.schedule_id AND b.status IN ('CONFIRMED','PENDING'))";
+    // Only confirmed bookings reserve seats; the threshold is strictly below 25%.
+    private static final String BOOKED_SQL = "(SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id=s.schedule_id AND b.status = 'CONFIRMED')";
     private static final String SESSION_SQL = "SELECT s.schedule_id scheduleId,s.class_id classId,c.class_name className,c.image_path classImagePath,u.avatar_path coachAvatarPath,u.full_name coachName,r.image_path roomImagePath,r.room_name roomName,s.start_time startTime,s.end_time endTime,s.status," + BOOKED_SQL + " booked,c.max_slots maxSlots FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id JOIN USERS u ON u.user_id=c.coach_id JOIN ROOMS r ON r.room_id=c.room_id ";
 
     public Map<String, Object> operationalOverview() {
@@ -141,7 +141,7 @@ public class ManagerRepository {
     public List<Map<String, Object>> scheduleBookings(Integer id) {
         return jdbc.queryForList("""
                 SELECT b.booking_id bookingId,u.full_name fullName,u.email,u.phone,b.status,b.attendance_status attendanceStatus
-                FROM BOOKINGS b JOIN USERS u ON u.user_id=b.user_id WHERE b.schedule_id=? ORDER BY u.full_name,b.booking_id
+                FROM BOOKINGS b JOIN USERS u ON u.user_id=b.user_id WHERE b.schedule_id=? AND b.status = 'CONFIRMED' ORDER BY u.full_name,b.booking_id
                 """, id);
     }
 
@@ -324,7 +324,7 @@ public class ManagerRepository {
                        c.price,c.max_slots maxSlots,c.status,c.image_path imagePath,
                        COALESCE((SELECT MAX(booked) FROM (
                          SELECT sx.class_id,COUNT(*) booked FROM SCHEDULES sx JOIN BOOKINGS bx ON bx.schedule_id=sx.schedule_id
-                         WHERE sx.status<>'CANCELLED' AND bx.status IN ('CONFIRMED','PENDING') GROUP BY sx.class_id,sx.schedule_id
+                         WHERE sx.status<>'CANCELLED' AND bx.status = 'CONFIRMED' GROUP BY sx.class_id,sx.schedule_id
                        ) counts WHERE counts.class_id=c.class_id),0) enrolled
                 FROM CLASSES c JOIN SUBJECTS s ON s.subject_id=c.subject_id
                 JOIN USERS u ON u.user_id=c.coach_id JOIN ROOMS r ON r.room_id=c.room_id
@@ -362,7 +362,7 @@ public class ManagerRepository {
                 SELECT sc.schedule_id scheduleId,sc.class_id classId,c.class_name className,
                        c.coach_id coachId,u.full_name coachName,u.avatar_path coachAvatarPath,c.room_id roomId,r.room_name roomName,c.image_path classImagePath,r.image_path roomImagePath,
                        sc.start_time startTime,sc.end_time endTime,sc.status,
-                       COUNT(CASE WHEN b.status IN ('CONFIRMED','PENDING') THEN 1 END) booked,c.max_slots maxSlots
+                       COUNT(CASE WHEN b.status = 'CONFIRMED' THEN 1 END) booked,c.max_slots maxSlots
                 FROM SCHEDULES sc JOIN CLASSES c ON c.class_id=sc.class_id JOIN USERS u ON u.user_id=c.coach_id
                 JOIN ROOMS r ON r.room_id=c.room_id LEFT JOIN BOOKINGS b ON b.schedule_id=sc.schedule_id
                 WHERE sc.start_time >= ? AND sc.start_time < ?

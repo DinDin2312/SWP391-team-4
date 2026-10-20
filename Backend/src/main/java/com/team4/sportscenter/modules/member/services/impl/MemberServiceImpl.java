@@ -217,7 +217,8 @@ public class MemberServiceImpl implements MemberService {
                     bookedSlots = booked;
             }
 
-            Boolean isBooked = bookingRepository.existsByEmailAndClassId(email, gymClass.getClassId());
+            Boolean isBooked = bookingRepository.existsConfirmedByEmailAndClassId(email, gymClass.getClassId());
+            Boolean isPending = bookingRepository.existsPendingByEmailAndClassId(email, gymClass.getClassId());
 
             Integer duration = (int) ChronoUnit.MINUTES.between(nextSession.getStartTime(), nextSession.getEndTime());
 
@@ -247,6 +248,7 @@ public class MemberServiceImpl implements MemberService {
                     .maxSlots(gymClass.getMaxSlots())
                     .bookedSlots(bookedSlots)
                     .isBookedByMe(isBooked)
+                    .isPendingPayment(isPending)
                     .totalSessions(classScheds.size())
                     .nextSessionTime(nextSession.getStartTime())
                     .durationMinutes(duration)
@@ -273,8 +275,11 @@ public class MemberServiceImpl implements MemberService {
 
     private void bookCourse(String email, Integer classId, Integer membershipId) {
         bookingRepository.lockOperations();
-        if (bookingRepository.existsByEmailAndClassId(email, classId)) {
+        if (bookingRepository.existsConfirmedByEmailAndClassId(email, classId)) {
             throw new RuntimeException("You have already booked this course.");
+        }
+        if (bookingRepository.existsPendingByEmailAndClassId(email, classId)) {
+            throw new RuntimeException("This course is already in your cart. Please go to checkout to complete payment.");
         }
 
         LocalDateTime currentTime = LocalDateTime.now();

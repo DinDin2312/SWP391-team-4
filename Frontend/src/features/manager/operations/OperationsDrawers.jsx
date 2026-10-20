@@ -626,7 +626,7 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
           <p className="ops-note">{t("Completed and cancelled sessions cannot be edited or reopened.")}</p>
         )}
         <h3>{t("Roster · read only")}</h3>
-        <p className="ops-note">{t("Only the assigned coach can record attendance. Pending bookings hold a seat.")}</p>
+        <p className="ops-note">{t("Only the assigned coach can record attendance. Enrolled members are confirmed upon payment.")}</p>
         {error ? (
           <div className="manager-alert" role="alert">
             <span>{t(error)}</span>

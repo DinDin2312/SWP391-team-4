@@ -23,6 +23,7 @@ public class AvailableClassResponse {
     private Integer maxSlots;
     private Integer bookedSlots;
     private Boolean isBookedByMe;
+    private Boolean isPendingPayment;
     private Integer totalSessions;
     private LocalDateTime nextSessionTime;
     private Integer durationMinutes;

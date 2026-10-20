@@ -33,9 +33,11 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
     @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.email = :email AND b.schedule.gymClass.classId = :classId AND b.status = 'CONFIRMED'")
     boolean existsConfirmedByEmailAndClassId(@Param("email") String email, @Param("classId") Integer classId);
 
+    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.email = :email AND b.schedule.gymClass.classId = :classId AND b.status = 'PENDING'")
+    boolean existsPendingByEmailAndClassId(@Param("email") String email, @Param("classId") Integer classId);
+
     @Query("SELECT b FROM Booking b WHERE b.status = 'PENDING' AND (b.bookingTime < :cutoff OR b.schedule.startTime < :now)")
     List<Booking> findExpiredPendingBookings(@Param("cutoff") LocalDateTime cutoff, @Param("now") LocalDateTime now);
-
 
     @Query("SELECT b FROM Booking b JOIN FETCH b.schedule s JOIN FETCH s.gymClass c JOIN FETCH b.user WHERE b.status = 'CONFIRMED' AND s.startTime >= :startOfDay AND s.startTime < :endOfDay")
     List<Booking> findBookingsByDateRange(@Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay);
