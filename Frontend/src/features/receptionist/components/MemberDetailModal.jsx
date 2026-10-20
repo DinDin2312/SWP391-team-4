@@ -77,6 +77,8 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                     key: key,
                     courseName: b.className || 'Unknown Course',
                     classId: b.classId,
+                    subjectId: b.subjectId,
+                    subjectName: b.subjectName,
                     coachName: b.coachName || 'N/A',
                     roomName: b.roomName || 'N/A',
                     firstSessionDate: b.startTime,
@@ -88,8 +90,18 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                     cancelledCount: 0,
                     upcomingCount: 0,
                     sampleBookingId: b.bookingId,
+                    daysOfWeek: new Set(),
+                    timeSlot: b.startTime ? new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '',
                     sessions: [],
                 };
+            }
+            if (b.subjectId && !grouped[key].subjectId) grouped[key].subjectId = b.subjectId;
+            if (b.subjectName && !grouped[key].subjectName) grouped[key].subjectName = b.subjectName;
+            if (b.startTime) {
+                grouped[key].daysOfWeek.add(new Date(b.startTime).getDay());
+                if (!grouped[key].timeSlot) {
+                    grouped[key].timeSlot = new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                }
             }
             grouped[key].sessionsCount += 1;
             if (b.classId && !grouped[key].classId) {
@@ -145,12 +157,11 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
         });
 
         const courses = Object.values(grouped);
-        // Sắp xếp các khóa học: 2 lớp cùng môn/cùng khóa (Tháng 10 & Tháng 11, Đợt 1 & Đợt 2) luôn nằm liền kề nhau
-        const cleanBaseName = (name = '') => name.replace(/\s*[-–(]?\s*(?:Đợt|Khóa|K|Tháng|T)\s*\d+.*[)]?/i, '').trim();
+        // Sắp xếp các khóa học: Gom cùng bộ môn / loại lớp và sắp theo thời gian khai giảng
         courses.sort((a, b) => {
-            const baseA = cleanBaseName(a.courseName);
-            const baseB = cleanBaseName(b.courseName);
-            const cmp = baseA.localeCompare(baseB, 'vi');
+            const nameA = (a.subjectName || a.courseName || '').toLowerCase();
+            const nameB = (b.subjectName || b.courseName || '').toLowerCase();
+            const cmp = nameA.localeCompare(nameB, 'vi');
             if (cmp !== 0) return cmp;
             return new Date(a.firstSessionDate) - new Date(b.firstSessionDate);
         });
@@ -840,17 +851,36 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                                         {(() => {
                                             const confirmedBookings = (member?.bookings || []).filter(b => b.bookingStatus === "CONFIRMED");
                                             const allCourses = groupBookingsByCourse(confirmedBookings);
-                                            const cleanBaseName = (name = '') => name.replace(/\s*[-–(]?\s*(?:Đợt|Khóa|K|Tháng|T)\s*\d+.*[)]?/i, '').trim();
-
                                             return allCourses.map((course, idx) => {
                                                 const courseKey = course.key || (course.classId ? `class_${course.classId}` : course.courseName);
                                                 const isExpanded = expandedCourseKey === courseKey;
-                                                const baseName = cleanBaseName(course.courseName || course.className);
-                                                const nextBatch = allCourses.find(other =>
-                                                    other !== course &&
-                                                    cleanBaseName(other.courseName || other.className) === baseName &&
-                                                    new Date(other.firstSessionDate) > new Date(course.firstSessionDate)
-                                                );
+                                                // Nhận diện lớp gia hạn theo đúng tiêu chí nghiệp vụ:
+                                                // 1. Của tương lai (sau ngày khai giảng lớp hiện tại)
+                                                // 2. Cùng loại lớp (cùng subjectId hoặc cùng tên bộ môn)
+                                                // 3. Cùng lịch học (cùng các thứ trong tuần & cùng khung giờ học)
+                                                // 4. Khác giáo viên thì được (không bắt buộc cùng HLV)
+                                                const nextBatch = allCourses.find(other => {
+                                                    if (other === course) return false;
+                                                    if (new Date(other.firstSessionDate) <= new Date(course.firstSessionDate)) return false;
+
+                                                    const sameSubject = (course.subjectId && other.subjectId && course.subjectId === other.subjectId)
+                                                        || (course.subjectName && other.subjectName && course.subjectName.trim().toLowerCase() === other.subjectName.trim().toLowerCase());
+                                                    const cleanBaseName = (name = '') => name.replace(/\s*[-–(]?\s*(?:Đợt|Khóa|K|Tháng|T)\s*\d+.*[)]?/i, '').trim();
+                                                    const sameBase = cleanBaseName(course.courseName) === cleanBaseName(other.courseName);
+                                                    if (!sameSubject && !sameBase) return false;
+
+                                                    const daysA = course.daysOfWeek || new Set();
+                                                    const daysB = other.daysOfWeek || new Set();
+                                                    let daysMatch = true;
+                                                    if (daysA.size > 0 && daysB.size > 0) {
+                                                        let matchCount = 0;
+                                                        daysA.forEach(d => { if (daysB.has(d)) matchCount++; });
+                                                        daysMatch = matchCount >= Math.min(daysA.size, daysB.size);
+                                                    }
+                                                    const slotMatch = !course.timeSlot || !other.timeSlot || course.timeSlot === other.timeSlot;
+
+                                                    return daysMatch && slotMatch;
+                                                });
                                                 return (
                                                     <React.Fragment key={idx}>
                                                         <tr style={{ borderBottom: '1px solid var(--border)' }}>

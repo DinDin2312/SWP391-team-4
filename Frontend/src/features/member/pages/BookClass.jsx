@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar, Sparkles, ShoppingCart } from 'lucide-react';
+import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar, Sparkles, ShoppingCart, Clock, ArrowRight } from 'lucide-react';
 
 const BookClass = () => {
   useLanguage();
@@ -328,56 +328,75 @@ const BookClass = () => {
                     </div>
                   </div>
 
-                  <div className="relative z-10 flex flex-col justify-between shrink-0 sm:w-32 border-t sm:border-t-0 sm:border-l border-surface-container-highest pt-4 sm:pt-0 sm:pl-6">
-                    <div className="flex flex-col gap-1 text-right sm:text-left">
+                  <div className="relative z-10 flex flex-col justify-between shrink-0 sm:w-56 border-t sm:border-t-0 sm:border-l border-surface-container-highest pt-4 sm:pt-0 sm:pl-6">
+                    <div className="flex flex-col gap-0.5 text-right sm:text-right">
                       <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{t("Course Fee")}</span>
-                      <span className="text-sm font-bold text-primary">{formatMoney(course.price)}</span>
+                      <span className="text-xl font-black text-primary tracking-tight">{formatMoney(course.price)}</span>
                     </div>
 
-                    {benefitsError && <p className="text-xs mt-2" role="alert">{t('Package benefits could not be loaded. Refresh to use a package.')}</p>}
-                    {!isBooked && !isPending && <label className="text-xs mt-3 flex flex-col gap-1">{t('Booking payment')}
-                      <select aria-label={t('Booking payment for {0}',[course.className])} value={paymentChoices[course.classId]||''} disabled={booking!==null || isFull} onChange={event=>setPaymentChoices(current=>({...current,[course.classId]:event.target.value}))} className="w-full rounded-lg text-xs bg-surface border border-surface-container-highest">
-                        <option value="">{t('Buy this course separately')}</option>
-                        {packageBookingOptions(packages,course,new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())).map(option=><option key={option.membershipId} value={option.membershipId}>{t('{0} · {1} sessions remaining',[option.packageName,option.remainingSessions])}</option>)}
-                      </select>
-                      <small>{t('A package must cover every session and have enough remaining sessions for the whole course.')}</small>
-                    </label>}
+                    {benefitsError && <p className="text-xs text-error mt-2" role="alert">{t('Package benefits could not be loaded. Refresh to use a package.')}</p>}
+                    {!isBooked && !isPending && (
+                      <div className="mt-3 flex flex-col gap-1.5">
+                        <label className="text-[11px] font-semibold text-on-surface-variant">{t('Booking payment')}</label>
+                        <select
+                          aria-label={t('Booking payment for {0}', [course.className])}
+                          value={paymentChoices[course.classId] || ''}
+                          disabled={booking !== null || isFull}
+                          onChange={event => setPaymentChoices(current => ({ ...current, [course.classId]: event.target.value }))}
+                          className="w-full rounded-xl text-xs py-2 px-2.5 bg-surface border border-surface-container-highest text-on-surface focus:outline-none focus:ring-1 focus:ring-primary truncate"
+                        >
+                          <option value="">{t('Buy this course separately')}</option>
+                          {packageBookingOptions(packages, course, new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())).map(option => (
+                            <option key={option.membershipId} value={option.membershipId}>
+                              {t('{0} · {1} sessions remaining', [option.packageName, option.remainingSessions])}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="text-[10px] text-on-surface-variant/80 leading-snug">
+                          {t('A package must cover every session and have enough remaining sessions for the whole course.')}
+                        </span>
+                      </div>
+                    )}
                     {isBooked ? (
                       <button
                         disabled
-                        className="mt-4 sm:mt-auto w-full py-2.5 rounded-lg font-bold text-sm bg-surface-container-highest text-on-surface-variant cursor-not-allowed shadow-none flex items-center justify-center gap-2"
+                        className="mt-4 sm:mt-auto w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 cursor-not-allowed flex items-center justify-center gap-1.5 shadow-sm"
                       >
-                        {t('Enrolled')}
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>{t('Enrolled')}</span>
                       </button>
                     ) : isPending ? (
-                      <div className="mt-4 sm:mt-auto flex flex-col gap-1 w-full">
+                      <div className="mt-4 sm:mt-auto flex flex-col gap-2 w-full">
                         <button
                           type="button"
                           onClick={() => navigate('/member/cart')}
-                          className="w-full py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-[var(--shadow)] bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20"
+                          className="group relative w-full py-2.5 px-3.5 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-orange-500/35 active:scale-[0.98] cursor-pointer"
                         >
-                          <ShoppingCart className="w-4 h-4" />
-                          {t('In Cart - Pay Now')}
+                          <ShoppingCart className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" />
+                          <span className="whitespace-nowrap">{t('In Cart - Pay Now')}</span>
                         </button>
-                        <span className="text-[10px] text-amber-500 font-medium text-center leading-tight">
-                          {t('Seat reserved upon payment')}
-                        </span>
+                        <div className="flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] font-medium text-center">
+                          <Clock className="w-3 h-3 shrink-0" />
+                          <span className="leading-tight">{t('Seat reserved upon payment')}</span>
+                        </div>
                       </div>
                     ) : isFull ? (
                       <button
                         disabled
-                        className="mt-4 sm:mt-auto w-full py-2.5 rounded-lg font-bold text-sm bg-[var(--danger-soft)] text-[var(--danger-text)] cursor-not-allowed shadow-none flex items-center justify-center gap-2"
+                        className="mt-4 sm:mt-auto w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 cursor-not-allowed flex items-center justify-center gap-1.5 shadow-sm"
                       >
-                        {t('Full')}
+                        <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                        <span>{t('Full')}</span>
                       </button>
                     ) : (
                       <button
                         type="button"
                         onClick={() => handleBook(course.classId)}
                         disabled={booking !== null}
-                        className="mt-4 sm:mt-auto w-full py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-[var(--shadow)] bg-primary text-on-primary hover:bg-primary/90 shadow-primary/20"
+                        className="mt-4 sm:mt-auto w-full py-2.5 px-3.5 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-on-primary shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       >
-                        {t(booking === course.classId ? 'Enrolling...' : 'Enroll Now')}
+                        <span className="whitespace-nowrap">{t(booking === course.classId ? 'Enrolling...' : 'Enroll Now')}</span>
+                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 shrink-0" />
                       </button>
                     )}
                   </div>

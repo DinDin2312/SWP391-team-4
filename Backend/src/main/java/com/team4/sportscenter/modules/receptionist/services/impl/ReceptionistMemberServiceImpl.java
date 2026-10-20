@@ -244,10 +244,16 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 upcomingCount++;
             }
 
+            Integer subjectId = (s != null && s.getGymClass() != null) ? s.getGymClass().getSubjectId() : null;
+            String subjectName = (s != null && s.getGymClass() != null && s.getGymClass().getSubject() != null)
+                    ? s.getGymClass().getSubject().getSubjectName() : null;
+
             bookingDetails.add(MemberBookingDetail.builder()
                     .bookingId(b.getBookingId())
                     .scheduleId(s != null ? s.getScheduleId() : null)
                     .classId(s != null && s.getGymClass() != null ? s.getGymClass().getClassId() : null)
+                    .subjectId(subjectId)
+                    .subjectName(subjectName)
                     .className(className)
                     .coachName(coachName)
                     .coachEmail(coachEmail)
@@ -459,7 +465,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         }
 
         if (futureSchedules.isEmpty()) {
-            throw new RuntimeException("Không tìm thấy đợt mở lớp tiếp theo cho khóa học: " + className);
+            throw new RuntimeException("Không tìm thấy lớp học tiếp theo phù hợp cho khóa học: " + className);
         }
 
         // Nhóm các lịch học theo từng GymClass (từng đợt mở lớp)
@@ -468,11 +474,13 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             schedulesByClass.computeIfAbsent(s.getGymClass().getClassId(), k -> new java.util.ArrayList<>()).add(s);
         }
 
-        // Sắp xếp các lớp ứng viên cho kỳ sau theo độ tương đồng lịch học cao nhất:
-        // 0. Ưu tiên lớp cùng tên gốc (Đợt tiếp theo của đúng khóa đó) và bắt đầu sau khi khóa cũ kết thúc
-        // 1. Trùng nhiều ngày trong tuần nhất (ví dụ cùng Thứ 2, 4, 6)
-        // 2. Giờ bắt đầu ca học (Fixed Teaching Slot) tương tự nhất
-        // 3. Khai giảng sớm nhất tiếp nối khóa cũ
+        // Sắp xếp các lớp ứng viên cho kỳ sau theo 4 tiêu chí cốt lõi:
+        // 1. Cùng loại lớp / bộ môn (Subject)
+        // 2. Của tương lai (Bắt đầu sau khi khóa hiện tại kết thúc)
+        // 3. Cùng lịch học: 100% cùng các thứ trong tuần (curDaysOfWeek)
+        // 4. Cùng khung giờ ca học (curStartTime)
+        // 5. Khai giảng sớm nhất tiếp nối khóa cũ
+        // 6. Khác giáo viên thì được (Coach có thể khác nhau, không bị ràng buộc)
         List<Map.Entry<Integer, List<Schedule>>> rankedCandidateClasses = new java.util.ArrayList<>(schedulesByClass.entrySet());
         rankedCandidateClasses.sort((e1, e2) -> {
             List<Schedule> list1 = e1.getValue();
@@ -480,44 +488,58 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             GymClass c1 = list1.get(0).getGymClass();
             GymClass c2 = list2.get(0).getGymClass();
 
-            String b1 = c1.getClassName() != null
-                    ? c1.getClassName().replaceAll("(?i)\\s*[-–(]?\\s*(Đợt|Khóa|K|Tháng|T)\\s*\\d+.*[)]?", "").trim()
-                    : "";
-            String b2 = c2.getClassName() != null
-                    ? c2.getClassName().replaceAll("(?i)\\s*[-–(]?\\s*(Đợt|Khóa|K|Tháng|T)\\s*\\d+.*[)]?", "").trim()
-                    : "";
-            boolean sameBase1 = !baseName.isEmpty() && b1.toLowerCase().startsWith(baseName.toLowerCase());
-            boolean sameBase2 = !baseName.isEmpty() && b2.toLowerCase().startsWith(baseName.toLowerCase());
-            if (sameBase1 != sameBase2) {
-                return sameBase1 ? -1 : 1;
+            // 1. Cùng bộ môn (Subject)
+            boolean sameSubj1 = curClass.getSubjectId() != null && curClass.getSubjectId().equals(c1.getSubjectId());
+            boolean sameSubj2 = curClass.getSubjectId() != null && curClass.getSubjectId().equals(c2.getSubjectId());
+            if (sameSubj1 != sameSubj2) {
+                return sameSubj1 ? -1 : 1;
             }
 
+            // 2. Của tương lai (Bắt đầu sau khi khóa hiện tại kết thúc hoặc sau searchAfterTime)
             boolean afterCur1 = !list1.get(0).getStartTime().isBefore(searchAfterTime);
             boolean afterCur2 = !list2.get(0).getStartTime().isBefore(searchAfterTime);
             if (afterCur1 != afterCur2) {
                 return afterCur1 ? -1 : 1;
             }
 
+            // 3. Cùng lịch học - 100% cùng các thứ trong tuần (ví dụ cùng T2-4-6, hoặc cùng T3-5-7)
             java.util.Set<java.time.DayOfWeek> days1 = list1.stream().map(s -> s.getStartTime().getDayOfWeek()).collect(Collectors.toSet());
             java.util.Set<java.time.DayOfWeek> days2 = list2.stream().map(s -> s.getStartTime().getDayOfWeek()).collect(Collectors.toSet());
+            boolean exactDays1 = days1.equals(curDaysOfWeek);
+            boolean exactDays2 = days2.equals(curDaysOfWeek);
+            if (exactDays1 != exactDays2) {
+                return exactDays1 ? -1 : 1;
+            }
 
             long matchCount1 = days1.stream().filter(curDaysOfWeek::contains).count();
             long matchCount2 = days2.stream().filter(curDaysOfWeek::contains).count();
-
             if (matchCount1 != matchCount2) {
-                return Long.compare(matchCount2, matchCount1); // Ưu tiên trùng ngày nhiều hơn
+                return Long.compare(matchCount2, matchCount1);
             }
 
+            // 4. Cùng khung giờ ca học (Slot)
             java.time.LocalTime t1 = list1.get(0).getStartTime().toLocalTime();
             java.time.LocalTime t2 = list2.get(0).getStartTime().toLocalTime();
             long diff1 = Math.abs(java.time.temporal.ChronoUnit.MINUTES.between(curStartTime, t1));
             long diff2 = Math.abs(java.time.temporal.ChronoUnit.MINUTES.between(curStartTime, t2));
-
             if (diff1 != diff2) {
-                return Long.compare(diff1, diff2); // Ưu tiên khung giờ tập tương tự
+                return Long.compare(diff1, diff2);
             }
 
-            return list1.get(0).getStartTime().compareTo(list2.get(0).getStartTime());
+            // 5. Khai giảng sớm nhất tiếp nối khóa cũ
+            int cmpStart = list1.get(0).getStartTime().compareTo(list2.get(0).getStartTime());
+            if (cmpStart != 0) {
+                return cmpStart;
+            }
+
+            // 6. Khác giáo viên thì được (ưu tiên cùng HLV nếu có, nhưng khác HLV vẫn đứng ngay sau)
+            boolean sameCoach1 = curClass.getCoach() != null && c1.getCoach() != null && curClass.getCoach().getUserId().equals(c1.getCoach().getUserId());
+            boolean sameCoach2 = curClass.getCoach() != null && c2.getCoach() != null && curClass.getCoach().getUserId().equals(c2.getCoach().getUserId());
+            if (sameCoach1 != sameCoach2) {
+                return sameCoach1 ? -1 : 1;
+            }
+
+            return 0;
         });
 
         List<Booking> activeMemberBookings = bookingRepository.findByUserIdWithDetails(userId).stream()
@@ -573,7 +595,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         }
 
         if (targetClass == null || targetFirstSession == null) {
-            throw new RuntimeException("Đợt mở lớp tiếp theo của khóa học '" + className + "' hiện đã kín chỗ.");
+            throw new RuntimeException("Lớp học tiếp theo của khóa học '" + className + "' hiện đã kín chỗ.");
         }
 
         return ClassRenewalSuggestionResponse.builder()

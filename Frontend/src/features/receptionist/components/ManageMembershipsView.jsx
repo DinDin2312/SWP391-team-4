@@ -101,6 +101,8 @@ export default function ManageMembershipsView() {
                     key: key,
                     courseName: b.className || 'Unknown Course',
                     classId: b.classId,
+                    subjectId: b.subjectId,
+                    subjectName: b.subjectName,
                     coachName: b.coachName || 'N/A',
                     roomName: b.roomName || 'N/A',
                     firstSessionDate: b.startTime,
@@ -108,17 +110,22 @@ export default function ManageMembershipsView() {
                     sessionsCount: 0,
                     upcomingCount: 0,
                     sampleBookingId: b.bookingId,
+                    daysOfWeek: new Set(),
+                    timeSlot: b.startTime ? new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '',
                 };
             }
             grouped[key].sessionsCount += 1;
-            if (b.classId && !grouped[key].classId) {
-                grouped[key].classId = b.classId;
-            }
-            if (b.coachName && grouped[key].coachName === 'N/A') {
-                grouped[key].coachName = b.coachName;
-            }
-            if (b.roomName && grouped[key].roomName === 'N/A') {
-                grouped[key].roomName = b.roomName;
+            if (b.classId && !grouped[key].classId) grouped[key].classId = b.classId;
+            if (b.subjectId && !grouped[key].subjectId) grouped[key].subjectId = b.subjectId;
+            if (b.subjectName && !grouped[key].subjectName) grouped[key].subjectName = b.subjectName;
+            if (b.coachName && grouped[key].coachName === 'N/A') grouped[key].coachName = b.coachName;
+            if (b.roomName && grouped[key].roomName === 'N/A') grouped[key].roomName = b.roomName;
+
+            if (b.startTime) {
+                grouped[key].daysOfWeek.add(new Date(b.startTime).getDay());
+                if (!grouped[key].timeSlot) {
+                    grouped[key].timeSlot = new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                }
             }
 
             const sessionEnd = b.endTime ? new Date(b.endTime) : (b.startTime ? new Date(b.startTime) : null);
@@ -137,12 +144,11 @@ export default function ManageMembershipsView() {
         });
 
         const courses = Object.values(grouped);
-        // Sắp xếp các khóa học: 2 lớp cùng môn/cùng khóa (Tháng 10 & Tháng 11, Đợt 1 & Đợt 2) luôn nằm liền kề nhau
-        const cleanBaseName = (name = '') => name.replace(/\s*[-–(]?\s*(?:Đợt|Khóa|K|Tháng|T)\s*\d+.*[)]?/i, '').trim();
+        // Sắp xếp các khóa học: Gom cùng bộ môn / loại lớp và sắp theo thời gian khai giảng
         courses.sort((a, b) => {
-            const baseA = cleanBaseName(a.courseName);
-            const baseB = cleanBaseName(b.courseName);
-            const cmp = baseA.localeCompare(baseB, 'vi');
+            const nameA = (a.subjectName || a.courseName || '').toLowerCase();
+            const nameB = (b.subjectName || b.courseName || '').toLowerCase();
+            const cmp = nameA.localeCompare(nameB, 'vi');
             if (cmp !== 0) return cmp;
             return new Date(a.firstSessionDate) - new Date(b.firstSessionDate);
         });
@@ -662,13 +668,38 @@ export default function ManageMembershipsView() {
                                                     <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
                                                         <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'center' }}>
                                                             {(() => {
-                                                                const cleanBaseName = (name = '') => name.replace(/\s*[-–(]?\s*(?:Đợt|Khóa|K|Tháng|T)\s*\d+.*[)]?/i, '').trim();
-                                                                const baseName = cleanBaseName(c.courseName || c.className);
-                                                                const nextBatch = memberBookings.find(other =>
-                                                                    other !== c &&
-                                                                    cleanBaseName(other.courseName || other.className) === baseName &&
-                                                                    new Date(other.firstSessionDate) > new Date(c.firstSessionDate)
-                                                                );
+                                                                // Nhận diện lớp gia hạn theo đúng tiêu chí nghiệp vụ:
+                                                                // 1. Của tương lai (sau ngày khai giảng lớp hiện tại)
+                                                                // 2. Cùng loại lớp (cùng subjectId hoặc cùng tên bộ môn)
+                                                                // 3. Cùng lịch học (cùng các thứ trong tuần & cùng khung giờ học)
+                                                                // 4. Khác giáo viên thì được (không bắt buộc cùng HLV)
+                                                                const nextBatch = memberBookings.find(other => {
+                                                                    if (other === c) return false;
+                                                                    if (new Date(other.firstSessionDate) <= new Date(c.firstSessionDate)) return false;
+
+                                                                    // Cùng loại lớp / bộ môn
+                                                                    const sameSubject = (c.subjectId && other.subjectId && c.subjectId === other.subjectId)
+                                                                        || (c.subjectName && other.subjectName && c.subjectName.trim().toLowerCase() === other.subjectName.trim().toLowerCase());
+                                                                    const cleanBaseName = (name = '') => name.replace(/\s*[-–(]?\s*(?:Đợt|Khóa|K|Tháng|T)\s*\d+.*[)]?/i, '').trim();
+                                                                    const sameBase = cleanBaseName(c.courseName) === cleanBaseName(other.courseName);
+                                                                    if (!sameSubject && !sameBase) return false;
+
+                                                                    // Cùng các thứ trong tuần
+                                                                    const daysA = c.daysOfWeek || new Set();
+                                                                    const daysB = other.daysOfWeek || new Set();
+                                                                    let daysMatch = true;
+                                                                    if (daysA.size > 0 && daysB.size > 0) {
+                                                                        let matchCount = 0;
+                                                                        daysA.forEach(d => { if (daysB.has(d)) matchCount++; });
+                                                                        daysMatch = matchCount >= Math.min(daysA.size, daysB.size);
+                                                                    }
+
+                                                                    // Cùng khung giờ ca học
+                                                                    const slotMatch = !c.timeSlot || !other.timeSlot || c.timeSlot === other.timeSlot;
+
+                                                                    // Khác giáo viên thì được
+                                                                    return daysMatch && slotMatch;
+                                                                });
 
                                                                 if (nextBatch) {
                                                                     return (
