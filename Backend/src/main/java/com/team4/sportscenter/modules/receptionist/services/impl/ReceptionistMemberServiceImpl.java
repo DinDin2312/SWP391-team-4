@@ -457,7 +457,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                     .map(Schedule::getScheduleId)
                     .collect(Collectors.toSet());
             List<Schedule> sameSubjectSchedules = scheduleRepository.findUpcomingSchedulesBySubjectId(
-                    curClass.getSubjectId(), curClassId, LocalDateTime.now());
+                    curClass.getSubjectId(), curClassId, searchAfterTime);
             for (Schedule s : sameSubjectSchedules) {
                 if (!existingSchedIds.contains(s.getScheduleId())) {
                     futureSchedules.add(s);
@@ -564,6 +564,14 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             GymClass candidateClass = candidateSchedules.get(0).getGymClass();
 
             Schedule firstSession = candidateSchedules.get(0);
+            List<Schedule> allClassSessions = scheduleRepository.findAllSchedulesByClassId(candidateClass.getClassId());
+            if (!allClassSessions.isEmpty() && allClassSessions.get(0).getStartTime().isBefore(searchAfterTime)) {
+                // Khóa học này đã bắt đầu từ kỳ trước (chỉ còn vài buổi sót lại), bỏ qua để chỉ lấy lớp kỳ sau
+                continue;
+            }
+            if (firstSession.getStartTime().isBefore(searchAfterTime)) {
+                continue;
+            }
             Schedule lastSession = candidateSchedules.get(candidateSchedules.size() - 1);
 
             Set<DayOfWeek> candDays = candidateSchedules.stream()
