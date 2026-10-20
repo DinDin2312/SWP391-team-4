@@ -521,7 +521,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         });
 
         List<Booking> activeMemberBookings = bookingRepository.findByUserIdWithDetails(userId).stream()
-                .filter(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus()))
+                .filter(b -> "CONFIRMED".equalsIgnoreCase(b.getStatus()))
                 .filter(b -> b.getSchedule() != null && !"CANCELLED".equalsIgnoreCase(b.getSchedule().getStatus()))
                 .filter(b -> b.getSchedule().getGymClass() == null || !curClassId.equals(b.getSchedule().getGymClass().getClassId()))
                 .toList();
@@ -626,7 +626,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         }
 
         List<Booking> existingActiveBookings = bookingRepository.findByUserIdWithDetails(user.getUserId()).stream()
-                .filter(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus()))
+                .filter(b -> "CONFIRMED".equalsIgnoreCase(b.getStatus()))
                 .filter(b -> b.getSchedule() != null && !"CANCELLED".equalsIgnoreCase(b.getSchedule().getStatus()))
                 .collect(Collectors.toList());
 
@@ -1513,9 +1513,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             ORDER BY c.class_name
         """);
 
-        // Set of classIds member already booked and NOT cancelled
+        // Set of classIds member already booked and CONFIRMED
         Set<Integer> bookedClassIds = bookingRepository.findByUserIdWithDetails(userId).stream()
-                .filter(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus()))
+                .filter(b -> "CONFIRMED".equalsIgnoreCase(b.getStatus()))
                 .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null)
                 .map(b -> b.getSchedule().getGymClass().getClassId())
                 .collect(Collectors.toSet());
@@ -1579,7 +1579,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
 
                 // Count booked slots for this schedule
                 Integer bCount = jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM BOOKINGS WHERE schedule_id = ? AND status IN ('CONFIRMED', 'PENDING')",
+                        "SELECT COUNT(*) FROM BOOKINGS WHERE schedule_id = ? AND status = 'CONFIRMED'",
                         Integer.class, scheduleId
                 );
                 if (bCount != null && bCount > bookedSlots) {
@@ -1642,9 +1642,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             throw new IllegalStateException("MemberService is not available.");
         }
 
-        // Check if member already booked this course and not cancelled
+        // Check if member already booked this course and CONFIRMED
         boolean alreadyBooked = bookingRepository.findByUserIdWithDetails(user.getUserId()).stream()
-                .anyMatch(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus())
+                .anyMatch(b -> "CONFIRMED".equalsIgnoreCase(b.getStatus())
                         && b.getSchedule() != null
                         && b.getSchedule().getGymClass() != null
                         && b.getSchedule().getGymClass().getClassId().equals(request.getClassId()));
@@ -1664,20 +1664,38 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             throw new IllegalStateException("Lớp học đã đủ số lượng học viên (" + maxSlots + "/" + maxSlots + ").");
         }
 
-        // Đặt lớp trực tiếp cho hội viên (tạo các bản ghi bookings)
-        memberService.bookClass(user.getEmail(), request.getClassId());
-
-        // Cập nhật tất cả các booking PENDING vừa tạo thành CONFIRMED
-        List<Booking> createdBookings = bookingRepository.findByUserIdWithDetails(user.getUserId()).stream()
+        // Kiểm tra xem hội viên này đã có booking PENDING (trong giỏ hàng) chưa
+        List<Booking> pendingBookings = bookingRepository.findByUserIdWithDetails(user.getUserId()).stream()
                 .filter(b -> "PENDING".equalsIgnoreCase(b.getStatus())
                         && b.getSchedule() != null
                         && b.getSchedule().getGymClass() != null
                         && b.getSchedule().getGymClass().getClassId().equals(request.getClassId()))
                 .toList();
 
-        for (Booking b : createdBookings) {
-            b.setStatus("CONFIRMED");
-            bookingRepository.save(b);
+        List<Booking> createdBookings;
+        if (!pendingBookings.isEmpty()) {
+            // Đã có trong giỏ hàng -> Chuyển trực tiếp sang CONFIRMED
+            for (Booking b : pendingBookings) {
+                b.setStatus("CONFIRMED");
+                bookingRepository.save(b);
+            }
+            createdBookings = pendingBookings;
+        } else {
+            // Đặt lớp trực tiếp cho hội viên (tạo các bản ghi bookings)
+            memberService.bookClass(user.getEmail(), request.getClassId());
+
+            // Cập nhật tất cả các booking PENDING vừa tạo thành CONFIRMED
+            createdBookings = bookingRepository.findByUserIdWithDetails(user.getUserId()).stream()
+                    .filter(b -> "PENDING".equalsIgnoreCase(b.getStatus())
+                            && b.getSchedule() != null
+                            && b.getSchedule().getGymClass() != null
+                            && b.getSchedule().getGymClass().getClassId().equals(request.getClassId()))
+                    .toList();
+
+            for (Booking b : createdBookings) {
+                b.setStatus("CONFIRMED");
+                bookingRepository.save(b);
+            }
         }
 
         // Ghi nhận hóa đơn & thanh toán trực tiếp tại quầy (Invoice & Payment)

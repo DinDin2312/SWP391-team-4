@@ -29,7 +29,7 @@ const ZONE = 'Asia/Ho_Chi_Minh';
 
 // CONFIRMED and PENDING bookings reserve seats. Low registration is strictly below 25%.
 
-const LOW_HINT = 'Upcoming scheduled sessions below 25% capacity. Confirmed and pending bookings both count as reserved seats.';
+const LOW_HINT = 'Upcoming scheduled sessions below 25% capacity. Only confirmed paid bookings count as reserved seats.';
 
 const parse = (value) => new Date(typeof value === 'string' && !/Z$|[+-]\d\d:\d\d$/.test(value) ? `${value}+07:00` : value);
 

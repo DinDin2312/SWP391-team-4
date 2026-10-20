@@ -838,7 +838,8 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                                         </thead>
                                         <tbody>
                                         {(() => {
-                                            const allCourses = groupBookingsByCourse(member?.bookings || []);
+                                            const confirmedBookings = (member?.bookings || []).filter(b => b.bookingStatus === "CONFIRMED");
+                                            const allCourses = groupBookingsByCourse(confirmedBookings);
                                             const cleanBaseName = (name = '') => name.replace(/\s*[-–(]?\s*(?:Đợt|Khóa|K|Tháng|T)\s*\d+.*[)]?/i, '').trim();
 
                                             return allCourses.map((course, idx) => {

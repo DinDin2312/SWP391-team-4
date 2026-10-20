@@ -289,7 +289,7 @@ const BookClass = () => {
 
                   <div className="relative z-10 flex flex-col flex-1">
                     <div className="flex flex-wrap items-center gap-3 mb-2">
-                      <span className="text-[11px] font-bold text-[var(--success-text)] uppercase tracking-wider bg-[var(--success-soft)] px-2 py-0.5 rounded">{t("Full Course:")}{' '}{course.totalSessions}{' '}{t("Sessions")}</span>
+                      <span className="text-[11px] font-bold text-[var(--success-text)] uppercase tracking-wider bg-[var(--success-soft)] px-2 py-0.5 rounded">{t("Full Course:")}{' '}{course.totalSessions}{' '}{t("sessions")}</span>
                     </div>
 
                     <h3 className="text-xl font-bold text-on-surface leading-snug mb-2">{course.className}</h3>

@@ -2692,3 +2692,21 @@ translations['Checkout failed! The class is now fully booked by others.'] = ['Ch
 translations['Thanh toán không thành công! Lớp học vừa được người khác thanh toán trước nên đã hết chỗ.'] = ['Checkout failed! The class is now fully booked by others.', 'Thanh toán không thành công! Lớp học vừa được người khác thanh toán trước nên đã hết chỗ.'];
 translations['This course is already in your cart. Please go to checkout to complete payment.'] = ['This course is already in your cart. Please go to checkout to complete payment.', 'Khóa học này đã có trong giỏ hàng của bạn. Vui lòng vào giỏ hàng để hoàn tất thanh toán.'];
 translations['Khóa học này đã có trong giỏ hàng của bạn. Vui lòng vào giỏ hàng để hoàn tất thanh toán.'] = ['This course is already in your cart. Please go to checkout to complete payment.', 'Khóa học này đã có trong giỏ hàng của bạn. Vui lòng vào giỏ hàng để hoàn tất thanh toán.'];
+
+// Receptionist cart / pending payment translations
+translations['Cart / Pending Payment'] = ['Cart / Pending Payment', 'Giỏ hàng · Chờ thanh toán'];
+translations['Giỏ hàng · Chờ thanh toán'] = ['Cart / Pending Payment', 'Giỏ hàng · Chờ thanh toán'];
+translations['Seats not reserved · Pay at counter to confirm enrollment'] = ['Seats not reserved · Pay at counter to confirm enrollment', 'Chưa giữ chỗ · Thanh toán tại quầy để xác nhận vào lớp'];
+translations['Chưa giữ chỗ · Thanh toán tại quầy để xác nhận vào lớp'] = ['Seats not reserved · Pay at counter to confirm enrollment', 'Chưa giữ chỗ · Thanh toán tại quầy để xác nhận vào lớp'];
+translations['Pay at Counter'] = ['Pay at Counter', 'Thanh toán tại quầy'];
+translations['Thanh toán tại quầy'] = ['Pay at Counter', 'Thanh toán tại quầy'];
+translations['In Cart'] = ['In Cart', 'Trong giỏ hàng'];
+translations['Trong giỏ hàng'] = ['In Cart', 'Trong giỏ hàng'];
+translations['Remove from Cart'] = ['Remove from Cart', 'Xóa khỏi giỏ hàng'];
+translations['Xóa khỏi giỏ hàng'] = ['Remove from Cart', 'Xóa khỏi giỏ hàng'];
+translations['Collect payment at counter and confirm enrollment'] = ['Collect payment at counter and confirm enrollment', 'Thu tiền tại quầy và xác nhận vào lớp'];
+translations['Thu tiền tại quầy và xác nhận vào lớp'] = ['Collect payment at counter and confirm enrollment', 'Thu tiền tại quầy và xác nhận vào lớp'];
+translations['Upcoming scheduled sessions below 25% capacity. Only confirmed paid bookings count as reserved seats.'] = ['Upcoming scheduled sessions below 25% capacity. Only confirmed paid bookings count as reserved seats.', 'Buổi sắp tới có dưới 25% sức chứa được đăng ký. Chỉ lượt đăng ký đã hoàn tất thanh toán mới giữ chỗ.'];
+translations['Buổi sắp tới có dưới 25% sức chứa được đăng ký. Chỉ lượt đăng ký đã hoàn tất thanh toán mới giữ chỗ.'] = ['Upcoming scheduled sessions below 25% capacity. Only confirmed paid bookings count as reserved seats.', 'Buổi sắp tới có dưới 25% sức chứa được đăng ký. Chỉ lượt đăng ký đã hoàn tất thanh toán mới giữ chỗ.'];
+translations['Full Course:'] = ['Full Course:', 'Toàn bộ khóa:'];
+translations['Toàn bộ khóa:'] = ['Full Course:', 'Toàn bộ khóa:'];

@@ -744,6 +744,98 @@ export default function ManageMembershipsView() {
                                     </table>
                                 </div>
                             )}
+
+                            {/* Khóa học trong giỏ hàng chờ thanh toán (First-come first-served) */}
+                            {memberCartBookings.length > 0 && (
+                                <div style={{ marginTop: '1.5rem', border: '1px solid #fcd34d', backgroundColor: '#fffbeb', borderRadius: '0.75rem', padding: '1.15rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span style={{ fontSize: '1.1rem' }}>🛒</span>
+                                            <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#92400e', fontWeight: 700 }}>
+                                                {t("Cart / Pending Payment")} ({memberCartBookings.length})
+                                            </h4>
+                                        </div>
+                                        <span style={{ fontSize: '0.76rem', color: '#b45309', fontWeight: 500, backgroundColor: '#fef3c7', padding: '0.2rem 0.65rem', borderRadius: '9999px', border: '1px solid #fde68a' }}>
+                                            ⚠️ {t("Seats not reserved · Pay at counter to confirm enrollment")}
+                                        </span>
+                                    </div>
+                                    <div style={{ overflowX: 'auto', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                                            <thead>
+                                                <tr style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                                                    <th style={{ padding: '0.75rem 1rem' }}>{t("Course Name")}</th>
+                                                    <th style={{ padding: '0.75rem 1rem' }}>{t("Coach")}</th>
+                                                    <th style={{ padding: '0.75rem 1rem' }}>{t("Room")}</th>
+                                                    <th style={{ padding: '0.75rem 1rem' }}>{t("Course Timeline")}</th>
+                                                    <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{t("Total Sessions")}</th>
+                                                    <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{t("Action")}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {memberCartBookings.map((c, idx) => (
+                                                    <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                        <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: 'var(--text)' }}>
+                                                            {c.courseName}
+                                                            <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '9999px', backgroundColor: '#fef3c7', color: '#b45309', fontWeight: 600 }}>
+                                                                {t("In Cart")}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: '0.85rem 1rem', color: 'var(--text)' }}>{c.coachName}</td>
+                                                        <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)' }}>{c.roomName}</td>
+                                                        <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)' }}>
+                                                            {formatDateTime(c.firstSessionDate)} → {formatDateTime(c.lastSessionDate)}
+                                                        </td>
+                                                        <td style={{ padding: '0.85rem 1rem', textAlign: 'center', color: 'var(--primary)', fontWeight: 600 }}>
+                                                            {c.sessionsCount}{' '}{t("sessions")}
+                                                        </td>
+                                                        <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                                                            <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'center' }}>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenEnrollModal(c.classId)}
+                                                                    style={{
+                                                                        padding: '0.4rem 0.85rem',
+                                                                        borderRadius: '0.5rem',
+                                                                        border: '1px solid #16a34a',
+                                                                        backgroundColor: '#16a34a',
+                                                                        color: '#ffffff',
+                                                                        fontSize: '0.78rem',
+                                                                        fontWeight: 600,
+                                                                        cursor: 'pointer',
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '0.35rem'
+                                                                    }}
+                                                                    title={t("Collect payment at counter and confirm enrollment")}
+                                                                >
+                                                                    💳 {t("Pay at Counter")}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenCancelCourse(c)}
+                                                                    style={{
+                                                                        padding: '0.4rem 0.75rem',
+                                                                        borderRadius: '0.5rem',
+                                                                        border: '1px solid var(--border)',
+                                                                        backgroundColor: 'transparent',
+                                                                        color: 'var(--text-muted)',
+                                                                        fontSize: '0.78rem',
+                                                                        fontWeight: 500,
+                                                                        cursor: 'pointer'
+                                                                    }}
+                                                                    title={t("Remove from Cart")}
+                                                                >
+                                                                    ✕ {t("Remove")}
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

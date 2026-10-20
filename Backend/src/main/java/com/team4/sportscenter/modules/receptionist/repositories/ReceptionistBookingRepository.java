@@ -27,12 +27,12 @@ public interface ReceptionistBookingRepository extends JpaRepository<Booking, In
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.user.userId = :userId")
     Long countByUserId(@Param("userId") Integer userId);
 
-    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.userId = :userId AND b.schedule.scheduleId = :scheduleId AND b.status != 'CANCELLED'")
+    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.userId = :userId AND b.schedule.scheduleId = :scheduleId AND b.status = 'CONFIRMED'")
     boolean existsByUserIdAndScheduleId(@Param("userId") Integer userId, @Param("scheduleId") Integer scheduleId);
 
-    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.userId = :userId AND b.schedule.gymClass.classId = :classId AND b.status != 'CANCELLED'")
+    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.userId = :userId AND b.schedule.gymClass.classId = :classId AND b.status = 'CONFIRMED'")
     boolean existsByUserIdAndClassId(@Param("userId") Integer userId, @Param("classId") Integer classId);
 
-    @Query("SELECT COUNT(DISTINCT b.user.userId) FROM Booking b WHERE b.schedule.gymClass.classId = :classId AND b.status IN ('CONFIRMED', 'PENDING')")
+    @Query("SELECT COUNT(DISTINCT b.user.userId) FROM Booking b WHERE b.schedule.gymClass.classId = :classId AND b.status = 'CONFIRMED'")
     Integer countBookedUsersByClassId(@Param("classId") Integer classId);
 }
