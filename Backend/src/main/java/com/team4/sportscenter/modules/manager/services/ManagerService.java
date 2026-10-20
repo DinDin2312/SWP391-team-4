@@ -45,6 +45,30 @@ public class ManagerService {
     private final PackageTypeCatalog packageTypes;
     private final com.team4.sportscenter.modules.member.services.PackageCommerceService commerce;
 
+    public int saveSubjectWithImage(Integer id, ManagerRequests.SubjectRequest request, MultipartFile image, boolean removeImage, String actor) {
+        if(image!=null && removeImage) throw new IllegalArgumentException("Choose either a new photo or photo removal.");
+        int savedId=saveSubject(id,request,actor);
+        if(image!=null) updateResourceImage("subjects",savedId,image,actor);
+        else if(removeImage) removeResourceImage("subjects",savedId,actor);
+        return savedId;
+    }
+
+    public int saveRoomWithImage(Integer id, ManagerRequests.RoomRequest request, MultipartFile image, boolean removeImage, String actor) {
+        if(image!=null && removeImage) throw new IllegalArgumentException("Choose either a new photo or photo removal.");
+        int savedId=saveRoom(id,request,actor);
+        if(image!=null) updateResourceImage("rooms",savedId,image,actor);
+        else if(removeImage) removeResourceImage("rooms",savedId,actor);
+        return savedId;
+    }
+
+    public int saveClassWithImage(Integer id, ManagerRequests.ClassRequest request, MultipartFile image, boolean removeImage, String actor) {
+        if(image!=null && removeImage) throw new IllegalArgumentException("Choose either a new photo or photo removal.");
+        int savedId=saveClass(id,request,actor);
+        if(image!=null) updateResourceImage("classes",savedId,image,actor);
+        else if(removeImage) removeResourceImage("classes",savedId,actor);
+        return savedId;
+    }
+
     public String updateResourceImage(String resource, Integer id, MultipartFile file, String actor) {
         String previous = managerRepository.lockResourceImage(resource, id);
         String stored = resourceImageStorageService.store(file);
@@ -109,7 +133,8 @@ public class ManagerService {
                 .status(request.status().toUpperCase())
                 .forcePasswordChange(Boolean.TRUE.equals(request.forcePasswordChange()))
                 .build();
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
+        saveCoachSubjects(user,request);
         audit(actor, "CREATE", "USER", user.getUserId(), "Created account " + user.getEmail() + " - " + role.getRoleName());
         return user.getUserId();
     }
@@ -138,8 +163,19 @@ public class ManagerService {
         if (request.password() != null && !request.password().isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(request.password()));
         }
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
+        saveCoachSubjects(user,request);
         audit(actor, "UPDATE", "USER", id, "Updated account " + user.getEmail() + " - " + role.getRoleName());
+    }
+
+    private void saveCoachSubjects(User user,ManagerRequests.UserRequest request) {
+        if("Coach".equalsIgnoreCase(user.getRole().getRoleName())) {
+            if(request.subjectIds()!=null) {
+                if(!request.subjectIds().containsAll(managerRepository.activeCoachSubjects(user.getUserId())))
+                    throw new IllegalArgumentException("Reassign or deactivate active classes before removing their coach's subject.");
+                managerRepository.saveCoachSubjects(user.getUserId(),request.subjectIds());
+            }
+        } else managerRepository.saveCoachSubjects(user.getUserId(),List.of());
     }
 
     public void deleteUser(Integer id, String actor) {
@@ -202,8 +238,14 @@ public class ManagerService {
     public List<Map<String, Object>> subjects() { return managerRepository.subjects(); }
 
     public int saveSubject(Integer id, ManagerRequests.SubjectRequest request, String actor) {
+        managerRepository.lockOperations();
         if (id != null) managerRepository.requireSubject(id);
+        var existing=id==null?managerRepository.slotPolicy():managerRepository.subjectPolicy(id);
+        new TeachingSlots.Policy(existing.opensAt(),existing.closesAt(),existing.breakMinutes(),
+            request.durationMinutes()==null?existing.durationMinutes():request.durationMinutes(),
+            request.slotStarts()==null?existing.configuredStarts():request.slotStarts());
         int savedId = managerRepository.saveSubject(id, request);
+        managerRepository.subjectPolicy(savedId);
         audit(actor, id == null ? "CREATE" : "UPDATE", "SUBJECT", savedId, request.subjectName());
         return savedId;
     }
@@ -246,6 +288,8 @@ public class ManagerService {
         if (!"Coach".equalsIgnoreCase(coach.getRole().getRoleName()) || !"ACTIVE".equalsIgnoreCase(coach.getStatus())) {
             throw new IllegalArgumentException("Only active coaches can be assigned");
         }
+        if(!managerRepository.coachTeachesSubject(request.coachId(),request.subjectId()))
+            throw new IllegalArgumentException("The selected coach is not assigned to this subject.");
         Integer capacity = managerRepository.roomCapacity(request.roomId());
         if (capacity == null) throw new IllegalArgumentException("The room does not exist");
         if (request.maxSlots() > capacity) throw new IllegalArgumentException("Maximum class capacity exceeds room capacity");
@@ -277,6 +321,31 @@ public class ManagerService {
         return managerRepository.filteredSchedules(from,to,low,status,excludeUrgent);
     }
 
+    @Transactional(readOnly=true)
+    public Map<String,Object> classSlotPolicy(Integer classId) {
+        var p=managerRepository.classSlotPolicy(classId);
+        return Map.of("classId",classId,"opensAt",p.opensAt(),"closesAt",p.closesAt(),"breakMinutes",p.breakMinutes(),"durationMinutes",p.durationMinutes(),"starts",p.starts());
+    }
+    public Map<String,Object> slotPolicy() {
+        var p=managerRepository.slotPolicy();
+        return Map.of("opensAt",p.opensAt(),"closesAt",p.closesAt(),"breakMinutes",p.breakMinutes(),"durationMinutes",p.durationMinutes(),"starts",p.starts());
+    }
+    public Map<String,Object> saveSlotPolicy(TeachingSlots.Policy policy,String actor) {
+        managerRepository.lockOperations();
+        for(var subject:managerRepository.subjects()) {
+            var existing=managerRepository.subjectPolicy(((Number)subject.get("subjectId")).intValue());
+            new TeachingSlots.Policy(policy.opensAt(),policy.closesAt(),policy.breakMinutes(),existing.durationMinutes(),existing.configuredStarts());
+        }
+        managerRepository.saveSlotPolicy(policy);
+        audit(actor,"UPDATE","SCHEDULE_POLICY",1,policy.toString());
+        return slotPolicy();
+    }
+    private ManagerRequests.SchedulePlanRequest fixedRules(ManagerRequests.SchedulePlanRequest r) {
+        var p=managerRepository.classSlotPolicy(r.classId());
+        if(r.durationMinutes()==null || !r.durationMinutes().equals(p.durationMinutes()) || !java.util.Objects.equals(r.breakMinutes(),p.breakMinutes()))
+            throw new IllegalArgumentException("Scheduling settings changed. Reload the fixed teaching slots.");
+        return r;
+    }
     public int saveSchedule(Integer id, ManagerRequests.ScheduleRequest request, String actor) {
         managerRepository.lockOperations();
         validateStatus(request.status(), SCHEDULE_STATUSES);
@@ -301,6 +370,11 @@ public class ManagerService {
                     || !request.classId().equals(((Number) previous.get("classId")).intValue()))) {
                 throw new IllegalArgumentException("Keep the class and times unchanged when cancelling or completing a session");
             }
+        }
+        var policy=managerRepository.classSlotPolicy(request.classId());
+        int changeover=previous==null?policy.breakMinutes():((Number)previous.get("changeoverMinutes")).intValue();
+        if(timingChanged && !cancelled && !completed) {
+            policy.validate(request.startTime(),request.endTime()); changeover=policy.breakMinutes();
         }
         if (id == null && (cancelled || completed)) {
             throw new IllegalArgumentException("A new session must have Scheduled status");
@@ -327,10 +401,11 @@ public class ManagerService {
         Integer coachId = ((Number) assignment.get("coachId")).intValue();
         Integer roomId = ((Number) assignment.get("roomId")).intValue();
         if (!cancelled && !completed
-                && managerRepository.hasScheduleConflict(id, coachId, roomId, request.startTime(), request.endTime())) {
+                && managerRepository.hasScheduleConflict(id, coachId, roomId, request.startTime(), request.endTime().plusMinutes(changeover))) {
             throw new IllegalArgumentException("The time slot conflicts with the coach or room schedule");
         }
         int savedId = managerRepository.saveSchedule(id, request);
+        managerRepository.setChangeover(savedId,changeover);
         if (id != null && cancelled) {
             managerRepository.notifyScheduleBookings(id, "Buổi học đã hủy",
                     assignment.get("className") + " lúc " + request.startTime()
@@ -371,20 +446,35 @@ public class ManagerService {
     }
 
     @Transactional(readOnly=true)
+    public Map<String,Object> scheduleAvailability(ManagerRequests.SchedulePlanRequest request) {
+        var now=LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        fixedRules(request);SchedulePlanner.validateRules(request,now);
+        var assignment=planningAssignment(request.classId());
+        int coachId=((Number)assignment.get("coachId")).intValue(),roomId=((Number)assignment.get("roomId")).intValue();
+        var busy=managerRepository.occupiedSlots(coachId,roomId,request.fromDate().atStartOfDay().minusMinutes(request.breakMinutes()),request.toDate().plusDays(1).atStartOfDay().plusMinutes(request.breakMinutes()));
+        return Map.of("slots",CourseSchedulePlanner.availability(request,busy,now,managerRepository.classSlotPolicy(request.classId())));
+    }
+
+    @Transactional(readOnly=true)
     public Map<String,Object> previewSchedulePlan(ManagerRequests.SchedulePlanRequest request) {
         var now=LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
-        SchedulePlanner.validateRules(request,now);
+        fixedRules(request); SchedulePlanner.validateRules(request,now);
         var assignment=planningAssignment(request.classId());
         int coachId=((Number)assignment.get("coachId")).intValue(), roomId=((Number)assignment.get("roomId")).intValue();
         var busy=managerRepository.occupiedSlots(coachId,roomId,request.fromDate().atStartOfDay().minusMinutes(request.breakMinutes()),request.toDate().plusDays(1).atStartOfDay().plusMinutes(request.breakMinutes()));
-        var plan=SchedulePlanner.propose(request,busy,now);
+        if(request.weekdaySlots()!=null) {
+            var weekly=CourseSchedulePlanner.propose(request,busy,now,managerRepository.classSlotPolicy(request.classId()));
+            return Map.of("sessions",weekly.sessions(),"missing",weekly.missing(),"skipped",weekly.skipped(),
+                "conflicts",weekly.conflicts(),"requestedSessions",weekly.requestedSessions(),"coachId",coachId,"roomId",roomId);
+        }
+        var plan=SchedulePlanner.proposeFixed(request,busy,now,managerRepository.classSlotPolicy(request.classId()));
         return Map.of("sessions",plan.sessions(),"missing",plan.missing(),"skipped",plan.skipped(),"coachId",coachId,"roomId",roomId);
     }
 
     public List<Integer> commitSchedulePlan(ManagerRequests.SchedulePlanCommitRequest request, String actor) {
         managerRepository.lockOperations();
         var now=LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
-        var rules=request.rules(); SchedulePlanner.validateRules(rules,now);
+        var rules=fixedRules(request.rules()); SchedulePlanner.validateRules(rules,now);
         var assignment=planningAssignment(rules.classId());
         int coachId=((Number)assignment.get("coachId")).intValue(), roomId=((Number)assignment.get("roomId")).intValue();
         if (!java.util.Objects.equals(request.coachId(),coachId) || !java.util.Objects.equals(request.roomId(),roomId))
@@ -392,13 +482,19 @@ public class ManagerService {
         if(request.sessions()==null || request.sessions().size()!=rules.sessions())
             throw new IllegalArgumentException("Generate a complete plan before saving.");
         var busy=new ArrayList<>(managerRepository.occupiedSlots(coachId,roomId,rules.fromDate().atStartOfDay().minusMinutes(rules.breakMinutes()),rules.toDate().plusDays(1).atStartOfDay().plusMinutes(rules.breakMinutes())));
+        if(rules.weekdaySlots()!=null) {
+            var expected=CourseSchedulePlanner.propose(rules,busy,now,managerRepository.classSlotPolicy(rules.classId()));
+            if(expected.missing()!=0 || !expected.sessions().equals(request.sessions()))
+                throw new IllegalArgumentException("The weekly plan changed or contains conflicts. Generate a new preview.");
+        }
         var dates=new java.util.HashSet<java.time.LocalDate>();
         for(var session:request.sessions()) {
-            SchedulePlanner.validateSession(rules,session,now);
+            if(rules.weekdaySlots()==null) SchedulePlanner.validateSession(rules,session,now);
+            managerRepository.classSlotPolicy(rules.classId()).validate(session.startTime(),session.endTime());
             if(!dates.add(session.startTime().toLocalDate())) throw new IllegalArgumentException("Plan at most one session per day.");
-            if(!SchedulePlanner.free(session,busy,rules.breakMinutes()))
+            if(!SchedulePlanner.free(new ManagerRequests.PlannedSession(session.startTime(),session.endTime().plusMinutes(rules.breakMinutes())),busy,0))
                 throw new IllegalArgumentException("The preview conflicts with a coach or room booking. Generate a new preview.");
-            busy.add(new SchedulePlanner.BusyPeriod(session.startTime(),session.endTime()));
+            busy.add(new SchedulePlanner.BusyPeriod(session.startTime(),session.endTime().plusMinutes(rules.breakMinutes())));
         }
         List<Integer> ids=new ArrayList<>();
         for(var session:request.sessions()) ids.add(saveSchedule(null,new ManagerRequests.ScheduleRequest(rules.classId(),session.startTime(),session.endTime(),"SCHEDULED"),actor));

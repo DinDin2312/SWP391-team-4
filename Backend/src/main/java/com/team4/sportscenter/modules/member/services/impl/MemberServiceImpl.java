@@ -300,7 +300,10 @@ public class MemberServiceImpl implements MemberService {
 
         // --- NEW: Time Overlap Validation ---
         List<Booking> myExistingBookings = bookingRepository.findAllBookingsByEmail(email)
-                .stream().filter(b -> !b.getStatus().equals("CANCELLED")).toList();
+                .stream()
+                .filter(b -> !b.getStatus().equals("CANCELLED"))
+                .filter(b -> b.getSchedule() != null && !"CANCELLED".equalsIgnoreCase(b.getSchedule().getStatus()))
+                .toList();
 
         for (Schedule newSched : schedules) {
             for (Booking myB : myExistingBookings) {

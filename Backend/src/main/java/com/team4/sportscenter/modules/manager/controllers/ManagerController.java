@@ -22,6 +22,13 @@ public class ManagerController {
     private final ManagerService managerService;
     private final com.team4.sportscenter.modules.manager.services.TransactionService transactions;
 
+    @GetMapping("/classes/{id}/schedule-policy")
+    public Map<String,Object> classSlotPolicy(@PathVariable Integer id) {return managerService.classSlotPolicy(id);}
+    @GetMapping("/schedule-policy")
+    public Map<String,Object> schedulePolicy(){return managerService.slotPolicy();}
+    @PutMapping("/schedule-policy")
+    public Map<String,Object> schedulePolicy(@RequestBody com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy policy,java.security.Principal principal){return managerService.saveSlotPolicy(policy,principal.getName());}
+
     @GetMapping("/transactions")
     public Map<String,Object> transactions(@RequestParam(defaultValue="payments") String mode,
             @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate from,
@@ -96,6 +103,37 @@ public class ManagerController {
         return Map.of("avatarPath", avatarPath, "avatarUrl", "/api/avatars/" + avatarPath);
     }
 
+    @PostMapping(value="/subjects/with-image",consumes="multipart/form-data")
+    public Map<String,Integer> createSubjectWithImage( @Valid @RequestPart("details") ManagerRequests.SubjectRequest details,
+            @RequestPart(value="image",required=false) MultipartFile image,@RequestParam(defaultValue="false") boolean removeImage,Authentication auth) {
+        return Map.of("id",managerService.saveSubjectWithImage(null,details,image,removeImage,auth.getName()));
+    }
+    @PutMapping(value="/subjects/{id}/with-image",consumes="multipart/form-data")
+    public Map<String,Integer> updateSubjectWithImage(@PathVariable Integer id,@Valid @RequestPart("details") ManagerRequests.SubjectRequest details,
+            @RequestPart(value="image",required=false) MultipartFile image,@RequestParam(defaultValue="false") boolean removeImage,Authentication auth) {
+        return Map.of("id",managerService.saveSubjectWithImage(id,details,image,removeImage,auth.getName()));
+    }
+    @PostMapping(value="/rooms/with-image",consumes="multipart/form-data")
+    public Map<String,Integer> createRoomWithImage( @Valid @RequestPart("details") ManagerRequests.RoomRequest details,
+            @RequestPart(value="image",required=false) MultipartFile image,@RequestParam(defaultValue="false") boolean removeImage,Authentication auth) {
+        return Map.of("id",managerService.saveRoomWithImage(null,details,image,removeImage,auth.getName()));
+    }
+    @PutMapping(value="/rooms/{id}/with-image",consumes="multipart/form-data")
+    public Map<String,Integer> updateRoomWithImage(@PathVariable Integer id,@Valid @RequestPart("details") ManagerRequests.RoomRequest details,
+            @RequestPart(value="image",required=false) MultipartFile image,@RequestParam(defaultValue="false") boolean removeImage,Authentication auth) {
+        return Map.of("id",managerService.saveRoomWithImage(id,details,image,removeImage,auth.getName()));
+    }
+    @PostMapping(value="/classes/with-image",consumes="multipart/form-data")
+    public Map<String,Integer> createClassWithImage( @Valid @RequestPart("details") ManagerRequests.ClassRequest details,
+            @RequestPart(value="image",required=false) MultipartFile image,@RequestParam(defaultValue="false") boolean removeImage,Authentication auth) {
+        return Map.of("id",managerService.saveClassWithImage(null,details,image,removeImage,auth.getName()));
+    }
+    @PutMapping(value="/classes/{id}/with-image",consumes="multipart/form-data")
+    public Map<String,Integer> updateClassWithImage(@PathVariable Integer id,@Valid @RequestPart("details") ManagerRequests.ClassRequest details,
+            @RequestPart(value="image",required=false) MultipartFile image,@RequestParam(defaultValue="false") boolean removeImage,Authentication auth) {
+        return Map.of("id",managerService.saveClassWithImage(id,details,image,removeImage,auth.getName()));
+    }
+
     @GetMapping("/subjects") public List<Map<String, Object>> subjects() { return managerService.subjects(); }
     @PostMapping("/subjects") public Map<String, Integer> createSubject(@Valid @RequestBody ManagerRequests.SubjectRequest request, Authentication auth) { return Map.of("id", managerService.saveSubject(null, request, auth.getName())); }
     @PutMapping("/subjects/{id}") public Map<String, Integer> updateSubject(@PathVariable Integer id, @Valid @RequestBody ManagerRequests.SubjectRequest request, Authentication auth) { return Map.of("id", managerService.saveSubject(id, request, auth.getName())); }
@@ -130,6 +168,11 @@ public class ManagerController {
     @PostMapping("/schedules/plan/preview")
     public Map<String,Object> previewSchedulePlan(@Valid @RequestBody ManagerRequests.SchedulePlanRequest request) {
         return managerService.previewSchedulePlan(request);
+    }
+
+    @PostMapping("/schedules/plan/availability")
+    public Map<String,Object> scheduleAvailability(@Valid @RequestBody ManagerRequests.SchedulePlanRequest request) {
+        return managerService.scheduleAvailability(request);
     }
 
     @PostMapping("/schedules/plan")

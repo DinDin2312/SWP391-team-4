@@ -438,8 +438,25 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 : java.time.LocalTime.of(18, 0);
 
         // Tìm các lịch học của đợt tiếp theo (bắt đầu sau hoặc sát thời điểm khóa hiện tại kết thúc)
-        List<Schedule> futureSchedules = scheduleRepository.findUpcomingSchedulesByBaseName(
-                baseName, className, curClassId, curEndTime.minusDays(2));
+        LocalDateTime searchAfterTime = curEndTime.isAfter(LocalDateTime.now())
+                ? curEndTime.minusDays(2)
+                : LocalDateTime.now();
+        List<Schedule> futureSchedules = new ArrayList<>(scheduleRepository.findUpcomingSchedulesByBaseName(
+                baseName, className, curClassId, searchAfterTime));
+
+        // Bổ sung các lớp học cùng bộ môn (Subject) được Manager tạo theo quy tắc Fixed Teaching Slots mới
+        if (curClass.getSubjectId() != null) {
+            Set<Integer> existingSchedIds = futureSchedules.stream()
+                    .map(Schedule::getScheduleId)
+                    .collect(Collectors.toSet());
+            List<Schedule> sameSubjectSchedules = scheduleRepository.findUpcomingSchedulesBySubjectId(
+                    curClass.getSubjectId(), curClassId, LocalDateTime.now());
+            for (Schedule s : sameSubjectSchedules) {
+                if (!existingSchedIds.contains(s.getScheduleId())) {
+                    futureSchedules.add(s);
+                }
+            }
+        }
 
         if (futureSchedules.isEmpty()) {
             throw new RuntimeException("Không tìm thấy đợt mở lớp tiếp theo cho khóa học: " + className);
@@ -452,13 +469,34 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         }
 
         // Sắp xếp các lớp ứng viên cho kỳ sau theo độ tương đồng lịch học cao nhất:
+        // 0. Ưu tiên lớp cùng tên gốc (Đợt tiếp theo của đúng khóa đó) và bắt đầu sau khi khóa cũ kết thúc
         // 1. Trùng nhiều ngày trong tuần nhất (ví dụ cùng Thứ 2, 4, 6)
-        // 2. Giờ bắt đầu lớp học tương tự nhất (chênh lệch ít phút nhất so với ca học cũ)
+        // 2. Giờ bắt đầu ca học (Fixed Teaching Slot) tương tự nhất
         // 3. Khai giảng sớm nhất tiếp nối khóa cũ
         List<Map.Entry<Integer, List<Schedule>>> rankedCandidateClasses = new java.util.ArrayList<>(schedulesByClass.entrySet());
         rankedCandidateClasses.sort((e1, e2) -> {
             List<Schedule> list1 = e1.getValue();
             List<Schedule> list2 = e2.getValue();
+            GymClass c1 = list1.get(0).getGymClass();
+            GymClass c2 = list2.get(0).getGymClass();
+
+            String b1 = c1.getClassName() != null
+                    ? c1.getClassName().replaceAll("(?i)\\s*[-–(]?\\s*(Đợt|Khóa|K|Tháng|T)\\s*\\d+.*[)]?", "").trim()
+                    : "";
+            String b2 = c2.getClassName() != null
+                    ? c2.getClassName().replaceAll("(?i)\\s*[-–(]?\\s*(Đợt|Khóa|K|Tháng|T)\\s*\\d+.*[)]?", "").trim()
+                    : "";
+            boolean sameBase1 = !baseName.isEmpty() && b1.toLowerCase().startsWith(baseName.toLowerCase());
+            boolean sameBase2 = !baseName.isEmpty() && b2.toLowerCase().startsWith(baseName.toLowerCase());
+            if (sameBase1 != sameBase2) {
+                return sameBase1 ? -1 : 1;
+            }
+
+            boolean afterCur1 = !list1.get(0).getStartTime().isBefore(searchAfterTime);
+            boolean afterCur2 = !list2.get(0).getStartTime().isBefore(searchAfterTime);
+            if (afterCur1 != afterCur2) {
+                return afterCur1 ? -1 : 1;
+            }
 
             java.util.Set<java.time.DayOfWeek> days1 = list1.stream().map(s -> s.getStartTime().getDayOfWeek()).collect(Collectors.toSet());
             java.util.Set<java.time.DayOfWeek> days2 = list2.stream().map(s -> s.getStartTime().getDayOfWeek()).collect(Collectors.toSet());
@@ -482,13 +520,20 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             return list1.get(0).getStartTime().compareTo(list2.get(0).getStartTime());
         });
 
+        List<Booking> activeMemberBookings = bookingRepository.findByUserIdWithDetails(userId).stream()
+                .filter(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus()))
+                .filter(b -> b.getSchedule() != null && !"CANCELLED".equalsIgnoreCase(b.getSchedule().getStatus()))
+                .filter(b -> b.getSchedule().getGymClass() == null || !curClassId.equals(b.getSchedule().getGymClass().getClassId()))
+                .toList();
+
         GymClass targetClass = null;
         Schedule targetFirstSession = null;
         int maxSlots = 0;
         int bookedMembers = 0;
 
         for (Map.Entry<Integer, List<Schedule>> entry : rankedCandidateClasses) {
-            GymClass candidateClass = entry.getValue().get(0).getGymClass();
+            List<Schedule> candidateSchedules = entry.getValue();
+            GymClass candidateClass = candidateSchedules.get(0).getGymClass();
 
             // Kiểm tra xem hội viên này đã đăng ký/gia hạn vào đợt mới này chưa
             boolean alreadyEnrolled = bookingRepository.existsByUserIdAndClassId(userId, candidateClass.getClassId());
@@ -496,12 +541,31 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 continue; // Bỏ qua nếu đã đăng ký đợt này, tiếp tục tìm đợt tiếp theo phù hợp
             }
 
+            // Kiểm tra trùng lịch với các khóa học khác mà hội viên đang theo học
+            boolean hasConflict = false;
+            for (Schedule candSched : candidateSchedules) {
+                if (candSched.getStartTime() == null || candSched.getEndTime() == null) continue;
+                for (Booking existB : activeMemberBookings) {
+                    Schedule existSched = existB.getSchedule();
+                    if (existSched.getStartTime() != null && existSched.getEndTime() != null
+                            && candSched.getStartTime().isBefore(existSched.getEndTime())
+                            && existSched.getStartTime().isBefore(candSched.getEndTime())) {
+                        hasConflict = true;
+                        break;
+                    }
+                }
+                if (hasConflict) break;
+            }
+            if (hasConflict) {
+                continue;
+            }
+
             int candidateMax = (candidateClass.getMaxSlots() != null) ? candidateClass.getMaxSlots() : 30;
             int candidateBooked = bookingRepository.countBookedUsersByClassId(candidateClass.getClassId());
 
             if (candidateBooked < candidateMax) {
                 targetClass = candidateClass;
-                targetFirstSession = entry.getValue().get(0);
+                targetFirstSession = candidateSchedules.get(0);
                 maxSlots = candidateMax;
                 bookedMembers = candidateBooked;
                 break;
@@ -559,6 +623,37 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         List<Schedule> allBatchSchedules = scheduleRepository.findAllSchedulesByClassId(targetClass.getClassId());
         if (allBatchSchedules.isEmpty()) {
             throw new RuntimeException("Không tìm thấy danh sách buổi học của khóa học đợt mới.");
+        }
+
+        List<Booking> existingActiveBookings = bookingRepository.findByUserIdWithDetails(user.getUserId()).stream()
+                .filter(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus()))
+                .filter(b -> b.getSchedule() != null && !"CANCELLED".equalsIgnoreCase(b.getSchedule().getStatus()))
+                .collect(Collectors.toList());
+
+        DateTimeFormatter overlapFmt = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
+        for (Schedule targetSchedule : allBatchSchedules) {
+            if ("CANCELLED".equalsIgnoreCase(targetSchedule.getStatus())
+                    || targetSchedule.getStartTime() == null
+                    || targetSchedule.getEndTime() == null) {
+                continue;
+            }
+            for (Booking existing : existingActiveBookings) {
+                Schedule exSched = existing.getSchedule();
+                if (exSched == null || exSched.getStartTime() == null || exSched.getEndTime() == null) {
+                    continue;
+                }
+                if (exSched.getGymClass() != null && targetClass.getClassId().equals(exSched.getGymClass().getClassId())) {
+                    continue;
+                }
+                if (targetSchedule.getStartTime().isBefore(exSched.getEndTime())
+                        && targetSchedule.getEndTime().isAfter(exSched.getStartTime())) {
+                    String conflictClassName = exSched.getGymClass() != null
+                            ? exSched.getGymClass().getClassName()
+                            : "Lớp học khác";
+                    throw new IllegalStateException("Khóa học gia hạn bị trùng lịch với lớp '" + conflictClassName
+                            + "' vào lúc " + exSched.getStartTime().format(overlapFmt) + ".");
+                }
+            }
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -1407,9 +1502,11 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         // Get all active classes
         List<Map<String, Object>> activeClassRows = jdbcTemplate.queryForList("""
             SELECT c.class_id, c.class_name, c.price, c.max_slots, c.subject_id,
+                   sub.duration_minutes as subject_duration_minutes,
                    u.user_id as coach_id, u.full_name as coach_name,
                    r.room_id, r.room_name
             FROM CLASSES c
+            LEFT JOIN SUBJECTS sub ON sub.subject_id = c.subject_id
             LEFT JOIN USERS u ON u.user_id = c.coach_id
             LEFT JOIN ROOMS r ON r.room_id = c.room_id
             WHERE c.status = 'ACTIVE'
@@ -1432,6 +1529,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             java.math.BigDecimal price = (java.math.BigDecimal) crow.get("price");
             Integer maxSlots = crow.get("max_slots") != null ? ((Number) crow.get("max_slots")).intValue() : 20;
             Integer subjectId = crow.get("subject_id") != null ? ((Number) crow.get("subject_id")).intValue() : null;
+            Integer subjectDurationMinutes = crow.get("subject_duration_minutes") != null
+                    ? ((Number) crow.get("subject_duration_minutes")).intValue()
+                    : 90;
             String coachName = (String) crow.get("coach_name");
             Integer roomId = crow.get("room_id") != null ? ((Number) crow.get("room_id")).intValue() : null;
             String roomName = (String) crow.get("room_name");
@@ -1479,7 +1579,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
 
                 // Count booked slots for this schedule
                 Integer bCount = jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM BOOKINGS WHERE schedule_id = ? AND status = 'CONFIRMED'",
+                        "SELECT COUNT(*) FROM BOOKINGS WHERE schedule_id = ? AND status IN ('CONFIRMED', 'PENDING')",
                         Integer.class, scheduleId
                 );
                 if (bCount != null && bCount > bookedSlots) {
@@ -1490,7 +1590,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             LocalDateTime nextSessionTime = startTimes.isEmpty() ? null : startTimes.get(0);
             LocalDateTime lastSessionTime = endTimes.isEmpty() ? nextSessionTime : endTimes.stream().max(LocalDateTime::compareTo).orElse(nextSessionTime);
 
-            int durationMinutes = 60;
+            int durationMinutes = subjectDurationMinutes != null ? subjectDurationMinutes : 90;
             if (nextSessionTime != null && !endTimes.isEmpty() && endTimes.get(0) != null) {
                 durationMinutes = (int) ChronoUnit.MINUTES.between(nextSessionTime, endTimes.get(0));
             }

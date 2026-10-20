@@ -48,7 +48,7 @@ class DatabaseMigrationTests {
         for(var statement:ddl.split(";"))if(!statement.isBlank())sql(statement);
     }
     @Test void emptySchemaBootstrapsOnceAndRecordsFutureDates()throws Exception {
-        migrate();assertEquals(7,flyway().info().applied().length);
+        migrate();assertEquals(11,flyway().info().applied().length);
         assertEquals(4,number("SELECT COUNT(*) FROM ROLES"));
         assertEquals(0,number("SELECT COUNT(*) FROM USERS"));
         sql("INSERT INTO USERS(full_name,email,password_hash) VALUES('New user','fresh@test.invalid','hash')");
@@ -105,7 +105,7 @@ class DatabaseMigrationTests {
                 "--spring.datasource.url="+url,"--spring.datasource.username="+user,"--spring.datasource.password="+password,
                 "--spring.jpa.hibernate.ddl-auto=validate","--spring.jpa.show-sql=false","--server.port=0")) {
             assertTrue(application.getBean(jakarta.persistence.EntityManagerFactory.class).isOpen());
-            assertEquals(7,application.getBean(Flyway.class).info().applied().length);
+            assertEquals(11,application.getBean(Flyway.class).info().applied().length);
             assertEquals(0,number("SELECT COUNT(*) FROM USERS"));
         }
     }

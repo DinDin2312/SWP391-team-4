@@ -50,6 +50,25 @@ public final class SchedulePlanner {
             throw new IllegalArgumentException("Each session must respect the date, weekday, duration and availability rules.");
     }
 
+    public static Plan proposeFixed(SchedulePlanRequest r,List<BusyPeriod> occupied,LocalDateTime now,TeachingSlots.Policy policy) {
+        validateRules(r,now);
+        var times=new ArrayList<>(policy.starts().stream().filter(t->!t.isBefore(r.availableFrom())
+            && !t.plusMinutes(policy.durationMinutes()).isAfter(r.availableTo())).toList());
+        times.sort(Comparator.comparingInt(t->Math.abs(t.toSecondOfDay()-r.preferredTime().toSecondOfDay())));
+        List<PlannedSession> sessions=new ArrayList<>(); List<SkippedDay> skipped=new ArrayList<>();
+        for(var day=r.fromDate(); !day.isAfter(r.toDate()) && sessions.size()<r.sessions(); day=day.plusDays(1)) {
+            if(!r.weekdays().contains(day.getDayOfWeek().getValue()))continue;
+            if(r.excludedDates().contains(day)){skipped.add(new SkippedDay(day,"Excluded date"));continue;}
+            boolean found=false;
+            for(var time:times){var start=day.atTime(time);var end=start.plusMinutes(policy.durationMinutes());
+                if(start.isAfter(now) && free(new PlannedSession(start,end.plusMinutes(policy.breakMinutes())),occupied,0)){
+                    sessions.add(new PlannedSession(start,end));found=true;break;
+                }
+            }
+            if(!found)skipped.add(new SkippedDay(day,"No available slot"));
+        }
+        return new Plan(List.copyOf(sessions),r.sessions()-sessions.size(),List.copyOf(skipped));
+    }
     public static Plan propose(SchedulePlanRequest r, List<BusyPeriod> occupied, LocalDateTime now) {
         validateRules(r,now);
         List<PlannedSession> sessions=new ArrayList<>(); List<SkippedDay> skipped=new ArrayList<>();
