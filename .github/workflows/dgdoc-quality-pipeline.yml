@@ -148,18 +148,28 @@ jobs:
   security-sast-scan:
     name: Security & Vulnerability Scan (SAST)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Run Trivy Secret & Misconfiguration Scanner
-        uses: aquasecurity/trivy-action@master
+      - name: Log in to GitHub Container Registry (Avoid Rate Limiting)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Trivy Vulnerability & Secret Scanner
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
           format: 'table'
           exit-code: '0'
-          trivyargs: '--offline-scan --scanners misconfig,secret'
+          severity: 'CRITICAL,HIGH'
 
   # 5. Quality Gate Summary (Chặn merge nếu bất kỳ bài kiểm tra nào thất bại)
   quality-gate-summary:
