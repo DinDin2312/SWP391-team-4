@@ -1,18 +1,17 @@
 import { locale } from '../../../i18n/languageStore.js';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
-import { packageBookingOptions } from '../packageBookingOptions';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar, Sparkles, ShoppingCart, Clock, ArrowRight } from 'lucide-react';
+import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar, Sparkles, ShoppingCart, Clock, ArrowRight, Loader2 } from 'lucide-react';
 
 const BookClass = () => {
   useLanguage();
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
-  const [packages,setPackages]=useState([]),[paymentChoices,setPaymentChoices]=useState({}),[booking,setBooking]=useState(null),[benefitsError,setBenefitsError]=useState(false);
+  const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
@@ -80,18 +79,10 @@ const BookClass = () => {
   const fetchCourses = async (isInitialLoad = false) => {
     try {
       const token = localStorage.getItem('token');
-      const [res, benefits] = await Promise.all([
-        axios.get('http://localhost:8080/api/v1/member/available-classes', {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get('http://localhost:8080/api/v1/member/my-packages', {
-          headers: { Authorization: `Bearer ${token}` }
-        }).catch(() => ({ data: [] }))
-      ]);
-
+      const res = await axios.get('http://localhost:8080/api/v1/member/available-classes', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setCourses(res.data);
-      setPackages(benefits.data || []);
-      setBenefitsError(!benefits.data || benefits.data.length === 0);
 
       if (res.data.length > 0) {
         const uniqueDates = [...new Set(res.data.map(s => new Date(s.nextSessionTime).toDateString()))].sort((a, b) => new Date(a) - new Date(b));
@@ -112,22 +103,20 @@ const BookClass = () => {
   const handleBook = async (classId) => {
     if(booking!==null)return;
     setBooking(classId);
-    const membershipId=paymentChoices[classId];
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:8080/api/v1/member/book-class/${classId}${membershipId?`/with-package/${membershipId}`:''}`, {}, {
+      await axios.post(`http://localhost:8080/api/v1/member/book-class/${classId}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       // Optimistic update: UI phản hồi ngay lập tức không cần đợi network
       setCourses(prev => prev.map(c => c.classId === classId ? {
         ...c,
-        isBookedByMe: !!membershipId,
-        isPendingPayment: !membershipId,
+        isPendingPayment: true,
         bookedSlots: Math.min(c.maxSlots, (c.bookedSlots || 0) + 1)
       } : c));
 
-      setToast({ visible: true, type: 'success', title: t('Course Enrolled'), message: t(membershipId?'Booked using package benefits. No additional course payment is required.':'Course added to cart. Complete payment to confirm your place.') });
+      setToast({ visible: true, type: 'success', title: t('Course Enrolled'), message: t('Course added to cart. Complete payment to confirm your place.') });
       setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 4000);
       window.dispatchEvent(new Event('cartUpdated')); // Cập nhật badge giỏ hàng ngay lập tức
       fetchCourses(false); // Đồng bộ ngầm
@@ -237,6 +226,7 @@ const BookClass = () => {
               const isPending = !!course.isPendingPayment;
               const isFull = spotsLeft <= 0;
               const isAiSelected = Number(aiHighlightedClassId) === Number(course.classId);
+              const isThisBooking = Number(booking) === Number(course.classId);
 
               return (
                 <div
@@ -346,29 +336,6 @@ const BookClass = () => {
                       <span className="text-xl font-black text-primary tracking-tight">{formatMoney(course.price)}</span>
                     </div>
 
-                    {benefitsError && <p className="text-xs text-error mt-2" role="alert">{t('Package benefits could not be loaded. Refresh to use a package.')}</p>}
-                    {!isBooked && !isPending && (
-                      <div className="mt-3 flex flex-col gap-1.5">
-                        <label className="text-[11px] font-semibold text-on-surface-variant">{t('Booking payment')}</label>
-                        <select
-                          aria-label={t('Booking payment for {0}', [course.className])}
-                          value={paymentChoices[course.classId] || ''}
-                          disabled={booking !== null || isFull}
-                          onChange={event => setPaymentChoices(current => ({ ...current, [course.classId]: event.target.value }))}
-                          className="w-full rounded-xl text-xs py-2 px-2.5 bg-surface border border-surface-container-highest text-on-surface focus:outline-none focus:ring-1 focus:ring-primary truncate"
-                        >
-                          <option value="">{t('Buy this course separately')}</option>
-                          {packageBookingOptions(packages, course, new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())).map(option => (
-                            <option key={option.membershipId} value={option.membershipId}>
-                              {t('{0} · {1} sessions remaining', [option.packageName, option.remainingSessions])}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="text-[10px] text-on-surface-variant/80 leading-snug">
-                          {t('A package must cover every session and have enough remaining sessions for the whole course.')}
-                        </span>
-                      </div>
-                    )}
                     {isBooked ? (
                       <button
                         disabled
@@ -404,11 +371,23 @@ const BookClass = () => {
                       <button
                         type="button"
                         onClick={() => handleBook(course.classId)}
-                        disabled={booking !== null}
-                        className="group mt-4 sm:mt-auto w-full py-2.5 px-3.5 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-indigo-500/35 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        disabled={isThisBooking}
+                        className={`group mt-4 sm:mt-auto w-full py-2.5 px-3.5 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-indigo-500/35 active:scale-[0.98] ${
+                          isThisBooking ? 'opacity-85 cursor-wait pointer-events-none' : 'cursor-pointer'
+                        }`}
                       >
-                        <span className="whitespace-nowrap">{t(booking === course.classId ? 'Enrolling...' : 'Enroll Now')}</span>
-                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 shrink-0" />
+                        {isThisBooking ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                            <span className="whitespace-nowrap">{t('Enrolling...')}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="whitespace-nowrap">{t('Enroll Now')}</span>
+                            <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 shrink-0" />
+                          </>
+                        )}
+
                       </button>
                     )}
                   </div>
