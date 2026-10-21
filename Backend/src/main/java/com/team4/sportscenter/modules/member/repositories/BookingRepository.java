@@ -47,4 +47,13 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
 
     @Query("SELECT s FROM Booking b JOIN b.schedule s WHERE b.user.email = :email AND s.gymClass.classId = :classId AND b.status = 'CONFIRMED' ORDER BY s.startTime ASC")
     List<com.team4.sportscenter.modules.member.entities.Schedule> findEnrolledSchedulesByEmailAndClassId(@Param("email") String email, @Param("classId") Integer classId);
+
+    @Query("SELECT b.schedule.scheduleId, COUNT(b) FROM Booking b WHERE b.status = 'CONFIRMED' GROUP BY b.schedule.scheduleId")
+    List<Object[]> countAllBookedSlotsGroupedBySchedule();
+
+    @Query("SELECT DISTINCT b.schedule.gymClass.classId FROM Booking b WHERE b.user.email = :email AND b.status = 'CONFIRMED'")
+    java.util.Set<Integer> findConfirmedClassIdsByEmail(@Param("email") String email);
+
+    @Query("SELECT DISTINCT b.schedule.gymClass.classId FROM Booking b WHERE b.user.email = :email AND b.status = 'PENDING'")
+    java.util.Set<Integer> findPendingClassIdsByEmail(@Param("email") String email);
 }

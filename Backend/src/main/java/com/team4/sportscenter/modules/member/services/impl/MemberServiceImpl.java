@@ -200,6 +200,17 @@ public class MemberServiceImpl implements MemberService {
         Map<GymClass, List<Schedule>> classSchedules = schedules.stream()
                 .collect(Collectors.groupingBy(Schedule::getGymClass));
 
+        // Tối ưu Batch Query: gom số lượng slot đã đặt của tất cả schedules trong 1 query duy nhất (thay vì N+1 queries)
+        Map<Integer, Integer> bookedSlotsBySchedule = bookingRepository.countAllBookedSlotsGroupedBySchedule().stream()
+                .collect(Collectors.toMap(
+                        row -> (Integer) row[0],
+                        row -> ((Number) row[1]).intValue()
+                ));
+
+        // Tối ưu Batch Query: lấy toàn bộ ID lớp đã Confirmed hoặc Pending của User trong 2 queries duy nhất
+        Set<Integer> confirmedClassIds = email != null ? bookingRepository.findConfirmedClassIdsByEmail(email) : Collections.emptySet();
+        Set<Integer> pendingClassIds = email != null ? bookingRepository.findPendingClassIdsByEmail(email) : Collections.emptySet();
+
         List<AvailableClassResponse> response = new ArrayList<>();
 
         for (Map.Entry<GymClass, List<Schedule>> entry : classSchedules.entrySet()) {
@@ -209,16 +220,16 @@ public class MemberServiceImpl implements MemberService {
             classScheds.sort(Comparator.comparing(Schedule::getStartTime));
             Schedule nextSession = classScheds.get(0);
 
-            // Find max booked slots across all sessions
+            // Tìm số slot đã đặt lớn nhất qua in-memory map tra cứu O(1)
             int bookedSlots = 0;
             for (Schedule s : classScheds) {
-                int booked = bookingRepository.countBookedSlots(s.getScheduleId());
+                int booked = bookedSlotsBySchedule.getOrDefault(s.getScheduleId(), 0);
                 if (booked > bookedSlots)
                     bookedSlots = booked;
             }
 
-            Boolean isBooked = bookingRepository.existsConfirmedByEmailAndClassId(email, gymClass.getClassId());
-            Boolean isPending = bookingRepository.existsPendingByEmailAndClassId(email, gymClass.getClassId());
+            Boolean isBooked = confirmedClassIds.contains(gymClass.getClassId());
+            Boolean isPending = pendingClassIds.contains(gymClass.getClassId());
 
             Integer duration = (int) ChronoUnit.MINUTES.between(nextSession.getStartTime(), nextSession.getEndTime());
 
@@ -283,9 +294,7 @@ public class MemberServiceImpl implements MemberService {
         }
 
         LocalDateTime currentTime = LocalDateTime.now();
-        List<Schedule> schedules = scheduleRepository.findAvailableSchedules(currentTime).stream()
-                .filter(s -> s.getGymClass().getClassId().equals(classId))
-                .toList();
+        List<Schedule> schedules = scheduleRepository.findAvailableSchedulesByClassId(classId, currentTime);
 
         if (schedules.isEmpty())
             throw new RuntimeException("No future sessions found for this class.");
@@ -330,18 +339,24 @@ public class MemberServiceImpl implements MemberService {
                         schedules.get(0).getGymClass().getRoom().getRoomId(),
                         schedules.stream().map(Schedule::getStartTime).toList());
 
+        List<Booking> newBookings = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
         for (Schedule schedule : schedules) {
             Booking booking = new Booking();
             booking.setUser(user);
             booking.setSchedule(schedule);
             booking.setStatus(benefitId == null ? "PENDING" : "CONFIRMED");
-            booking.setBookingTime(LocalDateTime.now()); // NEW: Status changed to PENDING awaiting payment
+            booking.setBookingTime(now); // NEW: Status changed to PENDING awaiting payment
             booking.setAttendanceStatus("NOT_YET");
-            bookingRepository.saveAndFlush(booking);
-            if (benefitId != null) {
+            newBookings.add(booking);
+        }
+        bookingRepository.saveAllAndFlush(newBookings);
+
+        if (benefitId != null) {
+            for (Booking booking : newBookings) {
                 packageBenefits.allocate(booking.getBookingId(), benefitId);
-                packageBenefits.validateSessionDates(schedule.getScheduleId(), schedule.getStartTime(),
-                        schedule.getEndTime());
+                packageBenefits.validateSessionDates(booking.getSchedule().getScheduleId(),
+                        booking.getSchedule().getStartTime(), booking.getSchedule().getEndTime());
             }
         }
 

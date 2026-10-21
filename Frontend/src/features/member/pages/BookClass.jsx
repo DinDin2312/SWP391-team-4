@@ -80,14 +80,18 @@ const BookClass = () => {
   const fetchCourses = async (isInitialLoad = false) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:8080/api/v1/member/available-classes', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const [res, benefits] = await Promise.all([
+        axios.get('http://localhost:8080/api/v1/member/available-classes', {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get('http://localhost:8080/api/v1/member/my-packages', {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => ({ data: [] }))
+      ]);
+
       setCourses(res.data);
-      try {
-        const benefits=await axios.get('http://localhost:8080/api/v1/member/my-packages',{headers:{Authorization:`Bearer ${token}`}});
-        setPackages(benefits.data||[]);setBenefitsError(false);
-      } catch { setPackages([]);setBenefitsError(true); }
+      setPackages(benefits.data || []);
+      setBenefitsError(!benefits.data || benefits.data.length === 0);
 
       if (res.data.length > 0) {
         const uniqueDates = [...new Set(res.data.map(s => new Date(s.nextSessionTime).toDateString()))].sort((a, b) => new Date(a) - new Date(b));
@@ -115,10 +119,18 @@ const BookClass = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      // Optimistic update: UI phản hồi ngay lập tức không cần đợi network
+      setCourses(prev => prev.map(c => c.classId === classId ? {
+        ...c,
+        isBookedByMe: !!membershipId,
+        isPendingPayment: !membershipId,
+        bookedSlots: Math.min(c.maxSlots, (c.bookedSlots || 0) + 1)
+      } : c));
+
       setToast({ visible: true, type: 'success', title: t('Course Enrolled'), message: t(membershipId?'Booked using package benefits. No additional course payment is required.':'Course added to cart. Complete payment to confirm your place.') });
       setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 4000);
-      fetchCourses();
-      window.dispatchEvent(new Event('cartUpdated')); // Notify layout to update cart badge
+      window.dispatchEvent(new Event('cartUpdated')); // Cập nhật badge giỏ hàng ngay lập tức
+      fetchCourses(false); // Đồng bộ ngầm
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.response?.data || error.message || "Failed to enroll. Please try again."; setToast({ visible: true, type: 'error', title: t('Enrollment Failed'), message: typeof errorMsg === 'string' ? errorMsg : 'Please try again.' }); setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 5000);
     } finally {setBooking(null);}
@@ -393,7 +405,7 @@ const BookClass = () => {
                         type="button"
                         onClick={() => handleBook(course.classId)}
                         disabled={booking !== null}
-                        className="mt-4 sm:mt-auto w-full py-2.5 px-3.5 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-on-primary shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        className="group mt-4 sm:mt-auto w-full py-2.5 px-3.5 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-indigo-500/35 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       >
                         <span className="whitespace-nowrap">{t(booking === course.classId ? 'Enrolling...' : 'Enroll Now')}</span>
                         <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 shrink-0" />
