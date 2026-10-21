@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
+import { AuthContext } from '../../../context/AuthContext';
 import {
   LifeBuoy, Search, Filter, RefreshCw, CheckCircle2,
   Clock, AlertTriangle, ShieldCheck, X, ChevronLeft,
@@ -10,14 +11,17 @@ import { formatMoney } from '../../../utils/displayFormat';
 import receptionistService from '../services/receptionistService';
 import RespondSupportModal from './RespondSupportModal';
 
-const SupportDeskView = () => {
+const SupportDeskView = (props) => {
   useLanguage();
+  const { userRole, userInfo } = useContext(AuthContext);
+  const isManager = Boolean(props.isManager || userRole === 'Center Manager' || userInfo?.role === 'Center Manager');
 
   const [stats, setStats] = useState({
     pending: 0,
     cancellations: 0,
     facilities: 0,
-    resolved: 0
+    resolved: 0,
+    escalated: 0
   });
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +55,8 @@ const SupportDeskView = () => {
           pending: res.pending || 0,
           cancellations: res.classCancellations || 0,
           facilities: res.facilityIssues || 0,
-          resolved: res.approved || 0
+          resolved: res.approved || 0,
+          escalated: res.escalated || 0
         });
       }
     } catch (err) {
@@ -164,10 +169,14 @@ const SupportDeskView = () => {
         <div>
           <h1 className="text-3xl font-extrabold text-[var(--text)] tracking-tight flex items-center gap-3">
             <LifeBuoy className="w-8 h-8 text-[var(--primary)]" />
-            {t('Reception Support Desk & Cancellations')}
+            {isManager
+              ? t('Center Operations: Support & Escalation Reviews')
+              : t('Reception Support Desk & Cancellations')}
           </h1>
           <p className="text-sm text-[var(--text-muted)] mt-1">
-            {t('Review mid-course class cancellation requests, issue credit vouchers, and address member facility inquiries.')}
+            {isManager
+              ? t('Review escalated member appeals, authorize cash or bank refunds, and oversee facility maintenance tickets.')
+              : t('Review mid-course class cancellation requests, issue credit vouchers, and address member facility inquiries.')}
           </p>
         </div>
         <button
@@ -195,13 +204,16 @@ const SupportDeskView = () => {
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-            <CreditCard className="w-5 h-5" />
+        <div
+          onClick={() => setSelectedStatus(isManager ? (selectedStatus === 'ESCALATED' ? 'ALL' : 'ESCALATED') : 'ALL')}
+          className={`p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3.5 cursor-pointer hover:border-purple-500 transition-all ${isManager && selectedStatus === 'ESCALATED' ? 'ring-2 ring-purple-500' : ''}`}
+        >
+          <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+            <ArrowUpRight className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-black text-[var(--text)]">{stats.cancellations}</div>
-            <div className="text-xs font-medium text-[var(--text-muted)]">{t('Cancellation Requests')}</div>
+            <div className="text-2xl font-black text-[var(--text)]">{isManager ? (stats.escalated || 0) : stats.cancellations}</div>
+            <div className="text-xs font-medium text-[var(--text-muted)]">{isManager ? t('Escalated to Manager') : t('Cancellation Requests')}</div>
           </div>
         </div>
 
@@ -420,6 +432,7 @@ const SupportDeskView = () => {
       <RespondSupportModal
         isOpen={isModalOpen}
         request={activeRequest}
+        isManager={isManager}
         onClose={() => {
           setIsModalOpen(false);
           setActiveRequest(null);

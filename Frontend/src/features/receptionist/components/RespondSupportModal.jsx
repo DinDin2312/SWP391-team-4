@@ -8,7 +8,7 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import receptionistService from '../services/receptionistService';
 
-const RespondSupportModal = ({ isOpen, request, onClose, onSuccess }) => {
+const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSuccess }) => {
   useLanguage();
 
   const [resolutionType, setResolutionType] = useState('ISSUE_CREDIT'); // 'ISSUE_CREDIT' | 'GYM_PASS' | 'ESCALATE' | 'REJECT'
@@ -23,15 +23,23 @@ const RespondSupportModal = ({ isOpen, request, onClose, onSuccess }) => {
       const suggested = request.proratedCredit || request.classPrice || 0;
       setCreditAmount(suggested);
       setValidDays(60);
-      setResolutionType(request.category === 'CLASS_CANCELLATION' ? 'ISSUE_CREDIT' : 'APPROVE_GENERAL');
+      const isEscalatedClassCancel = isManager && (request.status === 'ESCALATED' || request.category === 'CLASS_CANCELLATION');
+      const defaultType = isEscalatedClassCancel
+        ? 'CASH_REFUND'
+        : (request.category === 'CLASS_CANCELLATION' ? 'ISSUE_CREDIT' : 'APPROVE_GENERAL');
+      setResolutionType(defaultType);
+
+      const rolePrefix = isManager ? 'Quản lý trung tâm' : 'Lễ tân';
       setResponseNote(
-        request.category === 'CLASS_CANCELLATION'
-          ? `Lễ tân đã phê duyệt yêu cầu bảo lưu lớp ${request.className || ''}. Mã tín dụng 60 ngày trị giá ${formatMoney(suggested)} đã được cấp vào tài khoản học viên.`
-          : 'Lễ tân đã tiếp nhận và xử lý yêu cầu của bạn.'
+        isEscalatedClassCancel
+          ? `Quản lý trung tâm đã phê duyệt hoàn tiền học phí lớp ${request.className || ""}. Số tiền ${formatMoney(suggested)} sẽ được hoàn trả trực tiếp tại quầy hoặc chuyển khoản.`
+          : (request.category === 'CLASS_CANCELLATION'
+              ? `${rolePrefix} đã phê duyệt yêu cầu bảo lưu lớp ${request.className || ""}. Mã tín dụng 60 ngày trị giá ${formatMoney(suggested)} đã được cấp vào tài khoản học viên.`
+              : `${rolePrefix} đã tiếp nhận và xử lý yêu cầu của bạn.`)
       );
       setError('');
     }
-  }, [isOpen, request]);
+  }, [isOpen, request, isManager]);
 
   if (!isOpen || !request) return null;
 
@@ -49,7 +57,7 @@ const RespondSupportModal = ({ isOpen, request, onClose, onSuccess }) => {
       let status = 'APPROVED';
       let finalCreditAmount = null;
 
-      if (resolutionType === 'ISSUE_CREDIT') {
+      if (resolutionType === 'ISSUE_CREDIT' || resolutionType === 'CASH_REFUND') {
         status = 'APPROVED';
         finalCreditAmount = parseFloat(creditAmount) || 0;
       } else if (resolutionType === 'GYM_PASS' || resolutionType === 'APPROVE_GENERAL') {
@@ -242,18 +250,36 @@ const RespondSupportModal = ({ isOpen, request, onClose, onSuccess }) => {
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={() => setResolutionType('ESCALATE')}
-                className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${resolutionType === 'ESCALATE' ? 'border-purple-500 bg-purple-500/10 text-purple-900 dark:text-purple-200' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}
-              >
-                <span className="font-bold text-xs flex items-center gap-1.5 text-purple-600 dark:text-purple-400">
-                  <ArrowUpRight className="w-4 h-4" /> {t('Escalate to Center Manager')}
-                </span>
-                <span className="text-[11px] mt-1 opacity-80">
-                  {t('For special cash refunds or high-dispute exceptions.')}
-                </span>
-              </button>
+              {isManager ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResolutionType('CASH_REFUND');
+                    setResponseNote(`Quản lý trung tâm đã phê duyệt hoàn tiền học phí lớp ${request.className || ""}. Số tiền ${formatMoney(creditAmount)} sẽ được hoàn trả trực tiếp tại quầy hoặc chuyển khoản.`);
+                  }}
+                  className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${resolutionType === 'CASH_REFUND' ? 'border-emerald-600 bg-emerald-600/10 text-emerald-900 dark:text-emerald-200 ring-2 ring-emerald-500' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}
+                >
+                  <span className="font-bold text-xs flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                    <CreditCard className="w-4 h-4" /> {t('Phê Duyệt Hoàn Tiền Mặt / Chuyển Khoản')}
+                  </span>
+                  <span className="text-[11px] mt-1 opacity-80">
+                    {t('Duyệt lệnh xuất quỹ/kế toán chuyển khoản hoàn trả học phí cho học viên.')}
+                  </span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setResolutionType('ESCALATE')}
+                  className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${resolutionType === 'ESCALATE' ? 'border-purple-500 bg-purple-500/10 text-purple-900 dark:text-purple-200' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}
+                >
+                  <span className="font-bold text-xs flex items-center gap-1.5 text-purple-600 dark:text-purple-400">
+                    <ArrowUpRight className="w-4 h-4" /> {t('Escalate to Center Manager')}
+                  </span>
+                  <span className="text-[11px] mt-1 opacity-80">
+                    {t('For special cash refunds or high-dispute exceptions.')}
+                  </span>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -303,6 +329,41 @@ const RespondSupportModal = ({ isOpen, request, onClose, onSuccess }) => {
                     className="w-full px-3.5 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     required
                   />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Conditional Cash Refund fields */}
+          {resolutionType === 'CASH_REFUND' && (
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{t('Xác nhận lệnh hoàn tiền mặt / chuyển khoản (Thẩm quyền Quản lý)')}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label htmlFor="cash-refund-amount" className="block text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                    {t('Số tiền duyệt hoàn (VNĐ)')}
+                  </label>
+                  <input
+                    id="cash-refund-amount"
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={creditAmount}
+                    onChange={(e) => setCreditAmount(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                    {t('Hình thức chi trả')}
+                  </label>
+                  <div className="px-3.5 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs font-semibold text-[var(--text)]">
+                    {t('Tiền mặt tại quầy / Chuyển khoản ngân hàng')}
+                  </div>
                 </div>
               </div>
             </div>

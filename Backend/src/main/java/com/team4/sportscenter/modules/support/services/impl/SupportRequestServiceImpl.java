@@ -272,13 +272,30 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         String generatedCreditCode = null;
         BigDecimal generatedCreditAmount = null;
 
-        // If resolution grants Credit
+        // If resolution grants Credit or Cash Refund
         boolean isApproved = request.getStatus() == SupportStatus.RESOLVED || request.getStatus() == SupportStatus.APPROVED;
-        boolean wantsCredit = "CREDIT".equalsIgnoreCase(dto.getResolutionType()) 
+        boolean isCashRefund = "CASH_REFUND".equalsIgnoreCase(dto.getResolutionType()) 
+                || "MANAGER_REFUND".equalsIgnoreCase(dto.getResolutionType());
+        boolean wantsCredit = !isCashRefund && ("CREDIT".equalsIgnoreCase(dto.getResolutionType()) 
                 || "ISSUE_CREDIT".equalsIgnoreCase(dto.getResolutionType()) 
-                || (dto.getCreditAmount() != null && dto.getCreditAmount().compareTo(BigDecimal.ZERO) > 0);
+                || (dto.getCreditAmount() != null && dto.getCreditAmount().compareTo(BigDecimal.ZERO) > 0));
 
-        if (isApproved && wantsCredit) {
+        if (isApproved && isCashRefund) {
+            // Manager approved cash / bank refund: cancel future bookings so remaining slots are released
+            Integer classId = request.getGymClass() != null ? request.getGymClass().getClassId() : null;
+            if (classId != null) {
+                List<Booking> bookings = bookingRepository.findAllBookingsByEmail(request.getUser().getEmail()).stream()
+                        .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
+                                && Objects.equals(b.getSchedule().getGymClass().getClassId(), classId)
+                                && !"CANCELLED".equals(b.getStatus())
+                                && !"PRESENT".equalsIgnoreCase(b.getAttendanceStatus()))
+                        .toList();
+                for (Booking b : bookings) {
+                    b.setStatus("CANCELLED");
+                    bookingRepository.save(b);
+                }
+            }
+        } else if (isApproved && wantsCredit) {
             BigDecimal creditAmount = dto.getCreditAmount();
             if (creditAmount == null || creditAmount.compareTo(BigDecimal.ZERO) <= 0) {
                 // Auto calculate if class linked
@@ -331,12 +348,23 @@ public class SupportRequestServiceImpl implements SupportRequestService {
 
         supportRequestRepository.save(request);
 
-        // Send notification to member
+        // Send notification to member with appropriate role title
+        boolean isManagerStaff = staff.getRole() != null && staff.getRole().getRoleName() != null 
+                && (staff.getRole().getRoleName().toUpperCase().contains("MANAGER") || staff.getRole().getRoleName().toUpperCase().contains("ADMIN"));
+        String roleTitle = isManagerStaff ? "Quản lý trung tâm" : "Lễ tân";
+
         StringBuilder notifMsg = new StringBuilder();
         if (dto.getResponseNote() != null && !dto.getResponseNote().trim().isEmpty()) {
-            notifMsg.append("Lễ tân phản hồi: \"").append(dto.getResponseNote()).append("\". ");
+            notifMsg.append(roleTitle).append(" phản hồi: \"").append(dto.getResponseNote()).append("\". ");
         }
-        if (generatedCreditCode != null) {
+        if (isCashRefund) {
+            BigDecimal refundVal = dto.getCreditAmount();
+            if (refundVal != null && refundVal.compareTo(BigDecimal.ZERO) > 0) {
+                notifMsg.append("Khoản hoàn tiền mặt/chuyển khoản trị giá ").append(refundVal.longValue()).append("đ đã được Quản lý phê duyệt giải quyết.");
+            } else {
+                notifMsg.append("Lệnh hoàn tiền đã được Quản lý trung tâm phê duyệt giải quyết.");
+            }
+        } else if (generatedCreditCode != null) {
             notifMsg.append("Bạn được cấp Credit bảo lưu: ").append(generatedCreditCode)
                     .append(" trị giá ").append(generatedCreditAmount.longValue()).append("đ (hạn 60 ngày).");
         }
