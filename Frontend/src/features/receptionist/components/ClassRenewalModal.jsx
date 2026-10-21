@@ -14,6 +14,37 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDateTime as displayFormatDateTime, formatMoney } from '../../../utils/displayFormat';
 import PaymentMethodSelector from './PaymentMethodSelector';
 
+const getOptionBoxStyle = (isSelected, isOptDisabled) => {
+    let borderColor = 'var(--border)';
+    let bg = 'var(--surface)';
+    if (isSelected) {
+        borderColor = 'var(--primary)';
+        bg = 'var(--primary-soft)';
+    } else if (isOptDisabled) {
+        bg = 'var(--surface-hover)';
+    }
+    return {
+        padding: '0.8rem 1rem',
+        borderRadius: '0.75rem',
+        borderWidth: isSelected ? '2px' : '1px',
+        borderStyle: 'solid',
+        borderColor,
+        backgroundColor: bg,
+        cursor: isOptDisabled ? 'not-allowed' : 'pointer',
+        opacity: isOptDisabled ? 0.65 : 1,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.45rem'
+    };
+};
+
+const renderClassDetail = (icon, label, value, highlightColor) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+        {icon}
+        <span>{label}: <strong style={{ color: highlightColor || 'var(--text)' }}>{value}</strong></span>
+    </span>
+);
+
 const ClassRenewalModal = ({
     isOpen,
     onClose,
@@ -116,33 +147,21 @@ const ClassRenewalModal = ({
                             <div
                                 key={opt.classId}
                                 onClick={() => { if (!isOptDisabled) setSelectedRenewalClassId(opt.classId); }}
-                                style={{
-                                    padding: '0.75rem 1rem',
-                                    borderRadius: '0.75rem',
-                                    border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
-                                    backgroundColor: isSelected ? 'var(--primary-soft)' : isOptDisabled ? 'var(--surface-hover)' : 'var(--surface)',
-                                    cursor: isOptDisabled ? 'not-allowed' : 'pointer',
-                                    opacity: isOptDisabled ? 0.65 : 1,
-                                    transition: 'all 0.15s ease',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '0.4rem'
-                                }}
+                                style={getOptionBoxStyle(isSelected, isOptDisabled)}
                             >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: isOptDisabled ? 'not-allowed' : 'pointer' }}>
                                         <input
                                             type="radio"
                                             name="renewalModalClassChoice"
                                             checked={isSelected}
                                             disabled={isOptDisabled}
                                             onChange={() => setSelectedRenewalClassId(opt.classId)}
-                                            style={{ cursor: isOptDisabled ? 'not-allowed' : 'pointer' }}
                                         />
-                                        <strong style={{ fontSize: '0.9rem', color: isSelected ? 'var(--primary)' : 'var(--text)' }}>
+                                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: isSelected ? 'var(--primary)' : 'var(--text)' }}>
                                             {opt.className}
-                                        </strong>
-                                    </div>
+                                        </span>
+                                    </label>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                         {opt.isBestMatch && (
                                             <span style={{
@@ -189,27 +208,15 @@ const ClassRenewalModal = ({
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.35rem 0.75rem', fontSize: '0.78rem', color: 'var(--text-muted)', marginLeft: '1.4rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                        <User style={{ width: '13px', height: '13px', color: 'var(--primary)', flexShrink: 0 }} />
-                                        <span>{t("Coach:")} <strong style={{ color: 'var(--text)' }}>{opt.coachName}</strong> <span style={{ opacity: 0.5 }}>•</span> {opt.roomName}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                        <Clock style={{ width: '13px', height: '13px', color: '#f59e0b', flexShrink: 0 }} />
-                                        <span>{t("Schedule:")} <strong style={{ color: 'var(--text)' }}>{opt.daysOfWeekText || ''} · {opt.timeSlotText || ''}</strong></span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                        <Calendar style={{ width: '13px', height: '13px', color: '#3b82f6', flexShrink: 0 }} />
-                                        <span>{t("Starts:")} <strong style={{ color: 'var(--primary)' }}>{displayFormatDateTime(opt.startTime)}</strong></span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                        <Users style={{ width: '13px', height: '13px', color: opt.availableSlots > 0 ? '#10b981' : '#ef4444', flexShrink: 0 }} />
-                                        <span>{t("Availability:")} <strong style={{ color: opt.availableSlots > 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>{opt.availableSlots} / {opt.maxSlots} {t("slots left")}</strong></span>
-                                    </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem 1.25rem', fontSize: '0.78rem', color: 'var(--text-muted)', paddingLeft: '1.4rem' }}>
+                                    {renderClassDetail(<User style={{ width: '13px', height: '13px', color: 'var(--primary)' }} />, t("Coach"), `${opt.coachName} • ${opt.roomName}`)}
+                                    {renderClassDetail(<Clock style={{ width: '13px', height: '13px', color: '#f59e0b' }} />, t("Schedule"), `${opt.daysOfWeekText || ''} · ${opt.timeSlotText || ''}`)}
+                                    {renderClassDetail(<Calendar style={{ width: '13px', height: '13px', color: '#3b82f6' }} />, t("Starts"), displayFormatDateTime(opt.startTime), 'var(--primary)')}
+                                    {renderClassDetail(<Users style={{ width: '13px', height: '13px', color: opt.availableSlots > 0 ? '#10b981' : '#ef4444' }} />, t("Availability"), `${opt.availableSlots} / ${opt.maxSlots} ${t("slots left")}`, opt.availableSlots > 0 ? 'var(--success-text)' : 'var(--danger-text)')}
                                 </div>
 
                                 {opt.hasConflict && (
-                                    <div style={{ marginLeft: '1.4rem', fontSize: '0.75rem', color: 'var(--danger-text)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                    <div style={{ paddingLeft: '1.4rem', fontSize: '0.75rem', color: 'var(--danger-text)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                                         <AlertTriangle style={{ width: '13px', height: '13px' }} />
                                         <span>{opt.conflictReason}</span>
                                     </div>
