@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import {
     Search,
     RotateCw,
+    ArrowRightCircle,
+    AlertTriangle,
     RefreshCw,
     CheckCircle2,
     User,
@@ -15,17 +17,26 @@ import {
     Eye,
     Info,
     CreditCard,
-    Banknote,
     Clock,
     MapPin,
     Users,
-    Dumbbell
+    Dumbbell,
+    Calendar,
+    Sparkles
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
 import MemberDetailModal from './MemberDetailModal';
+import InvoiceReceiptModal from './InvoiceReceiptModal';
+import ClassRenewalModal from './ClassRenewalModal';
+import RenewalNoticeModal from './RenewalNoticeModal';
+import PaymentMethodSelector from './PaymentMethodSelector';
 
 export default function ManageMembershipsView() {
   useLanguage();
+    // Receipt Modal States
+    const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+    const [currentReceipt, setCurrentReceipt] = useState(null);
+
     // Package Subscription States
     const [packagesList, setPackagesList] = useState([]);
     const [packageModalOpen, setPackageModalOpen] = useState(false);
@@ -39,11 +50,13 @@ export default function ManageMembershipsView() {
     const [loading, setLoading] = useState(false);
     const [selectedMember, setSelectedMember] = useState(null);
     const [memberBookings, setMemberBookings] = useState([]);
+    const [memberCartBookings, setMemberCartBookings] = useState([]);
     const [loadingBookings, setLoadingBookings] = useState(false);
 
     // Renewal Modal States
     const [renewalModalOpen, setRenewalModalOpen] = useState(false);
     const [suggestedClass, setSuggestedClass] = useState(null);
+    const [selectedRenewalClassId, setSelectedRenewalClassId] = useState(null);
     const [confirming, setConfirming] = useState(false);
     const [feedback, setFeedback] = useState(null);
     const [renewalNotice, setRenewalNotice] = useState(null); // { isOpen, courseName, message }
@@ -84,16 +97,19 @@ export default function ManageMembershipsView() {
         handleSearch();
     }, []);
 
-    // Gom nhóm các buổi lẻ (sessions) thành từng khóa học (course)
+    // Gom nhóm các buổi lẻ (sessions) thành từng khóa học (course) phân biệt theo classId
     const groupBookingsByCourse = (bookingsList) => {
         const grouped = {};
         const now = new Date();
         (bookingsList || []).forEach((b) => {
-            const key = b.className || 'Unknown Course';
+            const key = b.classId ? `class_${b.classId}` : (b.className || 'Unknown Course');
             if (!grouped[key]) {
                 grouped[key] = {
-                    courseName: key,
+                    key: key,
+                    courseName: b.className || 'Unknown Course',
                     classId: b.classId,
+                    subjectId: b.subjectId,
+                    subjectName: b.subjectName,
                     coachName: b.coachName || 'N/A',
                     roomName: b.roomName || 'N/A',
                     firstSessionDate: b.startTime,
@@ -101,11 +117,22 @@ export default function ManageMembershipsView() {
                     sessionsCount: 0,
                     upcomingCount: 0,
                     sampleBookingId: b.bookingId,
+                    daysOfWeek: new Set(),
+                    timeSlot: b.startTime ? new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '',
                 };
             }
             grouped[key].sessionsCount += 1;
-            if (b.classId && !grouped[key].classId) {
-                grouped[key].classId = b.classId;
+            if (b.classId && !grouped[key].classId) grouped[key].classId = b.classId;
+            if (b.subjectId && !grouped[key].subjectId) grouped[key].subjectId = b.subjectId;
+            if (b.subjectName && !grouped[key].subjectName) grouped[key].subjectName = b.subjectName;
+            if (b.coachName && grouped[key].coachName === 'N/A') grouped[key].coachName = b.coachName;
+            if (b.roomName && grouped[key].roomName === 'N/A') grouped[key].roomName = b.roomName;
+
+            if (b.startTime) {
+                grouped[key].daysOfWeek.add(new Date(b.startTime).getDay());
+                if (!grouped[key].timeSlot) {
+                    grouped[key].timeSlot = new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                }
             }
 
             const sessionEnd = b.endTime ? new Date(b.endTime) : (b.startTime ? new Date(b.startTime) : null);
@@ -124,12 +151,11 @@ export default function ManageMembershipsView() {
         });
 
         const courses = Object.values(grouped);
-        // Sắp xếp các khóa học: 2 lớp cùng môn/cùng khóa (Đợt 1 & Đợt 2) luôn nằm liền kề nhau
-        const cleanBaseName = (name = '') => name.replace(/\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\)/i, '').trim();
+        // Sắp xếp các khóa học: Gom cùng bộ môn / loại lớp và sắp theo thời gian khai giảng
         courses.sort((a, b) => {
-            const baseA = cleanBaseName(a.courseName);
-            const baseB = cleanBaseName(b.courseName);
-            const cmp = baseA.localeCompare(baseB, 'vi');
+            const nameA = (a.subjectName || a.courseName || '').toLowerCase();
+            const nameB = (b.subjectName || b.courseName || '').toLowerCase();
+            const cmp = nameA.localeCompare(nameB, 'vi');
             if (cmp !== 0) return cmp;
             return new Date(a.firstSessionDate) - new Date(b.firstSessionDate);
         });
@@ -171,16 +197,18 @@ export default function ManageMembershipsView() {
         }
     };
 
-    const handleOpenEnrollModal = async () => {
+    const handleOpenEnrollModal = async (preselectedClassId = null) => {
         if (!selectedMember) return;
         setEnrollFeedback(null);
-        setSelectedClassId('');
+        setSelectedClassId(preselectedClassId ? String(preselectedClassId) : '');
         setEnrollModalOpen(true);
         setLoadingAvailableClasses(true);
         try {
             const data = await receptionistService.getAvailableClassesForMember(selectedMember.userId);
             setAvailableClasses(Array.isArray(data) ? data : []);
-            if (data && data.length > 0) {
+            if (preselectedClassId) {
+                setSelectedClassId(String(preselectedClassId));
+            } else if (data && data.length > 0) {
                 const unbooked = data.find((c) => !c.isBookedByMe);
                 if (unbooked) setSelectedClassId(String(unbooked.classId));
                 else setSelectedClassId(String(data[0].classId));
@@ -198,16 +226,22 @@ export default function ManageMembershipsView() {
         setEnrolling(true);
         setEnrollFeedback(null);
         try {
-            await receptionistService.enrollMemberToClass({
+            const receipt = await receptionistService.enrollMemberToClass({
                 userId: selectedMember.userId,
                 classId: Number(selectedClassId),
                 paymentMethod: paymentMethod,
             });
             setEnrollFeedback({ type: 'success', message: t('Member enrolled into class successfully!') });
+            if (receipt && receipt.invoiceId) {
+                setCurrentReceipt(receipt);
+            }
             setTimeout(() => {
                 setEnrollModalOpen(false);
                 handleSelectMember(selectedMember);
-            }, 1200);
+                if (receipt && receipt.invoiceId) {
+                    setReceiptModalOpen(true);
+                }
+            }, 800);
         } catch (err) {
             const msg = err.response?.data?.message || err.response?.data || 'Failed to enroll member into class.';
             setEnrollFeedback({ type: 'error', message: msg });
@@ -221,12 +255,16 @@ export default function ManageMembershipsView() {
         setSelectedMember(m);
         setLoadingBookings(true);
         setMemberBookings([]);
+        setMemberCartBookings([]);
         try {
             const detail = await receptionistService.getMemberDetail(m.userId);
             setSelectedMemberDetail(detail);
             const rawBookings = detail.bookings || [];
+            const confirmedList = rawBookings.filter(b => b.bookingStatus === 'CONFIRMED');
+            const pendingList = rawBookings.filter(b => b.bookingStatus === 'PENDING');
             // Gom nhóm trước khi lưu vào state
-            setMemberBookings(groupBookingsByCourse(rawBookings));
+            setMemberBookings(groupBookingsByCourse(confirmedList));
+            setMemberCartBookings(groupBookingsByCourse(pendingList));
         } catch (err) {
             console.error('Failed to load member classes:', err);
             setSelectedMemberDetail(null);
@@ -251,6 +289,8 @@ export default function ManageMembershipsView() {
         try {
             const data = await receptionistService.suggestNextClassRenewal(selectedMember.userId, bookingId);
             setSuggestedClass(data);
+            const defaultId = data.classId || (data.options && data.options[0]?.classId);
+            setSelectedRenewalClassId(defaultId);
             setPaymentMethod('CASH');
             setRenewalModalOpen(true);
         } catch (err) {
@@ -270,23 +310,30 @@ export default function ManageMembershipsView() {
     // 4. Confirm enrollment
     const handleConfirmEnrollment = async () => {
         if (!suggestedClass) return;
+        const chosenOption = (suggestedClass.options || []).find(o => o.classId === selectedRenewalClassId) || suggestedClass;
         setConfirming(true);
         setFeedback(null);
 
         try {
-            await receptionistService.confirmClassRenewal({
+            const receipt = await receptionistService.confirmClassRenewal({
                 userId: selectedMember.userId,
-                newScheduleId: suggestedClass.suggestedScheduleId,
+                newScheduleId: chosenOption.suggestedScheduleId,
                 previousBookingId: suggestedClass.currentBookingId,
                 paymentMethod: paymentMethod,
             });
 
             setFeedback({ type: 'success', message: t('Successfully renewed and enrolled into the next class!') });
+            if (receipt && receipt.invoiceId) {
+                setCurrentReceipt(receipt);
+            }
             setTimeout(() => {
                 setRenewalModalOpen(false);
                 setSuggestedClass(null);
                 handleSelectMember(selectedMember); // Reload bookings list
-            }, 1300);
+                if (receipt && receipt.invoiceId) {
+                    setReceiptModalOpen(true);
+                }
+            }, 800);
         } catch (err) {
             const msg = err.response?.data?.message || err.response?.data || 'Failed to complete renewal.';
             setFeedback({ type: 'error', message: msg });
@@ -302,7 +349,7 @@ export default function ManageMembershipsView() {
             setPackagesList(Array.isArray(data) ? data : []);
             if (data && data.length > 0) setSelectedPackageId(data[0].packageId);
             setPackageModalOpen(true);
-        } catch (err) {
+        } catch {
             alert('Failed to load packages list.');
         }
     };
@@ -312,17 +359,23 @@ export default function ManageMembershipsView() {
         setSubscribing(true);
         setPkgFeedback(null);
         try {
-            await receptionistService.subscribePackage({
+            const receipt = await receptionistService.subscribePackage({
                 userId: selectedMember.userId,
                 packageId: Number(selectedPackageId),
                 startDate: startDateInput,
                 paymentMethod: paymentMethod,
             });
             setPkgFeedback({ type: 'success', message: t('Combo Package subscribed successfully!') });
+            if (receipt && receipt.invoiceId) {
+                setCurrentReceipt(receipt);
+            }
             setTimeout(() => {
                 setPackageModalOpen(false);
                 handleSelectMember(selectedMember);
-            }, 1200);
+                if (receipt && receipt.invoiceId) {
+                    setReceiptModalOpen(true);
+                }
+            }, 800);
         } catch (err) {
             const msg = err.response?.data?.message || err.response?.data || 'Failed to subscribe package.';
             setPkgFeedback({ type: 'error', message: msg });
@@ -625,13 +678,38 @@ export default function ManageMembershipsView() {
                                                     <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
                                                         <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'center' }}>
                                                             {(() => {
-                                                                const cleanBaseName = (name = '') => name.replace(/\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\)/i, '').trim();
-                                                                const baseName = cleanBaseName(c.courseName || c.className);
-                                                                const nextBatch = memberBookings.find(other =>
-                                                                    other !== c &&
-                                                                    cleanBaseName(other.courseName || other.className) === baseName &&
-                                                                    new Date(other.firstSessionDate) > new Date(c.firstSessionDate)
-                                                                );
+                                                                // Nhận diện lớp gia hạn theo đúng tiêu chí nghiệp vụ:
+                                                                // 1. Của tương lai (sau ngày khai giảng lớp hiện tại)
+                                                                // 2. Cùng loại lớp (cùng subjectId hoặc cùng tên bộ môn)
+                                                                // 3. Cùng lịch học (cùng các thứ trong tuần & cùng khung giờ học)
+                                                                // 4. Khác giáo viên thì được (không bắt buộc cùng HLV)
+                                                                const nextBatch = memberBookings.find(other => {
+                                                                    if (other === c) return false;
+                                                                    if (new Date(other.firstSessionDate) <= new Date(c.firstSessionDate)) return false;
+
+                                                                    // Cùng loại lớp / bộ môn
+                                                                    const sameSubject = (c.subjectId && other.subjectId && c.subjectId === other.subjectId)
+                                                                        || (c.subjectName && other.subjectName && c.subjectName.trim().toLowerCase() === other.subjectName.trim().toLowerCase());
+                                                                    const cleanBaseName = (name = '') => { if (!name) return ''; const idx = name.search(/[-–(]/); return (idx !== -1 ? name.slice(0, idx) : name).trim().toLowerCase(); };
+                                                                    const sameBase = cleanBaseName(c.courseName) === cleanBaseName(other.courseName);
+                                                                    if (!sameSubject && !sameBase) return false;
+
+                                                                    // Cùng các thứ trong tuần
+                                                                    const daysA = c.daysOfWeek || new Set();
+                                                                    const daysB = other.daysOfWeek || new Set();
+                                                                    let daysMatch = true;
+                                                                    if (daysA.size > 0 && daysB.size > 0) {
+                                                                        let matchCount = 0;
+                                                                        daysA.forEach(d => { if (daysB.has(d)) matchCount++; });
+                                                                        daysMatch = matchCount >= Math.min(daysA.size, daysB.size);
+                                                                    }
+
+                                                                    // Cùng khung giờ ca học
+                                                                    const slotMatch = !c.timeSlot || !other.timeSlot || c.timeSlot === other.timeSlot;
+
+                                                                    // Khác giáo viên thì được
+                                                                    return daysMatch && slotMatch;
+                                                                });
 
                                                                 if (nextBatch) {
                                                                     return (
@@ -653,8 +731,8 @@ export default function ManageMembershipsView() {
                                                                             }}
                                                                             title={t("Course already renewed to next batch. Click to view.")}
                                                                         >
-                                                                            <CheckCircle2 style={{ width: '12px', height: '12px' }} />
-                                                                            <span>{t("Renewed")}</span>
+                                                                            <CheckCircle2 style={{ width: '13px', height: '13px' }} />
+                                                                            <span>{t("Enrolled in Next Term")}</span>
                                                                         </button>
                                                                     );
                                                                 }
@@ -678,8 +756,8 @@ export default function ManageMembershipsView() {
                                                                         }}
                                                                         title={t("Find next recurring session to renew")}
                                                                     >
-                                                                        <RotateCw style={{ width: '12px', height: '12px' }} />
-                                                                        <span>{t("Renew Course")}</span>
+                                                                        <ArrowRightCircle style={{ width: '13px', height: '13px' }} />
+                                                                        <span>{t("Enroll Next Term")}</span>
                                                                     </button>
                                                                 );
                                                             })()}
@@ -714,233 +792,124 @@ export default function ManageMembershipsView() {
                                     </table>
                                 </div>
                             )}
+
+                            {/* Khóa học trong giỏ hàng chờ thanh toán (First-come first-served) */}
+                            {memberCartBookings.length > 0 && (
+                                <div style={{ marginTop: '1.5rem', border: '1px solid #fcd34d', backgroundColor: '#fffbeb', borderRadius: '0.75rem', padding: '1.15rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span style={{ fontSize: '1.1rem' }}>🛒</span>
+                                            <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#92400e', fontWeight: 700 }}>
+                                                {t("Cart / Pending Payment")} ({memberCartBookings.length})
+                                            </h4>
+                                        </div>
+                                        <span style={{ fontSize: '0.76rem', color: '#b45309', fontWeight: 500, backgroundColor: '#fef3c7', padding: '0.2rem 0.65rem', borderRadius: '9999px', border: '1px solid #fde68a' }}>
+                                            ⚠️ {t("Seats not reserved · Pay at counter to confirm enrollment")}
+                                        </span>
+                                    </div>
+                                    <div style={{ overflowX: 'auto', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.5rem' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                                            <thead>
+                                                <tr style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                                                    <th style={{ padding: '0.75rem 1rem' }}>{t("Course Name")}</th>
+                                                    <th style={{ padding: '0.75rem 1rem' }}>{t("Coach")}</th>
+                                                    <th style={{ padding: '0.75rem 1rem' }}>{t("Room")}</th>
+                                                    <th style={{ padding: '0.75rem 1rem' }}>{t("Course Timeline")}</th>
+                                                    <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{t("Total Sessions")}</th>
+                                                    <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>{t("Action")}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {memberCartBookings.map((c, idx) => (
+                                                    <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                        <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: 'var(--text)' }}>
+                                                            {c.courseName}
+                                                            <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '9999px', backgroundColor: '#fef3c7', color: '#b45309', fontWeight: 600 }}>
+                                                                {t("In Cart")}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: '0.85rem 1rem', color: 'var(--text)' }}>{c.coachName}</td>
+                                                        <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)' }}>{c.roomName}</td>
+                                                        <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)' }}>
+                                                            {formatDateTime(c.firstSessionDate)} → {formatDateTime(c.lastSessionDate)}
+                                                        </td>
+                                                        <td style={{ padding: '0.85rem 1rem', textAlign: 'center', color: 'var(--primary)', fontWeight: 600 }}>
+                                                            {c.sessionsCount}{' '}{t("sessions")}
+                                                        </td>
+                                                        <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                                                            <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'center' }}>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenEnrollModal(c.classId)}
+                                                                    style={{
+                                                                        padding: '0.4rem 0.85rem',
+                                                                        borderRadius: '0.5rem',
+                                                                        border: '1px solid #16a34a',
+                                                                        backgroundColor: '#16a34a',
+                                                                        color: '#ffffff',
+                                                                        fontSize: '0.78rem',
+                                                                        fontWeight: 600,
+                                                                        cursor: 'pointer',
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '0.35rem'
+                                                                    }}
+                                                                    title={t("Collect payment at counter and confirm enrollment")}
+                                                                >
+                                                                    💳 {t("Pay at Counter")}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenCancelCourse(c)}
+                                                                    style={{
+                                                                        padding: '0.4rem 0.75rem',
+                                                                        borderRadius: '0.5rem',
+                                                                        border: '1px solid var(--border)',
+                                                                        backgroundColor: 'transparent',
+                                                                        color: 'var(--text-muted)',
+                                                                        fontSize: '0.78rem',
+                                                                        fontWeight: 500,
+                                                                        cursor: 'pointer'
+                                                                    }}
+                                                                    title={t("Remove from Cart")}
+                                                                >
+                                                                    ✕ {t("Remove")}
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Confirmation Modal */}
-            {renewalModalOpen && suggestedClass && (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 10000, backgroundColor: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-                    <div style={{ width: '100%', maxWidth: '500px', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
-                            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>{t("Enroll Next Recurring Course")}</h3>
-                            <button onClick={() => setRenewalModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                                <X style={{ width: '18px', height: '18px' }} />
-                            </button>
-                        </div>
-
-                        {feedback && (
-                            <div style={{ padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', backgroundColor: feedback.type === 'success' ? 'var(--success-soft)' : 'var(--danger-soft)', color: feedback.type === 'success' ? 'var(--success-text)' : 'var(--danger-text)', fontSize: '0.85rem' }}>
-                                {t(feedback.message)}
-                            </div>
-                        )}
-
-                        <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>{t("Target Course:")}</span><strong style={{ color: 'var(--text)' }}>{suggestedClass.className}</strong></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>{t("Coach:")}</span><span style={{ color: 'var(--text)' }}>{suggestedClass.coachName}</span></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>{t("Room:")}</span><span style={{ color: 'var(--text)' }}>{suggestedClass.roomName}</span></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>{t("Next Session Starts:")}</span><strong style={{ color: 'var(--primary)' }}>{formatDateTime(suggestedClass.startTime)}</strong></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>{t("Course Fee:")}</span><strong style={{ color: 'var(--success-text)', fontSize: '0.95rem' }}>{formatCurrency(suggestedClass.price)}</strong></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>{t("Availability:")}</span><span style={{ color: 'var(--text)' }}>{suggestedClass.availableSlots} / {suggestedClass.maxSlots}{' '}{t("slots")}</span></div>
-
-                            <div style={{ marginTop: '0.4rem', paddingTop: '0.6rem', borderTop: '1px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontWeight: 600, color: 'var(--text)' }}>{t("Payment method at counter:")}</span>
-                                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPaymentMethod('CASH')}
-                                        style={{
-                                            padding: '0.35rem 0.75rem',
-                                            borderRadius: '0.4rem',
-                                            fontSize: '0.78rem',
-                                            fontWeight: 600,
-                                            border: paymentMethod === 'CASH' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                            backgroundColor: paymentMethod === 'CASH' ? 'var(--primary-soft)' : 'var(--surface)',
-                                            color: paymentMethod === 'CASH' ? 'var(--primary)' : 'var(--text)',
-                                            cursor: 'pointer',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '0.35rem'
-                                        }}
-                                    >
-                                        <Banknote style={{ width: '13px', height: '13px' }} />
-                                        <span>{t("Cash")}</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPaymentMethod('TRANSFER')}
-                                        style={{
-                                            padding: '0.35rem 0.75rem',
-                                            borderRadius: '0.4rem',
-                                            fontSize: '0.78rem',
-                                            fontWeight: 600,
-                                            border: paymentMethod === 'TRANSFER' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                            backgroundColor: paymentMethod === 'TRANSFER' ? 'var(--primary-soft)' : 'var(--surface)',
-                                            color: paymentMethod === 'TRANSFER' ? 'var(--primary)' : 'var(--text)',
-                                            cursor: 'pointer',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '0.35rem'
-                                        }}
-                                    >
-                                        <CreditCard style={{ width: '13px', height: '13px' }} />
-                                        <span>{t("Bank Transfer")}</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>
-                            <button onClick={() => setRenewalModalOpen(false)} disabled={confirming} style={{ padding: '0.55rem 1rem', backgroundColor: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>{t("Cancel")}</button>
-                            <button onClick={handleConfirmEnrollment} disabled={confirming} style={{ padding: '0.55rem 1.25rem', backgroundColor: 'var(--primary)', color: 'var(--on-primary)', border: 'none', borderRadius: '0.5rem', fontSize: '0.85rem', fontWeight: 600, cursor: confirming ? 'not-allowed' : 'pointer' }}>
-                                {t(confirming ? t('Processing...') : t('Confirm Payment & Renew'))}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Modal Ghi Danh Kỳ Sau (Direction 1: Lựa chọn lớp với huy hiệu ⭐ Gợi ý khớp lịch cũ) */}
+            <ClassRenewalModal
+                isOpen={renewalModalOpen}
+                onClose={() => setRenewalModalOpen(false)}
+                suggestedClass={suggestedClass}
+                memberName={selectedMember?.fullName}
+                selectedRenewalClassId={selectedRenewalClassId}
+                setSelectedRenewalClassId={setSelectedRenewalClassId}
+                paymentMethod={paymentMethod}
+                setPaymentMethod={setPaymentMethod}
+                onConfirm={handleConfirmEnrollment}
+                confirming={confirming}
+                feedback={feedback}
+            />
 
             {/* Modal Thông Báo Khi Không Tìm Thấy Lịch Gia Hạn Tiếp Theo */}
-            {renewalNotice && renewalNotice.isOpen && (
-                <div style={{
-                    position: 'fixed',
-                    inset: 0,
-                    zIndex: 10001,
-                    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-                    backdropFilter: 'blur(6px)',
-                    WebkitBackdropFilter: 'blur(6px)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '1rem'
-                }}>
-                    <div style={{
-                        width: '100%',
-                        maxWidth: '480px',
-                        backgroundColor: 'var(--surface)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '1rem',
-                        padding: '1.5rem',
-                        boxShadow: 'var(--shadow)',
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '0.5rem', backgroundColor: 'var(--primary-soft)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Info style={{ width: '18px', height: '18px' }} />
-                                </div>
-                                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
-                                    {t("Course Renewal Notice")}
-                                </h3>
-                            </div>
-                            <button
-                                onClick={() => setRenewalNotice(null)}
-                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.25rem' }}
-                            >
-                                <X style={{ width: '18px', height: '18px' }} />
-                            </button>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.875rem' }}>
-                            <div style={{
-                                padding: '0.85rem 1rem',
-                                backgroundColor: 'var(--surface-hover)',
-                                borderRadius: '0.65rem',
-                                border: '1px solid var(--border)',
-                                lineHeight: 1.55,
-                                color: 'var(--text)'
-                            }}>
-                                {renewalNotice.type === 'ALREADY_RENEWED' ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--success-text)', fontWeight: 700, fontSize: '0.95rem' }}>
-                                            <CheckCircle2 style={{ width: '18px', height: '18px' }} />
-                                            <span>{t("Course renewed successfully!")}</span>
-                                        </div>
-                                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                            {t("Member has been registered and enrolled into the next batch:")}
-                                        </p>
-                                        <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.825rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: 'var(--text-muted)' }}>{t("Next Batch:")}</span>
-                                                <strong style={{ color: 'var(--primary)' }}>{renewalNotice.nextCourse?.courseName}</strong>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: 'var(--text-muted)' }}>{t("Coach / Room:")}</span>
-                                                <span style={{ color: 'var(--text)' }}>{renewalNotice.nextCourse?.coachName} • {renewalNotice.nextCourse?.roomName}</span>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: 'var(--text-muted)' }}>{t("Timeline:")}</span>
-                                                <span style={{ color: 'var(--text)' }}>{formatDateTime(renewalNotice.nextCourse?.firstSessionDate)} → {formatDateTime(renewalNotice.nextCourse?.lastSessionDate)}</span>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: 'var(--text-muted)' }}>{t("Total Sessions:")}</span>
-                                                <strong style={{ color: 'var(--success-text)' }}>{renewalNotice.nextCourse?.sessionsCount} {t("sessions (In schedule)")}</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : renewalNotice.type === 'ALREADY_ENROLLED' ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--success-text)', fontWeight: 600 }}>
-                                            <CheckCircle2 style={{ width: '18px', height: '18px' }} />
-                                            <span>{renewalNotice.message}</span>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <span>{t("No upcoming recurring schedule found for course:")} </span>
-                                        <strong style={{ color: 'var(--primary)' }}>{renewalNotice.courseName}</strong>.
-                                        <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                            {t("The center has not scheduled the next recurring batch for this course yet. You can enroll the member into another available class or check back later.")}
-                                        </p>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
-                            <button
-                                onClick={() => setRenewalNotice(null)}
-                                style={{
-                                    padding: '0.55rem 1.1rem',
-                                    backgroundColor: 'var(--surface)',
-                                    color: 'var(--text)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '0.5rem',
-                                    fontSize: '0.85rem',
-                                    fontWeight: 500,
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                {t("Close")}
-                            </button>
-                            {renewalNotice.type === 'NO_SCHEDULE' && (
-                                <button
-                                    onClick={() => {
-                                        setRenewalNotice(null);
-                                        handleOpenEnrollModal();
-                                    }}
-                                    style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '0.4rem',
-                                        padding: '0.55rem 1.15rem',
-                                        backgroundColor: 'var(--primary)',
-                                        color: 'var(--on-primary)',
-                                        border: 'none',
-                                        borderRadius: '0.5rem',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 600,
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    <BookOpen style={{ width: '14px', height: '14px' }} />
-                                    <span>{t("Enroll Another Class")}</span>
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
+            <RenewalNoticeModal
+                notice={renewalNotice}
+                onClose={() => setRenewalNotice(null)}
+                onEnrollOther={handleOpenEnrollModal}
+            />
 
             {/* Modal đăng ký gói Combo */}
             {packageModalOpen && (
@@ -1001,48 +970,7 @@ export default function ManageMembershipsView() {
                                 })()}
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.45rem', borderTop: '1px dashed var(--border)' }}>
                                     <span style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--text)' }}>{t("Payment method at counter:")}</span>
-                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPaymentMethod('CASH')}
-                                            style={{
-                                                padding: '0.35rem 0.75rem',
-                                                borderRadius: '0.4rem',
-                                                fontSize: '0.78rem',
-                                                fontWeight: 600,
-                                                border: paymentMethod === 'CASH' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                                backgroundColor: paymentMethod === 'CASH' ? 'var(--primary-soft)' : 'var(--surface)',
-                                                color: paymentMethod === 'CASH' ? 'var(--primary)' : 'var(--text)',
-                                                cursor: 'pointer',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '0.35rem'
-                                            }}
-                                        >
-                                            <Banknote style={{ width: '13px', height: '13px' }} />
-                                            <span>{t("Cash")}</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPaymentMethod('TRANSFER')}
-                                            style={{
-                                                padding: '0.35rem 0.75rem',
-                                                borderRadius: '0.4rem',
-                                                fontSize: '0.78rem',
-                                                fontWeight: 600,
-                                                border: paymentMethod === 'TRANSFER' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                                backgroundColor: paymentMethod === 'TRANSFER' ? 'var(--primary-soft)' : 'var(--surface)',
-                                                color: paymentMethod === 'TRANSFER' ? 'var(--primary)' : 'var(--text)',
-                                                cursor: 'pointer',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '0.35rem'
-                                            }}
-                                        >
-                                            <CreditCard style={{ width: '13px', height: '13px' }} />
-                                            <span>{t("Bank Transfer")}</span>
-                                        </button>
-                                    </div>
+                                    <PaymentMethodSelector paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} />
                                 </div>
                             </div>
                         </div>
@@ -1172,7 +1100,7 @@ export default function ManageMembershipsView() {
                             </button>
                         </div>
 
-                        {/* Scrollable Content Body (Single Scrollbar) */}
+                        {/* Scrollable Class List Section */}
                         <div style={{
                             flex: 1,
                             minHeight: 0,
@@ -1180,7 +1108,7 @@ export default function ManageMembershipsView() {
                             padding: '1.25rem 1.5rem',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '1rem'
+                            gap: '0.85rem'
                         }}>
                             {enrollFeedback && (
                                 <div style={{ padding: '0.75rem', borderRadius: '0.5rem', backgroundColor: enrollFeedback.type === 'success' ? 'var(--success-soft)' : 'var(--danger-soft)', color: enrollFeedback.type === 'success' ? 'var(--success-text)' : 'var(--danger-text)', border: '1px solid var(--border)', fontSize: '0.85rem' }}>
@@ -1198,7 +1126,7 @@ export default function ManageMembershipsView() {
                                     <p style={{ fontSize: '0.85rem', margin: 0 }}>{t("No upcoming open classes found at this time.")}</p>
                                 </div>
                             ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                         {t("Select an upcoming class to enroll member")} <strong>{selectedMember?.fullName}</strong>.
                                     </div>
@@ -1272,65 +1200,37 @@ export default function ManageMembershipsView() {
                                     </div>
                                 </div>
                             )}
-
-                            {selectedClassId && (() => {
-                                const sel = availableClasses.find(c => String(c.classId) === String(selectedClassId));
-                                if (!sel) return null;
-                                return (
-                                    <div style={{ padding: '0.85rem 1rem', backgroundColor: 'var(--surface-hover)', borderRadius: '0.65rem', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t("Selected Class:")} <strong style={{ color: 'var(--text)' }}>{sel.className}</strong></span>
-                                            <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--success-text)' }}>{formatMoney(sel.price || 0)}</span>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.45rem', borderTop: '1px dashed var(--border)' }}>
-                                            <span style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--text)' }}>{t("Payment method at counter:")}</span>
-                                            <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPaymentMethod('CASH')}
-                                                    style={{
-                                                        padding: '0.35rem 0.75rem',
-                                                        borderRadius: '0.4rem',
-                                                        fontSize: '0.78rem',
-                                                        fontWeight: 600,
-                                                        border: paymentMethod === 'CASH' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                                        backgroundColor: paymentMethod === 'CASH' ? 'var(--primary-soft)' : 'var(--surface)',
-                                                        color: paymentMethod === 'CASH' ? 'var(--primary)' : 'var(--text)',
-                                                        cursor: 'pointer',
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        gap: '0.35rem'
-                                                    }}
-                                                >
-                                                    <Banknote style={{ width: '13px', height: '13px' }} />
-                                                    <span>{t("Cash")}</span>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPaymentMethod('TRANSFER')}
-                                                    style={{
-                                                        padding: '0.35rem 0.75rem',
-                                                        borderRadius: '0.4rem',
-                                                        fontSize: '0.78rem',
-                                                        fontWeight: 600,
-                                                        border: paymentMethod === 'TRANSFER' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                                        backgroundColor: paymentMethod === 'TRANSFER' ? 'var(--primary-soft)' : 'var(--surface)',
-                                                        color: paymentMethod === 'TRANSFER' ? 'var(--primary)' : 'var(--text)',
-                                                        cursor: 'pointer',
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        gap: '0.35rem'
-                                                    }}
-                                                >
-                                                    <CreditCard style={{ width: '13px', height: '13px' }} />
-                                                    <span>{t("Bank Transfer")}</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
                         </div>
+
+                        {/* PINNED: Selected Class Summary & Payment Method Selection (Always visible, no scrolling needed) */}
+                        {selectedClassId && (() => {
+                            const sel = availableClasses.find(c => String(c.classId) === String(selectedClassId));
+                            if (!sel) return null;
+                            return (
+                                <div style={{
+                                    padding: '0.85rem 1.5rem',
+                                    backgroundColor: 'var(--surface-hover)',
+                                    borderTop: '1px solid var(--border)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '0.55rem',
+                                    flexShrink: 0
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                            {t("Selected Class:")} <strong style={{ color: 'var(--text)', fontSize: '0.9rem' }}>{sel.className}</strong>
+                                        </span>
+                                        <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--success-text)' }}>
+                                            {formatMoney(sel.price || 0)}
+                                        </span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.45rem', borderTop: '1px dashed var(--border)' }}>
+                                        <span style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--text)' }}>{t("Payment method at counter:")}</span>
+                                        <PaymentMethodSelector paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} />
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
                         {/* Fixed Footer with Action Buttons */}
                         <div style={{
@@ -1380,6 +1280,13 @@ export default function ManageMembershipsView() {
                     }}
                 />
             )}
+
+            {/* Modal In & Xem hóa đơn/biên lai */}
+            <InvoiceReceiptModal
+                isOpen={receiptModalOpen}
+                onClose={() => setReceiptModalOpen(false)}
+                receipt={currentReceipt}
+            />
         </div>
     );
 }

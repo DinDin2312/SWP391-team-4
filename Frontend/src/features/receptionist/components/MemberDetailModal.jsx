@@ -20,15 +20,29 @@ import {
     ChevronUp,
     Ban,
     Info,
-    Banknote
+    Banknote,
+    Receipt,
+    Printer,
+    Users,
+    Calendar,
+    Sparkles
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
+import InvoiceReceiptModal from './InvoiceReceiptModal';
+import ClassRenewalModal from './ClassRenewalModal';
+import RenewalNoticeModal from './RenewalNoticeModal';
 
 const MemberDetailModal = ({ member: initialMember, onClose }) => {
   useLanguage();
     const [member, setMemberData] = useState(initialMember);
-    const [activeTab, setActiveTab] = useState('packages'); // 'packages' | 'bookings' | 'profile'
+    const [activeTab, setActiveTab] = useState('packages'); // 'packages' | 'bookings' | 'invoices' | 'profile'
     const [copiedPhone, setCopiedPhone] = useState(false);
+
+    // Invoices Tab States
+    const [invoices, setInvoices] = useState([]);
+    const [loadingInvoices, setLoadingInvoices] = useState(false);
+    const [activeReceipt, setActiveReceipt] = useState(null);
+    const [receiptModalOpen, setReceiptModalOpen] = useState(false);
 
     useEffect(() => {
         setMemberData(initialMember);
@@ -44,16 +58,32 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
         }
     };
 
+    useEffect(() => {
+        if (activeTab === 'invoices' && member?.userId) {
+            setLoadingInvoices(true);
+            receptionistService.getMemberInvoices(member.userId)
+                .then((data) => setInvoices(Array.isArray(data) ? data : []))
+                .catch((err) => {
+                    console.error('Failed to load member invoices:', err);
+                    setInvoices([]);
+                })
+                .finally(() => setLoadingInvoices(false));
+        }
+    }, [activeTab, member?.userId]);
+
     // Helper gom các buổi học lẻ thành từng khóa học kèm danh sách buổi chi tiết
     const groupBookingsByCourse = (bookingsList) => {
         const grouped = {};
         const now = new Date();
         (bookingsList || []).forEach((b) => {
-            const key = b.className || 'Unknown Course';
+            const key = b.classId ? `class_${b.classId}` : (b.className || 'Unknown Course');
             if (!grouped[key]) {
                 grouped[key] = {
-                    courseName: key,
+                    key: key,
+                    courseName: b.className || 'Unknown Course',
                     classId: b.classId,
+                    subjectId: b.subjectId,
+                    subjectName: b.subjectName,
                     coachName: b.coachName || 'N/A',
                     roomName: b.roomName || 'N/A',
                     firstSessionDate: b.startTime,
@@ -65,12 +95,28 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                     cancelledCount: 0,
                     upcomingCount: 0,
                     sampleBookingId: b.bookingId,
+                    daysOfWeek: new Set(),
+                    timeSlot: b.startTime ? new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '',
                     sessions: [],
                 };
+            }
+            if (b.subjectId && !grouped[key].subjectId) grouped[key].subjectId = b.subjectId;
+            if (b.subjectName && !grouped[key].subjectName) grouped[key].subjectName = b.subjectName;
+            if (b.startTime) {
+                grouped[key].daysOfWeek.add(new Date(b.startTime).getDay());
+                if (!grouped[key].timeSlot) {
+                    grouped[key].timeSlot = new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                }
             }
             grouped[key].sessionsCount += 1;
             if (b.classId && !grouped[key].classId) {
                 grouped[key].classId = b.classId;
+            }
+            if (b.coachName && grouped[key].coachName === 'N/A') {
+                grouped[key].coachName = b.coachName;
+            }
+            if (b.roomName && grouped[key].roomName === 'N/A') {
+                grouped[key].roomName = b.roomName;
             }
 
             const sessionEnd = b.endTime ? new Date(b.endTime) : (b.startTime ? new Date(b.startTime) : null);
@@ -116,12 +162,11 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
         });
 
         const courses = Object.values(grouped);
-        // Sắp xếp các khóa học: 2 lớp cùng môn/cùng khóa (Đợt 1 & Đợt 2) luôn nằm liền kề nhau
-        const cleanBaseName = (name = '') => name.replace(/\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\)/i, '').trim();
+        // Sắp xếp các khóa học: Gom cùng bộ môn / loại lớp và sắp theo thời gian khai giảng
         courses.sort((a, b) => {
-            const baseA = cleanBaseName(a.courseName);
-            const baseB = cleanBaseName(b.courseName);
-            const cmp = baseA.localeCompare(baseB, 'vi');
+            const nameA = (a.subjectName || a.courseName || '').toLowerCase();
+            const nameB = (b.subjectName || b.courseName || '').toLowerCase();
+            const cmp = nameA.localeCompare(nameB, 'vi');
             if (cmp !== 0) return cmp;
             return new Date(a.firstSessionDate) - new Date(b.firstSessionDate);
         });
@@ -132,6 +177,7 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
     // States for Class Renewal Flow
     const [renewalLoading, setRenewalLoading] = useState(false);
     const [suggestedClass, setSuggestedClass] = useState(null);
+    const [selectedRenewalClassId, setSelectedRenewalClassId] = useState(null);
     const [renewalModalOpen, setRenewalModalOpen] = useState(false);
     const [confirmingRenewal, setConfirmingRenewal] = useState(false);
     const [renewalFeedback, setRenewalFeedback] = useState(null);
@@ -241,7 +287,7 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
 
     const handleCopyPhone = () => {
         if (member.phone) {
-            navigator.clipboard.writeText(member.phone);
+            void navigator.clipboard?.writeText(member.phone);
             setCopiedPhone(true);
             setTimeout(() => setCopiedPhone(false), 2000);
         }
@@ -280,6 +326,8 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
         try {
             const data = await receptionistService.suggestNextClassRenewal(member.userId, bookingId);
             setSuggestedClass(data);
+            const defaultId = data.classId || (data.options && data.options[0]?.classId);
+            setSelectedRenewalClassId(defaultId);
             setPaymentMethod('CASH');
             setRenewalModalOpen(true);
         } catch (err) {
@@ -305,7 +353,7 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
         try {
             await receptionistService.confirmClassRenewal({
                 userId: member.userId,
-                newScheduleId: suggestedClass.suggestedScheduleId,
+                newScheduleId: ((suggestedClass.options || []).find(o => o.classId === selectedRenewalClassId) || suggestedClass).suggestedScheduleId,
                 previousBookingId: suggestedClass.currentBookingId,
                 paymentMethod: paymentMethod,
             });
@@ -562,6 +610,26 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                     </button>
 
                     <button
+                        onClick={() => setActiveTab('invoices')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.65rem 1rem',
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            color: activeTab === 'invoices' ? 'var(--primary)' : 'var(--text-muted)',
+                            borderBottom: activeTab === 'invoices' ? '2px solid var(--primary)' : '2px solid transparent',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        <Receipt style={{ width: '16px', height: '16px' }} />
+                        <span>{t("Hóa đơn & Biên lai")}</span>
+                    </button>
+
+                    <button
                         onClick={() => setActiveTab('profile')}
                         style={{
                             display: 'flex',
@@ -789,17 +857,38 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                                         </thead>
                                         <tbody>
                                         {(() => {
-                                            const allCourses = groupBookingsByCourse(member?.bookings || []);
-                                            const cleanBaseName = (name = '') => name.replace(/\s*[-–]?\s*Đợt\s*\d+.*|\s*\(Đợt\s*\d+.*\)/i, '').trim();
-
+                                            const confirmedBookings = (member?.bookings || []).filter(b => b.bookingStatus === "CONFIRMED");
+                                            const allCourses = groupBookingsByCourse(confirmedBookings);
                                             return allCourses.map((course, idx) => {
-                                                const isExpanded = expandedCourseKey === course.courseName;
-                                                const baseName = cleanBaseName(course.courseName || course.className);
-                                                const nextBatch = allCourses.find(other =>
-                                                    other !== course &&
-                                                    cleanBaseName(other.courseName || other.className) === baseName &&
-                                                    new Date(other.firstSessionDate) > new Date(course.firstSessionDate)
-                                                );
+                                                const courseKey = course.key || (course.classId ? `class_${course.classId}` : course.courseName);
+                                                const isExpanded = expandedCourseKey === courseKey;
+                                                // Nhận diện lớp gia hạn theo đúng tiêu chí nghiệp vụ:
+                                                // 1. Của tương lai (sau ngày khai giảng lớp hiện tại)
+                                                // 2. Cùng loại lớp (cùng subjectId hoặc cùng tên bộ môn)
+                                                // 3. Cùng lịch học (cùng các thứ trong tuần & cùng khung giờ học)
+                                                // 4. Khác giáo viên thì được (không bắt buộc cùng HLV)
+                                                const nextBatch = allCourses.find(other => {
+                                                    if (other === course) return false;
+                                                    if (new Date(other.firstSessionDate) <= new Date(course.firstSessionDate)) return false;
+
+                                                    const sameSubject = (course.subjectId && other.subjectId && course.subjectId === other.subjectId)
+                                                        || (course.subjectName && other.subjectName && course.subjectName.trim().toLowerCase() === other.subjectName.trim().toLowerCase());
+                                                    const cleanBaseName = (name = '') => { if (!name) return ''; const idx = name.search(/[-–(]/); return (idx !== -1 ? name.slice(0, idx) : name).trim().toLowerCase(); };
+                                                    const sameBase = cleanBaseName(course.courseName) === cleanBaseName(other.courseName);
+                                                    if (!sameSubject && !sameBase) return false;
+
+                                                    const daysA = course.daysOfWeek || new Set();
+                                                    const daysB = other.daysOfWeek || new Set();
+                                                    let daysMatch = true;
+                                                    if (daysA.size > 0 && daysB.size > 0) {
+                                                        let matchCount = 0;
+                                                        daysA.forEach(d => { if (daysB.has(d)) matchCount++; });
+                                                        daysMatch = matchCount >= Math.min(daysA.size, daysB.size);
+                                                    }
+                                                    const slotMatch = !course.timeSlot || !other.timeSlot || course.timeSlot === other.timeSlot;
+
+                                                    return daysMatch && slotMatch;
+                                                });
                                                 return (
                                                     <React.Fragment key={idx}>
                                                         <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -807,7 +896,7 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => setExpandedCourseKey(isExpanded ? null : course.courseName)}
+                                                                        onClick={() => setExpandedCourseKey(isExpanded ? null : courseKey)}
                                                                         style={{
                                                                             background: 'none',
                                                                             border: 'none',
@@ -874,7 +963,7 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                                                                             title={t("Course already renewed to next batch. Click to view.")}
                                                                         >
                                                                             <CheckCircle2 style={{ width: '12px', height: '12px' }} />
-                                                                            <span>{t("Renewed")}</span>
+                                                                            <span>{t("Enrolled in Next Term")}</span>
                                                                         </button>
                                                                     ) : (
                                                                         <button
@@ -1014,6 +1103,162 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                         </div>
                     )}
 
+                    {/* TAB: INVOICES */}
+                    {activeTab === 'invoices' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
+                                        {t("Lịch sử hóa đơn & phiếu thu")}
+                                    </h4>
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>
+                                        {t("Tất cả các giao dịch thanh toán gói tập và khóa học đã thực hiện của hội viên")}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        if (member?.userId) {
+                                            setLoadingInvoices(true);
+                                            receptionistService.getMemberInvoices(member.userId)
+                                                .then((data) => setInvoices(Array.isArray(data) ? data : []))
+                                                .catch((e) => console.error(e))
+                                                .finally(() => setLoadingInvoices(false));
+                                        }
+                                    }}
+                                    disabled={loadingInvoices}
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.35rem',
+                                        padding: '0.4rem 0.75rem',
+                                        fontSize: '0.78rem',
+                                        fontWeight: 500,
+                                        backgroundColor: 'var(--surface)',
+                                        color: 'var(--text)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '0.4rem',
+                                        cursor: loadingInvoices ? 'not-allowed' : 'pointer'
+                                    }}
+                                >
+                                    <RefreshCw style={{ width: '13px', height: '13px', animation: loadingInvoices ? 'spin 1s linear infinite' : 'none' }} />
+                                    <span>{t("Làm mới")}</span>
+                                </button>
+                            </div>
+
+                            {loadingInvoices ? (
+                                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                                    <RotateCw style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite', margin: '0 auto 0.75rem' }} />
+                                    <div>{t("Đang tải danh sách hóa đơn...")}</div>
+                                </div>
+                            ) : invoices.length === 0 ? (
+                                <div style={{
+                                    padding: '3rem',
+                                    textAlign: 'center',
+                                    backgroundColor: 'var(--surface-hover)',
+                                    border: '1px dashed var(--border)',
+                                    borderRadius: '0.75rem',
+                                    color: 'var(--text-muted)',
+                                    fontSize: '0.875rem'
+                                }}>
+                                    <Receipt style={{ width: '36px', height: '36px', margin: '0 auto 0.75rem', color: 'var(--text-muted)', opacity: 0.5 }} />
+                                    <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '0.25rem' }}>
+                                        {t("Chưa có hóa đơn nào")}
+                                    </div>
+                                    <div style={{ fontSize: '0.78rem' }}>
+                                        {t("Hội viên chưa có lịch sử thanh toán hoặc hóa đơn được ghi nhận trên hệ thống.")}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div style={{
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '0.75rem',
+                                    overflow: 'hidden',
+                                    backgroundColor: 'var(--surface)'
+                                }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
+                                        <thead>
+                                            <tr style={{ backgroundColor: 'var(--surface-hover)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Mã HĐ")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Thời gian")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Nội dung dịch vụ")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{t("Hình thức")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'right' }}>{t("Số tiền")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'center' }}>{t("Trạng thái")}</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'center' }}>{t("Thao tác")}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {invoices.map((inv) => (
+                                                <tr key={inv.invoiceId} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                    <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--primary)' }}>
+                                                        {inv.invoiceCode || `#INV-${inv.invoiceId}`}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', color: 'var(--text)' }}>
+                                                        {displayFormatDateTime(inv.createdAt)}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', color: 'var(--text)', fontWeight: 500 }}>
+                                                        {inv.items && inv.items.length > 0
+                                                            ? inv.items.map(it => it.itemName).join(', ')
+                                                            : t("Dịch vụ thể thao")}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', color: 'var(--text-muted)' }}>
+                                                        {inv.paymentMethod === 'CASH'
+                                                            ? t("Tiền mặt")
+                                                            : inv.paymentMethod === 'BANK_TRANSFER'
+                                                            ? t("Chuyển khoản")
+                                                            : (inv.paymentMethod || 'CASH')}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700, color: 'var(--text)' }}>
+                                                        {formatMoney(inv.totalAmount)}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                                                        <span style={{
+                                                            display: 'inline-block',
+                                                            padding: '0.2rem 0.55rem',
+                                                            borderRadius: '9999px',
+                                                            fontSize: '0.72rem',
+                                                            fontWeight: 600,
+                                                            backgroundColor: inv.status === 'PAID' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                                                            color: inv.status === 'PAID' ? '#16a34a' : '#ca8a04'
+                                                        }}>
+                                                            {inv.status === 'PAID' ? t("Đã thanh toán") : inv.status}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                                                        <button
+                                                            onClick={() => {
+                                                                setActiveReceipt(inv);
+                                                                setReceiptModalOpen(true);
+                                                            }}
+                                                            type="button"
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '0.35rem',
+                                                                padding: '0.35rem 0.65rem',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 600,
+                                                                backgroundColor: 'var(--surface-hover)',
+                                                                color: 'var(--primary)',
+                                                                border: '1px solid var(--border)',
+                                                                borderRadius: '0.4rem',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                            title={t("Xem và in hóa đơn/biên lai")}
+                                                        >
+                                                            <Printer style={{ width: '13px', height: '13px' }} />
+                                                            <span>{t("In HĐ")}</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* TAB 3: PROFILE */}
                     {activeTab === 'profile' && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
@@ -1050,291 +1295,25 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                 </div>
 
                 {/* ================= RENEWAL CONFIRMATION POPUP MODAL ================= */}
-                {renewalModalOpen && suggestedClass && (
-                    <div
-                        style={{
-                            position: 'fixed',
-                            inset: 0,
-                            zIndex: 10000,
-                            backgroundColor: 'rgba(15, 23, 42, 0.45)',
-                            backdropFilter: 'blur(5px)',
-                            WebkitBackdropFilter: 'blur(5px)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '1rem'
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: '100%',
-                                maxWidth: '520px',
-                                backgroundColor: 'var(--surface)',
-                                border: '1px solid var(--border)',
-                                borderRadius: '1rem',
-                                padding: '1.5rem',
-                                boxShadow: 'var(--shadow)'
-                            }}
-                        >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <RotateCw style={{ width: '20px', height: '20px', color: 'var(--primary)' }} />
-                                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>{t("Confirm Next Course Renewal")}</h3>
-                                </div>
-                                <button
-                                    onClick={() => setRenewalModalOpen(false)}
-                                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-                                >
-                                    <X style={{ width: '18px', height: '18px' }} />
-                                </button>
-                            </div>
-
-                            {renewalFeedback && (
-                                <div style={{
-                                    padding: '0.75rem',
-                                    borderRadius: '0.5rem',
-                                    marginBottom: '1rem',
-                                    backgroundColor: renewalFeedback.type === 'success' ? 'var(--success-soft)' : 'var(--danger-soft)',
-                                    border: `1px solid ${renewalFeedback.type === 'success' ? 'var(--border)' : 'var(--border)'}`,
-                                    color: renewalFeedback.type === 'success' ? 'var(--success-text)' : 'var(--danger-text)',
-                                    fontSize: '0.85rem'
-                                }}>
-                                    {t(renewalFeedback.message)}
-                                </div>
-                            )}
-
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 1rem' }}>{t("System automatically found the closest recurring session for member")}<strong>{member.fullName}</strong>:
-                            </p>
-
-                            <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.875rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>{t("Course:")}</span>
-                                    <strong style={{ color: 'var(--text)' }}>{suggestedClass.className}</strong>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>{t("Coach:")}</span>
-                                    <span style={{ color: 'var(--text)' }}>{suggestedClass.coachName}</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>{t("Room:")}</span>
-                                    <span style={{ color: 'var(--text)' }}>{suggestedClass.roomName}</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>{t("Starts On:")}</span>
-                                    <strong style={{ color: 'var(--primary)' }}>{formatDateTime(suggestedClass.startTime)}</strong>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>{t("Course Fee:")}</span>
-                                    <strong style={{ color: 'var(--success-text)', fontSize: '0.95rem' }}>{formatCurrency(suggestedClass.price)}</strong>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>{t("Available Slots:")}</span>
-                                    <span style={{ color: 'var(--text)' }}>{suggestedClass.availableSlots} / {suggestedClass.maxSlots}{' '}{t("slots left")}</span>
-                                </div>
-
-                                <div style={{ marginTop: '0.4rem', paddingTop: '0.6rem', borderTop: '1px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.825rem' }}>{t("Payment method at counter:")}</span>
-                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPaymentMethod('CASH')}
-                                            style={{
-                                                padding: '0.35rem 0.75rem',
-                                                borderRadius: '0.4rem',
-                                                fontSize: '0.78rem',
-                                                fontWeight: 600,
-                                                border: paymentMethod === 'CASH' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                                backgroundColor: paymentMethod === 'CASH' ? 'var(--primary-soft)' : 'var(--surface)',
-                                                color: paymentMethod === 'CASH' ? 'var(--primary)' : 'var(--text)',
-                                                cursor: 'pointer',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '0.35rem'
-                                            }}
-                                        >
-                                            <Banknote style={{ width: '13px', height: '13px' }} />
-                                            <span>{t("Cash")}</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPaymentMethod('TRANSFER')}
-                                            style={{
-                                                padding: '0.35rem 0.75rem',
-                                                borderRadius: '0.4rem',
-                                                fontSize: '0.78rem',
-                                                fontWeight: 600,
-                                                border: paymentMethod === 'TRANSFER' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                                backgroundColor: paymentMethod === 'TRANSFER' ? 'var(--primary-soft)' : 'var(--surface)',
-                                                color: paymentMethod === 'TRANSFER' ? 'var(--primary)' : 'var(--text)',
-                                                cursor: 'pointer',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '0.35rem'
-                                            }}
-                                        >
-                                            <CreditCard style={{ width: '13px', height: '13px' }} />
-                                            <span>{t("Bank Transfer")}</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>
-                                <button
-                                    onClick={() => setRenewalModalOpen(false)}
-                                    disabled={confirmingRenewal}
-                                    style={{
-                                        padding: '0.6rem 1rem',
-                                        backgroundColor: 'var(--surface)',
-                                        color: 'var(--text)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '0.5rem',
-                                        fontSize: '0.85rem',
-                                        cursor: 'pointer'
-                                    }}
-                                >{t("Cancel")}</button>
-                                <button
-                                    onClick={handleConfirmRenewal}
-                                    disabled={confirmingRenewal}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.4rem',
-                                        padding: '0.6rem 1.25rem',
-                                        backgroundColor: 'var(--primary)',
-                                        color: 'var(--on-primary)',
-                                        border: 'none',
-                                        borderRadius: '0.5rem',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 600,
-                                        cursor: confirmingRenewal ? 'not-allowed' : 'pointer'
-                                    }}
-                                >
-                                    {confirmingRenewal ? <RefreshCw style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 style={{ width: '14px', height: '14px' }} />}
-                                    <span>{t(confirmingRenewal ? t('Processing...') : t('Confirm Payment & Renew'))}</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <ClassRenewalModal
+                    isOpen={renewalModalOpen}
+                    onClose={() => setRenewalModalOpen(false)}
+                    suggestedClass={suggestedClass}
+                    memberName={member.fullName}
+                    selectedRenewalClassId={selectedRenewalClassId}
+                    setSelectedRenewalClassId={setSelectedRenewalClassId}
+                    paymentMethod={paymentMethod}
+                    setPaymentMethod={setPaymentMethod}
+                    onConfirm={handleConfirmRenewal}
+                    confirming={confirmingRenewal}
+                    feedback={renewalFeedback}
+                />
 
                 {/* Modal Thông Báo Khi Không Tìm Thấy Lịch Gia Hạn Tiếp Theo */}
-                {renewalNotice && renewalNotice.isOpen && (
-                    <div
-                        style={{
-                            position: 'fixed',
-                            inset: 0,
-                            zIndex: 10002,
-                            backgroundColor: 'rgba(15, 23, 42, 0.45)',
-                            backdropFilter: 'blur(5px)',
-                            WebkitBackdropFilter: 'blur(5px)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '1rem',
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: '100%',
-                                maxWidth: '460px',
-                                backgroundColor: 'var(--surface)',
-                                border: '1px solid var(--border)',
-                                borderRadius: '1rem',
-                                padding: '1.5rem',
-                                boxShadow: 'var(--shadow)',
-                            }}
-                        >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                    <div style={{ width: '32px', height: '32px', borderRadius: '0.5rem', backgroundColor: 'var(--primary-soft)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <Info style={{ width: '18px', height: '18px' }} />
-                                    </div>
-                                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
-                                        {t("Course Renewal Notice")}
-                                    </h3>
-                                </div>
-                                <button onClick={() => setRenewalNotice(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.25rem' }}>
-                                    <X style={{ width: '18px', height: '18px' }} />
-                                </button>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.875rem' }}>
-                                <div style={{
-                                    padding: '0.85rem 1rem',
-                                    backgroundColor: 'var(--surface-hover)',
-                                    borderRadius: '0.65rem',
-                                    border: '1px solid var(--border)',
-                                    lineHeight: 1.55,
-                                    color: 'var(--text)'
-                                }}>
-                                {renewalNotice.type === 'ALREADY_RENEWED' ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--success-text)', fontWeight: 700, fontSize: '0.95rem' }}>
-                                            <CheckCircle2 style={{ width: '18px', height: '18px' }} />
-                                            <span>{t("Course renewed successfully!")}</span>
-                                        </div>
-                                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                            {t("Member has been registered and enrolled into the next batch:")}
-                                        </p>
-                                        <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.825rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: 'var(--text-muted)' }}>{t("Next Batch:")}</span>
-                                                <strong style={{ color: 'var(--primary)' }}>{renewalNotice.nextCourse?.courseName}</strong>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: 'var(--text-muted)' }}>{t("Coach / Room:")}</span>
-                                                <span style={{ color: 'var(--text)' }}>{renewalNotice.nextCourse?.coachName} • {renewalNotice.nextCourse?.roomName}</span>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: 'var(--text-muted)' }}>{t("Timeline:")}</span>
-                                                <span style={{ color: 'var(--text)' }}>{formatDateTime(renewalNotice.nextCourse?.firstSessionDate)} → {formatDateTime(renewalNotice.nextCourse?.lastSessionDate)}</span>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: 'var(--text-muted)' }}>{t("Total Sessions:")}</span>
-                                                <strong style={{ color: 'var(--success-text)' }}>{renewalNotice.nextCourse?.sessionsCount} {t("sessions (In schedule)")}</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : renewalNotice.type === 'ALREADY_ENROLLED' ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--success-text)', fontWeight: 600 }}>
-                                            <CheckCircle2 style={{ width: '18px', height: '18px' }} />
-                                            <span>{renewalNotice.message}</span>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <span>{t("No upcoming recurring schedule found for course:")} </span>
-                                        <strong style={{ color: 'var(--primary)' }}>{renewalNotice.courseName}</strong>.
-                                        <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                            {t("The center has not scheduled the next recurring batch for this course yet. You can enroll the member into another available class or check back later.")}
-                                        </p>
-                                    </>
-                                )}
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
-                                <button
-                                    onClick={() => setRenewalNotice(null)}
-                                    style={{
-                                        padding: '0.55rem 1.1rem',
-                                        backgroundColor: 'var(--surface)',
-                                        color: 'var(--text)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '0.5rem',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 500,
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    {t("Close")}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <RenewalNoticeModal
+                    notice={renewalNotice}
+                    onClose={() => setRenewalNotice(null)}
+                />
 
                 {/* ================= CANCELLATION CONFIRMATION POPUP MODAL ================= */}
                 {cancelModalOpen && cancelTarget && (
@@ -1456,6 +1435,13 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                         </div>
                     </div>
                 )}
+
+                {/* Modal In & Xem hóa đơn/biên lai */}
+                <InvoiceReceiptModal
+                    isOpen={receiptModalOpen}
+                    onClose={() => setReceiptModalOpen(false)}
+                    receipt={activeReceipt}
+                />
             </div>
         </div>
     );

@@ -725,7 +725,7 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
           <div>
             <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Sparkles style={{ width: '18px', height: '18px', color: 'var(--primary)' }} />
-              {t('1. Quick Member Check-in Desk')}
+              {t('Quick Member Check-in Desk')}
             </h2>
             <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               {t('Search by member name, phone, email, or ID to verify package status.')}
@@ -750,13 +750,19 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                 type="text"
                 value={memberKeyword}
                 onChange={(e) => {
-                  setMemberKeyword(e.target.value);
-                  fetchMembersList(e.target.value);
+                  const val = e.target.value;
+                  setMemberKeyword(val);
+                  if (selectedMember) {
+                    handleSelectMember(null);
+                  }
+                  fetchMembersList(val);
                 }}
                 placeholder={t('Enter member name, phone, email or #ID...')}
                 style={{
                   width: '100%',
-                  padding: '0.65rem 0.75rem 0.65rem 2.3rem',
+                  padding: memberKeyword
+                    ? '0.65rem 2.2rem 0.65rem 2.3rem'
+                    : '0.65rem 0.75rem 0.65rem 2.3rem',
                   borderRadius: '0.65rem',
                   border: '1px solid var(--border)',
                   backgroundColor: 'var(--bg)',
@@ -764,105 +770,130 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                   fontSize: '0.85rem',
                 }}
               />
+              {memberKeyword && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMemberKeyword('');
+                    fetchMembersList('');
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: '0.75rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    padding: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  title={t('Clear search')}
+                >
+                  <X style={{ width: '14px', height: '14px' }} />
+                </button>
+              )}
             </div>
           </form>
 
-          {/* Member Quick List */}
-          <div
-            style={{
-              maxHeight: selectedMember ? '185px' : '320px',
-              overflowY: 'auto',
-              border: '1px solid var(--border)',
-              borderRadius: '0.75rem',
-              backgroundColor: 'var(--bg)',
-              divideY: '1px solid var(--border)',
-            }}
-          >
-            {loadingMembers ? (
-              <div style={{ padding: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                {t('Searching members...')}
-              </div>
-            ) : members.length === 0 ? (
-              <div style={{ padding: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                {t('No matching members found.')}
-              </div>
-            ) : (
-              members.map((m) => {
-                const isChosen = selectedMember?.userId === m.userId;
-                const isMemberActive = m.membershipStatus === 'ACTIVE';
-                const isExpiring = m.daysRemaining != null && m.daysRemaining > 0 && m.daysRemaining <= 7 && isMemberActive;
+          {/* Member Quick List (shown when no member is selected) */}
+          {!selectedMember && (
+            <div
+              style={{
+                maxHeight: '380px',
+                overflowY: 'auto',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                backgroundColor: 'var(--bg)',
+              }}
+            >
+              {loadingMembers ? (
+                <div style={{ padding: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  {t('Searching members...')}
+                </div>
+              ) : members.length === 0 ? (
+                <div style={{ padding: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  {t('No matching members found.')}
+                </div>
+              ) : (
+                members.map((m) => {
+                  const isChosen = selectedMember?.userId === m.userId;
+                  const isMemberActive = m.membershipStatus === 'ACTIVE';
+                  const isExpiring = m.daysRemaining != null && m.daysRemaining > 0 && m.daysRemaining <= 7 && isMemberActive;
 
-                return (
-                  <div
-                    key={m.userId}
-                    onClick={() => handleSelectMember(m)}
-                    style={{
-                      padding: '0.75rem 0.9rem',
-                      borderBottom: '1px solid var(--border)',
-                      backgroundColor: isChosen ? 'var(--primary-soft)' : 'transparent',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '0.75rem',
-                      transition: 'background-color 0.15s',
-                    }}
-                  >
-                    <div style={{ overflow: 'hidden' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.86rem', color: 'var(--text)' }}>
-                          {m.fullName}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                          #{m.userId}
+                  return (
+                    <div
+                      key={m.userId}
+                      onClick={() => handleSelectMember(m)}
+                      style={{
+                        padding: '0.75rem 0.9rem',
+                        borderBottom: '1px solid var(--border)',
+                        backgroundColor: isChosen ? 'var(--primary-soft)' : 'transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.75rem',
+                        transition: 'background-color 0.15s',
+                      }}
+                    >
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.86rem', color: 'var(--text)' }}>
+                            {m.fullName}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                            #{m.userId}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                          {m.phone || t('No phone')} • {m.email}
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            padding: '0.18rem 0.5rem',
+                            borderRadius: '999px',
+                            backgroundColor: isMemberActive
+                              ? isExpiring
+                                ? 'var(--warning-soft)'
+                                : 'var(--success-soft)'
+                              : 'var(--danger-soft)',
+                            color: isMemberActive
+                              ? isExpiring
+                                ? 'var(--warning-text)'
+                                : 'var(--success-text)'
+                              : 'var(--danger-text)',
+                          }}
+                        >
+                          {isMemberActive
+                            ? isExpiring
+                              ? `${t('Expiring')} (${m.daysRemaining}d)`
+                              : t('Active Package')
+                            : m.membershipStatus === 'EXPIRED'
+                            ? t('Expired')
+                            : t('No Package')}
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                        {m.phone || t('No phone')} • {m.email}
-                      </div>
                     </div>
-
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          fontSize: '0.68rem',
-                          fontWeight: 700,
-                          padding: '0.18rem 0.5rem',
-                          borderRadius: '999px',
-                          backgroundColor: isMemberActive
-                            ? isExpiring
-                              ? 'var(--warning-soft)'
-                              : 'var(--success-soft)'
-                            : 'var(--danger-soft)',
-                          color: isMemberActive
-                            ? isExpiring
-                              ? 'var(--warning-text)'
-                              : 'var(--success-text)'
-                            : 'var(--danger-text)',
-                        }}
-                      >
-                        {isMemberActive
-                          ? isExpiring
-                            ? `${t('Expiring')} (${m.daysRemaining}d)`
-                            : t('Active Package')
-                          : m.membershipStatus === 'EXPIRED'
-                          ? t('Expired')
-                          : t('No Package')}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+                  );
+                })
+              )}
+            </div>
+          )}
 
           {/* Selected Member Verification & Form */}
           {selectedMember ? (
             <div
               style={{
-                borderTop: '1px solid var(--border)',
-                paddingTop: '1rem',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '1rem',
@@ -871,61 +902,116 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
               {/* Selected Member Header Card */}
               <div
                 style={{
-                  padding: '0.9rem 1rem',
+                  padding: '0.85rem 1rem',
                   borderRadius: '0.8rem',
                   backgroundColor: 'var(--bg)',
                   border: '1px solid var(--border)',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.75rem',
+                  flexDirection: 'column',
+                  gap: '0.55rem',
                 }}
               >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text)' }}>
-                      {selectedMember.fullName}
-                    </span>
+                {/* Top Row: Full Name + ID + Active Badge */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0, flex: 1 }}>
                     <span
                       style={{
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        padding: '0.15rem 0.45rem',
-                        borderRadius: '0.35rem',
-                        backgroundColor:
-                          selectedMember.status === 'ACTIVE' ? 'var(--success-soft)' : 'var(--danger-soft)',
-                        color:
-                          selectedMember.status === 'ACTIVE' ? 'var(--success-text)' : 'var(--danger-text)',
+                        fontWeight: 800,
+                        fontSize: '0.95rem',
+                        color: 'var(--text)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
                       }}
+                      title={selectedMember.fullName}
                     >
-                      {selectedMember.status === 'ACTIVE' ? t('● Active') : t('● Inactive')}
+                      {selectedMember.fullName}
+                    </span>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0 }}>
+                      #{selectedMember.userId}
                     </span>
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                    {selectedMember.phone || '—'} • {selectedMember.email}
-                  </div>
+
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      padding: '0.18rem 0.5rem',
+                      borderRadius: '0.35rem',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      backgroundColor:
+                        selectedMember.status === 'ACTIVE' ? 'var(--success-soft)' : 'var(--danger-soft)',
+                      color:
+                        selectedMember.status === 'ACTIVE' ? 'var(--success-text)' : 'var(--danger-text)',
+                    }}
+                  >
+                    {selectedMember.status === 'ACTIVE' ? t('● Active') : t('● Inactive')}
+                  </span>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setDetailModalUserId(selectedMember.userId)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    padding: '0.45rem 0.7rem',
-                    borderRadius: '0.5rem',
-                    border: '1px solid var(--border)',
-                    backgroundColor: 'var(--surface)',
-                    color: 'var(--primary)',
-                    fontSize: '0.76rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Eye style={{ width: '14px', height: '14px' }} />
-                  {t('Details')}
-                </button>
+                {/* Bottom Row: Contact info + Action buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', paddingTop: '0.35rem', borderTop: '1px solid var(--border)' }}>
+                  <div
+                    style={{
+                      fontSize: '0.76rem',
+                      color: 'var(--text-muted)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      flex: 1,
+                    }}
+                    title={`${selectedMember.phone || '—'} • ${selectedMember.email}`}
+                  >
+                    {selectedMember.phone || '—'} • {selectedMember.email}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectMember(null)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        padding: '0.35rem 0.6rem',
+                        borderRadius: '0.45rem',
+                        border: '1px solid var(--border)',
+                        backgroundColor: 'var(--surface)',
+                        color: 'var(--text-muted)',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title={t('Change member')}
+                    >
+                      <X style={{ width: '13px', height: '13px' }} />
+                      {t('Change')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDetailModalUserId(selectedMember.userId)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        padding: '0.35rem 0.65rem',
+                        borderRadius: '0.45rem',
+                        border: '1px solid var(--border)',
+                        backgroundColor: 'var(--surface)',
+                        color: 'var(--primary)',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <Eye style={{ width: '13px', height: '13px' }} />
+                      {t('Details')}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Anomaly Warning Banner for selected member */}
@@ -994,22 +1080,23 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                     }
                     style={{
                       width: '100%',
-                      padding: '0.7rem 1rem',
+                      padding: '0.75rem 1rem',
                       borderRadius: '0.65rem',
-                      border: '1px solid var(--border)',
-                      backgroundColor: 'var(--surface)',
-                      color: 'var(--text)',
+                      border: 'none',
+                      backgroundColor: '#EF4444',
+                      color: '#ffffff',
                       fontWeight: 700,
                       fontSize: '0.85rem',
-                      cursor: 'pointer',
+                      cursor: checkingOutId === activeCheckInForSelectedMember.checkInId ? 'wait' : 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '0.5rem',
+                      boxShadow: '0 1px 3px rgba(239, 68, 68, 0.25)',
                     }}
                   >
                     <LogOut style={{ width: '16px', height: '16px' }} />
-                    {t('Check-out Member Now')}
+                    {checkingOutId === activeCheckInForSelectedMember.checkInId ? t('Checking out...') : t('Check-out Member Now')}
                   </button>
                 </div>
               ) : loadingMemberships ? (
@@ -1456,19 +1543,19 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
               <thead>
                 <tr style={{ backgroundColor: 'var(--bg)', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase' }}>
+                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '130px' }}>
                     {t('Member')}
                   </th>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase' }}>
+                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '180px' }}>
                     {t('Package & Facility')}
                   </th>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase' }}>
+                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '140px', whiteSpace: 'nowrap' }}>
                     {t('Check-in / Out Time')}
                   </th>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase' }}>
+                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '120px', whiteSpace: 'nowrap' }}>
                     {t('Status')}
                   </th>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', textAlign: 'right' }}>
+                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', textAlign: 'right', minWidth: '135px', whiteSpace: 'nowrap' }}>
                     {t('Action')}
                   </th>
                 </tr>
@@ -1573,14 +1660,14 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                                   fontSize: '0.72rem',
                                   padding: '0.15rem 0.5rem',
                                   borderRadius: '0.35rem',
-                                  backgroundColor: '#ECFDF5',
-                                  color: '#059669',
-                                  border: '1px solid #A7F3D0',
-                                  fontWeight: 700,
+                                  backgroundColor: 'var(--surface-hover)',
+                                  color: 'var(--text)',
+                                  border: '1px solid var(--border)',
+                                  fontWeight: 600,
                                 }}
                               >
-                                <Key style={{ width: '12px', height: '12px' }} />
-                                <span>{t('Door Code:')} <strong>{rec.accessCode}</strong></span>
+                                <Key style={{ width: '12px', height: '12px', color: 'var(--text-muted)' }} />
+                                <span>{t('Door Code:')} <strong style={{ fontFamily: 'monospace', letterSpacing: '0.5px' }}>{rec.accessCode}</strong></span>
                               </div>
                             ) : rec.checkInType === 'CLASS_SESSION' ? (
                               <div
@@ -1611,16 +1698,16 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                           </div>
                         </td>
 
-                        <td style={{ padding: '0.85rem 1rem', fontSize: '0.8rem' }}>
-                          <div style={{ color: 'var(--text)', fontWeight: 600 }}>
+                        <td style={{ padding: '0.85rem 1rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                          <div style={{ color: 'var(--text)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                             {t('In:')} {formatDateTime(rec.checkInTime)}
                           </div>
-                          <div style={{ color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                          <div style={{ color: 'var(--text-muted)', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>
                             {t('Out:')} {rec.checkOutTime ? formatDateTime(rec.checkOutTime) : '—'}
                           </div>
                         </td>
 
-                        <td style={{ padding: '0.85rem 1rem' }}>
+                        <td style={{ padding: '0.85rem 1rem', whiteSpace: 'nowrap' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.35rem' }}>
                             <span
                               style={{
@@ -1634,6 +1721,7 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                                 backgroundColor: isCurrentlyIn ? 'var(--success-soft)' : 'var(--bg)',
                                 color: isCurrentlyIn ? 'var(--success-text)' : 'var(--text-muted)',
                                 border: '1px solid var(--border)',
+                                whiteSpace: 'nowrap',
                               }}
                             >
                               <span
@@ -1642,9 +1730,10 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                                   height: '7px',
                                   borderRadius: '50%',
                                   backgroundColor: isCurrentlyIn ? 'var(--success-text)' : 'var(--text-muted)',
+                                  flexShrink: 0,
                                 }}
                               />
-                              {isCurrentlyIn ? t('In Center') : t('Checked Out')}
+                              <span style={{ whiteSpace: 'nowrap' }}>{isCurrentlyIn ? t('In Center') : t('Checked Out')}</span>
                             </span>
 
                             {rec.hasAnomaly && (
@@ -1661,6 +1750,7 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                                   backgroundColor: '#FEF2F2',
                                   color: '#EF4444',
                                   border: '1px solid #FCA5A5',
+                                  whiteSpace: 'nowrap',
                                 }}
                               >
                                 <ShieldAlert style={{ width: '12px', height: '12px', flexShrink: 0 }} />
@@ -1670,8 +1760,8 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                           </div>
                         </td>
 
-                        <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
+                        <td style={{ padding: '0.85rem 1rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
                             <button
                               type="button"
                               onClick={() => setDetailModalUserId(rec.userId)}
@@ -1685,6 +1775,7 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                                 fontSize: '0.75rem',
                                 fontWeight: 600,
                                 cursor: 'pointer',
+                                flexShrink: 0,
                               }}
                             >
                               <Eye style={{ width: '14px', height: '14px' }} />
@@ -1707,10 +1798,12 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '0.35rem',
+                                  whiteSpace: 'nowrap',
+                                  flexShrink: 0,
                                 }}
                               >
-                                <LogOut style={{ width: '13px', height: '13px' }} />
-                                {t('Check-out')}
+                                <LogOut style={{ width: '13px', height: '13px', flexShrink: 0 }} />
+                                <span style={{ whiteSpace: 'nowrap' }}>{t('Check-out')}</span>
                               </button>
                             )}
                           </div>

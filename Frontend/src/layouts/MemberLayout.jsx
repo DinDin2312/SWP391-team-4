@@ -30,19 +30,21 @@ const MemberLayout = () => {
       try {
         const token = localStorage.getItem('token');
         if (token) {
-          const cartRes = await axios.get('http://localhost:8080/api/v1/payment/cart', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          // Thực thi đồng thời cả 3 requests song song qua Promise.all thay vì chờ nối tiếp
+          const [cartRes, notifRes, myPkgsRes] = await Promise.all([
+            axios.get('http://localhost:8080/api/v1/payment/cart', {
+              headers: { Authorization: `Bearer ${token}` }
+            }).catch(() => ({ data: { items: [] } })),
+            axios.get('http://localhost:8080/api/v1/notifications', {
+              headers: { Authorization: `Bearer ${token}` }
+            }).catch(() => ({ data: [] })),
+            axios.get('http://localhost:8080/api/v1/member/my-packages', {
+              headers: { Authorization: `Bearer ${token}` }
+            }).catch(() => ({ data: [] }))
+          ]);
+
           setCartCount(cartRes.data.items?.length || 0);
-
-          const notifRes = await axios.get('http://localhost:8080/api/v1/notifications', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
           setUnreadCount(notifRes.data.filter(n => !n.read).length || 0);
-
-          const myPkgsRes = await axios.get('http://localhost:8080/api/v1/member/my-packages', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
           const hasAi = myPkgsRes.data.some(p => (p.packageType === 'AI_ACCESS' || p.packageType === 'COMBO') && p.status === 'ACTIVE');
           setHasAiAccess(hasAi);
         }

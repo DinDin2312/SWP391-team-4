@@ -15,4 +15,12 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
            "WHERE s.startTime >= :currentTime AND s.status='SCHEDULED' AND c.status='ACTIVE' " +
            "ORDER BY s.startTime ASC")
     List<Schedule> findAvailableSchedules(@Param("currentTime") LocalDateTime currentTime);
+
+    @Query("SELECT s FROM Schedule s " +
+           "JOIN FETCH s.gymClass c " +
+           "JOIN FETCH c.coach u " +
+           "JOIN FETCH c.room r " +
+           "WHERE c.classId = :classId AND s.startTime >= :currentTime AND s.status='SCHEDULED' AND c.status='ACTIVE' " +
+           "ORDER BY s.startTime ASC")
+    List<Schedule> findAvailableSchedulesByClassId(@Param("classId") Integer classId, @Param("currentTime") LocalDateTime currentTime);
 }

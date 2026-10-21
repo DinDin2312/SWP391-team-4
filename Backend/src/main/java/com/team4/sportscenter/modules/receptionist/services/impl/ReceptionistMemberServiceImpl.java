@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
@@ -103,7 +104,6 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 }
                 startDate = latestMembership.getStartDate();
                 endDate = latestMembership.getEndDate();
-                daysRemaining = 0L;
             }
 
             // Apply membershipFilter if requested
@@ -245,10 +245,16 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 upcomingCount++;
             }
 
+            Integer subjectId = (s != null && s.getGymClass() != null) ? s.getGymClass().getSubjectId() : null;
+            String subjectName = (s != null && s.getGymClass() != null && s.getGymClass().getSubject() != null)
+                    ? s.getGymClass().getSubject().getSubjectName() : null;
+
             bookingDetails.add(MemberBookingDetail.builder()
                     .bookingId(b.getBookingId())
                     .scheduleId(s != null ? s.getScheduleId() : null)
                     .classId(s != null && s.getGymClass() != null ? s.getGymClass().getClassId() : null)
+                    .subjectId(subjectId)
+                    .subjectName(subjectName)
                     .className(className)
                     .coachName(coachName)
                     .coachEmail(coachEmail)
@@ -337,8 +343,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
     @Override
     public List<MemberMembershipDetail> getMemberMemberships(Integer userId) {
         LocalDate today = LocalDate.now();
-        List<UserMembership> memberships = userMembershipRepository.findByUser_UserId(userId);
-        List<MemberMembershipDetail> list = memberships.stream().map(um -> {
+        return userMembershipRepository.findByUser_UserId(userId).stream().map(um -> {
             boolean isStarted = um.getStartDate() == null || !um.getStartDate().isAfter(today);
             boolean isNotExpired = um.getEndDate() == null || !um.getEndDate().isBefore(today);
             boolean isActive = "ACTIVE".equalsIgnoreCase(um.getStatus()) && isStarted && isNotExpired;
@@ -374,8 +379,6 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             return 0;
         })
         .toList();
-
-        return list;
     }
 
     @Override
@@ -422,8 +425,8 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         String className = curClass.getClassName();
         Integer curClassId = curClass.getClassId();
 
-        // Tách tên gốc của khóa học (bỏ hậu tố " - Đợt 1", " (Đợt 1)", v.v.)
-        String baseName = className.replaceAll("(?i)\\s*[-–]?\\s*Đợt\\s*\\d+.*", "").trim();
+        // Tách tên gốc của khóa học (bỏ hậu tố " - Đợt 1", " (Đợt 1)", " - Tháng 10", " - T10", " - K01", v.v.)
+        String baseName = className.replaceAll("(?i)\\s*[-–(]?\\s*(Đợt|Khóa|K|Tháng|T)\\s*\\d+.*[)]?", "").trim();
 
         // Tìm thời gian kết thúc của buổi cuối cùng trong khóa học hiện tại
         List<Schedule> curClassSchedules = scheduleRepository.findAllSchedulesByClassId(curClassId);
@@ -433,12 +436,37 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 .max(LocalDateTime::compareTo)
                 .orElse(curSchedule.getEndTime() != null ? curSchedule.getEndTime() : LocalDateTime.now());
 
+        // Lấy các thứ trong tuần và giờ học của khóa học hiện tại để so khớp lịch tương tự
+        java.util.Set<java.time.DayOfWeek> curDaysOfWeek = curClassSchedules.stream()
+                .map(s -> s.getStartTime().getDayOfWeek())
+                .collect(Collectors.toSet());
+        java.time.LocalTime curStartTime = (curSchedule.getStartTime() != null)
+                ? curSchedule.getStartTime().toLocalTime()
+                : java.time.LocalTime.of(18, 0);
+
         // Tìm các lịch học của đợt tiếp theo (bắt đầu sau hoặc sát thời điểm khóa hiện tại kết thúc)
-        List<Schedule> futureSchedules = scheduleRepository.findUpcomingSchedulesByBaseName(
-                baseName, className, curClassId, curEndTime.minusDays(2));
+        LocalDateTime searchAfterTime = curEndTime.isAfter(LocalDateTime.now())
+                ? curEndTime.minusDays(2)
+                : LocalDateTime.now();
+        List<Schedule> futureSchedules = new ArrayList<>(scheduleRepository.findUpcomingSchedulesByBaseName(
+                baseName, className, curClassId, searchAfterTime));
+
+        // Bổ sung các lớp học cùng bộ môn (Subject) được Manager tạo theo quy tắc Fixed Teaching Slots mới
+        if (curClass.getSubjectId() != null) {
+            Set<Integer> existingSchedIds = futureSchedules.stream()
+                    .map(Schedule::getScheduleId)
+                    .collect(Collectors.toSet());
+            List<Schedule> sameSubjectSchedules = scheduleRepository.findUpcomingSchedulesBySubjectId(
+                    curClass.getSubjectId(), curClassId, searchAfterTime);
+            for (Schedule s : sameSubjectSchedules) {
+                if (!existingSchedIds.contains(s.getScheduleId())) {
+                    futureSchedules.add(s);
+                }
+            }
+        }
 
         if (futureSchedules.isEmpty()) {
-            throw new RuntimeException("Không tìm thấy đợt mở lớp tiếp theo cho khóa học: " + className);
+            throw new RuntimeException("Không tìm thấy lớp học tiếp theo phù hợp cho khóa học: " + className);
         }
 
         // Nhóm các lịch học theo từng GymClass (từng đợt mở lớp)
@@ -447,58 +475,242 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             schedulesByClass.computeIfAbsent(s.getGymClass().getClassId(), k -> new java.util.ArrayList<>()).add(s);
         }
 
-        GymClass targetClass = null;
-        Schedule targetFirstSession = null;
-        int maxSlots = 0;
-        int bookedMembers = 0;
+        // Sắp xếp các lớp ứng viên cho kỳ sau theo 4 tiêu chí cốt lõi:
+        // 1. Cùng loại lớp / bộ môn (Subject)
+        // 2. Của tương lai (Bắt đầu sau khi khóa hiện tại kết thúc)
+        // 3. Cùng lịch học: 100% cùng các thứ trong tuần (curDaysOfWeek)
+        // 4. Cùng khung giờ ca học (curStartTime)
+        // 5. Khai giảng sớm nhất tiếp nối khóa cũ
+        // 6. Khác giáo viên thì được (Coach có thể khác nhau, không bị ràng buộc)
+        List<Map.Entry<Integer, List<Schedule>>> rankedCandidateClasses = new java.util.ArrayList<>(schedulesByClass.entrySet());
+        rankedCandidateClasses.sort((e1, e2) -> {
+            List<Schedule> list1 = e1.getValue();
+            List<Schedule> list2 = e2.getValue();
+            GymClass c1 = list1.get(0).getGymClass();
+            GymClass c2 = list2.get(0).getGymClass();
 
-        for (Map.Entry<Integer, List<Schedule>> entry : schedulesByClass.entrySet()) {
-            GymClass candidateClass = entry.getValue().get(0).getGymClass();
+            // 1. Cùng bộ môn (Subject)
+            boolean sameSubj1 = curClass.getSubjectId() != null && curClass.getSubjectId().equals(c1.getSubjectId());
+            boolean sameSubj2 = curClass.getSubjectId() != null && curClass.getSubjectId().equals(c2.getSubjectId());
+            if (sameSubj1 != sameSubj2) {
+                return sameSubj1 ? -1 : 1;
+            }
 
-            // Kiểm tra xem hội viên này đã đăng ký/gia hạn vào đợt mới này chưa
+            // 2. Của tương lai (Bắt đầu sau khi khóa hiện tại kết thúc hoặc sau searchAfterTime)
+            boolean afterCur1 = !list1.get(0).getStartTime().isBefore(searchAfterTime);
+            boolean afterCur2 = !list2.get(0).getStartTime().isBefore(searchAfterTime);
+            if (afterCur1 != afterCur2) {
+                return afterCur1 ? -1 : 1;
+            }
+
+            // 3. Cùng lịch học - 100% cùng các thứ trong tuần (ví dụ cùng T2-4-6, hoặc cùng T3-5-7)
+            java.util.Set<java.time.DayOfWeek> days1 = list1.stream().map(s -> s.getStartTime().getDayOfWeek()).collect(Collectors.toSet());
+            java.util.Set<java.time.DayOfWeek> days2 = list2.stream().map(s -> s.getStartTime().getDayOfWeek()).collect(Collectors.toSet());
+            boolean exactDays1 = days1.equals(curDaysOfWeek);
+            boolean exactDays2 = days2.equals(curDaysOfWeek);
+            if (exactDays1 != exactDays2) {
+                return exactDays1 ? -1 : 1;
+            }
+
+            long matchCount1 = days1.stream().filter(curDaysOfWeek::contains).count();
+            long matchCount2 = days2.stream().filter(curDaysOfWeek::contains).count();
+            if (matchCount1 != matchCount2) {
+                return Long.compare(matchCount2, matchCount1);
+            }
+
+            // 4. Cùng khung giờ ca học (Slot)
+            java.time.LocalTime t1 = list1.get(0).getStartTime().toLocalTime();
+            java.time.LocalTime t2 = list2.get(0).getStartTime().toLocalTime();
+            long diff1 = Math.abs(java.time.temporal.ChronoUnit.MINUTES.between(curStartTime, t1));
+            long diff2 = Math.abs(java.time.temporal.ChronoUnit.MINUTES.between(curStartTime, t2));
+            if (diff1 != diff2) {
+                return Long.compare(diff1, diff2);
+            }
+
+            // 5. Khai giảng sớm nhất tiếp nối khóa cũ
+            int cmpStart = list1.get(0).getStartTime().compareTo(list2.get(0).getStartTime());
+            if (cmpStart != 0) {
+                return cmpStart;
+            }
+
+            // 6. Khác giáo viên thì được (ưu tiên cùng HLV nếu có, nhưng khác HLV vẫn đứng ngay sau)
+            boolean sameCoach1 = curClass.getCoach() != null && c1.getCoach() != null && curClass.getCoach().getUserId().equals(c1.getCoach().getUserId());
+            boolean sameCoach2 = curClass.getCoach() != null && c2.getCoach() != null && curClass.getCoach().getUserId().equals(c2.getCoach().getUserId());
+            if (sameCoach1 != sameCoach2) {
+                return sameCoach1 ? -1 : 1;
+            }
+
+            return 0;
+        });
+
+        List<Booking> activeMemberBookings = bookingRepository.findByUserIdWithDetails(userId).stream()
+                .filter(b -> "CONFIRMED".equalsIgnoreCase(b.getStatus()))
+                .filter(b -> b.getSchedule() != null && !"CANCELLED".equalsIgnoreCase(b.getSchedule().getStatus()))
+                .filter(b -> b.getSchedule().getGymClass() == null || !curClassId.equals(b.getSchedule().getGymClass().getClassId()))
+                .toList();
+
+        // 1. Chuỗi mô tả thói quen tập luyện của lớp hiện tại
+        LocalTime curEndTimeOfDay = (curSchedule.getEndTime() != null) ? curSchedule.getEndTime().toLocalTime() : curStartTime.plusMinutes(90);
+        String currentSchedulePattern = formatDaysOfWeek(curDaysOfWeek) + " (" + formatTimeSlot(curStartTime, curEndTimeOfDay) + ")";
+
+        // 2. Danh sách tất cả các lớp ứng viên cho kỳ tiếp theo (Direction 1: Chọn lớp có gắn sao gợi ý)
+        List<ClassRenewalOptionItem> options = new ArrayList<>();
+        DateTimeFormatter conflictFmt = DateTimeFormatter.ofPattern("HH:mm dd/MM");
+
+        for (Map.Entry<Integer, List<Schedule>> entry : rankedCandidateClasses) {
+            List<Schedule> candidateSchedules = entry.getValue();
+            if (candidateSchedules.isEmpty()) continue;
+            candidateSchedules.sort(Comparator.comparing(Schedule::getStartTime));
+            GymClass candidateClass = candidateSchedules.get(0).getGymClass();
+
+            Schedule firstSession = candidateSchedules.get(0);
+            List<Schedule> allClassSessions = scheduleRepository.findAllSchedulesByClassId(candidateClass.getClassId());
+            if (!allClassSessions.isEmpty() && allClassSessions.get(0).getStartTime().isBefore(searchAfterTime)) {
+                // Khóa học này đã bắt đầu từ kỳ trước (chỉ còn vài buổi sót lại), bỏ qua để chỉ lấy lớp kỳ sau
+                continue;
+            }
+            if (firstSession.getStartTime().isBefore(searchAfterTime)) {
+                continue;
+            }
+            Schedule lastSession = candidateSchedules.get(candidateSchedules.size() - 1);
+
+            Set<DayOfWeek> candDays = candidateSchedules.stream()
+                    .map(s -> s.getStartTime().getDayOfWeek())
+                    .collect(Collectors.toSet());
+            LocalTime candStartTime = firstSession.getStartTime().toLocalTime();
+            LocalTime candEndTime = (firstSession.getEndTime() != null)
+                    ? firstSession.getEndTime().toLocalTime()
+                    : candStartTime.plusMinutes(90);
+
+            boolean isBest = candDays.equals(curDaysOfWeek)
+                    && Math.abs(ChronoUnit.MINUTES.between(curStartTime, candStartTime)) <= 15;
+
             boolean alreadyEnrolled = bookingRepository.existsByUserIdAndClassId(userId, candidateClass.getClassId());
-            if (alreadyEnrolled) {
-                throw new IllegalArgumentException("Hội viên đã được đăng ký/gia hạn vào đợt tiếp theo (" + candidateClass.getClassName() + ") rồi!");
+
+            boolean hasConflict = false;
+            String conflictReason = null;
+            for (Schedule candSched : candidateSchedules) {
+                if (candSched.getStartTime() == null || candSched.getEndTime() == null) continue;
+                for (Booking existB : activeMemberBookings) {
+                    Schedule existSched = existB.getSchedule();
+                    if (existSched != null && existSched.getStartTime() != null && existSched.getEndTime() != null
+                            && candSched.getStartTime().isBefore(existSched.getEndTime())
+                            && existSched.getStartTime().isBefore(candSched.getEndTime())) {
+                        hasConflict = true;
+                        String conflictName = (existSched.getGymClass() != null) ? existSched.getGymClass().getClassName() : "Lớp khác";
+                        conflictReason = "Trùng giờ với '" + conflictName + "' (" + existSched.getStartTime().format(conflictFmt) + ")";
+                        break;
+                    }
+                }
+                if (hasConflict) break;
             }
 
             int candidateMax = (candidateClass.getMaxSlots() != null) ? candidateClass.getMaxSlots() : 30;
             int candidateBooked = bookingRepository.countBookedUsersByClassId(candidateClass.getClassId());
+            int candidateAvail = Math.max(0, candidateMax - candidateBooked);
 
-            if (candidateBooked < candidateMax) {
-                targetClass = candidateClass;
-                targetFirstSession = entry.getValue().get(0);
-                maxSlots = candidateMax;
-                bookedMembers = candidateBooked;
-                break;
+            ClassRenewalOptionItem item = ClassRenewalOptionItem.builder()
+                    .classId(candidateClass.getClassId())
+                    .suggestedScheduleId(firstSession.getScheduleId())
+                    .className(candidateClass.getClassName())
+                    .coachName(candidateClass.getCoach() != null ? candidateClass.getCoach().getFullName() : "N/A")
+                    .coachEmail(candidateClass.getCoach() != null ? candidateClass.getCoach().getEmail() : null)
+                    .roomName(candidateClass.getRoom() != null ? candidateClass.getRoom().getRoomName() : "N/A")
+                    .startTime(firstSession.getStartTime())
+                    .endTime(lastSession.getEndTime())
+                    .price(candidateClass.getPrice())
+                    .maxSlots(candidateMax)
+                    .bookedSlots(candidateBooked)
+                    .availableSlots(candidateAvail)
+                    .daysOfWeekText(formatDaysOfWeek(candDays))
+                    .timeSlotText(formatTimeSlot(candStartTime, candEndTime))
+                    .isBestMatch(isBest)
+                    .matchBadge(isBest ? "⭐ Gợi ý khớp lịch cũ nhất" : null)
+                    .alreadyEnrolled(alreadyEnrolled)
+                    .hasConflict(hasConflict)
+                    .conflictReason(conflictReason)
+                    .build();
+
+            options.add(item);
+        }
+
+        // Sắp xếp danh sách options:
+        // 1. isBestMatch lên đầu
+        // 2. Các lớp chưa đăng ký và còn chỗ
+        // 3. Khởi hành sớm nhất
+        options.sort((o1, o2) -> {
+            if (o1.isBestMatch() != o2.isBestMatch()) {
+                return o1.isBestMatch() ? -1 : 1;
             }
+            if (o1.isAlreadyEnrolled() != o2.isAlreadyEnrolled()) {
+                return o1.isAlreadyEnrolled() ? 1 : -1;
+            }
+            return o1.getStartTime().compareTo(o2.getStartTime());
+        });
+
+        // 3. Chọn default target class cho backward compatibility (lấy option khả dụng đầu tiên)
+        ClassRenewalOptionItem defaultTarget = options.stream()
+                .filter(o -> !o.isAlreadyEnrolled() && !o.isHasConflict() && o.getAvailableSlots() > 0)
+                .findFirst()
+                .orElse(options.isEmpty() ? null : options.get(0));
+
+        if (defaultTarget == null) {
+            throw new RuntimeException("Không tìm thấy lớp học tiếp theo phù hợp cho khóa học: " + className);
         }
 
-        if (targetClass == null || targetFirstSession == null) {
-            throw new RuntimeException("Đợt mở lớp tiếp theo của khóa học '" + className + "' hiện đã kín chỗ.");
-        }
+        Integer subjectId = curClass.getSubjectId() != null
+                ? curClass.getSubjectId()
+                : (curClass.getSubject() != null ? curClass.getSubject().getSubjectId() : null);
+        String subjectName = (curClass.getSubject() != null)
+                ? curClass.getSubject().getSubjectName()
+                : null;
 
         return ClassRenewalSuggestionResponse.builder()
                 .currentBookingId(currentBooking.getBookingId())
                 .currentClassName(className)
                 .currentEndTime(curEndTime)
-                .suggestedScheduleId(targetFirstSession.getScheduleId())
-                .classId(targetClass.getClassId())
-                .className(targetClass.getClassName())
-                .coachName(targetClass.getCoach() != null ? targetClass.getCoach().getFullName() : "N/A")
-                .coachEmail(targetClass.getCoach() != null ? targetClass.getCoach().getEmail() : null)
-                .roomName(targetClass.getRoom() != null ? targetClass.getRoom().getRoomName() : "N/A")
-                .startTime(targetFirstSession.getStartTime())
-                .endTime(targetFirstSession.getEndTime())
-                .price(targetClass.getPrice())
-                .maxSlots(maxSlots)
-                .bookedSlots(bookedMembers)
-                .availableSlots(maxSlots - bookedMembers)
+                .subjectId(subjectId)
+                .subjectName(subjectName)
+                .currentSchedulePattern(currentSchedulePattern)
+                .suggestedScheduleId(defaultTarget.getSuggestedScheduleId())
+                .classId(defaultTarget.getClassId())
+                .className(defaultTarget.getClassName())
+                .coachName(defaultTarget.getCoachName())
+                .coachEmail(defaultTarget.getCoachEmail())
+                .roomName(defaultTarget.getRoomName())
+                .startTime(defaultTarget.getStartTime())
+                .endTime(defaultTarget.getEndTime())
+                .price(defaultTarget.getPrice())
+                .maxSlots(defaultTarget.getMaxSlots())
+                .bookedSlots(defaultTarget.getBookedSlots())
+                .availableSlots(defaultTarget.getAvailableSlots())
+                .options(options)
                 .build();
+    }
+
+    private String formatDaysOfWeek(Set<DayOfWeek> days) {
+        if (days == null || days.isEmpty()) return "";
+        List<String> list = new ArrayList<>();
+        if (days.contains(DayOfWeek.MONDAY)) list.add("T2");
+        if (days.contains(DayOfWeek.TUESDAY)) list.add("T3");
+        if (days.contains(DayOfWeek.WEDNESDAY)) list.add("T4");
+        if (days.contains(DayOfWeek.THURSDAY)) list.add("T5");
+        if (days.contains(DayOfWeek.FRIDAY)) list.add("T6");
+        if (days.contains(DayOfWeek.SATURDAY)) list.add("T7");
+        if (days.contains(DayOfWeek.SUNDAY)) list.add("CN");
+        return "Thứ " + String.join(", ", list);
+    }
+
+    private String formatTimeSlot(LocalTime start, LocalTime end) {
+        if (start == null) return "";
+        DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
+        if (end == null) return start.format(timeFmt);
+        return start.format(timeFmt) + " - " + end.format(timeFmt);
     }
 
     @Override
     @Transactional
-    public void confirmClassRenewal(RenewBookingRequest request) {
+    public ReceiptResponse confirmClassRenewal(RenewBookingRequest request) {
         bookingRepository.lockOperations();
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("Member not found with ID: " + request.getUserId()));
@@ -524,6 +736,37 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         List<Schedule> allBatchSchedules = scheduleRepository.findAllSchedulesByClassId(targetClass.getClassId());
         if (allBatchSchedules.isEmpty()) {
             throw new RuntimeException("Không tìm thấy danh sách buổi học của khóa học đợt mới.");
+        }
+
+        List<Booking> existingActiveBookings = bookingRepository.findByUserIdWithDetails(user.getUserId()).stream()
+                .filter(b -> "CONFIRMED".equalsIgnoreCase(b.getStatus()))
+                .filter(b -> b.getSchedule() != null && !"CANCELLED".equalsIgnoreCase(b.getSchedule().getStatus()))
+                .collect(Collectors.toList());
+
+        DateTimeFormatter overlapFmt = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
+        for (Schedule targetSchedule : allBatchSchedules) {
+            if ("CANCELLED".equalsIgnoreCase(targetSchedule.getStatus())
+                    || targetSchedule.getStartTime() == null
+                    || targetSchedule.getEndTime() == null) {
+                continue;
+            }
+            for (Booking existing : existingActiveBookings) {
+                Schedule exSched = existing.getSchedule();
+                if (exSched == null || exSched.getStartTime() == null || exSched.getEndTime() == null) {
+                    continue;
+                }
+                if (exSched.getGymClass() != null && targetClass.getClassId().equals(exSched.getGymClass().getClassId())) {
+                    continue;
+                }
+                if (targetSchedule.getStartTime().isBefore(exSched.getEndTime())
+                        && targetSchedule.getEndTime().isAfter(exSched.getStartTime())) {
+                    String conflictClassName = exSched.getGymClass() != null
+                            ? exSched.getGymClass().getClassName()
+                            : "Lớp học khác";
+                    throw new IllegalStateException("Khóa học gia hạn bị trùng lịch với lớp '" + conflictClassName
+                            + "' vào lúc " + exSched.getStartTime().format(overlapFmt) + ".");
+                }
+            }
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -590,6 +833,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 );
             } catch (Exception ignored) {}
         }
+        return buildReceiptResponse(invoice);
     }
 
     @Override
@@ -612,7 +856,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
 
     @Override
     @Transactional
-    public void subscribePackageForMember(SubscribePackageRequest request) {
+    public ReceiptResponse subscribePackageForMember(SubscribePackageRequest request) {
         bookingRepository.lockOperations();
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("Member not found with ID: " + request.getUserId()));
@@ -689,6 +933,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 );
             } catch (Exception ignored) {}
         }
+        return buildReceiptResponse(invoice);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -1370,18 +1615,20 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         // Get all active classes
         List<Map<String, Object>> activeClassRows = jdbcTemplate.queryForList("""
             SELECT c.class_id, c.class_name, c.price, c.max_slots, c.subject_id,
+                   sub.duration_minutes as subject_duration_minutes,
                    u.user_id as coach_id, u.full_name as coach_name,
                    r.room_id, r.room_name
             FROM CLASSES c
+            LEFT JOIN SUBJECTS sub ON sub.subject_id = c.subject_id
             LEFT JOIN USERS u ON u.user_id = c.coach_id
             LEFT JOIN ROOMS r ON r.room_id = c.room_id
             WHERE c.status = 'ACTIVE'
             ORDER BY c.class_name
         """);
 
-        // Set of classIds member already booked and NOT cancelled
+        // Set of classIds member already booked and CONFIRMED
         Set<Integer> bookedClassIds = bookingRepository.findByUserIdWithDetails(userId).stream()
-                .filter(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus()))
+                .filter(b -> "CONFIRMED".equalsIgnoreCase(b.getStatus()))
                 .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null)
                 .map(b -> b.getSchedule().getGymClass().getClassId())
                 .collect(Collectors.toSet());
@@ -1395,6 +1642,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             java.math.BigDecimal price = (java.math.BigDecimal) crow.get("price");
             Integer maxSlots = crow.get("max_slots") != null ? ((Number) crow.get("max_slots")).intValue() : 20;
             Integer subjectId = crow.get("subject_id") != null ? ((Number) crow.get("subject_id")).intValue() : null;
+            Integer subjectDurationMinutes = crow.get("subject_duration_minutes") != null
+                    ? ((Number) crow.get("subject_duration_minutes")).intValue()
+                    : 90;
             String coachName = (String) crow.get("coach_name");
             Integer roomId = crow.get("room_id") != null ? ((Number) crow.get("room_id")).intValue() : null;
             String roomName = (String) crow.get("room_name");
@@ -1453,7 +1703,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             LocalDateTime nextSessionTime = startTimes.isEmpty() ? null : startTimes.get(0);
             LocalDateTime lastSessionTime = endTimes.isEmpty() ? nextSessionTime : endTimes.stream().max(LocalDateTime::compareTo).orElse(nextSessionTime);
 
-            int durationMinutes = 60;
+            int durationMinutes = subjectDurationMinutes != null ? subjectDurationMinutes : 90;
             if (nextSessionTime != null && !endTimes.isEmpty() && endTimes.get(0) != null) {
                 durationMinutes = (int) ChronoUnit.MINUTES.between(nextSessionTime, endTimes.get(0));
             }
@@ -1488,13 +1738,16 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         results.sort(Comparator.comparing(
                 com.team4.sportscenter.modules.member.dtos.response.AvailableClassResponse::getNextSessionTime,
                 Comparator.nullsLast(Comparator.naturalOrder())
+        ).thenComparing(
+                com.team4.sportscenter.modules.member.dtos.response.AvailableClassResponse::getClassId,
+                Comparator.nullsLast(Comparator.naturalOrder())
         ));
         return results;
     }
 
     @Override
     @Transactional
-    public void enrollMemberToClass(EnrollClassRequest request) {
+    public ReceiptResponse enrollMemberToClass(EnrollClassRequest request) {
         if (request.getUserId() == null || request.getClassId() == null) {
             throw new IllegalArgumentException("User ID and Class ID are required to enroll.");
         }
@@ -1505,9 +1758,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             throw new IllegalStateException("MemberService is not available.");
         }
 
-        // Check if member already booked this course and not cancelled
+        // Check if member already booked this course and CONFIRMED
         boolean alreadyBooked = bookingRepository.findByUserIdWithDetails(user.getUserId()).stream()
-                .anyMatch(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus())
+                .anyMatch(b -> "CONFIRMED".equalsIgnoreCase(b.getStatus())
                         && b.getSchedule() != null
                         && b.getSchedule().getGymClass() != null
                         && b.getSchedule().getGymClass().getClassId().equals(request.getClassId()));
@@ -1527,20 +1780,38 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             throw new IllegalStateException("Lớp học đã đủ số lượng học viên (" + maxSlots + "/" + maxSlots + ").");
         }
 
-        // Đặt lớp trực tiếp cho hội viên (tạo các bản ghi bookings)
-        memberService.bookClass(user.getEmail(), request.getClassId());
-
-        // Cập nhật tất cả các booking PENDING vừa tạo thành CONFIRMED
-        List<Booking> createdBookings = bookingRepository.findByUserIdWithDetails(user.getUserId()).stream()
+        // Kiểm tra xem hội viên này đã có booking PENDING (trong giỏ hàng) chưa
+        List<Booking> pendingBookings = bookingRepository.findByUserIdWithDetails(user.getUserId()).stream()
                 .filter(b -> "PENDING".equalsIgnoreCase(b.getStatus())
                         && b.getSchedule() != null
                         && b.getSchedule().getGymClass() != null
                         && b.getSchedule().getGymClass().getClassId().equals(request.getClassId()))
                 .toList();
 
-        for (Booking b : createdBookings) {
-            b.setStatus("CONFIRMED");
-            bookingRepository.save(b);
+        List<Booking> createdBookings;
+        if (!pendingBookings.isEmpty()) {
+            // Đã có trong giỏ hàng -> Chuyển trực tiếp sang CONFIRMED
+            for (Booking b : pendingBookings) {
+                b.setStatus("CONFIRMED");
+                bookingRepository.save(b);
+            }
+            createdBookings = pendingBookings;
+        } else {
+            // Đặt lớp trực tiếp cho hội viên (tạo các bản ghi bookings)
+            memberService.bookClass(user.getEmail(), request.getClassId());
+
+            // Cập nhật tất cả các booking PENDING vừa tạo thành CONFIRMED
+            createdBookings = bookingRepository.findByUserIdWithDetails(user.getUserId()).stream()
+                    .filter(b -> "PENDING".equalsIgnoreCase(b.getStatus())
+                            && b.getSchedule() != null
+                            && b.getSchedule().getGymClass() != null
+                            && b.getSchedule().getGymClass().getClassId().equals(request.getClassId()))
+                    .toList();
+
+            for (Booking b : createdBookings) {
+                b.setStatus("CONFIRMED");
+                bookingRepository.save(b);
+            }
         }
 
         // Ghi nhận hóa đơn & thanh toán trực tiếp tại quầy (Invoice & Payment)
@@ -1592,6 +1863,107 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 );
             } catch (Exception ignored) {}
         }
+        return buildReceiptResponse(invoice);
+    }
+
+    @Override
+    public ReceiptResponse getInvoiceReceipt(Integer invoiceId) {
+        com.team4.sportscenter.modules.payment.entities.Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new RuntimeException("Invoice not found with ID: " + invoiceId));
+        return buildReceiptResponse(invoice);
+    }
+
+    @Override
+    public List<ReceiptResponse> getMemberInvoices(Integer userId) {
+        List<com.team4.sportscenter.modules.payment.entities.Invoice> invoices = invoiceRepository.findByUser_UserIdOrderByCreatedAtDesc(userId);
+        return invoices.stream().map(this::buildReceiptResponse).toList();
+    }
+
+    @Override
+    public List<ReceiptResponse> getAllInvoices() {
+        List<com.team4.sportscenter.modules.payment.entities.Invoice> invoices = invoiceRepository.findAllByOrderByCreatedAtDesc();
+        return invoices.stream().map(this::buildReceiptResponse).toList();
+    }
+
+    private ReceiptResponse buildReceiptResponse(com.team4.sportscenter.modules.payment.entities.Invoice invoice) {
+        if (invoice == null) return null;
+        User user = invoice.getUser();
+
+        com.team4.sportscenter.modules.payment.entities.PaymentEntity payment = paymentRepository
+                .findByInvoice_InvoiceId(invoice.getInvoiceId())
+                .orElse(null);
+
+        List<com.team4.sportscenter.modules.payment.entities.InvoiceDetail> details = invoiceDetailRepository
+                .findByInvoice_InvoiceId(invoice.getInvoiceId());
+
+        List<ReceiptResponse.ReceiptItem> items = new ArrayList<>();
+        for (com.team4.sportscenter.modules.payment.entities.InvoiceDetail d : details) {
+            String itemName = "Dịch vụ thể thao";
+            String itemType = "SERVICE";
+            Integer durationDays = null;
+            Integer totalSessions = null;
+
+            if (d.getAPackage() != null) {
+                itemName = d.getAPackage().getPackageName();
+                itemType = "PACKAGE";
+                durationDays = d.getAPackage().getDurationDays();
+            } else if (d.getGymClass() != null) {
+                itemName = d.getGymClass().getClassName();
+                itemType = "CLASS";
+                try {
+                    List<Schedule> scheds = scheduleRepository.findAllSchedulesByClassId(d.getGymClass().getClassId());
+                    totalSessions = (scheds != null && !scheds.isEmpty()) ? scheds.size() : null;
+                } catch (Exception ignored) {}
+            }
+
+            items.add(ReceiptResponse.ReceiptItem.builder()
+                    .itemName(itemName)
+                    .itemType(itemType)
+                    .durationDays(durationDays)
+                    .totalSessions(totalSessions)
+                    .unitPrice(d.getUnitPrice() != null ? d.getUnitPrice() : invoice.getTotalAmount())
+                    .amount(d.getUnitPrice() != null ? d.getUnitPrice() : invoice.getTotalAmount())
+                    .build());
+        }
+
+        if (items.isEmpty()) {
+            items.add(ReceiptResponse.ReceiptItem.builder()
+                    .itemName("Dịch vụ thể thao / Sports Service")
+                    .itemType("OTHER")
+                    .unitPrice(invoice.getTotalAmount())
+                    .amount(invoice.getTotalAmount())
+                    .build());
+        }
+
+        String cashier = "Lễ tân quầy / Front Desk";
+        try {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getName() != null && !auth.getName().equalsIgnoreCase("anonymousUser")) {
+                User cashierUser = userRepository.findByEmail(auth.getName()).orElse(null);
+                if (cashierUser != null && cashierUser.getFullName() != null && !cashierUser.getFullName().isBlank()) {
+                    cashier = cashierUser.getFullName();
+                } else if (auth.getName() != null) {
+                    cashier = auth.getName();
+                }
+            }
+        } catch (Exception ignored) {}
+
+        return ReceiptResponse.builder()
+                .invoiceId(invoice.getInvoiceId())
+                .invoiceCode(String.format("INV-%06d", invoice.getInvoiceId()))
+                .createdAt(invoice.getCreatedAt())
+                .status(invoice.getStatus())
+                .totalAmount(invoice.getTotalAmount())
+                .userId(user != null ? user.getUserId() : null)
+                .memberName(user != null ? user.getFullName() : null)
+                .memberEmail(user != null ? user.getEmail() : null)
+                .memberPhone(user != null ? user.getPhone() : null)
+                .paymentMethod(payment != null ? payment.getPaymentMethod() : "CASH")
+                .transactionNo(payment != null ? payment.getTransactionNo() : ("INV-" + invoice.getInvoiceId()))
+                .paymentDate(payment != null ? payment.getPaymentDate() : invoice.getCreatedAt())
+                .cashierName(cashier)
+                .items(items)
+                .build();
     }
 }
 

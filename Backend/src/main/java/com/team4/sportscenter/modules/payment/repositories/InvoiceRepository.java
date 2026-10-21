@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface InvoiceRepository extends JpaRepository<Invoice, Integer> {
     List<Invoice> findByUser_EmailOrderByCreatedAtDesc(String email);
+    List<Invoice> findByUser_UserIdOrderByCreatedAtDesc(Integer userId);
+    List<Invoice> findAllByOrderByCreatedAtDesc();
 }

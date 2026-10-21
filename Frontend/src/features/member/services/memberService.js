@@ -25,11 +25,8 @@ export const memberService = {
     return await axiosClient.get('/v1/member/available-classes');
   },
 
-  bookClass: async (classId, membershipId = null) => {
-    const path = membershipId
-      ? `/v1/member/book-class/${classId}/with-package/${membershipId}`
-      : `/v1/member/book-class/${classId}`;
-    return await axiosClient.post(path, {});
+  bookClass: async (classId) => {
+    return await axiosClient.post(`/v1/member/book-class/${classId}`, {});
   },
 
   cancelClass: async (classId) => {

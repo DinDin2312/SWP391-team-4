@@ -2019,6 +2019,10 @@ const receptionistDictionary = {
   "Expired": "Đã hết hạn",
   "No Package": "Chưa có gói",
   "Details": "Chi tiết",
+  "Change": "Đổi",
+  "Change member": "Đổi hội viên",
+  "Clear search": "Xóa tìm kiếm",
+  "Checking out...": "Đang Check-out...",
   "Member is currently checked in at the center": "Hội viên hiện đang có mặt tập luyện tại trung tâm",
   "Facility / Zone:": "Khu vực / Phòng tập:",
   "Package:": "Gói tập:",
@@ -2153,12 +2157,12 @@ const receptionistDictionary = {
   "Course Renewal Notice": "Thông báo gia hạn khóa học",
   "No Upcoming Schedule Found": "Chưa có lịch khóa tiếp theo",
   "No upcoming recurring schedule found for course:": "Chưa tìm thấy lịch học tiếp theo cho khóa học:",
-  "The center has not scheduled the next recurring batch for this course yet. You can enroll the member into another available class or check back later.": "Hiện tại trung tâm chưa xếp lịch cho đợt tiếp theo của khóa học này. Bạn có thể chọn đăng ký một lớp học khác có sẵn cho hội viên hoặc kiểm tra lại sau.",
+  "The center has not scheduled the next recurring batch for this course yet. You can enroll the member into another available class or check back later.": "Hiện tại trung tâm chưa xếp lịch cho lớp tiếp theo của bộ môn này. Bạn có thể chọn đăng ký một lớp học khác có sẵn cho hội viên hoặc kiểm tra lại sau.",
   "Enroll Another Class": "Đăng ký lớp khác",
-  "No upcoming recurring schedule found for this course.": "Không tìm thấy lịch học định kỳ tiếp theo cho khóa học này.",
-  "No upcoming recurring schedule found for this class.": "Không tìm thấy lịch học định kỳ tiếp theo cho lớp học này.",
+  "No upcoming recurring schedule found for this course.": "Không tìm thấy lịch học tiếp theo phù hợp cho khóa học này.",
+  "No upcoming recurring schedule found for this class.": "Không tìm thấy lịch học tiếp theo phù hợp cho lớp học này.",
   "Course & Membership Renewal": "Quản lý khóa học & Gia hạn",
-  "Select a member to view active course enrolments and automatically book next recurring classes.": "Chọn một học viên để xem các khóa học đã tham gia và thực hiện gia hạn cho các đợt tiếp theo.",
+  "Select a member to view active course enrolments and automatically book next recurring classes.": "Chọn một học viên để xem các khóa học đã tham gia và thực hiện gia hạn cho các lớp tiếp theo.",
   "Search member name / phone...": "Tìm theo tên hoặc số điện thoại...",
   "Find": "Tìm kiếm",
   "Loading members...": "Đang tải danh sách...",
@@ -2187,9 +2191,21 @@ const receptionistDictionary = {
   "Total Sessions": "Tổng số buổi",
   "sessions": "buổi",
   "Renewed": "Đã gia hạn",
-  "Course already renewed to next batch. Click to view.": "Khóa học đã được gia hạn sang đợt tiếp theo. Bấm để xem chi tiết.",
-  "Renew Course": "Gia hạn",
-  "Enroll Next Recurring Course": "Gia hạn khóa học tiếp theo",
+  "Course already renewed to next batch. Click to view.": "Khóa học đã được gia hạn sang lớp tiếp theo. Bấm để xem chi tiết.",
+  "Renew Course": "Đăng ký tiếp",
+  "Enroll Next Recurring Course": "Đăng ký khóa học kỳ tiếp theo",
+  "Enroll Next Term": "Đăng ký tiếp",
+  "Enrolled in Next Term": "Đã đăng ký kỳ sau",
+  "Enroll Next Term Course": "Đăng ký khóa học kỳ tiếp theo",
+  "Current Course:": "Khóa học hiện tại:",
+  "Familiar Schedule:": "Lịch học quen thuộc:",
+  "Available Classes for Next Term:": "Danh sách lớp học mở cho kỳ tiếp theo:",
+  "Select one class to enroll": "Chọn 1 lớp để ghi danh",
+  "Best Match - Same Schedule": "Gợi ý khớp lịch cũ nhất",
+  "Tuition Fee:": "Học phí khóa học:",
+  "Schedule Conflict": "Trùng lịch học",
+  "Starts:": "Khai giảng:",
+  "Schedule:": "Lịch học:",
   "Target Course:": "Khóa học tiếp theo:",
   "Next Session Starts:": "Buổi học đầu tiên:",
   "Course Fee:": "Học phí:",
@@ -2203,7 +2219,7 @@ const receptionistDictionary = {
   "Confirm Payment & Enroll": "Xác nhận thu tiền & Đăng ký",
   "Confirm Payment & Subscribe": "Xác nhận thu tiền & Đăng ký",
   "Package Fee:": "Giá gói:",
-  "Successfully renewed and enrolled into the next class!": "Gia hạn và đăng ký thành công cho đợt tiếp theo!",
+  "Successfully renewed and enrolled into the next class!": "Gia hạn và đăng ký thành công cho lớp tiếp theo!",
   "Failed to complete renewal.": "Không thể hoàn tất gia hạn.",
   "Subscribe Combo Package": "Đăng ký gói hội viên",
   "Select Combo Package": "Chọn gói hội viên",
@@ -2218,14 +2234,66 @@ const receptionistDictionary = {
   "Room TBD": "Chưa xếp phòng",
   "Selected Class:": "Lớp đã chọn:",
   "Course renewed successfully!": "Khóa học đã được gia hạn thành công!",
-  "Member has been registered and enrolled into the next batch:": "Học viên đã được đăng ký và ghi danh vào đợt kế tiếp:",
-  "Next Batch:": "Đợt tiếp theo:",
+  "Member has been registered and enrolled into the next batch:": "Học viên đã được đăng ký và ghi danh vào lớp kế tiếp:",
+  "Next Batch:": "Lớp tiếp theo:",
   "Coach / Room:": "HLV / Phòng:",
   "Timeline:": "Tiến trình:",
   "Total Sessions:": "Tổng số buổi:",
   "sessions (In schedule)": "buổi (Đã có trong lịch)",
   "1 day left (Expires today)": "Còn 1 ngày (Hết hạn hôm nay)",
-  "1 day left": "Còn 1 ngày"
+  "1 day left": "Còn 1 ngày",
+
+  // Invoices & Receipts (Feature 45 - Front Desk)
+  "Invoices & Receipts": "Hóa đơn & Phiếu thu",
+  "Front Desk Invoices & Receipts": "Hóa đơn & Phiếu thu tại quầy",
+  "Look up recent payment transactions and print/export service receipts for members.": "Tra cứu các giao dịch thanh toán và in/xuất phiếu thu dịch vụ cho khách hàng.",
+  "Search by invoice code (#INV-...), member name, phone...": "Tìm theo mã HĐ (#INV-...), tên khách hàng, số điện thoại...",
+  "All Methods": "Tất cả phương thức",
+  "All Time": "Tất cả thời gian",
+  "Last 7 Days": "7 ngày qua",
+  "This Month": "Tháng này",
+  "Newest": "Mới nhất",
+  "Oldest": "Cũ nhất",
+  "Newest First": "Mới nhất trước",
+  "Oldest First": "Cũ nhất trước",
+  "No matching invoices found": "Chưa có hóa đơn nào phù hợp",
+  "Try changing search keywords or adjusting filters.": "Thử thay đổi từ khóa tìm kiếm hoặc điều chỉnh lại bộ lọc.",
+  "Invoice No.": "Mã HĐ",
+  "Date & Time": "Thời gian",
+  "Customer": "Khách hàng",
+  "Service": "Dịch vụ",
+  "Amount": "Số tiền",
+  "Cashier": "Người lập",
+  "Print Receipt": "In HĐ",
+  "Print Invoice": "In hóa đơn",
+  "View / Print Receipt": "Xem / In Hóa đơn",
+  "Invoice & Payment Receipt": "Hóa đơn & Biên lai thu tiền",
+  "Service Payment Receipt": "Phiếu thu & Hóa đơn dịch vụ",
+  "International Sports & Fitness Center": "Trung tâm Thể thao & Thể hình Quốc tế",
+  "Member Information": "Thông tin hội viên / Member Info",
+  "Walk-in Guest": "Khách vãng lai",
+  "Service / Course Name": "Tên dịch vụ / Khóa học",
+  "Service Type": "Loại dịch vụ",
+  "Duration / Sessions": "Thời lượng / Buổi",
+  "Unit Price": "Đơn giá",
+  "Total": "Thành tiền",
+  "Sports Service": "Dịch vụ thể thao",
+  "Front Desk Sports Service": "Dịch vụ thể thao tại quầy",
+  "Reference No.": "Mã tham chiếu",
+  "Cashier / Receptionist": "Thu ngân / Lễ tân",
+  "Total Payment": "Tổng thanh toán",
+  "Payer / Customer": "Người nộp tiền / Khách hàng",
+  "(Signature & Full Name)": "(Ký, ghi rõ họ tên)",
+  "Thank you for using our services at Nexus Sport Center!": "Cảm ơn Quý khách đã sử dụng dịch vụ tại Nexus Sport Center!",
+  "Cash (CASH)": "Tiền mặt (CASH)",
+  "Bank Transfer (TRANSFER)": "Chuyển khoản (TRANSFER)",
+  "PAID": "ĐÃ THANH TOÁN",
+  "COMPLETED": "HOÀN TẤT",
+  "Total Invoices": "Số lượng hóa đơn",
+  "Total Receipts": "Tổng phiếu thu",
+  "Loading invoice list...": "Đang tải danh sách hóa đơn...",
+  "Refresh": "Làm mới",
+  "Recent Transactions": "Giao dịch gần đây"
 };
 
 const workoutDictionary = {
@@ -2626,3 +2694,37 @@ for(const [en,vi] of Object.entries(subjectSlotTranslations)){translations[en]=[
 
 translations['Inherited subject timetable']=['Inherited subject timetable','Kế thừa ca học của bộ môn'];
 
+
+// Payment first-come first-served translations
+translations['In Cart - Pay Now'] = ['In Cart - Pay Now', 'Trong giỏ · Thanh toán ngay'];
+translations['Trong giỏ · Thanh toán ngay'] = ['In Cart - Pay Now', 'Trong giỏ · Thanh toán ngay'];
+translations['Trong giỏ hàng · Thanh toán ngay'] = ['In Cart - Pay Now', 'Trong giỏ · Thanh toán ngay'];
+translations['Seat reserved upon payment'] = ['Seat reserved upon payment', 'Giữ chỗ sau khi thanh toán'];
+translations['Giữ chỗ sau khi thanh toán'] = ['Seat reserved upon payment', 'Giữ chỗ sau khi thanh toán'];
+translations['Chưa giữ chỗ. Suất học xác nhận sau khi thanh toán.'] = ['Seat reserved upon payment', 'Giữ chỗ sau khi thanh toán'];
+translations['Courses in cart are first-come, first-served. Complete payment to secure your spot.'] = ['Courses in cart are first-come, first-served. Complete payment to secure your spot.', 'Suất học ưu tiên người hoàn tất thanh toán trước. Vui lòng thanh toán sớm để đảm bảo vị trí.'];
+translations['Suất học ưu tiên người hoàn tất thanh toán trước. Vui lòng thanh toán sớm để đảm bảo vị trí.'] = ['Courses in cart are first-come, first-served. Complete payment to secure your spot.', 'Suất học ưu tiên người hoàn tất thanh toán trước. Vui lòng thanh toán sớm để đảm bảo vị trí.'];
+translations['Only the assigned coach can record attendance. Enrolled members are confirmed upon payment.'] = ['Only the assigned coach can record attendance. Enrolled members are confirmed upon payment.', 'Chỉ huấn luyện viên được phân công mới có thể điểm danh. Danh sách học viên được xác nhận sau khi thanh toán.'];
+translations['Chỉ huấn luyện viên được phân công mới có thể điểm danh. Danh sách học viên được xác nhận sau khi thanh toán.'] = ['Only the assigned coach can record attendance. Enrolled members are confirmed upon payment.', 'Chỉ huấn luyện viên được phân công mới có thể điểm danh. Danh sách học viên được xác nhận sau khi thanh toán.'];
+translations['Checkout failed! The class is now fully booked by others.'] = ['Checkout failed! The class is now fully booked by others.', 'Thanh toán không thành công! Lớp học vừa được người khác thanh toán trước nên đã hết chỗ.'];
+translations['Thanh toán không thành công! Lớp học vừa được người khác thanh toán trước nên đã hết chỗ.'] = ['Checkout failed! The class is now fully booked by others.', 'Thanh toán không thành công! Lớp học vừa được người khác thanh toán trước nên đã hết chỗ.'];
+translations['This course is already in your cart. Please go to checkout to complete payment.'] = ['This course is already in your cart. Please go to checkout to complete payment.', 'Khóa học này đã có trong giỏ hàng của bạn. Vui lòng vào giỏ hàng để hoàn tất thanh toán.'];
+translations['Khóa học này đã có trong giỏ hàng của bạn. Vui lòng vào giỏ hàng để hoàn tất thanh toán.'] = ['This course is already in your cart. Please go to checkout to complete payment.', 'Khóa học này đã có trong giỏ hàng của bạn. Vui lòng vào giỏ hàng để hoàn tất thanh toán.'];
+
+// Receptionist cart / pending payment translations
+translations['Cart / Pending Payment'] = ['Cart / Pending Payment', 'Giỏ hàng · Chờ thanh toán'];
+translations['Giỏ hàng · Chờ thanh toán'] = ['Cart / Pending Payment', 'Giỏ hàng · Chờ thanh toán'];
+translations['Seats not reserved · Pay at counter to confirm enrollment'] = ['Seats not reserved · Pay at counter to confirm enrollment', 'Chưa giữ chỗ · Thanh toán tại quầy để xác nhận vào lớp'];
+translations['Chưa giữ chỗ · Thanh toán tại quầy để xác nhận vào lớp'] = ['Seats not reserved · Pay at counter to confirm enrollment', 'Chưa giữ chỗ · Thanh toán tại quầy để xác nhận vào lớp'];
+translations['Pay at Counter'] = ['Pay at Counter', 'Thanh toán tại quầy'];
+translations['Thanh toán tại quầy'] = ['Pay at Counter', 'Thanh toán tại quầy'];
+translations['In Cart'] = ['In Cart', 'Trong giỏ hàng'];
+translations['Trong giỏ hàng'] = ['In Cart', 'Trong giỏ hàng'];
+translations['Remove from Cart'] = ['Remove from Cart', 'Xóa khỏi giỏ hàng'];
+translations['Xóa khỏi giỏ hàng'] = ['Remove from Cart', 'Xóa khỏi giỏ hàng'];
+translations['Collect payment at counter and confirm enrollment'] = ['Collect payment at counter and confirm enrollment', 'Thu tiền tại quầy và xác nhận vào lớp'];
+translations['Thu tiền tại quầy và xác nhận vào lớp'] = ['Collect payment at counter and confirm enrollment', 'Thu tiền tại quầy và xác nhận vào lớp'];
+translations['Upcoming scheduled sessions below 25% capacity. Only confirmed paid bookings count as reserved seats.'] = ['Upcoming scheduled sessions below 25% capacity. Only confirmed paid bookings count as reserved seats.', 'Buổi sắp tới có dưới 25% sức chứa được đăng ký. Chỉ lượt đăng ký đã hoàn tất thanh toán mới giữ chỗ.'];
+translations['Buổi sắp tới có dưới 25% sức chứa được đăng ký. Chỉ lượt đăng ký đã hoàn tất thanh toán mới giữ chỗ.'] = ['Upcoming scheduled sessions below 25% capacity. Only confirmed paid bookings count as reserved seats.', 'Buổi sắp tới có dưới 25% sức chứa được đăng ký. Chỉ lượt đăng ký đã hoàn tất thanh toán mới giữ chỗ.'];
+translations['Full Course:'] = ['Full Course:', 'Toàn bộ khóa:'];
+translations['Toàn bộ khóa:'] = ['Full Course:', 'Toàn bộ khóa:'];

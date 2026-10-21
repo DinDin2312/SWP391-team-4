@@ -1,16 +1,17 @@
 import { locale } from '../../../i18n/languageStore.js';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
-import { packageBookingOptions } from '../packageBookingOptions';
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar, Sparkles } from 'lucide-react';
+import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar, Sparkles, ShoppingCart, Clock, ArrowRight, Loader2 } from 'lucide-react';
 
 const BookClass = () => {
   useLanguage();
+  const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
-  const [packages,setPackages]=useState([]),[paymentChoices,setPaymentChoices]=useState({}),[booking,setBooking]=useState(null),[benefitsError,setBenefitsError]=useState(false);
+  const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
@@ -65,7 +66,7 @@ const BookClass = () => {
       if (detail && detail.type === 'CLASS') {
         sessionStorage.removeItem('nexus_ai_highlight');
         if (detail.action === 'BOOK_CLASS') {
-          fetchCourses(false);
+          void fetchCourses(false);
         }
         triggerClassHighlight(detail.id, courses);
       }
@@ -75,20 +76,26 @@ const BookClass = () => {
     return () => window.removeEventListener('nexusAiHighlight', handleAiHighlight);
   }, [loading, courses]);
 
+  const sortCoursesStably = (list) => {
+    if (!Array.isArray(list)) return [];
+    return [...list].sort((a, b) => {
+      const timeDiff = new Date(a.nextSessionTime).getTime() - new Date(b.nextSessionTime).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      return (Number(a.classId) || 0) - (Number(b.classId) || 0);
+    });
+  };
+
   const fetchCourses = async (isInitialLoad = false) => {
     try {
       const token = localStorage.getItem('token');
       const res = await axios.get('http://localhost:8080/api/v1/member/available-classes', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setCourses(res.data);
-      try {
-        const benefits=await axios.get('http://localhost:8080/api/v1/member/my-packages',{headers:{Authorization:`Bearer ${token}`}});
-        setPackages(benefits.data||[]);setBenefitsError(false);
-      } catch { setPackages([]);setBenefitsError(true); }
+      const stableList = sortCoursesStably(res.data);
+      setCourses(stableList);
 
-      if (res.data.length > 0) {
-        const uniqueDates = [...new Set(res.data.map(s => new Date(s.nextSessionTime).toDateString()))].sort((a, b) => new Date(a) - new Date(b));
+      if (stableList.length > 0) {
+        const uniqueDates = [...new Set(stableList.map(s => new Date(s.nextSessionTime).toDateString()))].sort((a, b) => new Date(a) - new Date(b));
         setSelectedDate(prev => {
           if (isInitialLoad || !prev) return uniqueDates[0];
           return uniqueDates.includes(prev) ? prev : uniqueDates[0];
@@ -106,17 +113,23 @@ const BookClass = () => {
   const handleBook = async (classId) => {
     if(booking!==null)return;
     setBooking(classId);
-    const membershipId=paymentChoices[classId];
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:8080/api/v1/member/book-class/${classId}${membershipId?`/with-package/${membershipId}`:''}`, {}, {
+      await axios.post(`http://localhost:8080/api/v1/member/book-class/${classId}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      setToast({ visible: true, type: 'success', title: t('Course Enrolled'), message: t(membershipId?'Booked using package benefits. No additional course payment is required.':'Course added to cart. Complete payment to confirm your place.') });
+      // Optimistic update: UI phản hồi ngay lập tức không cần đợi network
+      setCourses(prev => prev.map(c => c.classId === classId ? {
+        ...c,
+        isPendingPayment: true,
+        bookedSlots: Math.min(c.maxSlots, (c.bookedSlots || 0) + 1)
+      } : c));
+
+      setToast({ visible: true, type: 'success', title: t('Course Enrolled'), message: t('Course added to cart. Complete payment to confirm your place.') });
       setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 4000);
-      fetchCourses();
-      window.dispatchEvent(new Event('cartUpdated')); // Notify layout to update cart badge
+      window.dispatchEvent(new Event('cartUpdated')); // Cập nhật badge giỏ hàng ngay lập tức
+      void fetchCourses(false); // Đồng bộ ngầm
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.response?.data || error.message || "Failed to enroll. Please try again."; setToast({ visible: true, type: 'error', title: t('Enrollment Failed'), message: typeof errorMsg === 'string' ? errorMsg : 'Please try again.' }); setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 5000);
     } finally {setBooking(null);}
@@ -139,12 +152,12 @@ const BookClass = () => {
     return `${prefix} (${shortDate})`;
   };
 
-  const filteredCourses = courses.filter(s => {
+  const filteredCourses = sortCoursesStably(courses.filter(s => {
     const matchesDate = new Date(s.nextSessionTime).toDateString() === selectedDate;
     const matchesSearch = s.className.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           s.coachName.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesDate && matchesSearch;
-  });
+  }));
 
   return (
     <div className="flex flex-col w-full pb-10">
@@ -220,8 +233,10 @@ const BookClass = () => {
               const spotsLeft = course.maxSlots - (course.bookedSlots || 0);
               const progressWidth = ((course.maxSlots - spotsLeft) / course.maxSlots) * 100;
               const isBooked = course.isBookedByMe;
+              const isPending = !!course.isPendingPayment;
               const isFull = spotsLeft <= 0;
               const isAiSelected = Number(aiHighlightedClassId) === Number(course.classId);
+              const isThisBooking = Number(booking) === Number(course.classId);
 
               return (
                 <div
@@ -286,7 +301,7 @@ const BookClass = () => {
 
                   <div className="relative z-10 flex flex-col flex-1">
                     <div className="flex flex-wrap items-center gap-3 mb-2">
-                      <span className="text-[11px] font-bold text-[var(--success-text)] uppercase tracking-wider bg-[var(--success-soft)] px-2 py-0.5 rounded">{t("Full Course:")}{' '}{course.totalSessions}{' '}{t("Sessions")}</span>
+                      <span className="text-[11px] font-bold text-[var(--success-text)] uppercase tracking-wider bg-[var(--success-soft)] px-2 py-0.5 rounded">{t("Full Course:")}{' '}{course.totalSessions}{' '}{t("sessions")}</span>
                     </div>
 
                     <h3 className="text-xl font-bold text-on-surface leading-snug mb-2">{course.className}</h3>
@@ -325,27 +340,66 @@ const BookClass = () => {
                     </div>
                   </div>
 
-                  <div className="relative z-10 flex flex-col justify-between shrink-0 sm:w-32 border-t sm:border-t-0 sm:border-l border-surface-container-highest pt-4 sm:pt-0 sm:pl-6">
-                    <div className="flex flex-col gap-1 text-right sm:text-left">
+                  <div className="relative z-10 flex flex-col justify-between shrink-0 sm:w-56 border-t sm:border-t-0 sm:border-l border-surface-container-highest pt-4 sm:pt-0 sm:pl-6">
+                    <div className="flex flex-col gap-0.5 text-right sm:text-right">
                       <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{t("Course Fee")}</span>
-                      <span className="text-sm font-bold text-primary">{formatMoney(course.price)}</span>
+                      <span className="text-xl font-black text-primary tracking-tight">{formatMoney(course.price)}</span>
                     </div>
 
-                    {benefitsError && <p className="text-xs mt-2" role="alert">{t('Package benefits could not be loaded. Refresh to use a package.')}</p>}
-                    {!isBooked && <label className="text-xs mt-3 flex flex-col gap-1">{t('Booking payment')}
-                      <select aria-label={t('Booking payment for {0}',[course.className])} value={paymentChoices[course.classId]||''} disabled={booking!==null || isFull} onChange={event=>setPaymentChoices(current=>({...current,[course.classId]:event.target.value}))} className="w-full rounded-lg text-xs bg-surface border border-surface-container-highest">
-                        <option value="">{t('Buy this course separately')}</option>
-                        {packageBookingOptions(packages,course,new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())).map(option=><option key={option.membershipId} value={option.membershipId}>{t('{0} · {1} sessions remaining',[option.packageName,option.remainingSessions])}</option>)}
-                      </select>
-                      <small>{t('A package must cover every session and have enough remaining sessions for the whole course.')}</small>
-                    </label>}
-                    <button
-                      onClick={() => handleBook(course.classId)}
-                      disabled={isBooked || isFull || booking!==null}
-                      className={`mt-4 sm:mt-auto w-full py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-[var(--shadow)] ${isBooked ? t('bg-surface-container-highest text-on-surface-variant cursor-not-allowed shadow-none') : isFull ? t('bg-[var(--danger-soft)] text-[var(--danger-text)] cursor-not-allowed shadow-none') : t('bg-primary text-on-primary hover:bg-primary/90 shadow-primary/20')}`}
-                    >
-                      {t(isBooked ? t('Enrolled') : isFull ? t('Full') : t('Enroll Now'))}
-                    </button>
+                    {isBooked ? (
+                      <button
+                        disabled
+                        className="mt-4 sm:mt-auto w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 cursor-not-allowed flex items-center justify-center gap-1.5 shadow-sm"
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>{t('Enrolled')}</span>
+                      </button>
+                    ) : isPending ? (
+                      <div className="mt-4 sm:mt-auto flex flex-col gap-2 w-full">
+                        <button
+                          type="button"
+                          onClick={() => navigate('/member/cart')}
+                          className="group relative w-full py-2.5 px-3.5 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white shadow-md shadow-amber-500/25 hover:shadow-lg hover:shadow-orange-500/35 active:scale-[0.98] cursor-pointer"
+                        >
+                          <ShoppingCart className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" />
+                          <span className="whitespace-nowrap">{t('In Cart - Pay Now')}</span>
+                        </button>
+                        <div className="flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] font-medium text-center">
+                          <Clock className="w-3 h-3 shrink-0" />
+                          <span className="leading-tight">{t('Seat reserved upon payment')}</span>
+                        </div>
+                      </div>
+                    ) : isFull ? (
+                      <button
+                        disabled
+                        className="mt-4 sm:mt-auto w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 cursor-not-allowed flex items-center justify-center gap-1.5 shadow-sm"
+                      >
+                        <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                        <span>{t('Full')}</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleBook(course.classId)}
+                        disabled={isThisBooking}
+                        className={`group mt-4 sm:mt-auto w-full py-2.5 px-3.5 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-indigo-500/35 active:scale-[0.98] ${
+                          isThisBooking ? 'opacity-85 cursor-wait pointer-events-none' : 'cursor-pointer'
+                        }`}
+                      >
+                        {isThisBooking ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                            <span className="whitespace-nowrap">{t('Enrolling...')}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="whitespace-nowrap">{t('Enroll Now')}</span>
+                            <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 shrink-0" />
+                          </>
+                        )}
+
+                      </button>
+                    )}
                   </div>
                 </div>
               );

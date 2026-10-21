@@ -132,7 +132,7 @@ const PaymentCart = () => {
       <section className="mb-8">
         <h1 className="text-4xl font-extrabold text-[var(--text)] tracking-tight flex items-center gap-3">
           <ShoppingCart className="w-8 h-8 text-[var(--primary)]" />{t("Checkout")}</h1>
-        <p className="text-sm text-[var(--text-muted)] mt-2">{t("Review your pending courses and complete the payment to secure your spots.")}</p>
+        <p className="text-sm text-[var(--text-muted)] mt-2">{t("Courses in cart are first-come, first-served. Complete payment to secure your spot.")}</p>
       </section>
 
       {error ? (

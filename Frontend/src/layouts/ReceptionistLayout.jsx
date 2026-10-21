@@ -12,6 +12,7 @@ import {
   Dumbbell,
   LogOut,
   ShieldCheck,
+  Receipt,
 } from 'lucide-react';
 
 const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSelectFeature }) => {
@@ -59,6 +60,13 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
       id: 'manage-memberships',
       label: t('Packages & Renewals'),
       icon: CreditCard,
+      badge: '',
+      isReady: true,
+    },
+    {
+      id: 'manage-invoices',
+      label: t('Invoices & Receipts'),
+      icon: Receipt,
       badge: '',
       isReady: true,
     },

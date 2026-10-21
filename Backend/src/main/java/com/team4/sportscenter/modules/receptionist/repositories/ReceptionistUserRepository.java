@@ -22,8 +22,6 @@ public interface ReceptionistUserRepository extends JpaRepository<User, Integer>
            "ORDER BY u.userId DESC")
     List<User> searchMembers(@Param("keyword") String keyword, @Param("status") String status);
 
-    @Query("SELECT u FROM User u WHERE u.role.roleId = 4 ORDER BY u.userId DESC")
-    List<User> findAllMembers();
-
     boolean existsByEmail(String email);
+    java.util.Optional<User> findByEmail(String email);
 }
