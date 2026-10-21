@@ -11,13 +11,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   BarChart3, CalendarDays, Camera,
   ClipboardList, Dumbbell, LayoutDashboard, LogOut,
-  Menu, Package, RefreshCw, ShieldCheck, Users, X, Wallet,
+  Menu, Package, RefreshCw, ShieldCheck, Users, X, Wallet, LifeBuoy,
 } from 'lucide-react';
 import { AuthContext } from '../../../context/AuthContext';
 import managerService from '../services/managerService';
 import { isoDate, initialForm, apiError } from '../managerUtils';
 import StaffPage from '../staff/StaffPage';
 import OperationsPage, { OperationsSkeleton } from '../operations/OperationsPage';
+import SupportDeskView from '../../receptionist/components/SupportDeskView';
 import { weekRange } from '../operations/operationsUtils';
 import ManagerToast from '../staff/ManagerToast';
 import StaffSkeleton from '../staff/StaffSkeleton';
@@ -41,6 +42,7 @@ const adminPages = [
   { id: 'packages', title: 'Membership Packages', description: 'Manage membership plans, pricing, and availability.', icon: Package },
   { id: 'reports', title: 'Reports', description: 'Review financial and operational performance by date range.', icon: BarChart3 },
   { id: 'transactions', title: 'Transactions', description: 'Monitor system-wide invoices and payment history.', icon: Wallet },
+  { id: 'support', title: 'Support & Escalations', description: 'Review escalated member cancellation appeals and facility inquiries.', icon: LifeBuoy },
   { id: 'audit', title: 'System Audit Log', description: 'Review administrative changes and account activity.', icon: ClipboardList },
 ];
 
@@ -190,7 +192,7 @@ function ManagerDashboard() {
 
         <section className="manager-content">
           {error && active !== 'packages' && <div className="manager-alert" role="alert"><span>{t(error)}</span><button onClick={load}>{t("Retry")}</button></div>}
-          {initialLoading && !['dashboard', 'packages', 'transactions'].includes(active) ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={dataView === active ? data : null} filters={filters} appliedFilters={active === 'operations' ? operationFilters : appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={refreshAll} loading={loading || dataView !== active} loadError={error} updatedAt={updatedAt} openTransactions={openTransactions} />}
+          {initialLoading && !['dashboard', 'packages', 'transactions', 'support'].includes(active) ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={dataView === active ? data : null} filters={filters} appliedFilters={active === 'operations' ? operationFilters : appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={refreshAll} loading={loading || dataView !== active} loadError={error} updatedAt={updatedAt} openTransactions={openTransactions} />}
         </section>
       </main>
       <ManagerToast message={t(notice)} onClose={() => setNotice('')} />
@@ -208,6 +210,7 @@ function ManagerView(props) {
   if (props.active === 'packages') return <PackagesPage {...props} />;
   if (props.active === 'reports') return <ReportsPage {...props} />;
   if (props.active === 'transactions') return <TransactionsPage {...props} />;
+  if (props.active === 'support') return <SupportDeskView {...props} />;
   return <AuditPage {...props} />;
 }
 
