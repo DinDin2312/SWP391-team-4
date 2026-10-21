@@ -144,13 +144,12 @@ const ClassRenewalModal = ({
                         const isOptDisabled = opt.alreadyEnrolled || (opt.availableSlots <= 0);
 
                         return (
-                            <div
+                            <label
                                 key={opt.classId}
-                                onClick={() => { if (!isOptDisabled) setSelectedRenewalClassId(opt.classId); }}
-                                style={getOptionBoxStyle(isSelected, isOptDisabled)}
+                                                                style={getOptionBoxStyle(isSelected, isOptDisabled)}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: isOptDisabled ? 'not-allowed' : 'pointer' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <input
                                             type="radio"
                                             name="renewalModalClassChoice"
@@ -161,7 +160,7 @@ const ClassRenewalModal = ({
                                         <span style={{ fontWeight: 700, fontSize: '0.9rem', color: isSelected ? 'var(--primary)' : 'var(--text)' }}>
                                             {opt.className}
                                         </span>
-                                    </label>
+                                    </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                         {opt.isBestMatch && (
                                             <span style={{
@@ -221,7 +220,7 @@ const ClassRenewalModal = ({
                                         <span>{opt.conflictReason}</span>
                                     </div>
                                 )}
-                            </div>
+                            </label>
                         );
                     })}
                 </div>

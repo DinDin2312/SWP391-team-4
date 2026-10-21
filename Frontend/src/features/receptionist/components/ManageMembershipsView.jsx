@@ -690,7 +690,7 @@ export default function ManageMembershipsView() {
                                                                     // Cùng loại lớp / bộ môn
                                                                     const sameSubject = (c.subjectId && other.subjectId && c.subjectId === other.subjectId)
                                                                         || (c.subjectName && other.subjectName && c.subjectName.trim().toLowerCase() === other.subjectName.trim().toLowerCase());
-                                                                    const cleanBaseName = (name = '') => (name ? name.split(/\s*[-–(]\s*(?:Đợt|Khóa|K|Tháng|T)\s*\d+/i)[0].trim() : '');
+                                                                    const cleanBaseName = (name = '') => { if (!name) return ''; const idx = name.search(/[-–(]/); return (idx !== -1 ? name.slice(0, idx) : name).trim().toLowerCase(); };
                                                                     const sameBase = cleanBaseName(c.courseName) === cleanBaseName(other.courseName);
                                                                     if (!sameSubject && !sameBase) return false;
 

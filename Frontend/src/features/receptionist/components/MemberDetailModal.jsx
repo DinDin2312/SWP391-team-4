@@ -287,7 +287,7 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
 
     const handleCopyPhone = () => {
         if (member.phone) {
-            navigator.clipboard.writeText(member.phone);
+            void navigator.clipboard?.writeText(member.phone);
             setCopiedPhone(true);
             setTimeout(() => setCopiedPhone(false), 2000);
         }
@@ -873,7 +873,7 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
 
                                                     const sameSubject = (course.subjectId && other.subjectId && course.subjectId === other.subjectId)
                                                         || (course.subjectName && other.subjectName && course.subjectName.trim().toLowerCase() === other.subjectName.trim().toLowerCase());
-                                                    const cleanBaseName = (name = '') => (name ? name.split(/\s*[-–(]\s*(?:Đợt|Khóa|K|Tháng|T)\s*\d+/i)[0].trim() : '');
+                                                    const cleanBaseName = (name = '') => { if (!name) return ''; const idx = name.search(/[-–(]/); return (idx !== -1 ? name.slice(0, idx) : name).trim().toLowerCase(); };
                                                     const sameBase = cleanBaseName(course.courseName) === cleanBaseName(other.courseName);
                                                     if (!sameSubject && !sameBase) return false;
 

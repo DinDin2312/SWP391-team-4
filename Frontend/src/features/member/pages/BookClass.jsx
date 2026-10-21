@@ -66,7 +66,7 @@ const BookClass = () => {
       if (detail && detail.type === 'CLASS') {
         sessionStorage.removeItem('nexus_ai_highlight');
         if (detail.action === 'BOOK_CLASS') {
-          fetchCourses(false);
+          void fetchCourses(false);
         }
         triggerClassHighlight(detail.id, courses);
       }
@@ -119,7 +119,7 @@ const BookClass = () => {
       setToast({ visible: true, type: 'success', title: t('Course Enrolled'), message: t('Course added to cart. Complete payment to confirm your place.') });
       setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 4000);
       window.dispatchEvent(new Event('cartUpdated')); // Cập nhật badge giỏ hàng ngay lập tức
-      fetchCourses(false); // Đồng bộ ngầm
+      void fetchCourses(false); // Đồng bộ ngầm
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.response?.data || error.message || "Failed to enroll. Please try again."; setToast({ visible: true, type: 'error', title: t('Enrollment Failed'), message: typeof errorMsg === 'string' ? errorMsg : 'Please try again.' }); setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 5000);
     } finally {setBooking(null);}

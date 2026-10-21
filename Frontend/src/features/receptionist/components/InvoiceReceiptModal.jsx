@@ -12,7 +12,7 @@ export default function InvoiceReceiptModal({ isOpen, onClose, receipt }) {
   const handleCopyCode = () => {
     const code = receipt.invoiceCode || `INV-${receipt.invoiceId}`;
     if (code) {
-      navigator.clipboard?.writeText(code);
+      void navigator.clipboard?.writeText(code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
