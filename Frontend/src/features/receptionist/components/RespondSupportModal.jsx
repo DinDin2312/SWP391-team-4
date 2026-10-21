@@ -65,8 +65,10 @@ const RespondSupportModal = ({ isOpen, request, onClose, onSuccess }) => {
 
       await receptionistService.respondSupportRequest(request.requestId, {
         status,
+        resolutionType,
         responseNote: responseNote.trim(),
         creditAmount: finalCreditAmount,
+        validityDays: resolutionType === 'ISSUE_CREDIT' ? parseInt(validDays, 10) : 60,
         creditExpiryDays: resolutionType === 'ISSUE_CREDIT' ? parseInt(validDays, 10) : 60
       });
 

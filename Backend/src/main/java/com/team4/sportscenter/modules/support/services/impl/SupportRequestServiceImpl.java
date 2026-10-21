@@ -249,7 +249,9 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         stats.put("total", supportRequestRepository.count());
         stats.put("pending", supportRequestRepository.countByStatus(SupportStatus.PENDING));
         stats.put("inProgress", supportRequestRepository.countByStatus(SupportStatus.IN_PROGRESS));
-        stats.put("resolved", supportRequestRepository.countByStatus(SupportStatus.RESOLVED));
+        stats.put("resolved", supportRequestRepository.countByStatus(SupportStatus.RESOLVED) + supportRequestRepository.countByStatus(SupportStatus.APPROVED));
+        stats.put("approved", supportRequestRepository.countByStatus(SupportStatus.APPROVED));
+        stats.put("escalated", supportRequestRepository.countByStatus(SupportStatus.ESCALATED));
         stats.put("rejected", supportRequestRepository.countByStatus(SupportStatus.REJECTED));
         return stats;
     }
@@ -271,7 +273,12 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         BigDecimal generatedCreditAmount = null;
 
         // If resolution grants Credit
-        if ("CREDIT".equalsIgnoreCase(dto.getResolutionType()) && dto.getStatus() == SupportStatus.RESOLVED) {
+        boolean isApproved = request.getStatus() == SupportStatus.RESOLVED || request.getStatus() == SupportStatus.APPROVED;
+        boolean wantsCredit = "CREDIT".equalsIgnoreCase(dto.getResolutionType()) 
+                || "ISSUE_CREDIT".equalsIgnoreCase(dto.getResolutionType()) 
+                || (dto.getCreditAmount() != null && dto.getCreditAmount().compareTo(BigDecimal.ZERO) > 0);
+
+        if (isApproved && wantsCredit) {
             BigDecimal creditAmount = dto.getCreditAmount();
             if (creditAmount == null || creditAmount.compareTo(BigDecimal.ZERO) <= 0) {
                 // Auto calculate if class linked
@@ -290,7 +297,7 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                 generatedCreditCode = generateCreditCode(classId, request.getUser().getUserId());
                 generatedCreditAmount = creditAmount;
 
-                int validityDays = dto.getValidityDays() != null && dto.getValidityDays() > 0 ? dto.getValidityDays() : 60;
+                int validityDays = dto.getEffectiveValidityDays() != null ? dto.getEffectiveValidityDays() : 60;
                 LocalDate expiryDate = LocalDate.now().plusDays(validityDays);
 
                 UserCredit credit = UserCredit.builder()
