@@ -21,7 +21,9 @@ import {
     Clock,
     MapPin,
     Users,
-    Dumbbell
+    Dumbbell,
+    Calendar,
+    Sparkles
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
 import MemberDetailModal from './MemberDetailModal';
@@ -893,8 +895,21 @@ export default function ManageMembershipsView() {
 
                 return (
                     <div style={{ position: 'fixed', inset: 0, zIndex: 10000, backgroundColor: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-                        <div style={{ width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+                        <div style={{
+                            width: '100%',
+                            maxWidth: '680px',
+                            maxHeight: 'min(92vh, 800px)',
+                            height: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            overflow: 'hidden',
+                            backgroundColor: 'var(--surface)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '1rem',
+                            padding: '1.25rem 1.5rem',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                        }}>
+                            <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.65rem' }}>
                                 <div>
                                     <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
                                         {t("Enroll Next Term Course")}
@@ -909,25 +924,25 @@ export default function ManageMembershipsView() {
                             </div>
 
                             {feedback && (
-                                <div style={{ padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', backgroundColor: feedback.type === 'success' ? 'var(--success-soft)' : 'var(--danger-soft)', color: feedback.type === 'success' ? 'var(--success-text)' : 'var(--danger-text)', fontSize: '0.85rem' }}>
+                                <div style={{ flexShrink: 0, padding: '0.65rem 0.85rem', borderRadius: '0.5rem', marginBottom: '0.75rem', backgroundColor: feedback.type === 'success' ? 'var(--success-soft)' : 'var(--danger-soft)', color: feedback.type === 'success' ? 'var(--success-text)' : 'var(--danger-text)', fontSize: '0.825rem' }}>
                                     {t(feedback.message)}
                                 </div>
                             )}
 
                             {/* Banner thói quen tập luyện của lớp cũ */}
-                            <div style={{ backgroundColor: 'var(--surface-hover)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.825rem' }}>
+                            <div style={{ flexShrink: 0, backgroundColor: 'var(--surface-hover)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.65rem 0.9rem', marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.825rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>{t("Current Course:")} <strong style={{ color: 'var(--text)' }}>{suggestedClass.currentClassName}</strong></span>
                                     <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{suggestedClass.subjectName || ''}</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)' }}>
-                                    <Clock style={{ width: '13px', height: '13px' }} />
+                                    <Clock style={{ width: '13px', height: '13px', color: 'var(--primary)' }} />
                                     <span>{t("Familiar Schedule:")} <strong style={{ color: 'var(--text)' }}>{suggestedClass.currentSchedulePattern || ''}</strong></span>
                                 </div>
                             </div>
 
                             {/* Tiêu đề danh sách lớp mở */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                            <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                                 <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text)' }}>
                                     {t("Available Classes for Next Term:")} ({optionsList.length})
                                 </span>
@@ -936,8 +951,20 @@ export default function ManageMembershipsView() {
                                 </span>
                             </div>
 
-                            {/* Danh sách các lớp học ứng viên */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', maxHeight: '280px', overflowY: 'auto', paddingRight: '0.35rem', marginBottom: '1rem' }}>
+                            {/* Danh sách các lớp học ứng viên - THANH CUỘN DUY NHẤT */}
+                            <div style={{
+                                flex: '1 1 auto',
+                                minHeight: '130px',
+                                maxHeight: '320px',
+                                overflowY: 'auto',
+                                scrollbarWidth: 'thin',
+                                scrollbarColor: 'var(--border) transparent',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.6rem',
+                                paddingRight: '0.4rem',
+                                marginBottom: '0.75rem'
+                            }}>
                                 {optionsList.map((opt) => {
                                     const isSelected = selectedRenewalClassId === opt.classId;
                                     const isOptDisabled = opt.alreadyEnrolled || (opt.availableSlots <= 0);
@@ -980,14 +1007,15 @@ export default function ManageMembershipsView() {
                                                             borderRadius: '9999px',
                                                             fontSize: '0.72rem',
                                                             fontWeight: 700,
-                                                            backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                                                            backgroundColor: 'rgba(234, 179, 8, 0.12)',
                                                             color: '#ca8a04',
-                                                            border: '1px solid rgba(234, 179, 8, 0.3)',
+                                                            border: '1px solid rgba(234, 179, 8, 0.25)',
                                                             display: 'inline-flex',
                                                             alignItems: 'center',
                                                             gap: '0.25rem'
                                                         }}>
-                                                            ⭐ {t("Best Match - Same Schedule")}
+                                                            <Sparkles style={{ width: '12px', height: '12px', color: '#eab308' }} />
+                                                            {t("Best Match - Same Schedule")}
                                                         </span>
                                                     )}
                                                     {opt.alreadyEnrolled && (
@@ -1018,11 +1046,23 @@ export default function ManageMembershipsView() {
                                                 </div>
                                             </div>
 
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.3rem 0.6rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '1.4rem' }}>
-                                                <div>👤 {t("Coach:")} <strong style={{ color: 'var(--text)' }}>{opt.coachName}</strong> • {opt.roomName}</div>
-                                                <div>⏰ {t("Schedule:")} <strong style={{ color: 'var(--text)' }}>{opt.daysOfWeekText || ''} · {opt.timeSlotText || ''}</strong></div>
-                                                <div>🗓️ {t("Starts:")} <strong style={{ color: 'var(--primary)' }}>{formatDateTime(opt.startTime)}</strong></div>
-                                                <div>👥 {t("Availability:")} <strong style={{ color: opt.availableSlots > 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>{opt.availableSlots} / {opt.maxSlots} {t("slots left")}</strong></div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.35rem 0.75rem', fontSize: '0.78rem', color: 'var(--text-muted)', marginLeft: '1.4rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                    <User style={{ width: '13px', height: '13px', color: 'var(--primary)', flexShrink: 0 }} />
+                                                    <span>{t("Coach:")} <strong style={{ color: 'var(--text)' }}>{opt.coachName}</strong> <span style={{ opacity: 0.5 }}>•</span> {opt.roomName}</span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                    <Clock style={{ width: '13px', height: '13px', color: '#f59e0b', flexShrink: 0 }} />
+                                                    <span>{t("Schedule:")} <strong style={{ color: 'var(--text)' }}>{opt.daysOfWeekText || ''} · {opt.timeSlotText || ''}</strong></span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                    <Calendar style={{ width: '13px', height: '13px', color: '#3b82f6', flexShrink: 0 }} />
+                                                    <span>{t("Starts:")} <strong style={{ color: 'var(--primary)' }}>{formatDateTime(opt.startTime)}</strong></span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                    <Users style={{ width: '13px', height: '13px', color: opt.availableSlots > 0 ? '#10b981' : '#ef4444', flexShrink: 0 }} />
+                                                    <span>{t("Availability:")} <strong style={{ color: opt.availableSlots > 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>{opt.availableSlots} / {opt.maxSlots} {t("slots left")}</strong></span>
+                                                </div>
                                             </div>
 
                                             {opt.hasConflict && (
@@ -1036,19 +1076,19 @@ export default function ManageMembershipsView() {
                                 })}
                             </div>
 
-                            {/* Khung thanh toán tại quầy */}
-                            <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                            {/* Khung thanh toán tại quầy - Cố định ở đáy, không bao giờ bị che */}
+                            <div style={{ flexShrink: 0, backgroundColor: 'var(--surface-hover)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                    <span style={{ fontSize: '0.825rem', color: 'var(--text-muted)' }}>
                                         {t("Tuition Fee:")} <strong style={{ color: 'var(--text)' }}>{chosenOption?.className || ''}</strong>
                                     </span>
-                                    <span style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--success-text)' }}>
+                                    <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--success-text)' }}>
                                         {formatCurrency(chosenOption?.price || suggestedClass.price)}
                                     </span>
                                 </div>
 
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.45rem', borderTop: '1px dashed var(--border)' }}>
-                                    <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.825rem' }}>{t("Payment method at counter:")}</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.8rem' }}>{t("Payment method at counter:")}</span>
                                     <div style={{ display: 'flex', gap: '0.4rem' }}>
                                         <button
                                             type="button"
@@ -1094,12 +1134,16 @@ export default function ManageMembershipsView() {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>
+                            {/* Nút hành động cố định ở đáy modal */}
+                            <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.85rem' }}>
                                 <button onClick={() => setRenewalModalOpen(false)} disabled={confirming} style={{ padding: '0.55rem 1rem', backgroundColor: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>{t("Cancel")}</button>
                                 <button
                                     onClick={handleConfirmEnrollment}
                                     disabled={confirming || isChosenDisabled}
                                     style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.4rem',
                                         padding: '0.55rem 1.25rem',
                                         backgroundColor: 'var(--primary)',
                                         color: 'var(--on-primary)',
@@ -1111,7 +1155,8 @@ export default function ManageMembershipsView() {
                                         opacity: isChosenDisabled ? 0.6 : 1
                                     }}
                                 >
-                                    {t(confirming ? t('Processing...') : t('Confirm Payment & Enroll'))}
+                                    {confirming ? <RefreshCw style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 style={{ width: '14px', height: '14px' }} />}
+                                    <span>{t(confirming ? t('Processing...') : t('Confirm Payment & Enroll'))}</span>
                                 </button>
                             </div>
                         </div>
