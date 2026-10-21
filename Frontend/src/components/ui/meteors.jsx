@@ -3,29 +3,29 @@ import React, { useMemo } from "react";
 /**
  * Meteors that fall diagonally at 45° (top-left -> bottom-right) across the card.
  * Starts from the top-left corner/edges of the item.
+ * Uses deterministic staggered offsets to avoid non-cryptographic PRNG warnings (SonarQube S2245).
  */
 export const Meteors = ({ number = 8, className = "" }) => {
   const meteors = useMemo(
     () =>
       Array.from({ length: number }, (_, idx) => {
-        // Natural staggered speed: 3.5s to 6.5s
-        const duration = 3.5 + Math.random() * 3;
+        // Natural staggered speed: 3.6s to 6.0s
+        const duration = 3.6 + ((idx * 7) % 5) * 0.6;
         // Distribute spawn points along the top-left corner / entrance boundary:
-        // Half start along the top-left top edge (-5% to 40%)
-        // Half start along the top-left left edge (-8% to 0%, top 0% to 35%)
+        // Alternates between the top edge (-5% to 28%) and left edge (9% to 28%)
         const isTopEdge = idx % 2 === 0;
         const left = isTopEdge
-          ? -5 + Math.random() * 45
-          : -8 - Math.random() * 5;
+          ? -5 + ((idx * 13) % 45)
+          : -8 - ((idx * 3) % 6);
         const top = isTopEdge
-          ? -8 - Math.random() * 5
-          : Math.random() * 35;
+          ? -8 - ((idx * 2) % 6)
+          : ((idx * 9) % 35);
 
         return {
           left,
           top,
           duration,
-          delay: -Math.random() * duration,
+          delay: -((idx * 1.5) % duration),
         };
       }),
     [number]

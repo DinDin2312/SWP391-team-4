@@ -725,7 +725,7 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
           <div>
             <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Sparkles style={{ width: '18px', height: '18px', color: 'var(--primary)' }} />
-              {t('1. Quick Member Check-in Desk')}
+              {t('Quick Member Check-in Desk')}
             </h2>
             <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               {t('Search by member name, phone, email, or ID to verify package status.')}
@@ -750,13 +750,19 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                 type="text"
                 value={memberKeyword}
                 onChange={(e) => {
-                  setMemberKeyword(e.target.value);
-                  fetchMembersList(e.target.value);
+                  const val = e.target.value;
+                  setMemberKeyword(val);
+                  if (selectedMember) {
+                    handleSelectMember(null);
+                  }
+                  fetchMembersList(val);
                 }}
                 placeholder={t('Enter member name, phone, email or #ID...')}
                 style={{
                   width: '100%',
-                  padding: '0.65rem 0.75rem 0.65rem 2.3rem',
+                  padding: memberKeyword
+                    ? '0.65rem 2.2rem 0.65rem 2.3rem'
+                    : '0.65rem 0.75rem 0.65rem 2.3rem',
                   borderRadius: '0.65rem',
                   border: '1px solid var(--border)',
                   backgroundColor: 'var(--bg)',
@@ -764,105 +770,130 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                   fontSize: '0.85rem',
                 }}
               />
+              {memberKeyword && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMemberKeyword('');
+                    fetchMembersList('');
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: '0.75rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    padding: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  title={t('Clear search')}
+                >
+                  <X style={{ width: '14px', height: '14px' }} />
+                </button>
+              )}
             </div>
           </form>
 
-          {/* Member Quick List */}
-          <div
-            style={{
-              maxHeight: selectedMember ? '185px' : '320px',
-              overflowY: 'auto',
-              border: '1px solid var(--border)',
-              borderRadius: '0.75rem',
-              backgroundColor: 'var(--bg)',
-              divideY: '1px solid var(--border)',
-            }}
-          >
-            {loadingMembers ? (
-              <div style={{ padding: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                {t('Searching members...')}
-              </div>
-            ) : members.length === 0 ? (
-              <div style={{ padding: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                {t('No matching members found.')}
-              </div>
-            ) : (
-              members.map((m) => {
-                const isChosen = selectedMember?.userId === m.userId;
-                const isMemberActive = m.membershipStatus === 'ACTIVE';
-                const isExpiring = m.daysRemaining != null && m.daysRemaining > 0 && m.daysRemaining <= 7 && isMemberActive;
+          {/* Member Quick List (shown when no member is selected) */}
+          {!selectedMember && (
+            <div
+              style={{
+                maxHeight: '380px',
+                overflowY: 'auto',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                backgroundColor: 'var(--bg)',
+              }}
+            >
+              {loadingMembers ? (
+                <div style={{ padding: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  {t('Searching members...')}
+                </div>
+              ) : members.length === 0 ? (
+                <div style={{ padding: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  {t('No matching members found.')}
+                </div>
+              ) : (
+                members.map((m) => {
+                  const isChosen = selectedMember?.userId === m.userId;
+                  const isMemberActive = m.membershipStatus === 'ACTIVE';
+                  const isExpiring = m.daysRemaining != null && m.daysRemaining > 0 && m.daysRemaining <= 7 && isMemberActive;
 
-                return (
-                  <div
-                    key={m.userId}
-                    onClick={() => handleSelectMember(m)}
-                    style={{
-                      padding: '0.75rem 0.9rem',
-                      borderBottom: '1px solid var(--border)',
-                      backgroundColor: isChosen ? 'var(--primary-soft)' : 'transparent',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '0.75rem',
-                      transition: 'background-color 0.15s',
-                    }}
-                  >
-                    <div style={{ overflow: 'hidden' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.86rem', color: 'var(--text)' }}>
-                          {m.fullName}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                          #{m.userId}
+                  return (
+                    <div
+                      key={m.userId}
+                      onClick={() => handleSelectMember(m)}
+                      style={{
+                        padding: '0.75rem 0.9rem',
+                        borderBottom: '1px solid var(--border)',
+                        backgroundColor: isChosen ? 'var(--primary-soft)' : 'transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.75rem',
+                        transition: 'background-color 0.15s',
+                      }}
+                    >
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.86rem', color: 'var(--text)' }}>
+                            {m.fullName}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                            #{m.userId}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                          {m.phone || t('No phone')} • {m.email}
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            padding: '0.18rem 0.5rem',
+                            borderRadius: '999px',
+                            backgroundColor: isMemberActive
+                              ? isExpiring
+                                ? 'var(--warning-soft)'
+                                : 'var(--success-soft)'
+                              : 'var(--danger-soft)',
+                            color: isMemberActive
+                              ? isExpiring
+                                ? 'var(--warning-text)'
+                                : 'var(--success-text)'
+                              : 'var(--danger-text)',
+                          }}
+                        >
+                          {isMemberActive
+                            ? isExpiring
+                              ? `${t('Expiring')} (${m.daysRemaining}d)`
+                              : t('Active Package')
+                            : m.membershipStatus === 'EXPIRED'
+                            ? t('Expired')
+                            : t('No Package')}
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                        {m.phone || t('No phone')} • {m.email}
-                      </div>
                     </div>
-
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          fontSize: '0.68rem',
-                          fontWeight: 700,
-                          padding: '0.18rem 0.5rem',
-                          borderRadius: '999px',
-                          backgroundColor: isMemberActive
-                            ? isExpiring
-                              ? 'var(--warning-soft)'
-                              : 'var(--success-soft)'
-                            : 'var(--danger-soft)',
-                          color: isMemberActive
-                            ? isExpiring
-                              ? 'var(--warning-text)'
-                              : 'var(--success-text)'
-                            : 'var(--danger-text)',
-                        }}
-                      >
-                        {isMemberActive
-                          ? isExpiring
-                            ? `${t('Expiring')} (${m.daysRemaining}d)`
-                            : t('Active Package')
-                          : m.membershipStatus === 'EXPIRED'
-                          ? t('Expired')
-                          : t('No Package')}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+                  );
+                })
+              )}
+            </div>
+          )}
 
           {/* Selected Member Verification & Form */}
           {selectedMember ? (
             <div
               style={{
-                borderTop: '1px solid var(--border)',
-                paddingTop: '1rem',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '1rem',
@@ -906,26 +937,49 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setDetailModalUserId(selectedMember.userId)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    padding: '0.45rem 0.7rem',
-                    borderRadius: '0.5rem',
-                    border: '1px solid var(--border)',
-                    backgroundColor: 'var(--surface)',
-                    color: 'var(--primary)',
-                    fontSize: '0.76rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Eye style={{ width: '14px', height: '14px' }} />
-                  {t('Details')}
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectMember(null)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.45rem 0.7rem',
+                      borderRadius: '0.5rem',
+                      border: '1px solid var(--border)',
+                      backgroundColor: 'var(--surface)',
+                      color: 'var(--text-muted)',
+                      fontSize: '0.76rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                    title={t('Change member')}
+                  >
+                    <X style={{ width: '13px', height: '13px' }} />
+                    {t('Change')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDetailModalUserId(selectedMember.userId)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.45rem 0.7rem',
+                      borderRadius: '0.5rem',
+                      border: '1px solid var(--border)',
+                      backgroundColor: 'var(--surface)',
+                      color: 'var(--primary)',
+                      fontSize: '0.76rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Eye style={{ width: '14px', height: '14px' }} />
+                    {t('Details')}
+                  </button>
+                </div>
               </div>
 
               {/* Anomaly Warning Banner for selected member */}
@@ -994,22 +1048,23 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                     }
                     style={{
                       width: '100%',
-                      padding: '0.7rem 1rem',
+                      padding: '0.75rem 1rem',
                       borderRadius: '0.65rem',
-                      border: '1px solid var(--border)',
-                      backgroundColor: 'var(--surface)',
-                      color: 'var(--text)',
+                      border: 'none',
+                      backgroundColor: '#EF4444',
+                      color: '#ffffff',
                       fontWeight: 700,
                       fontSize: '0.85rem',
-                      cursor: 'pointer',
+                      cursor: checkingOutId === activeCheckInForSelectedMember.checkInId ? 'wait' : 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '0.5rem',
+                      boxShadow: '0 1px 3px rgba(239, 68, 68, 0.25)',
                     }}
                   >
                     <LogOut style={{ width: '16px', height: '16px' }} />
-                    {t('Check-out Member Now')}
+                    {checkingOutId === activeCheckInForSelectedMember.checkInId ? t('Checking out...') : t('Check-out Member Now')}
                   </button>
                 </div>
               ) : loadingMemberships ? (
@@ -1573,14 +1628,14 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                                   fontSize: '0.72rem',
                                   padding: '0.15rem 0.5rem',
                                   borderRadius: '0.35rem',
-                                  backgroundColor: '#ECFDF5',
-                                  color: '#059669',
-                                  border: '1px solid #A7F3D0',
-                                  fontWeight: 700,
+                                  backgroundColor: 'var(--surface-hover)',
+                                  color: 'var(--text)',
+                                  border: '1px solid var(--border)',
+                                  fontWeight: 600,
                                 }}
                               >
-                                <Key style={{ width: '12px', height: '12px' }} />
-                                <span>{t('Door Code:')} <strong>{rec.accessCode}</strong></span>
+                                <Key style={{ width: '12px', height: '12px', color: 'var(--text-muted)' }} />
+                                <span>{t('Door Code:')} <strong style={{ fontFamily: 'monospace', letterSpacing: '0.5px' }}>{rec.accessCode}</strong></span>
                               </div>
                             ) : rec.checkInType === 'CLASS_SESSION' ? (
                               <div
