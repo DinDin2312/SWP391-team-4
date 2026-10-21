@@ -17,7 +17,6 @@ import {
     Eye,
     Info,
     CreditCard,
-    Banknote,
     Clock,
     MapPin,
     Users,
@@ -29,6 +28,8 @@ import receptionistService from '../services/receptionistService';
 import MemberDetailModal from './MemberDetailModal';
 import InvoiceReceiptModal from './InvoiceReceiptModal';
 import ClassRenewalModal from './ClassRenewalModal';
+import RenewalNoticeModal from './RenewalNoticeModal';
+import PaymentMethodSelector from './PaymentMethodSelector';
 
 export default function ManageMembershipsView() {
   useLanguage();
@@ -904,145 +905,11 @@ export default function ManageMembershipsView() {
             />
 
             {/* Modal Thông Báo Khi Không Tìm Thấy Lịch Gia Hạn Tiếp Theo */}
-            {renewalNotice && renewalNotice.isOpen && (
-                <div style={{
-                    position: 'fixed',
-                    inset: 0,
-                    zIndex: 10001,
-                    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-                    backdropFilter: 'blur(6px)',
-                    WebkitBackdropFilter: 'blur(6px)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '1rem'
-                }}>
-                    <div style={{
-                        width: '100%',
-                        maxWidth: '480px',
-                        backgroundColor: 'var(--surface)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '1rem',
-                        padding: '1.5rem',
-                        boxShadow: 'var(--shadow)',
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '0.5rem', backgroundColor: 'var(--primary-soft)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Info style={{ width: '18px', height: '18px' }} />
-                                </div>
-                                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
-                                    {t("Course Renewal Notice")}
-                                </h3>
-                            </div>
-                            <button
-                                onClick={() => setRenewalNotice(null)}
-                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.25rem' }}
-                            >
-                                <X style={{ width: '18px', height: '18px' }} />
-                            </button>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.875rem' }}>
-                            <div style={{
-                                padding: '0.85rem 1rem',
-                                backgroundColor: 'var(--surface-hover)',
-                                borderRadius: '0.65rem',
-                                border: '1px solid var(--border)',
-                                lineHeight: 1.55,
-                                color: 'var(--text)'
-                            }}>
-                                {renewalNotice.type === 'ALREADY_RENEWED' ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--success-text)', fontWeight: 700, fontSize: '0.95rem' }}>
-                                            <CheckCircle2 style={{ width: '18px', height: '18px' }} />
-                                            <span>{t("Course renewed successfully!")}</span>
-                                        </div>
-                                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                            {t("Member has been registered and enrolled into the next batch:")}
-                                        </p>
-                                        <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.825rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: 'var(--text-muted)' }}>{t("Next Batch:")}</span>
-                                                <strong style={{ color: 'var(--primary)' }}>{renewalNotice.nextCourse?.courseName}</strong>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: 'var(--text-muted)' }}>{t("Coach / Room:")}</span>
-                                                <span style={{ color: 'var(--text)' }}>{renewalNotice.nextCourse?.coachName} • {renewalNotice.nextCourse?.roomName}</span>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: 'var(--text-muted)' }}>{t("Timeline:")}</span>
-                                                <span style={{ color: 'var(--text)' }}>{formatDateTime(renewalNotice.nextCourse?.firstSessionDate)} → {formatDateTime(renewalNotice.nextCourse?.lastSessionDate)}</span>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: 'var(--text-muted)' }}>{t("Total Sessions:")}</span>
-                                                <strong style={{ color: 'var(--success-text)' }}>{renewalNotice.nextCourse?.sessionsCount} {t("sessions (In schedule)")}</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : renewalNotice.type === 'ALREADY_ENROLLED' ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--success-text)', fontWeight: 600 }}>
-                                            <CheckCircle2 style={{ width: '18px', height: '18px' }} />
-                                            <span>{renewalNotice.message}</span>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <span>{t("No upcoming recurring schedule found for course:")} </span>
-                                        <strong style={{ color: 'var(--primary)' }}>{renewalNotice.courseName}</strong>.
-                                        <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                            {t("The center has not scheduled the next recurring batch for this course yet. You can enroll the member into another available class or check back later.")}
-                                        </p>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
-                            <button
-                                onClick={() => setRenewalNotice(null)}
-                                style={{
-                                    padding: '0.55rem 1.1rem',
-                                    backgroundColor: 'var(--surface)',
-                                    color: 'var(--text)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '0.5rem',
-                                    fontSize: '0.85rem',
-                                    fontWeight: 500,
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                {t("Close")}
-                            </button>
-                            {renewalNotice.type === 'NO_SCHEDULE' && (
-                                <button
-                                    onClick={() => {
-                                        setRenewalNotice(null);
-                                        handleOpenEnrollModal();
-                                    }}
-                                    style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '0.4rem',
-                                        padding: '0.55rem 1.15rem',
-                                        backgroundColor: 'var(--primary)',
-                                        color: 'var(--on-primary)',
-                                        border: 'none',
-                                        borderRadius: '0.5rem',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 600,
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    <BookOpen style={{ width: '14px', height: '14px' }} />
-                                    <span>{t("Enroll Another Class")}</span>
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
+            <RenewalNoticeModal
+                notice={renewalNotice}
+                onClose={() => setRenewalNotice(null)}
+                onEnrollOther={handleOpenEnrollModal}
+            />
 
             {/* Modal đăng ký gói Combo */}
             {packageModalOpen && (
@@ -1103,48 +970,7 @@ export default function ManageMembershipsView() {
                                 })()}
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.45rem', borderTop: '1px dashed var(--border)' }}>
                                     <span style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--text)' }}>{t("Payment method at counter:")}</span>
-                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPaymentMethod('CASH')}
-                                            style={{
-                                                padding: '0.35rem 0.75rem',
-                                                borderRadius: '0.4rem',
-                                                fontSize: '0.78rem',
-                                                fontWeight: 600,
-                                                border: paymentMethod === 'CASH' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                                backgroundColor: paymentMethod === 'CASH' ? 'var(--primary-soft)' : 'var(--surface)',
-                                                color: paymentMethod === 'CASH' ? 'var(--primary)' : 'var(--text)',
-                                                cursor: 'pointer',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '0.35rem'
-                                            }}
-                                        >
-                                            <Banknote style={{ width: '13px', height: '13px' }} />
-                                            <span>{t("Cash")}</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPaymentMethod('TRANSFER')}
-                                            style={{
-                                                padding: '0.35rem 0.75rem',
-                                                borderRadius: '0.4rem',
-                                                fontSize: '0.78rem',
-                                                fontWeight: 600,
-                                                border: paymentMethod === 'TRANSFER' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                                backgroundColor: paymentMethod === 'TRANSFER' ? 'var(--primary-soft)' : 'var(--surface)',
-                                                color: paymentMethod === 'TRANSFER' ? 'var(--primary)' : 'var(--text)',
-                                                cursor: 'pointer',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '0.35rem'
-                                            }}
-                                        >
-                                            <CreditCard style={{ width: '13px', height: '13px' }} />
-                                            <span>{t("Bank Transfer")}</span>
-                                        </button>
-                                    </div>
+                                    <PaymentMethodSelector paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} />
                                 </div>
                             </div>
                         </div>
@@ -1400,48 +1226,7 @@ export default function ManageMembershipsView() {
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.45rem', borderTop: '1px dashed var(--border)' }}>
                                         <span style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--text)' }}>{t("Payment method at counter:")}</span>
-                                        <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                            <button
-                                                type="button"
-                                                onClick={() => setPaymentMethod('CASH')}
-                                                style={{
-                                                    padding: '0.35rem 0.75rem',
-                                                    borderRadius: '0.4rem',
-                                                    fontSize: '0.78rem',
-                                                    fontWeight: 600,
-                                                    border: paymentMethod === 'CASH' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                                    backgroundColor: paymentMethod === 'CASH' ? 'var(--primary-soft)' : 'var(--surface)',
-                                                    color: paymentMethod === 'CASH' ? 'var(--primary)' : 'var(--text)',
-                                                    cursor: 'pointer',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: '0.35rem'
-                                                }}
-                                            >
-                                                <Banknote style={{ width: '13px', height: '13px' }} />
-                                                <span>{t("Cash")}</span>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setPaymentMethod('TRANSFER')}
-                                                style={{
-                                                    padding: '0.35rem 0.75rem',
-                                                    borderRadius: '0.4rem',
-                                                    fontSize: '0.78rem',
-                                                    fontWeight: 600,
-                                                    border: paymentMethod === 'TRANSFER' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                                    backgroundColor: paymentMethod === 'TRANSFER' ? 'var(--primary-soft)' : 'var(--surface)',
-                                                    color: paymentMethod === 'TRANSFER' ? 'var(--primary)' : 'var(--text)',
-                                                    cursor: 'pointer',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: '0.35rem'
-                                                }}
-                                            >
-                                                <CreditCard style={{ width: '13px', height: '13px' }} />
-                                                <span>{t("Bank Transfer")}</span>
-                                            </button>
-                                        </div>
+                                        <PaymentMethodSelector paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} />
                                     </div>
                                 </div>
                             );

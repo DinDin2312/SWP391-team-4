@@ -7,13 +7,12 @@ import {
     Calendar,
     Users,
     AlertTriangle,
-    Banknote,
-    CreditCard,
     CheckCircle2,
     RefreshCw
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDateTime as displayFormatDateTime, formatMoney } from '../../../utils/displayFormat';
+import PaymentMethodSelector from './PaymentMethodSelector';
 
 const ClassRenewalModal = ({
     isOpen,
@@ -233,48 +232,7 @@ const ClassRenewalModal = ({
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.45rem', borderTop: '1px dashed var(--border)' }}>
                         <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.8rem' }}>{t("Payment method at counter:")}</span>
-                        <div style={{ display: 'flex', gap: '0.4rem' }}>
-                            <button
-                                type="button"
-                                onClick={() => setPaymentMethod('CASH')}
-                                style={{
-                                    padding: '0.35rem 0.75rem',
-                                    borderRadius: '0.4rem',
-                                    fontSize: '0.78rem',
-                                    fontWeight: 600,
-                                    border: paymentMethod === 'CASH' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                    backgroundColor: paymentMethod === 'CASH' ? 'var(--primary-soft)' : 'var(--surface)',
-                                    color: paymentMethod === 'CASH' ? 'var(--primary)' : 'var(--text)',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.35rem'
-                                }}
-                            >
-                                <Banknote style={{ width: '13px', height: '13px' }} />
-                                <span>{t("Cash")}</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setPaymentMethod('TRANSFER')}
-                                style={{
-                                    padding: '0.35rem 0.75rem',
-                                    borderRadius: '0.4rem',
-                                    fontSize: '0.78rem',
-                                    fontWeight: 600,
-                                    border: paymentMethod === 'TRANSFER' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                                    backgroundColor: paymentMethod === 'TRANSFER' ? 'var(--primary-soft)' : 'var(--surface)',
-                                    color: paymentMethod === 'TRANSFER' ? 'var(--primary)' : 'var(--text)',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.35rem'
-                                }}
-                            >
-                                <CreditCard style={{ width: '13px', height: '13px' }} />
-                                <span>{t("Bank Transfer")}</span>
-                            </button>
-                        </div>
+                        <PaymentMethodSelector paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} />
                     </div>
                 </div>
 
