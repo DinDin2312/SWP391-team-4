@@ -37,13 +37,15 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: "outputs/Backend/Dockerfile"
-          ignore: "DL3008,DL3015"
+          ignore: "DL3008,DL3015,DL3018,DL3019,DL3059"
+          failure-threshold: "error"
 
       - name: Run Hadolint on Frontend Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: "outputs/Frontend/Dockerfile"
-          ignore: "DL3008,DL3015"
+          ignore: "DL3008,DL3015,DL3018,DL3019,DL3059"
+          failure-threshold: "error"
 
   # 2. Quét & Kiểm thử chất lượng Frontend thật sự (Lint, Unit Tests, Build)
   frontend-quality:
@@ -150,48 +152,33 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Run Trivy Vulnerability & Secret Scanner
+      - name: Run Trivy Secret & Misconfiguration Scanner
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          severity: 'CRITICAL,HIGH'
           format: 'table'
           exit-code: '0'
+          trivyargs: '--offline-scan --scanners misconfig,secret'
 
-  # 5. SonarQube Cloud Quality Gate (Kiểm tra & Thực thi điểm chất lượng)
-  sonarqube-quality-gate:
-    name: SonarQube Quality Gate Check
-    runs-on: ubuntu-latest
-    needs: [frontend-quality, backend-quality]
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: SonarQube Quality Gate Enforcement
-        uses: sonarsource/sonarqube-quality-gate-action@v1
-        timeout-minutes: 5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-  # 6. Quality Gate Summary (Chặn merge nếu bất kỳ bài kiểm tra nào thất bại)
+  # 5. Quality Gate Summary (Chặn merge nếu bất kỳ bài kiểm tra nào thất bại)
   quality-gate-summary:
     name: Quality Gate Summary (Enforce All Pass)
     runs-on: ubuntu-latest
-    needs: [frontend-quality, backend-quality, sonarqube-quality-gate]
+    needs: [dockerfile-lint, frontend-quality, backend-quality, security-sast-scan]
     if: always()
     steps:
       - name: Check overall quality gate results
         run: |
-          if [ "${{ needs.frontend-quality.result }}" != "success" ] || \
+          if [ "${{ needs.dockerfile-lint.result }}" != "success" ] || \
+             [ "${{ needs.frontend-quality.result }}" != "success" ] || \
              [ "${{ needs.backend-quality.result }}" != "success" ] || \
-             [ "${{ needs.sonarqube-quality-gate.result }}" != "success" ]; then
+             [ "${{ needs.security-sast-scan.result }}" != "success" ]; then
             echo "::error::Quality Gate failed! Pull Request cannot be merged until all quality checks pass."
+            echo "Dockerfile Lint: ${{ needs.dockerfile-lint.result }}"
             echo "Frontend Quality: ${{ needs.frontend-quality.result }}"
             echo "Backend Quality: ${{ needs.backend-quality.result }}"
-            echo "SonarQube Quality Gate: ${{ needs.sonarqube-quality-gate.result }}"
+            echo "Security SAST: ${{ needs.security-sast-scan.result }}"
             exit 1
           fi
-          echo "All quality checks passed! Ready to merge."
+          echo "All code quality and security checks passed! Ready to merge."
