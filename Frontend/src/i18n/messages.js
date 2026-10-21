@@ -2200,7 +2200,6 @@ const receptionistDictionary = {
   "Best Match - Same Schedule": "Gợi ý khớp lịch cũ nhất",
   "Tuition Fee:": "Học phí khóa học:",
   "Schedule Conflict": "Trùng lịch học",
-  "slots left": "chỗ trống",
   "Starts:": "Khai giảng:",
   "Schedule:": "Lịch học:",
   "Target Course:": "Khóa học tiếp theo:",

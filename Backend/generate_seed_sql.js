@@ -71,19 +71,20 @@ sql += "DELETE FROM schedules WHERE class_id BETWEEN 120 AND 149;\n";
 sql += "DELETE FROM classes WHERE class_id BETWEEN 120 AND 149;\n\n";
 
 sql += "-- 1. Insert 30 Next-Term Classes across 5 Subjects\n";
-classes.forEach(c => {
-  sql += `INSERT INTO classes (class_id, class_name, subject_id, coach_id, room_id, status, price, max_slots) VALUES (${c.id}, '${c.name}', ${c.subjectId}, ${c.coachId}, ${c.roomId}, 'ACTIVE', ${c.price}, ${c.maxSlots});\n`;
-});
+sql += "INSERT INTO classes (class_id, class_name, subject_id, coach_id, room_id, status, price, max_slots) VALUES\n";
+const classValues = classes.map(c => `  (${c.id}, '${c.name}', ${c.subjectId}, ${c.coachId}, ${c.roomId}, 'ACTIVE', ${c.price}, ${c.maxSlots})`);
+sql += classValues.join(',\n') + ';\n\n';
 
-sql += "\n-- 2. Insert Full Schedules for each Next-Term Class\n";
+sql += "-- 2. Insert Full Schedules for each Next-Term Class\n";
+sql += "INSERT INTO schedules (class_id, start_time, end_time, status, changeover_minutes) VALUES\n";
+const scheduleValues = [];
 classes.forEach(c => {
   const dates = c.pattern === 'MWF' ? mwfDates : (c.pattern === 'TTS' ? ttsDates : ssDates);
   dates.forEach(d => {
-    const startDt = `${d} ${c.start}:00`;
-    const endDt = `${d} ${c.end}:00`;
-    sql += `INSERT INTO schedules (class_id, start_time, end_time, status, changeover_minutes) VALUES (${c.id}, '${startDt}', '${endDt}', 'SCHEDULED', 0);\n`;
+    scheduleValues.push(`  (${c.id}, '${d} ${c.start}:00', '${d} ${c.end}:00', 'SCHEDULED', 0)`);
   });
 });
+sql += scheduleValues.join(',\n') + ';\n';
 
-fs.writeFileSync('SWP391_Code/Backend/seed_next_term_classes.sql', sql, 'utf8');
-console.log(`Generated seed_next_term_classes.sql with ${classes.length} classes and their schedules.`);
+fs.writeFileSync('Backend/seed_next_term_classes.sql', sql, 'utf8');
+console.log(`Generated seed_next_term_classes.sql with ${classes.length} classes and ${scheduleValues.length} schedules.`);
