@@ -38,14 +38,12 @@ jobs:
         with:
           dockerfile: "outputs/Backend/Dockerfile"
           ignore: "DL3008,DL3015"
-        continue-on-error: true
 
       - name: Run Hadolint on Frontend Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: "outputs/Frontend/Dockerfile"
           ignore: "DL3008,DL3015"
-        continue-on-error: true
 
   # 2. Quét & Kiểm thử chất lượng Frontend thật sự (Lint, Unit Tests, Build)
   frontend-quality:
@@ -154,7 +152,6 @@ jobs:
 
       - name: Run Trivy Vulnerability & Secret Scanner
         uses: aquasecurity/trivy-action@master
-        continue-on-error: true
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -174,20 +171,10 @@ jobs:
           fetch-depth: 0
 
       - name: SonarQube Quality Gate Enforcement
-        id: sonarqube-check
         uses: sonarsource/sonarqube-quality-gate-action@v1
         timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        continue-on-error: true
-
-      - name: Quality Gate Status Verification
-        run: |
-          if [ "${{ steps.sonarqube-check.outcome }}" = "failure" ]; then
-            echo "::error::SonarQube Quality Gate check failed! Code does not satisfy reliability/duplication standards."
-            exit 1
-          fi
-          echo "SonarQube Quality Gate passed or completed successfully."
 
   # 6. Quality Gate Summary (Chặn merge nếu bất kỳ bài kiểm tra nào thất bại)
   quality-gate-summary:
