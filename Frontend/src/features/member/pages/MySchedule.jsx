@@ -1,6 +1,7 @@
 import { locale } from '../../../i18n/languageStore.js';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';
+import CancelClassPolicyModal from '../components/CancelClassPolicyModal';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -334,18 +335,13 @@ const MySchedule = () => {
           </div>
         </div>
       </div>
-      <ConfirmModal
+      <CancelClassPolicyModal
         isOpen={cancelModal.isOpen}
+        classId={cancelModal.classId}
         onClose={() => setCancelModal({ isOpen: false, classId: null })}
-        onConfirm={() => {
-          memberService.cancelClass(cancelModal.classId).then(() => {
-            setCancelModal({ isOpen: false, classId: null });
-            fetchBookings();
-          }).catch(err => alert(err.response?.data || 'Failed to cancel class'));
+        onSuccess={() => {
+          fetchScheduleData();
         }}
-        title={t("Cancel Class Registration")}
-        message={t("Are you sure you want to cancel this class? All future sessions of this class will be dropped from your schedule. This action cannot be undone.")}
-        confirmText={t("Yes, Cancel Class")}
       />
       <MemberWorkoutsModal
         isOpen={workoutModal.isOpen}

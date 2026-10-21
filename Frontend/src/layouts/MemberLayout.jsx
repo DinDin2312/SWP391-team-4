@@ -11,7 +11,7 @@ import { Bot } from 'lucide-react';
 import NexusAiChat from '../features/member/components/NexusAiChat';
 import {
   LayoutDashboard, CalendarDays, CreditCard, Dumbbell,
-  Bell, Settings, LogOut, ShoppingCart, Receipt, ClipboardList
+  Bell, Settings, LogOut, ShoppingCart, Receipt, ClipboardList, HelpCircle
 } from 'lucide-react';
 
 const MemberLayout = () => {
@@ -84,6 +84,7 @@ const MemberLayout = () => {
           case '/member/settings': return 'Settings';
           case '/member/cart': return 'Checkout Cart';
           case '/member/billing': return 'Billing & Invoices';
+          case '/member/support': return 'Help & Support Desk';
           default: return 'Nexus Portal';
       }
   };
@@ -160,6 +161,11 @@ const MemberLayout = () => {
             <button onClick={() => navigate("/member/attendance")} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/attendance') ? 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'}`}>
               <ClipboardList className="w-4 h-4" />
               <span>{t("Attendance History")}</span>
+            </button>
+
+            <button onClick={() => navigate("/member/support")} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/support') ? 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'}`}>
+              <HelpCircle className="w-4 h-4" />
+              <span>{t("Help & Support")}</span>
             </button>
 
             <button onClick={() => navigate("/member/settings")} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive('/member/settings') ? 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold' : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'}`}>

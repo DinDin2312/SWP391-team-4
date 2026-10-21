@@ -6,6 +6,7 @@ import java.util.Map;
 public interface PaymentService {
     CartResponse getCartItems(String email);
     String checkout(String email, String ipAddress, String paymentMethod);
+    String checkout(String email, String ipAddress, String paymentMethod, String creditCode);
     void removeFromCart(String email, Integer classId);
     void removePackageFromCart(String email, Integer packageId);
     void clearCart(String email);

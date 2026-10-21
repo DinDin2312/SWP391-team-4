@@ -51,6 +51,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final com.team4.sportscenter.modules.member.services.PackageCommerceService commerce;
     private final NotificationService notificationService;
     private final com.team4.sportscenter.modules.manager.services.PackageTypeCatalog packageTypes;
+    private final com.team4.sportscenter.modules.support.repositories.UserCreditRepository userCreditRepository;
 
     @Override
         public CartResponse getCartItems(String email) {
@@ -99,6 +100,12 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public String checkout(String email, String ipAddress, String paymentMethod) {
+        return checkout(email, ipAddress, paymentMethod, null);
+    }
+
+    @Override
+    @Transactional
+    public String checkout(String email, String ipAddress, String paymentMethod, String creditCode) {
         bookingRepository.lockOperations();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -153,6 +160,31 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         
         totalAmount = totalAmount.multiply(discountFactor).setScale(0, java.math.RoundingMode.HALF_UP);
 
+        com.team4.sportscenter.modules.support.entities.UserCredit appliedCredit = null;
+        BigDecimal creditDiscount = BigDecimal.ZERO;
+        if (creditCode != null && !creditCode.trim().isEmpty()) {
+            appliedCredit = userCreditRepository.findByCreditCode(creditCode.trim().toUpperCase())
+                    .orElseThrow(() -> new IllegalArgumentException("Mã tín dụng không hợp lệ / Invalid credit code: " + creditCode));
+            if (!appliedCredit.getUser().getUserId().equals(user.getUserId())) {
+                throw new IllegalArgumentException("Mã tín dụng không thuộc về bạn / Credit code does not belong to your account");
+            }
+            if (appliedCredit.getStatus() != com.team4.sportscenter.modules.support.enums.CreditStatus.ACTIVE) {
+                throw new IllegalArgumentException("Mã tín dụng đã hết hạn hoặc đã được sử dụng / Credit is no longer active");
+            }
+            if (appliedCredit.getExpiryDate().isBefore(java.time.LocalDate.now())) {
+                appliedCredit.setStatus(com.team4.sportscenter.modules.support.enums.CreditStatus.EXPIRED);
+                userCreditRepository.save(appliedCredit);
+                throw new IllegalArgumentException("Mã tín dụng đã quá hạn sử dụng / Credit code has expired");
+            }
+            creditDiscount = appliedCredit.getRemainingAmount();
+            if (creditDiscount.compareTo(totalAmount) >= 0) {
+                creditDiscount = totalAmount;
+                totalAmount = BigDecimal.ZERO;
+            } else {
+                totalAmount = totalAmount.subtract(creditDiscount);
+            }
+        }
+
         Invoice invoice = Invoice.builder()
                 .user(user)
                 .totalAmount(totalAmount)
@@ -160,6 +192,17 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
                 .createdAt(LocalDateTime.now())
                 .build();
         invoice = invoiceRepository.saveAndFlush(invoice);
+
+        if (appliedCredit != null) {
+            appliedCredit.setUsedInvoiceId(invoice.getInvoiceId());
+            if (totalAmount.signum() == 0) {
+                appliedCredit.setRemainingAmount(appliedCredit.getRemainingAmount().subtract(creditDiscount));
+                if (appliedCredit.getRemainingAmount().signum() <= 0) {
+                    appliedCredit.setStatus(com.team4.sportscenter.modules.support.enums.CreditStatus.USED);
+                }
+            }
+            userCreditRepository.save(appliedCredit);
+        }
 
         for(var booking:pendingBookings)jdbc.update("INSERT INTO INVOICE_BOOKINGS(invoice_id,booking_id) VALUES(?,?)",invoice.getInvoiceId(),booking.getBookingId());
         for (Map.Entry<GymClass, List<Booking>> entry : groupedByClass.entrySet()) {
@@ -190,7 +233,7 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
                 .paymentDate(LocalDateTime.now())
                 .build();
         paymentRepository.saveAndFlush(payment);
-        if(totalAmount.signum()==0){finishPayment(invoice,true,"FREE-"+invoice.getInvoiceId());return "/member/memberships";}
+        if(totalAmount.signum()==0){finishPayment(invoice,true,appliedCredit!=null?("CREDIT-"+appliedCredit.getCreditCode()):("FREE-"+invoice.getInvoiceId()));return "/member/memberships";}
 
 
         if ("momo".equalsIgnoreCase(paymentMethod)) {
@@ -389,7 +432,15 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     private void finishPayment(Invoice invoice,boolean success,String transaction){
         if(Set.of("PAID","REVIEW").contains(invoice.getStatus()))return;
         var payment=paymentRepository.findAll().stream().filter(p->p.getInvoice().getInvoiceId().equals(invoice.getInvoiceId())).findFirst().orElseThrow();
-        if(!success){invoice.setStatus("FAILED");payment.setStatus("FAILED");invoiceRepository.save(invoice);paymentRepository.save(payment);return;}
+        var maybeCredit = userCreditRepository.findByUsedInvoiceId(invoice.getInvoiceId());
+        if(!success){
+            if (maybeCredit.isPresent()) {
+                var c = maybeCredit.get();
+                c.setUsedInvoiceId(null);
+                userCreditRepository.save(c);
+            }
+            invoice.setStatus("FAILED");payment.setStatus("FAILED");invoiceRepository.save(invoice);paymentRepository.save(payment);return;
+        }
         payment.setStatus("COMPLETED");payment.setTransactionNo(transaction);paymentRepository.save(payment);
         String issue=null;
         var purchased=userMembershipRepository.findAll().stream().filter(m->invoice.getInvoiceId().equals(m.getCheckoutInvoiceId())).toList();
@@ -414,6 +465,14 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
             m.setStartDate(start);m.setEndDate(start.plusDays(m.purchasedDuration()-1));m.setStatus("ACTIVE");m.setPurchaseCompletedAt(LocalDateTime.now());m.setPurchaseSource("ONLINE");userMembershipRepository.save(m);active.add(m);
         }
         invoice.setStatus("PAID");invoiceRepository.save(invoice);
+        if (maybeCredit.isPresent()) {
+            var c = maybeCredit.get();
+            if (c.getStatus() == com.team4.sportscenter.modules.support.enums.CreditStatus.ACTIVE) {
+                c.setStatus(com.team4.sportscenter.modules.support.enums.CreditStatus.USED);
+                c.setRemainingAmount(BigDecimal.ZERO);
+                userCreditRepository.save(c);
+            }
+        }
         notificationService.createNotification(invoice.getUser().getEmail(),"Payment Successful","Your invoice "+invoice.getInvoiceId()+" is complete.","PAYMENT");
         if (!purchased.isEmpty()) {
             for (var m : purchased) {

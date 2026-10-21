@@ -124,6 +124,26 @@ export const memberService = {
   deleteAllNotifications: async () => {
     return await axiosClient.delete('/v1/notifications');
   },
+
+  getCancelClassPreview: async (classId) => {
+    return await axiosClient.get(`/v1/member/support/classes/${classId}/cancel-preview`);
+  },
+
+  cancelClassDirectly: async (classId) => {
+    return await axiosClient.post(`/v1/member/support/classes/${classId}/cancel-direct`, {});
+  },
+
+  createSupportRequest: async (payload) => {
+    return await axiosClient.post('/v1/member/support/requests', payload);
+  },
+
+  getMySupportRequests: async () => {
+    return await axiosClient.get('/v1/member/support/requests');
+  },
+
+  getMyCredits: async () => {
+    return await axiosClient.get('/v1/member/support/credits');
+  },
 };
 
 export default memberService;

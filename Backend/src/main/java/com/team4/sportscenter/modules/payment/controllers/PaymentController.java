@@ -31,7 +31,8 @@ public class PaymentController {
         String email = authentication.getName();
         String ipAddress = VNPayConfig.getIpAddress(request);
         String paymentMethod = (body != null && body.containsKey("paymentMethod")) ? body.get("paymentMethod") : "vnpay";
-        String paymentUrl = paymentService.checkout(email, ipAddress, paymentMethod);
+        String creditCode = (body != null && body.containsKey("creditCode")) ? body.get("creditCode") : null;
+        String paymentUrl = paymentService.checkout(email, ipAddress, paymentMethod, creditCode);
         return ResponseEntity.ok(Map.of("paymentUrl", paymentUrl,"completed",paymentUrl.startsWith("/member/")));
     }
     

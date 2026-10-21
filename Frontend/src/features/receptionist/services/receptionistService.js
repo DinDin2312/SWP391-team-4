@@ -104,6 +104,26 @@ export const receptionistService = {
   getAllInvoices: async () => {
     return await axiosClient.get('/receptionist/invoices');
   },
+
+  getSupportRequests: async ({ status, category, keyword, page = 0, size = 10 } = {}) => {
+    const params = { page, size };
+    if (status && status !== 'ALL') params.status = status;
+    if (category && category !== 'ALL') params.category = category;
+    if (keyword && keyword.trim()) params.keyword = keyword.trim();
+    return await axiosClient.get('/receptionist/support/requests', { params });
+  },
+
+  getSupportStats: async () => {
+    return await axiosClient.get('/receptionist/support/stats');
+  },
+
+  respondSupportRequest: async (requestId, payload) => {
+    return await axiosClient.put(`/receptionist/support/requests/${requestId}/respond`, payload);
+  },
+
+  createSupportOnBehalf: async (memberUserId, payload) => {
+    return await axiosClient.post(`/receptionist/support/requests/on-behalf/${memberUserId}`, payload);
+  },
 };
 
 export default receptionistService;

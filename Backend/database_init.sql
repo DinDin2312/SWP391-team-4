@@ -302,3 +302,47 @@ INSERT INTO `TRAINEE_ASSESSMENTS` (`assessment_id`, `coach_id`, `user_id`, `sche
 (1, 3, 6, 1, 1, NULL, 'Đánh giá buổi tập Gym đầu tiên', 72.50, 175.00, 21.0, 32.50, 4, 5, 'Học viên có thể lực nền tảng khá, tư thế squat và deadlift cơ bản đúng kỹ thuật. Cần chú ý hít thở đều.', 'Tập trung siết cơ bụng khi nâng tạ. Uống thêm nước và bổ sung thêm đạm sau buổi tập.', '2026-10-01 08:00:00'),
 (2, 4, 7, 4, 4, NULL, 'Kiểm tra độ dẻo dai và hơi thở Yoga', 54.00, 162.00, 24.5, 21.00, 5, 5, 'Khả năng giữ thăng bằng rất tốt, kiểm soát hơi thở đều đặn trong các tư thế chiến binh và uốn lưng.', 'Tiếp tục duy trì giãn cơ mỗi sáng 15 phút tại nhà để cải thiện khớp háng.', '2026-10-02 19:45:00');
 
+
+-- ================== 5. PHIẾU HỖ TRỢ HỘI VIÊN & CREDIT BẢO LƯU ==================
+CREATE TABLE IF NOT EXISTS `SUPPORT_REQUESTS` (
+    `request_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `user_id` INT NOT NULL,
+    `class_id` INT DEFAULT NULL,
+    `category` VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
+    `title` VARCHAR(255) NOT NULL,
+    `content` TEXT NOT NULL,
+    `status` VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    `priority` VARCHAR(20) NOT NULL DEFAULT 'NORMAL',
+    `response_note` TEXT DEFAULT NULL,
+    `responded_by` INT DEFAULT NULL,
+    `responded_at` DATETIME DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY `idx_support_user` (`user_id`, `created_at`),
+    KEY `idx_support_status` (`status`),
+    KEY `idx_support_category` (`category`)
+);
+
+ALTER TABLE `SUPPORT_REQUESTS` ADD CONSTRAINT `fk_support_user` FOREIGN KEY (`user_id`) REFERENCES `USERS` (`user_id`) ON DELETE CASCADE;
+ALTER TABLE `SUPPORT_REQUESTS` ADD CONSTRAINT `fk_support_class` FOREIGN KEY (`class_id`) REFERENCES `CLASSES` (`class_id`) ON DELETE SET NULL;
+ALTER TABLE `SUPPORT_REQUESTS` ADD CONSTRAINT `fk_support_responder` FOREIGN KEY (`responded_by`) REFERENCES `USERS` (`user_id`) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS `USER_CREDITS` (
+    `credit_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `user_id` INT NOT NULL,
+    `request_id` INT DEFAULT NULL,
+    `class_id` INT DEFAULT NULL,
+    `credit_code` VARCHAR(50) NOT NULL UNIQUE,
+    `amount` DECIMAL(10,2) NOT NULL,
+    `remaining_amount` DECIMAL(10,2) NOT NULL,
+    `reason` VARCHAR(255) DEFAULT NULL,
+    `expiry_date` DATE NOT NULL,
+    `status` VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY `idx_credit_user` (`user_id`, `status`),
+    KEY `idx_credit_code` (`credit_code`)
+);
+
+ALTER TABLE `USER_CREDITS` ADD CONSTRAINT `fk_credit_user` FOREIGN KEY (`user_id`) REFERENCES `USERS` (`user_id`) ON DELETE CASCADE;
+ALTER TABLE `USER_CREDITS` ADD CONSTRAINT `fk_credit_request` FOREIGN KEY (`request_id`) REFERENCES `SUPPORT_REQUESTS` (`request_id`) ON DELETE SET NULL;
+ALTER TABLE `USER_CREDITS` ADD CONSTRAINT `fk_credit_class` FOREIGN KEY (`class_id`) REFERENCES `CLASSES` (`class_id`) ON DELETE SET NULL;
