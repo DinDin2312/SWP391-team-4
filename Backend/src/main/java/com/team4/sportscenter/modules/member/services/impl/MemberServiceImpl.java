@@ -198,7 +198,7 @@ public class MemberServiceImpl implements MemberService {
         List<Schedule> schedules = scheduleRepository.findAvailableSchedules(currentTime);
 
         Map<GymClass, List<Schedule>> classSchedules = schedules.stream()
-                .collect(Collectors.groupingBy(Schedule::getGymClass));
+                .collect(Collectors.groupingBy(Schedule::getGymClass, java.util.LinkedHashMap::new, Collectors.toList()));
 
         // Tối ưu Batch Query: gom số lượng slot đã đặt của tất cả schedules trong 1 query duy nhất (thay vì N+1 queries)
         Map<Integer, Integer> bookedSlotsBySchedule = bookingRepository.countAllBookedSlotsGroupedBySchedule().stream()
@@ -268,7 +268,13 @@ public class MemberServiceImpl implements MemberService {
                     .build());
         }
 
-        response.sort(Comparator.comparing(AvailableClassResponse::getNextSessionTime));
+        response.sort(Comparator.comparing(
+                AvailableClassResponse::getNextSessionTime,
+                Comparator.nullsLast(Comparator.naturalOrder())
+        ).thenComparing(
+                AvailableClassResponse::getClassId,
+                Comparator.nullsLast(Comparator.naturalOrder())
+        ));
         return response;
     }
 

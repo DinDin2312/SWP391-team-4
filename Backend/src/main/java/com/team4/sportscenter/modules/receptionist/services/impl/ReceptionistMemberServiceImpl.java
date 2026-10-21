@@ -1738,6 +1738,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         results.sort(Comparator.comparing(
                 com.team4.sportscenter.modules.member.dtos.response.AvailableClassResponse::getNextSessionTime,
                 Comparator.nullsLast(Comparator.naturalOrder())
+        ).thenComparing(
+                com.team4.sportscenter.modules.member.dtos.response.AvailableClassResponse::getClassId,
+                Comparator.nullsLast(Comparator.naturalOrder())
         ));
         return results;
     }

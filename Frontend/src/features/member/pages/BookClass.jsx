@@ -76,16 +76,26 @@ const BookClass = () => {
     return () => window.removeEventListener('nexusAiHighlight', handleAiHighlight);
   }, [loading, courses]);
 
+  const sortCoursesStably = (list) => {
+    if (!Array.isArray(list)) return [];
+    return [...list].sort((a, b) => {
+      const timeDiff = new Date(a.nextSessionTime).getTime() - new Date(b.nextSessionTime).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      return (Number(a.classId) || 0) - (Number(b.classId) || 0);
+    });
+  };
+
   const fetchCourses = async (isInitialLoad = false) => {
     try {
       const token = localStorage.getItem('token');
       const res = await axios.get('http://localhost:8080/api/v1/member/available-classes', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setCourses(res.data);
+      const stableList = sortCoursesStably(res.data);
+      setCourses(stableList);
 
-      if (res.data.length > 0) {
-        const uniqueDates = [...new Set(res.data.map(s => new Date(s.nextSessionTime).toDateString()))].sort((a, b) => new Date(a) - new Date(b));
+      if (stableList.length > 0) {
+        const uniqueDates = [...new Set(stableList.map(s => new Date(s.nextSessionTime).toDateString()))].sort((a, b) => new Date(a) - new Date(b));
         setSelectedDate(prev => {
           if (isInitialLoad || !prev) return uniqueDates[0];
           return uniqueDates.includes(prev) ? prev : uniqueDates[0];
@@ -142,12 +152,12 @@ const BookClass = () => {
     return `${prefix} (${shortDate})`;
   };
 
-  const filteredCourses = courses.filter(s => {
+  const filteredCourses = sortCoursesStably(courses.filter(s => {
     const matchesDate = new Date(s.nextSessionTime).toDateString() === selectedDate;
     const matchesSearch = s.className.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           s.coachName.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesDate && matchesSearch;
-  });
+  }));
 
   return (
     <div className="flex flex-col w-full pb-10">

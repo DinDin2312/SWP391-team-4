@@ -1,24 +1,29 @@
 import React, { useMemo } from "react";
 
 /**
- * Meteors that fall diagonally (top-left -> bottom-right) across the WHOLE card.
- * - Self-contained clipping layer (absolute inset-0 overflow-hidden), so the parent
- *   only needs `position: relative`.
- * - Spawn positions are in % of the card, spread evenly, so they cover the card
- *   regardless of its width/height (old version used fixed px from the top edge only,
- *   which made meteors cluster in the top-right corner).
- * - Negative delays: meteors are already mid-flight on mount, no static dots waiting.
+ * Meteors that fall diagonally at 45° (top-left -> bottom-right) across the card.
+ * Starts from the top-left corner/edges of the item.
  */
 export const Meteors = ({ number = 8, className = "" }) => {
   const meteors = useMemo(
     () =>
       Array.from({ length: number }, (_, idx) => {
-        const duration = 14 + Math.random() * 6; // 14s - 20s: calm glide
+        // Natural staggered speed: 3.5s to 6.5s
+        const duration = 3.5 + Math.random() * 3;
+        // Distribute spawn points along the top-left corner / entrance boundary:
+        // Half start along the top-left top edge (-5% to 40%)
+        // Half start along the top-left left edge (-8% to 0%, top 0% to 35%)
+        const isTopEdge = idx % 2 === 0;
+        const left = isTopEdge
+          ? -5 + Math.random() * 45
+          : -8 - Math.random() * 5;
+        const top = isTopEdge
+          ? -8 - Math.random() * 5
+          : Math.random() * 35;
+
         return {
-          // Near-vertical fall with slight right drift (~70% of card width over its full
-          // height), so spread starts evenly from -40% to 95% of the card width.
-          left: -40 + (idx / Math.max(number - 1, 1)) * 135 + (Math.random() * 8 - 4),
-          top: -15 + Math.random() * 35, // -15% .. 20% of card height
+          left,
+          top,
           duration,
           delay: -Math.random() * duration,
         };
