@@ -102,6 +102,39 @@ const ResolutionActionCard = ({
   );
 };
 
+const NON_CANCELLATION_RESOLUTIONS = {
+  COACH_FEEDBACK: {
+    primary: { actionType: 'ACKNOWLEDGE_AND_TRAIN', icon: UserCheck, titleKey: 'Ghi nhận & Làm việc với HLV', descKey: 'Nhắc nhở HLV, làm việc cùng Trưởng bộ môn để nâng cao chất lượng bài giảng.' },
+    secondary: { actionType: 'TRANSFER_CLASS_SUGGESTION', icon: BookOpen, titleKey: 'Đề xuất đổi lớp / HLV khác', descKey: 'Tư vấn hỗ trợ học viên chuyển sang lớp của HLV khác phù hợp với phong cách học.' },
+    escalate: { titleKey: 'Chuyển Quản lý Chuyên môn', descKey: 'Phản ánh nghiêm trọng về vi phạm kỷ luật hoặc thái độ cần cấp quản lý xử lý.' },
+    reject: { titleKey: 'Đóng phản ánh (Không có cơ sở)', descKey: 'Sau khi kiểm tra camera/lịch sử thấy HLV thực hiện đúng giáo án chuẩn.' }
+  },
+  FACILITY_ISSUE: {
+    primary: { actionType: 'ASSIGN_MAINTENANCE', icon: Wrench, titleKey: 'Báo Kỹ thuật / Bảo trì ngay', descKey: 'Chuyển ngay lệnh sửa chữa tới đội bảo trì, gắn biển kiểm tra thiết bị.' },
+    secondary: { actionType: 'SCHEDULED_FIX', icon: Clock, titleKey: 'Thông báo lịch sửa chữa', descKey: 'Báo lịch máy đang sửa chữa, dự kiến hoàn thành đưa vào sử dụng trong 24-48h.' },
+    escalate: { titleKey: 'Chuyển Quản lý CSVC (Thay mới)', descKey: 'Thiết bị hỏng nặng không thể sửa, cần Quản lý duyệt mua mới thay thế.' },
+    reject: { titleKey: 'Đã kiểm tra (Máy hoạt động tốt)', descKey: 'Kỹ thuật đã test máy bình thường, lễ tân sẽ hướng dẫn hội viên thao tác đúng.' }
+  },
+  SCHEDULE_SUPPORT: {
+    primary: { actionType: 'APPROVE_SCHEDULE_CHANGE', icon: Calendar, titleKey: 'Hỗ trợ đổi buổi / Xếp lịch bù', descKey: 'Lễ tân đã cập nhật lịch học mới cho học viên trên hệ thống quản lý.' },
+    secondary: { actionType: 'GUIDE_BOOKING', icon: BookOpen, titleKey: 'Hướng dẫn tự đổi lịch trên App', descKey: 'Hướng dẫn học viên chủ động đổi lịch trên app trước 24h quy định.' },
+    escalate: { titleKey: 'Chuyển Quản lý (Đặc cách xếp ca)', descKey: 'Yêu cầu xếp ca ngoài lịch học chuẩn cần cấp quản lý phê duyệt.' },
+    reject: { titleKey: 'Từ chối đổi lịch (Hết chỗ / Quá hạn)', descKey: 'Ca học mong muốn đã đầy sĩ số hoặc báo trễ không thỏa mãn điều kiện.' }
+  },
+  COMPLAINT: {
+    primary: { actionType: 'RESOLVE_COMPLAINT', icon: CheckCircle2, titleKey: 'Tiếp nhận xin lỗi & Khắc phục sự cố', descKey: 'Xin lỗi học viên, ghi nhận thiếu sót và đưa ra biện pháp khắc phục quy trình.' },
+    secondary: { actionType: 'CONTACT_DIRECTLY', icon: Phone, titleKey: 'Đã liên hệ trực tiếp hòa giải', descKey: 'Lễ tân/Trưởng ca đã gặp trực tiếp hoặc gọi điện trao đổi thỏa đáng với hội viên.' },
+    escalate: { titleKey: 'Chuyển Quản lý Trung tâm', descKey: 'Khiếu nại phức tạp cần cấp Quản lý trung tâm trực tiếp vào cuộc.' },
+    reject: { titleKey: 'Bác bỏ khiếu nại (Không vi phạm)', descKey: 'Xác minh quy trình đúng quy chế, không có sai sót từ phía trung tâm.' }
+  },
+  GENERAL_INQUIRY: {
+    primary: { actionType: 'ANSWER_INQUIRY', icon: CheckCircle2, titleKey: 'Giải đáp & Hướng dẫn hội viên', descKey: 'Phản hồi câu trả lời giải đáp đầy đủ thông tin hội viên cần hỗ trợ.' },
+    secondary: { actionType: 'CONTACT_DIRECTLY', icon: Phone, titleKey: 'Đã tư vấn trực tiếp / Qua điện thoại', descKey: 'Lễ tân đã liên hệ trực tiếp hỗ trợ chi tiết tại quầy hoặc qua hotline.' },
+    escalate: { titleKey: 'Chuyển Quản lý giải đáp', descKey: 'Câu hỏi chính sách vượt quá thẩm quyền của nhân viên lễ tân.' },
+    reject: { titleKey: 'Đóng yêu cầu hỗ trợ', descKey: 'Nội dung đã được xử lý hoặc đóng theo yêu cầu hội viên.' }
+  }
+};
+
 const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSuccess }) => {
   useLanguage();
 
@@ -349,161 +382,13 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
           isMemberChoice: false
         }
       ];
-    } else if (request.category === 'COACH_FEEDBACK') {
-      actions = [
-        {
-          actionType: 'ACKNOWLEDGE_AND_TRAIN',
-          icon: UserCheck,
-          title: t('Ghi nhận & Làm việc với HLV'),
-          desc: t('Nhắc nhở HLV, làm việc cùng Trưởng bộ môn để nâng cao chất lượng bài giảng.'),
-          color: 'emerald'
-        },
-        {
-          actionType: 'TRANSFER_CLASS_SUGGESTION',
-          icon: BookOpen,
-          title: t('Đề xuất đổi lớp / HLV khác'),
-          desc: t('Tư vấn hỗ trợ học viên chuyển sang lớp của HLV khác phù hợp với phong cách học.'),
-          color: 'blue'
-        },
-        {
-          actionType: 'ESCALATE',
-          icon: ArrowUpRight,
-          title: t('Chuyển Quản lý Chuyên môn'),
-          desc: t('Phản ánh nghiêm trọng về vi phạm kỷ luật hoặc thái độ cần cấp quản lý xử lý.'),
-          color: 'purple'
-        },
-        {
-          actionType: 'REJECT',
-          icon: X,
-          title: t('Đóng phản ánh (Không có cơ sở)'),
-          desc: t('Sau khi kiểm tra camera/lịch sử thấy HLV thực hiện đúng giáo án chuẩn.'),
-          color: 'rose'
-        }
-      ];
-    } else if (request.category === 'FACILITY_ISSUE') {
-      actions = [
-        {
-          actionType: 'ASSIGN_MAINTENANCE',
-          icon: Wrench,
-          title: t('Báo Kỹ thuật / Bảo trì ngay'),
-          desc: t('Chuyển ngay lệnh sửa chữa tới đội bảo trì, gắn biển kiểm tra thiết bị.'),
-          color: 'emerald'
-        },
-        {
-          actionType: 'SCHEDULED_FIX',
-          icon: Clock,
-          title: t('Thông báo lịch sửa chữa'),
-          desc: t('Báo lịch máy đang sửa chữa, dự kiến hoàn thành đưa vào sử dụng trong 24-48h.'),
-          color: 'blue'
-        },
-        {
-          actionType: 'ESCALATE',
-          icon: ArrowUpRight,
-          title: t('Chuyển Quản lý CSVC (Thay mới)'),
-          desc: t('Thiết bị hỏng nặng không thể sửa, cần Quản lý duyệt mua mới thay thế.'),
-          color: 'purple'
-        },
-        {
-          actionType: 'REJECT',
-          icon: X,
-          title: t('Đã kiểm tra (Máy hoạt động tốt)'),
-          desc: t('Kỹ thuật đã test máy bình thường, lễ tân sẽ hướng dẫn hội viên thao tác đúng.'),
-          color: 'rose'
-        }
-      ];
-    } else if (request.category === 'SCHEDULE_SUPPORT') {
-      actions = [
-        {
-          actionType: 'APPROVE_SCHEDULE_CHANGE',
-          icon: Calendar,
-          title: t('Hỗ trợ đổi buổi / Xếp lịch bù'),
-          desc: t('Lễ tân đã cập nhật lịch học mới cho học viên trên hệ thống quản lý.'),
-          color: 'emerald'
-        },
-        {
-          actionType: 'GUIDE_BOOKING',
-          icon: BookOpen,
-          title: t('Hướng dẫn tự đổi lịch trên App'),
-          desc: t('Hướng dẫn học viên chủ động đổi lịch trên app trước 24h quy định.'),
-          color: 'blue'
-        },
-        {
-          actionType: 'ESCALATE',
-          icon: ArrowUpRight,
-          title: t('Chuyển Quản lý (Đặc cách xếp ca)'),
-          desc: t('Yêu cầu xếp ca ngoài lịch học chuẩn cần cấp quản lý phê duyệt.'),
-          color: 'purple'
-        },
-        {
-          actionType: 'REJECT',
-          icon: X,
-          title: t('Từ chối đổi lịch (Hết chỗ / Quá hạn)'),
-          desc: t('Ca học mong muốn đã đầy sĩ số hoặc báo trễ không thỏa mãn điều kiện.'),
-          color: 'rose'
-        }
-      ];
-    } else if (request.category === 'COMPLAINT') {
-      actions = [
-        {
-          actionType: 'RESOLVE_COMPLAINT',
-          icon: CheckCircle2,
-          title: t('Tiếp nhận xin lỗi & Khắc phục sự cố'),
-          desc: t('Xin lỗi học viên, ghi nhận thiếu sót và đưa ra biện pháp khắc phục quy trình.'),
-          color: 'emerald'
-        },
-        {
-          actionType: 'CONTACT_DIRECTLY',
-          icon: Phone,
-          title: t('Đã liên hệ trực tiếp hòa giải'),
-          desc: t('Lễ tân/Trưởng ca đã gặp trực tiếp hoặc gọi điện trao đổi thỏa đáng với hội viên.'),
-          color: 'blue'
-        },
-        {
-          actionType: 'ESCALATE',
-          icon: ArrowUpRight,
-          title: t('Chuyển Quản lý Trung tâm'),
-          desc: t('Khiếu nại phức tạp cần cấp Quản lý trung tâm trực tiếp vào cuộc.'),
-          color: 'purple'
-        },
-        {
-          actionType: 'REJECT',
-          icon: X,
-          title: t('Bác bỏ khiếu nại (Không vi phạm)'),
-          desc: t('Xác minh quy trình đúng quy chế, không có sai sót từ phía trung tâm.'),
-          color: 'rose'
-        }
-      ];
     } else {
-      // 6. GENERAL INQUIRY (Default)
+      const cfg = NON_CANCELLATION_RESOLUTIONS[request.category] || NON_CANCELLATION_RESOLUTIONS.GENERAL_INQUIRY;
       actions = [
-        {
-          actionType: 'ANSWER_INQUIRY',
-          icon: CheckCircle2,
-          title: t('Giải đáp & Hướng dẫn hội viên'),
-          desc: t('Phản hồi câu trả lời giải đáp đầy đủ thông tin hội viên cần hỗ trợ.'),
-          color: 'emerald'
-        },
-        {
-          actionType: 'CONTACT_DIRECTLY',
-          icon: Phone,
-          title: t('Đã tư vấn trực tiếp / Qua điện thoại'),
-          desc: t('Lễ tân đã liên hệ trực tiếp hỗ trợ chi tiết tại quầy hoặc qua hotline.'),
-          color: 'blue'
-        },
-        {
-          actionType: 'ESCALATE',
-          icon: ArrowUpRight,
-          title: t('Chuyển Quản lý giải đáp'),
-          desc: t('Câu hỏi chính sách vượt quá thẩm quyền của nhân viên lễ tân.'),
-          color: 'purple'
-        },
-        {
-          actionType: 'REJECT',
-          icon: X,
-          title: t('Đóng yêu cầu hỗ trợ'),
-          desc: t('Nội dung đã được xử lý hoặc đóng theo yêu cầu hội viên.'),
-          color: 'rose'
-        }
+        { ...cfg.primary, color: 'emerald', title: t(cfg.primary.titleKey), desc: t(cfg.primary.descKey) },
+        { ...cfg.secondary, color: 'blue', title: t(cfg.secondary.titleKey), desc: t(cfg.secondary.descKey) },
+        { actionType: 'ESCALATE', icon: ArrowUpRight, color: 'purple', title: t(cfg.escalate.titleKey), desc: t(cfg.escalate.descKey) },
+        { actionType: 'REJECT', icon: X, color: 'rose', title: t(cfg.reject.titleKey), desc: t(cfg.reject.descKey) }
       ];
     }
 
@@ -539,7 +424,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
         <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
-              <CreditCard className="w-5 h-5" />
+              <CheckCircle2 className="w-5 h-5" />
             </div>
             <div>
               <h2 id="respond-modal-title" className="text-lg font-bold text-[var(--text)]">
@@ -827,75 +712,64 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                 </div>
               </div>
 
-              {/* Conditional Credit Voucher fields */}
-              {resolutionType === 'ISSUE_CREDIT' && (
-                <div className="p-4 rounded-xl bg-[var(--surface-hover)] border-2 border-emerald-500/50 space-y-3">
+              {/* Conditional Amount & Benefit Fields (Credit Voucher or Cash Refund) */}
+              {(resolutionType === 'ISSUE_CREDIT' || resolutionType === 'CASH_REFUND') && (
+                <div
+                  className={`p-4 rounded-xl bg-[var(--surface-hover)] border-2 space-y-3 ${
+                    resolutionType === 'ISSUE_CREDIT' ? 'border-emerald-500/50' : 'border-purple-500/50'
+                  }`}
+                >
+                  {resolutionType === 'CASH_REFUND' && (
+                    <div className="flex items-center gap-2 text-xs font-extrabold text-[var(--text)]">
+                      <CheckCircle2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      <span>{t('Xác nhận lệnh hoàn tiền mặt / chuyển khoản (Thẩm quyền Quản lý)')}</span>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div className="space-y-1.5">
-                      <label htmlFor="credit-amount-input" className="block text-xs font-black text-[var(--text)]">
-                        {t('Voucher Credit Amount (VND)')} <span className="text-red-500 font-bold">*</span>
+                      <label htmlFor="resolution-amount-input" className="block text-xs font-black text-[var(--text)]">
+                        {resolutionType === 'ISSUE_CREDIT' ? t('Voucher Credit Amount (VND)') : t('Số tiền duyệt hoàn (VNĐ)')}{' '}
+                        <span className="text-red-500 font-bold">*</span>
                       </label>
                       <input
-                        id="credit-amount-input"
+                        id="resolution-amount-input"
                         type="number"
                         min="0"
                         step="any"
                         value={creditAmount}
                         onChange={(e) => handleAmountChange(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-[var(--text)] font-black text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className={`w-full px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-[var(--text)] font-black text-base focus:outline-none focus:ring-2 ${
+                          resolutionType === 'ISSUE_CREDIT' ? 'focus:ring-emerald-500' : 'focus:ring-purple-500'
+                        }`}
                         required
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <label htmlFor="credit-validity-input" className="block text-xs font-black text-[var(--text)]">
-                        {t('Validity (Days)')} <span className="text-red-500 font-bold">*</span>
-                      </label>
-                      <input
-                        id="credit-validity-input"
-                        type="number"
-                        min="7"
-                        max="365"
-                        value={validDays}
-                        onChange={(e) => setValidDays(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-[var(--text)] font-black text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Conditional Cash Refund fields */}
-              {resolutionType === 'CASH_REFUND' && (
-                <div className="p-4 rounded-xl bg-[var(--surface-hover)] border-2 border-purple-500/50 space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-extrabold text-[var(--text)]">
-                    <CheckCircle2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                    <span>{t('Xác nhận lệnh hoàn tiền mặt / chuyển khoản (Thẩm quyền Quản lý)')}</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    <div className="space-y-1.5">
-                      <label htmlFor="cash-refund-amount" className="block text-xs font-black text-[var(--text)]">
-                        {t('Số tiền duyệt hoàn (VNĐ)')} <span className="text-red-500 font-bold">*</span>
-                      </label>
-                      <input
-                        id="cash-refund-amount"
-                        type="number"
-                        min="0"
-                        step="any"
-                        value={creditAmount}
-                        onChange={(e) => handleAmountChange(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-[var(--text)] font-black text-base focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-black text-[var(--text)]">
-                        {t('Hình thức chi trả')}
-                      </label>
-                      <div className="px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-xs font-bold text-[var(--text)] flex items-center h-[46px]">
-                        {t('Tiền mặt tại quầy / Chuyển khoản ngân hàng')}
+                    {resolutionType === 'ISSUE_CREDIT' ? (
+                      <div className="space-y-1.5">
+                        <label htmlFor="credit-validity-input" className="block text-xs font-black text-[var(--text)]">
+                          {t('Validity (Days)')} <span className="text-red-500 font-bold">*</span>
+                        </label>
+                        <input
+                          id="credit-validity-input"
+                          type="number"
+                          min="7"
+                          max="365"
+                          value={validDays}
+                          onChange={(e) => setValidDays(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-[var(--text)] font-black text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          required
+                        />
                       </div>
-                    </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-black text-[var(--text)]">
+                          {t('Hình thức chi trả')}
+                        </label>
+                        <div className="px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-xs font-bold text-[var(--text)] flex items-center h-[46px]">
+                          {t('Tiền mặt tại quầy / Chuyển khoản ngân hàng')}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -966,17 +840,9 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                   disabled={submitting || !responseNote.trim()}
                   className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 disabled:opacity-50"
                 >
-                  {submitting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>{t('Processing...')}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      <span>{t('Submit Resolution & Notify Member')}</span>
-                    </>
-                  )}
+                  {submitting && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  {!submitting && <Send className="w-4 h-4" />}
+                  <span>{submitting ? t('Processing...') : t('Submit Resolution & Notify Member')}</span>
                 </button>
               </>
             )}
