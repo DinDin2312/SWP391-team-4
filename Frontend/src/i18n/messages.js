@@ -2915,7 +2915,9 @@ const supportTranslations = [
   ["Warning: Revoking will invalidate the granted credit voucher in the member's wallet and set the ticket to Rejected. If the voucher has already been spent, revocation will be blocked.","Cảnh báo: Thao tác này sẽ vô hiệu hóa mã voucher tín dụng trong ví của hội viên và chuyển đơn sang trạng thái Đã từ chối. Nếu voucher đã được học viên sử dụng, hệ thống sẽ chặn thu hồi."],
   ["Please provide a reason for revoking the approval.","Vui lòng nhập lý do thu hồi phê duyệt."],
   ["Failed to revoke approval.","Không thể thu hồi phê duyệt."],
-  ["Approval decision revoked successfully.","Đã thu hồi quyết định phê duyệt thành công."]
+  ["Approval decision revoked successfully.","Đã thu hồi quyết định phê duyệt thành công."],
+  ["Thiết lập Voucher Tín Dụng Hoàn Trả","Thiết lập Voucher Tín Dụng Hoàn Trả"],
+  ["Set Up Credit Refund Voucher","Thiết lập Voucher Tín Dụng Hoàn Trả"]
 ];
 for (const [en, vi] of supportTranslations) {
   translations[en] = [en, vi];
