@@ -52,6 +52,40 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
     }
   };
 
+  const isClosed = request?.status === 'APPROVED' || request?.status === 'RESOLVED' || request?.status === 'REJECTED';
+  const isEscalatedForReceptionist = !isManager && request?.status === 'ESCALATED';
+  const isReadOnly = isClosed || isEscalatedForReceptionist;
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'APPROVED':
+      case 'RESOLVED':
+        return (
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" /> {t('Resolved')}
+          </span>
+        );
+      case 'ESCALATED':
+        return (
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 inline-flex items-center gap-1">
+            <ArrowUpRight className="w-3.5 h-3.5" /> {t('Escalated')}
+          </span>
+        );
+      case 'REJECTED':
+        return (
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 inline-flex items-center gap-1">
+            <X className="w-3.5 h-3.5" /> {t('Rejected')}
+          </span>
+        );
+      default:
+        return (
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 inline-flex items-center gap-1">
+            <Clock className="w-3.5 h-3.5" /> {t('Pending')}
+          </span>
+        );
+    }
+  };
+
   if (!isOpen || !request) return null;
 
   const handleSubmit = async (e) => {
@@ -117,7 +151,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
             </div>
             <div>
               <h2 id="respond-modal-title" className="text-lg font-bold text-[var(--text)]">
-                {t('Resolve Support Ticket')} #{request.requestId}
+                {isReadOnly ? t('Support Ticket Details') : t('Resolve Support Ticket')} #{request.requestId}
               </h2>
               <p className="text-xs text-[var(--text-muted)]">
                 {request.title} &bull; {t('Priority:')} <span className="font-semibold">{getPriorityLabel(request.priority)}</span>
@@ -212,325 +246,422 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
             </div>
           )}
 
-          {/* Resolution Action Selector */}
-          <div className="space-y-2">
-            <label className="block text-xs font-bold text-[var(--text)]">
-              {t('Select Resolution Action')} <span className="text-red-500">*</span>
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {request.category === 'CLASS_CANCELLATION' ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setResolutionType('ISSUE_CREDIT')}
-                    className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-                      resolutionType === 'ISSUE_CREDIT'
-                        ? 'border-emerald-500 bg-emerald-500/15 text-emerald-950 dark:text-emerald-100 shadow-sm'
-                        : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/40'
-                    }`}
-                  >
-                    <span className={`font-bold text-xs flex items-center justify-between ${
-                      resolutionType === 'ISSUE_CREDIT'
-                        ? 'text-emerald-700 dark:text-emerald-300'
-                        : 'text-[var(--text)]'
-                    }`}>
-                      <span className="flex items-center gap-1.5">
-                        <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        {t('Issue Credit Voucher (Recommended)')}
-                      </span>
-                      {resolutionType === 'ISSUE_CREDIT' && (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      )}
-                    </span>
-                    <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
-                      resolutionType === 'ISSUE_CREDIT'
-                        ? 'text-emerald-900 dark:text-emerald-200'
-                        : 'text-[var(--text-muted)]'
-                    }`}>
-                      {t('Generates 60-day voucher code for member to re-enroll without losing money.')}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setResolutionType('GYM_PASS')}
-                    className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-                      resolutionType === 'GYM_PASS'
-                        ? 'border-blue-500 bg-blue-500/15 text-blue-950 dark:text-blue-100 shadow-sm'
-                        : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/40'
-                    }`}
-                  >
-                    <span className={`font-bold text-xs flex items-center justify-between ${
-                      resolutionType === 'GYM_PASS'
-                        ? 'text-blue-700 dark:text-blue-300'
-                        : 'text-[var(--text)]'
-                    }`}>
-                      <span className="flex items-center gap-1.5">
-                        <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                        {t('Grant Free 1-Month Gym Pass')}
-                      </span>
-                      {resolutionType === 'GYM_PASS' && (
-                        <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                      )}
-                    </span>
-                    <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
-                      resolutionType === 'GYM_PASS'
-                        ? 'text-blue-900 dark:text-blue-200'
-                        : 'text-[var(--text-muted)]'
-                    }`}>
-                      {t('Alternative perk when student prefers gym workouts over class credit.')}
-                    </span>
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setResolutionType('APPROVE_GENERAL')}
-                  className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-                    resolutionType === 'APPROVE_GENERAL'
-                      ? 'border-emerald-500 bg-emerald-500/15 text-emerald-950 dark:text-emerald-100 shadow-sm'
-                      : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/40'
-                  }`}
-                >
-                  <span className={`font-bold text-xs flex items-center justify-between ${
-                    resolutionType === 'APPROVE_GENERAL'
-                      ? 'text-emerald-700 dark:text-emerald-300'
-                      : 'text-[var(--text)]'
-                  }`}>
-                    <span className="flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                      {t('Approve & Resolve Issue')}
-                    </span>
-                    {resolutionType === 'APPROVE_GENERAL' && (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    )}
-                  </span>
-                  <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
-                    resolutionType === 'APPROVE_GENERAL'
-                      ? 'text-emerald-900 dark:text-emerald-200'
-                      : 'text-[var(--text-muted)]'
-                  }`}>
-                    {t('Acknowledge repair, feedback or inquiry as fully resolved.')}
-                  </span>
-                </button>
+          {/* If Read-Only (Closed Ticket or Escalated for Receptionist): Show Resolution Summary */}
+          {isReadOnly ? (
+            <div className="space-y-4">
+              {/* If Escalated for Receptionist banner */}
+              {isEscalatedForReceptionist && (
+                <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs font-bold text-purple-800 dark:text-purple-300">
+                    <ArrowUpRight className="w-4 h-4" />
+                    <span>{t('Ticket Escalated to Center Management')}</span>
+                  </div>
+                  <p className="text-xs text-purple-900 dark:text-purple-200 leading-relaxed">
+                    {t('This ticket involves mid-course refund or exception and has been escalated to Center Manager for review. Receptionists cannot modify escalated tickets.')}
+                  </p>
+                </div>
               )}
 
-              {isManager ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setResolutionType('CASH_REFUND');
-                    setResponseNote(`Quản lý trung tâm đã phê duyệt hoàn tiền học phí lớp ${request.className || ""}. Số tiền ${formatMoney(creditAmount)} sẽ được hoàn trả trực tiếp tại quầy hoặc chuyển khoản.`);
-                  }}
-                  className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-                    resolutionType === 'CASH_REFUND'
-                      ? 'border-teal-600 bg-teal-500/15 text-teal-950 dark:text-teal-100 shadow-sm ring-2 ring-teal-500'
-                      : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-teal-500/40'
-                  }`}
-                >
-                  <span className={`font-bold text-xs flex items-center justify-between ${
-                    resolutionType === 'CASH_REFUND'
-                      ? 'text-teal-700 dark:text-teal-300'
-                      : 'text-[var(--text)]'
-                  }`}>
-                    <span className="flex items-center gap-1.5">
-                      <DollarSign className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                      {t('Phê Duyệt Hoàn Tiền Mặt / Chuyển Khoản')}
+              {/* Resolution Result Summary Card */}
+              {isClosed && (
+                <div className="p-4 rounded-xl border space-y-3.5 bg-[var(--surface-hover)] border-[var(--border)]">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-[var(--border)]">
+                    <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">
+                      {t('Resolution Outcome')}
                     </span>
-                    {resolutionType === 'CASH_REFUND' && (
-                      <CheckCircle2 className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
-                    )}
-                  </span>
-                  <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
-                    resolutionType === 'CASH_REFUND'
-                      ? 'text-teal-900 dark:text-teal-200'
-                      : 'text-[var(--text-muted)]'
-                  }`}>
-                    {t('Duyệt lệnh xuất quỹ/kế toán chuyển khoản hoàn trả học phí cho học viên.')}
-                  </span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setResolutionType('ESCALATE')}
-                  className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-                    resolutionType === 'ESCALATE'
-                      ? 'border-purple-500 bg-purple-500/15 text-purple-950 dark:text-purple-100 shadow-sm'
-                      : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/40'
-                  }`}
-                >
-                  <span className={`font-bold text-xs flex items-center justify-between ${
-                    resolutionType === 'ESCALATE'
-                      ? 'text-purple-700 dark:text-purple-300'
-                      : 'text-[var(--text)]'
-                  }`}>
-                    <span className="flex items-center gap-1.5">
-                      <ArrowUpRight className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                      {t('Escalate to Center Manager')}
-                    </span>
-                    {resolutionType === 'ESCALATE' && (
-                      <CheckCircle2 className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
-                    )}
-                  </span>
-                  <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
-                    resolutionType === 'ESCALATE'
-                      ? 'text-purple-900 dark:text-purple-200'
-                      : 'text-[var(--text-muted)]'
-                  }`}>
-                    {t('For special cash refunds or high-dispute exceptions.')}
-                  </span>
-                </button>
-              )}
+                    <div>{getStatusBadge(request.status)}</div>
+                  </div>
 
-              <button
-                type="button"
-                onClick={() => setResolutionType('REJECT')}
-                className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-                  resolutionType === 'REJECT'
-                    ? 'border-rose-500 bg-rose-500/15 text-rose-950 dark:text-rose-100 shadow-sm'
-                    : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/40'
-                }`}
-              >
-                <span className={`font-bold text-xs flex items-center justify-between ${
-                  resolutionType === 'REJECT'
-                    ? 'text-rose-700 dark:text-rose-300'
-                    : 'text-[var(--text)]'
-                }`}>
-                  <span className="flex items-center gap-1.5">
-                    <X className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                    {t('Reject Request')}
-                  </span>
-                  {resolutionType === 'REJECT' && (
-                    <CheckCircle2 className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                  {/* If Credit Voucher was generated */}
+                  {request.generatedCreditCode && (
+                    <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                          <CreditCard className="w-4 h-4" /> {t('Credit Voucher Issued')}
+                        </div>
+                        <code className="text-sm font-black text-emerald-900 dark:text-emerald-100 tracking-wider block mt-1">
+                          {request.generatedCreditCode}
+                        </code>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">{t('Amount')}</div>
+                        <div className="text-base font-extrabold text-emerald-900 dark:text-emerald-100">
+                          {formatMoney(request.generatedCreditAmount || request.calculatedCreditAmount)}
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </span>
-                <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
-                  resolutionType === 'REJECT'
-                    ? 'text-rose-900 dark:text-rose-200'
-                    : 'text-[var(--text-muted)]'
-                }`}>
-                  {t('Course completed >80% or violates center policies.')}
-                </span>
-              </button>
-            </div>
-          </div>
 
-          {/* Conditional Credit Voucher fields */}
-          {resolutionType === 'ISSUE_CREDIT' && (
-            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label htmlFor="credit-amount-input" className="block text-xs font-bold text-emerald-950 dark:text-emerald-200">
-                    {t('Voucher Credit Amount (VND)')}
-                  </label>
-                  <input
-                    id="credit-amount-input"
-                    type="number"
-                    min="10000"
-                    step="5000"
-                    value={creditAmount}
-                    onChange={(e) => setCreditAmount(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="credit-validity-input" className="block text-xs font-bold text-emerald-950 dark:text-emerald-200">
-                    {t('Validity (Days)')}
-                  </label>
-                  <input
-                    id="credit-validity-input"
-                    type="number"
-                    min="7"
-                    max="365"
-                    value={validDays}
-                    onChange={(e) => setValidDays(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+                  {/* If Cash Refund Approved */}
+                  {request.status === 'APPROVED' && !request.generatedCreditCode && request.category === 'CLASS_CANCELLATION' && (
+                    <div className="p-3.5 rounded-xl bg-teal-500/10 border border-teal-500/20 flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-bold text-teal-800 dark:text-teal-300 flex items-center gap-1.5">
+                          <DollarSign className="w-4 h-4" /> {t('Direct Cash / Bank Refund Approved')}
+                        </div>
+                        <div className="text-xs text-teal-900 dark:text-teal-200 mt-1 font-medium">
+                          {t('Authorized by Center Management')}
+                        </div>
+                      </div>
+                      <div className="text-base font-extrabold text-teal-900 dark:text-teal-100">
+                        {formatMoney(request.calculatedCreditAmount ?? request.classPrice)}
+                      </div>
+                    </div>
+                  )}
 
-          {/* Conditional Cash Refund fields */}
-          {resolutionType === 'CASH_REFUND' && (
-            <div className="p-4 rounded-xl bg-teal-500/10 border border-teal-500/30 space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-teal-800 dark:text-teal-200">
-                <CheckCircle2 className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                <span>{t('Xác nhận lệnh hoàn tiền mặt / chuyển khoản (Thẩm quyền Quản lý)')}</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label htmlFor="cash-refund-amount" className="block text-xs font-bold text-teal-950 dark:text-teal-200">
-                    {t('Số tiền duyệt hoàn (VNĐ)')}
-                  </label>
-                  <input
-                    id="cash-refund-amount"
-                    type="number"
-                    min="0"
-                    step="1000"
-                    value={creditAmount}
-                    onChange={(e) => setCreditAmount(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold text-teal-950 dark:text-teal-200">
-                    {t('Hình thức chi trả')}
-                  </label>
-                  <div className="px-3.5 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs font-semibold text-[var(--text)]">
-                    {t('Tiền mặt tại quầy / Chuyển khoản ngân hàng')}
+                  {/* Responder Information & Official Response */}
+                  <div className="space-y-2 text-xs pt-1">
+                    <div className="flex items-center justify-between text-[var(--text-muted)]">
+                      <span>{t('Processed By')}: <strong className="text-[var(--text)]">{request.responderName || t('Staff')}</strong></span>
+                      {request.respondedAt && <span>{request.respondedAt}</span>}
+                    </div>
+                    {request.responseNote && (
+                      <div className="p-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm text-[var(--text)] whitespace-pre-line leading-relaxed">
+                        <span className="text-xs font-bold text-[var(--text-muted)] block mb-1">
+                          {t('Official Response to Member')}:
+                        </span>
+                        "{request.responseNote}"
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
+              )}
             </div>
-          )}
+          ) : (
+            <>
+              {/* Resolution Action Selector */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-[var(--text)]">
+                  {t('Select Resolution Action')} <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {request.category === 'CLASS_CANCELLATION' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setResolutionType('ISSUE_CREDIT')}
+                        className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                          resolutionType === 'ISSUE_CREDIT'
+                            ? 'border-emerald-500 bg-emerald-500/15 text-emerald-950 dark:text-emerald-100 shadow-sm'
+                            : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/40'
+                        }`}
+                      >
+                        <span className={`font-bold text-xs flex items-center justify-between ${
+                          resolutionType === 'ISSUE_CREDIT'
+                            ? 'text-emerald-700 dark:text-emerald-300'
+                            : 'text-[var(--text)]'
+                        }`}>
+                          <span className="flex items-center gap-1.5">
+                            <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            {t('Issue Credit Voucher (Recommended)')}
+                          </span>
+                          {resolutionType === 'ISSUE_CREDIT' && (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          )}
+                        </span>
+                        <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
+                          resolutionType === 'ISSUE_CREDIT'
+                            ? 'text-emerald-900 dark:text-emerald-200'
+                            : 'text-[var(--text-muted)]'
+                        }`}>
+                          {t('Generates 60-day voucher code for member to re-enroll without losing money.')}
+                        </span>
+                      </button>
 
-          {/* Response Note (sent to member notification) */}
-          <div className="space-y-1.5">
-            <label htmlFor="response-note-textarea" className="block text-xs font-bold text-[var(--text)]">
-              {t('Official Response & Explanation to Member')} <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              id="response-note-textarea"
-              rows={3}
-              value={responseNote}
-              onChange={(e) => setResponseNote(e.target.value)}
-              placeholder={t('Enter response note explaining resolution or rejection reason. This will be sent directly to the member.')}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
-              required
-            />
-          </div>
+                      <button
+                        type="button"
+                        onClick={() => setResolutionType('GYM_PASS')}
+                        className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                          resolutionType === 'GYM_PASS'
+                            ? 'border-blue-500 bg-blue-500/15 text-blue-950 dark:text-blue-100 shadow-sm'
+                            : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/40'
+                        }`}
+                      >
+                        <span className={`font-bold text-xs flex items-center justify-between ${
+                          resolutionType === 'GYM_PASS'
+                            ? 'text-blue-700 dark:text-blue-300'
+                            : 'text-[var(--text)]'
+                        }`}>
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            {t('Grant Free 1-Month Gym Pass')}
+                          </span>
+                          {resolutionType === 'GYM_PASS' && (
+                            <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                          )}
+                        </span>
+                        <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
+                          resolutionType === 'GYM_PASS'
+                            ? 'text-blue-900 dark:text-blue-200'
+                            : 'text-[var(--text-muted)]'
+                        }`}>
+                          {t('Alternative perk when student prefers gym workouts over class credit.')}
+                        </span>
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setResolutionType('APPROVE_GENERAL')}
+                      className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                        resolutionType === 'APPROVE_GENERAL'
+                          ? 'border-emerald-500 bg-emerald-500/15 text-emerald-950 dark:text-emerald-100 shadow-sm'
+                          : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/40'
+                      }`}
+                    >
+                      <span className={`font-bold text-xs flex items-center justify-between ${
+                        resolutionType === 'APPROVE_GENERAL'
+                          ? 'text-emerald-700 dark:text-emerald-300'
+                          : 'text-[var(--text)]'
+                      }`}>
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          {t('Approve & Resolve Issue')}
+                        </span>
+                        {resolutionType === 'APPROVE_GENERAL' && (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        )}
+                      </span>
+                      <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
+                        resolutionType === 'APPROVE_GENERAL'
+                          ? 'text-emerald-900 dark:text-emerald-200'
+                          : 'text-[var(--text-muted)]'
+                      }`}>
+                        {t('Acknowledge repair, feedback or inquiry as fully resolved.')}
+                      </span>
+                    </button>
+                  )}
+
+                  {isManager ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResolutionType('CASH_REFUND');
+                        setResponseNote(`Quản lý trung tâm đã phê duyệt hoàn tiền học phí lớp ${request.className || ""}. Số tiền ${formatMoney(creditAmount)} sẽ được hoàn trả trực tiếp tại quầy hoặc chuyển khoản.`);
+                      }}
+                      className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                        resolutionType === 'CASH_REFUND'
+                          ? 'border-teal-600 bg-teal-500/15 text-teal-950 dark:text-teal-100 shadow-sm ring-2 ring-teal-500'
+                          : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-teal-500/40'
+                      }`}
+                    >
+                      <span className={`font-bold text-xs flex items-center justify-between ${
+                        resolutionType === 'CASH_REFUND'
+                          ? 'text-teal-700 dark:text-teal-300'
+                          : 'text-[var(--text)]'
+                      }`}>
+                        <span className="flex items-center gap-1.5">
+                          <DollarSign className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                          {t('Phê Duyệt Hoàn Tiền Mặt / Chuyển Khoản')}
+                        </span>
+                        {resolutionType === 'CASH_REFUND' && (
+                          <CheckCircle2 className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                        )}
+                      </span>
+                      <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
+                        resolutionType === 'CASH_REFUND'
+                          ? 'text-teal-900 dark:text-teal-200'
+                          : 'text-[var(--text-muted)]'
+                      }`}>
+                        {t('Duyệt lệnh xuất quỹ/kế toán chuyển khoản hoàn trả học phí cho học viên.')}
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setResolutionType('ESCALATE')}
+                      className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                        resolutionType === 'ESCALATE'
+                          ? 'border-purple-500 bg-purple-500/15 text-purple-950 dark:text-purple-100 shadow-sm'
+                          : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/40'
+                      }`}
+                    >
+                      <span className={`font-bold text-xs flex items-center justify-between ${
+                        resolutionType === 'ESCALATE'
+                          ? 'text-purple-700 dark:text-purple-300'
+                          : 'text-[var(--text)]'
+                      }`}>
+                        <span className="flex items-center gap-1.5">
+                          <ArrowUpRight className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                          {t('Escalate to Center Manager')}
+                        </span>
+                        {resolutionType === 'ESCALATE' && (
+                          <CheckCircle2 className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                        )}
+                      </span>
+                      <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
+                        resolutionType === 'ESCALATE'
+                          ? 'text-purple-900 dark:text-purple-200'
+                          : 'text-[var(--text-muted)]'
+                      }`}>
+                        {t('For special cash refunds or high-dispute exceptions.')}
+                      </span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setResolutionType('REJECT')}
+                    className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                      resolutionType === 'REJECT'
+                        ? 'border-rose-500 bg-rose-500/15 text-rose-950 dark:text-rose-100 shadow-sm'
+                        : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/40'
+                    }`}
+                  >
+                    <span className={`font-bold text-xs flex items-center justify-between ${
+                      resolutionType === 'REJECT'
+                        ? 'text-rose-700 dark:text-rose-300'
+                        : 'text-[var(--text)]'
+                    }`}>
+                      <span className="flex items-center gap-1.5">
+                        <X className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                        {t('Reject Request')}
+                      </span>
+                      {resolutionType === 'REJECT' && (
+                        <CheckCircle2 className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                      )}
+                    </span>
+                    <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
+                      resolutionType === 'REJECT'
+                        ? 'text-rose-900 dark:text-rose-200'
+                        : 'text-[var(--text-muted)]'
+                    }`}>
+                      {t('Course completed >80% or violates center policies.')}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Conditional Credit Voucher fields */}
+              {resolutionType === 'ISSUE_CREDIT' && (
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label htmlFor="credit-amount-input" className="block text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                        {t('Voucher Credit Amount (VND)')}
+                      </label>
+                      <input
+                        id="credit-amount-input"
+                        type="number"
+                        min="10000"
+                        step="5000"
+                        value={creditAmount}
+                        onChange={(e) => setCreditAmount(e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="credit-validity-input" className="block text-xs font-bold text-emerald-950 dark:text-emerald-200">
+                        {t('Validity (Days)')}
+                      </label>
+                      <input
+                        id="credit-validity-input"
+                        type="number"
+                        min="7"
+                        max="365"
+                        value={validDays}
+                        onChange={(e) => setValidDays(e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Conditional Cash Refund fields */}
+              {resolutionType === 'CASH_REFUND' && (
+                <div className="p-4 rounded-xl bg-teal-500/10 border border-teal-500/30 space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-teal-800 dark:text-teal-200">
+                    <CheckCircle2 className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    <span>{t('Xác nhận lệnh hoàn tiền mặt / chuyển khoản (Thẩm quyền Quản lý)')}</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label htmlFor="cash-refund-amount" className="block text-xs font-bold text-teal-950 dark:text-teal-200">
+                        {t('Số tiền duyệt hoàn (VNĐ)')}
+                      </label>
+                      <input
+                        id="cash-refund-amount"
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={creditAmount}
+                        onChange={(e) => setCreditAmount(e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-teal-950 dark:text-teal-200">
+                        {t('Hình thức chi trả')}
+                      </label>
+                      <div className="px-3.5 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs font-semibold text-[var(--text)]">
+                        {t('Tiền mặt tại quầy / Chuyển khoản ngân hàng')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Response Note (sent to member notification) */}
+              <div className="space-y-1.5">
+                <label htmlFor="response-note-textarea" className="block text-xs font-bold text-[var(--text)]">
+                  {t('Official Response & Explanation to Member')} <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="response-note-textarea"
+                  rows={3}
+                  value={responseNote}
+                  onChange={(e) => setResponseNote(e.target.value)}
+                  placeholder={t('Enter response note explaining resolution or rejection reason. This will be sent directly to the member.')}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
+                  required
+                />
+              </div>
+            </>
+          )}
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border)]">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={submitting}
-              className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors"
-            >
-              {t('Cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !responseNote.trim()}
-              className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 disabled:opacity-50"
-            >
-              {submitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>{t('Processing...')}</span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  <span>{t('Submit Resolution & Notify Member')}</span>
-                </>
-              )}
-            </button>
+            {isReadOnly ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-xl bg-[var(--primary)] text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+              >
+                {t('Close')}
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={submitting}
+                  className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors"
+                >
+                  {t('Cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting || !responseNote.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>{t('Processing...')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>{t('Submit Resolution & Notify Member')}</span>
+                    </>
+                  )}
+                </button>
+              </>
+            )}
           </div>
         </form>
       </div>

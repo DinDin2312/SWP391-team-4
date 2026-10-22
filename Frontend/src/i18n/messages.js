@@ -2896,7 +2896,17 @@ const supportTranslations = [
   ["Hide Details","Ẩn chi tiết"],
   ["Submitted on","Đã gửi vào lúc"],
   ["Loading credits...","Đang tải mã tín dụng..."],
-  ["Loading tickets...","Đang tải phiếu hỗ trợ..."]
+  ["Loading tickets...","Đang tải phiếu hỗ trợ..."],
+  ["Support Ticket Details","Chi Tiết Phiếu Hỗ Trợ"],
+  ["Resolution Outcome","Kết quả & Biên bản xử lý"],
+  ["Credit Voucher Issued","Đã cấp Voucher tín dụng"],
+  ["Amount","Số tiền"],
+  ["Direct Cash / Bank Refund Approved","Đã duyệt hoàn tiền mặt / chuyển khoản"],
+  ["Authorized by Center Management","Được phê duyệt bởi Quản lý trung tâm"],
+  ["Processed By","Người xử lý"],
+  ["Official Response to Member","Lời nhắn chính thức gửi tới hội viên"],
+  ["Ticket Escalated to Center Management","Phiếu đã chuyển lên Quản lý trung tâm"],
+  ["This ticket involves mid-course refund or exception and has been escalated to Center Manager for review. Receptionists cannot modify escalated tickets.","Phiếu này cần hoàn học phí hoặc khiếu nại và đã được chuyển lên Quản lý trung tâm xét duyệt. Lễ tân không thể thay đổi phiếu đã chuyển cấp."]
 ];
 for (const [en, vi] of supportTranslations) {
   translations[en] = [en, vi];

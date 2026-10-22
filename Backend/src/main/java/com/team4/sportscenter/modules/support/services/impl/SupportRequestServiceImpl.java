@@ -261,8 +261,22 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         SupportRequest request = supportRequestRepository.findById(requestId)
                 .orElseThrow(() -> new IllegalArgumentException("Support request not found: " + requestId));
 
+        if (request.getStatus() == SupportStatus.RESOLVED || request.getStatus() == SupportStatus.APPROVED) {
+            throw new IllegalStateException("Đơn yêu cầu #" + requestId + " đã được phê duyệt và giải quyết trước đó, không thể sửa đổi hoặc từ chối lại.");
+        }
+        if (request.getStatus() == SupportStatus.REJECTED) {
+            throw new IllegalStateException("Đơn yêu cầu #" + requestId + " đã bị từ chối trước đó và đã đóng hồ sơ, không thể thao tác lại.");
+        }
+
         User staff = userRepository.findByEmail(staffEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Staff user not found: " + staffEmail));
+
+        boolean isManagerStaff = staff.getRole() != null && staff.getRole().getRoleName() != null 
+                && (staff.getRole().getRoleName().toUpperCase().contains("MANAGER") || staff.getRole().getRoleName().toUpperCase().contains("ADMIN"));
+
+        if (request.getStatus() == SupportStatus.ESCALATED && !isManagerStaff) {
+            throw new IllegalStateException("Đơn yêu cầu này đã được chuyển lên Quản lý trung tâm. Chỉ Quản lý mới có thẩm quyền giải quyết.");
+        }
 
         request.setStatus(dto.getStatus() != null ? dto.getStatus() : SupportStatus.RESOLVED);
         request.setResponseNote(dto.getResponseNote());
@@ -349,8 +363,6 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         supportRequestRepository.save(request);
 
         // Send notification to member with appropriate role title
-        boolean isManagerStaff = staff.getRole() != null && staff.getRole().getRoleName() != null 
-                && (staff.getRole().getRoleName().toUpperCase().contains("MANAGER") || staff.getRole().getRoleName().toUpperCase().contains("ADMIN"));
         String roleTitle = isManagerStaff ? "Quản lý trung tâm" : "Lễ tân";
 
         StringBuilder notifMsg = new StringBuilder();

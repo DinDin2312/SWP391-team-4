@@ -401,7 +401,7 @@ const SupportDeskView = (props) => {
                         className="px-3.5 py-1.5 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white font-semibold transition-colors inline-flex items-center gap-1.5"
                       >
                         <Eye className="w-3.5 h-3.5" />
-                        <span>{req.status === 'PENDING' ? t('Review & Resolve') : t('View Details')}</span>
+                        <span>{(req.status === 'PENDING' || (isManager && req.status === 'ESCALATED')) ? t('Review & Resolve') : t('View Details')}</span>
                       </button>
                     </td>
                   </tr>
