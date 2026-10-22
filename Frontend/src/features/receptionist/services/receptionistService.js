@@ -121,6 +121,10 @@ export const receptionistService = {
     return await axiosClient.put(`/receptionist/support/requests/${requestId}/respond`, payload);
   },
 
+  revokeSupportRequest: async (requestId, payload) => {
+    return await axiosClient.put(`/receptionist/support/requests/${requestId}/revoke`, payload);
+  },
+
   createSupportOnBehalf: async (memberUserId, payload) => {
     return await axiosClient.post(`/receptionist/support/requests/on-behalf/${memberUserId}`, payload);
   },

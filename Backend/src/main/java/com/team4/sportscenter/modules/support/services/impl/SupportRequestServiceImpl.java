@@ -456,6 +456,69 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         return mapToResponse(saved);
     }
 
+    @Override
+    @Transactional
+    public SupportRequestResponse revokeRequest(Integer requestId, String reason, String staffEmail) {
+        SupportRequest request = supportRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Support request not found: " + requestId));
+
+        User staff = userRepository.findByEmail(staffEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Staff user not found: " + staffEmail));
+
+        boolean isManagerStaff = staff.getRole() != null && staff.getRole().getRoleName() != null 
+                && (staff.getRole().getRoleName().toUpperCase().contains("MANAGER") || staff.getRole().getRoleName().toUpperCase().contains("ADMIN"));
+
+        if (!isManagerStaff) {
+            throw new org.springframework.security.access.AccessDeniedException("Chỉ Quản lý trung tâm mới có quyền thu hồi quyết định phê duyệt.");
+        }
+
+        if (request.getStatus() != SupportStatus.APPROVED && request.getStatus() != SupportStatus.RESOLVED) {
+            throw new IllegalStateException("Chỉ có thể thu hồi các đơn đã được phê duyệt trước đó.");
+        }
+
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng cung cấp lý do thu hồi phê duyệt.");
+        }
+
+        // 1. Check if a Credit Voucher was generated for this request
+        Optional<UserCredit> optCredit = userCreditRepository.findBySupportRequestRequestId(requestId);
+        if (optCredit.isPresent()) {
+            UserCredit credit = optCredit.get();
+            // Check if credit was already used
+            if (credit.getStatus() == CreditStatus.USED || credit.getRemainingAmount().compareTo(credit.getAmount()) < 0) {
+                throw new IllegalStateException("Không thể thu hồi: Học viên đã sử dụng mã voucher " 
+                        + credit.getCreditCode() + " để thanh toán khóa học khác. Vui lòng đối soát nghiệp vụ trực tiếp.");
+            }
+            // Invalidate the voucher
+            credit.setStatus(CreditStatus.CANCELLED);
+            credit.setRemainingAmount(BigDecimal.ZERO);
+            credit.setReason("Đã thu hồi theo đơn #" + requestId + ": " + reason.trim());
+            userCreditRepository.save(credit);
+        }
+
+        // 2. Update support request to REJECTED with clear revocation note
+        request.setStatus(SupportStatus.REJECTED);
+        String oldNote = request.getResponseNote() != null ? request.getResponseNote() : "";
+        request.setResponseNote("[THU HỒI PHÊ DUYỆT BỞI " + staff.getFullName() + "] Lý do: " + reason.trim() 
+                + (oldNote.isEmpty() ? "" : " (Ghi chú trước đó: " + oldNote + ")"));
+        request.setRespondedBy(staff);
+        request.setRespondedAt(LocalDateTime.now());
+        supportRequestRepository.save(request);
+
+        // 3. Send notification to member
+        Notification notif = Notification.builder()
+                .user(request.getUser())
+                .title("Thu hồi quyết định phê duyệt đơn #" + requestId)
+                .message("Quản lý trung tâm (" + staff.getFullName() + ") đã thu hồi quyết định phê duyệt của đơn hỗ trợ #" + requestId 
+                        + ". Lý do: \"" + reason.trim() + "\". Quyền lợi voucher hoặc lệnh hoàn tiền liên quan đã bị hủy bỏ.")
+                .type("SUPPORT_REVOKED")
+                .isRead(false)
+                .build();
+        notificationRepository.save(notif);
+
+        return mapToResponse(request);
+    }
+
     private SupportRequestResponse mapToResponse(SupportRequest r) {
         GymClass gc = r.getGymClass();
         BigDecimal classPrice = gc != null ? gc.getPrice() : null;

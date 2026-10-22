@@ -6,7 +6,8 @@ public enum CreditStatus {
     ACTIVE,
     USED,
     EXHAUSTED,
-    EXPIRED;
+    EXPIRED,
+    CANCELLED;
 
     @JsonCreator
     public static CreditStatus fromString(String value) {
@@ -18,6 +19,9 @@ public enum CreditStatus {
             if (st.name().equalsIgnoreCase(normalized)) {
                 return st;
             }
+        }
+        if (normalized.contains("CANCEL") || normalized.contains("REVOK")) {
+            return CANCELLED;
         }
         if (normalized.contains("EXPIRE")) {
             return EXPIRED;

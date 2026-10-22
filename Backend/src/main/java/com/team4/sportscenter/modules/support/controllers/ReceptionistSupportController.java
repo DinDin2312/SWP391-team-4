@@ -52,6 +52,16 @@ public class ReceptionistSupportController {
         return ResponseEntity.ok(supportRequestService.respondToRequest(id, dto, userDetails.getUsername()));
     }
 
+    @PutMapping("/requests/{id}/revoke")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'ADMIN')")
+    public ResponseEntity<SupportRequestResponse> revokeRequest(
+            @PathVariable Integer id,
+            @RequestBody(required = false) Map<String, String> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String reason = (body != null && body.containsKey("reason")) ? body.get("reason") : "";
+        return ResponseEntity.ok(supportRequestService.revokeRequest(id, reason, userDetails.getUsername()));
+    }
+
     @PostMapping("/requests/on-behalf/{memberUserId}")
     public ResponseEntity<SupportRequestResponse> createOnBehalf(
             @PathVariable Integer memberUserId,

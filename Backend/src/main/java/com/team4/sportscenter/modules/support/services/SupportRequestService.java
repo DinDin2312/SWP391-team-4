@@ -29,6 +29,8 @@ public interface SupportRequestService {
 
     SupportRequestResponse respondToRequest(Integer requestId, RespondSupportRequest dto, String staffEmail);
 
+    SupportRequestResponse revokeRequest(Integer requestId, String reason, String staffEmail);
+
     List<UserCreditResponse> getMemberCredits(String memberEmail);
 
     SupportRequestResponse createOnBehalfOfMember(Integer memberUserId, CreateSupportRequest request, String staffEmail);

@@ -2906,7 +2906,16 @@ const supportTranslations = [
   ["Processed By","Người xử lý"],
   ["Official Response to Member","Lời nhắn chính thức gửi tới hội viên"],
   ["Ticket Escalated to Center Management","Phiếu đã chuyển lên Quản lý trung tâm"],
-  ["This ticket involves mid-course refund or exception and has been escalated to Center Manager for review. Receptionists cannot modify escalated tickets.","Phiếu này cần hoàn học phí hoặc khiếu nại và đã được chuyển lên Quản lý trung tâm xét duyệt. Lễ tân không thể thay đổi phiếu đã chuyển cấp."]
+  ["This ticket involves mid-course refund or exception and has been escalated to Center Manager for review. Receptionists cannot modify escalated tickets.","Phiếu này cần hoàn học phí hoặc khiếu nại và đã được chuyển lên Quản lý trung tâm xét duyệt. Lễ tân không thể thay đổi phiếu đã chuyển cấp."],
+  ["Revoke Approval","Thu Hồi Phê Duyệt"],
+  ["Revoke Refund & Resolution","Thu Hồi Phê Duyệt & Hủy Quyết Định"],
+  ["Revoke Reason (Required)","Lý do thu hồi (Bắt buộc)"],
+  ["Enter reason for revoking approval (e.g. member policy violation, fraud, incorrect amount)...","Nhập lý do thu hồi phê duyệt (ví dụ: phát hiện vi phạm quy chế, sai sót số tiền, gian lận)..."],
+  ["Confirm Revocation","Xác nhận thu hồi"],
+  ["Warning: Revoking will invalidate the granted credit voucher in the member's wallet and set the ticket to Rejected. If the voucher has already been spent, revocation will be blocked.","Cảnh báo: Thao tác này sẽ vô hiệu hóa mã voucher tín dụng trong ví của hội viên và chuyển đơn sang trạng thái Đã từ chối. Nếu voucher đã được học viên sử dụng, hệ thống sẽ chặn thu hồi."],
+  ["Please provide a reason for revoking the approval.","Vui lòng nhập lý do thu hồi phê duyệt."],
+  ["Failed to revoke approval.","Không thể thu hồi phê duyệt."],
+  ["Approval decision revoked successfully.","Đã thu hồi quyết định phê duyệt thành công."]
 ];
 for (const [en, vi] of supportTranslations) {
   translations[en] = [en, vi];
