@@ -373,6 +373,17 @@ const MemberSupportView = () => {
                           </div>
                         )}
 
+                        {tkt.preferredResolution && (
+                          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                            <span className="font-semibold">{t('Preferred Compensation')}:</span>
+                            <span className="font-bold text-[var(--primary)]">
+                              {tkt.preferredResolution === 'ISSUE_CREDIT' && t('Credit Voucher')}
+                              {tkt.preferredResolution === 'GYM_PASS' && t('1-Month Gym Pass')}
+                              {tkt.preferredResolution === 'CASH_REFUND' && t('Cash / Bank Refund')}
+                            </span>
+                          </div>
+                        )}
+
                         {/* Staff Response Box */}
                         {tkt.responseNote ? (
                           <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-900 dark:text-emerald-200 space-y-2">

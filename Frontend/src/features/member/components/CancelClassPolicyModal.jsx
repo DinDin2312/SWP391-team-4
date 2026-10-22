@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   X, AlertTriangle, CheckCircle2, Clock, Calendar,
-  CreditCard, Send, ShieldAlert, Copy, Check
+  CreditCard, Send, ShieldAlert, Copy, Check, Dumbbell, DollarSign, Sparkles
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
@@ -20,6 +20,7 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
   // Form state for in-progress support request
   const [reasonCategory, setReasonCategory] = useState('CLASS_CANCELLATION');
   const [reasonContent, setReasonContent] = useState('');
+  const [preferredResolution, setPreferredResolution] = useState('ISSUE_CREDIT'); // 'ISSUE_CREDIT' | 'GYM_PASS' | 'CASH_REFUND'
 
   // Result state
   const [successResult, setSuccessResult] = useState(null);
@@ -39,6 +40,7 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
     setError('');
     setPreview(null);
     setReasonContent('');
+    setPreferredResolution('ISSUE_CREDIT');
     setSuccessResult(null);
     setCopiedCode(false);
   };
@@ -91,13 +93,21 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
       const res = await memberService.createSupportRequest({
         classId,
         category: reasonCategory,
+        preferredResolution,
         title,
         content: reasonContent.trim(),
         priority: 'NORMAL'
       });
+
+      let prefLabel = t('Course Credit Voucher');
+      if (preferredResolution === 'GYM_PASS') prefLabel = t('Free 1-Month Gym Pass');
+      if (preferredResolution === 'CASH_REFUND') prefLabel = t('Cash / Bank Refund');
+
       setSuccessResult({
         type: 'SUPPORT_REQUEST_SUBMITTED',
         requestId: res.requestId,
+        preferredResolution,
+        preferredLabel: prefLabel,
         message: t('Your support ticket has been submitted to Reception. Our staff will review your request and issue a credit or alternative resolution.')
       });
       if (onSuccess) onSuccess();
@@ -216,6 +226,12 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
                   <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto">
                     {successResult.message}
                   </p>
+                  {successResult.preferredLabel && (
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] text-xs font-bold border border-[var(--primary)]/20">
+                      <span>{t('Requested Benefit')}:</span>
+                      <span>{successResult.preferredLabel}</span>
+                    </div>
+                  )}
                   <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-medium">
                     {t('Ticket ID')}: #{successResult.requestId} &bull; {t('You will receive a notification once Reception reviews and resolves your ticket.')}
                   </div>
@@ -304,12 +320,165 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
                 )}
               </div>
 
-              {/* Scenario 1: Not started -> 1-Click Cancel */}
-              {!preview.hasStarted ? (
+              {/* Member Compensation Benefit Selection */}
+              <div className="space-y-2.5 pt-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <label className="text-xs font-extrabold text-[var(--text)] uppercase tracking-wide flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span>{t('Select Desired Compensation Benefit')}</span>
+                  </label>
+                  <span className="text-[11px] font-semibold text-[var(--text-muted)]">
+                    {t('Choose how you would like to be compensated if this class is cancelled.')}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2.5">
+                  {/* Option 1: Course Credit Voucher */}
+                  <button
+                    type="button"
+                    onClick={() => setPreferredResolution('ISSUE_CREDIT')}
+                    className={`p-3.5 rounded-xl border-2 text-left transition-all relative ${
+                      preferredResolution === 'ISSUE_CREDIT'
+                        ? 'border-emerald-600 bg-emerald-500/10 dark:bg-emerald-500/15 ring-2 ring-emerald-500/30'
+                        : 'border-[var(--border)] bg-[var(--surface-hover)] hover:border-emerald-500/40'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2.5">
+                        <div className={`p-2 rounded-lg mt-0.5 ${
+                          preferredResolution === 'ISSUE_CREDIT'
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        }`}>
+                          <CreditCard className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-black text-[var(--text)]">
+                              {t('Course Credit Voucher (Recommended)')}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                              {!preview.hasStarted ? '100% ' + t('Tuition Value') : formatMoney(preview.proratedCredit)}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[var(--text-muted)] mt-1 leading-snug">
+                            {t('100% or prorated value credited for 60 days to book any other class or gym package.')}
+                          </p>
+                          <div className="mt-1.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>{!preview.hasStarted ? t('Auto-issued instantly (1-click)') : t('Quick reception review')}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {preferredResolution === 'ISSUE_CREDIT' && (
+                        <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                          <Check className="w-3.5 h-3.5" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Option 2: 1-Month Gym Pass */}
+                  <button
+                    type="button"
+                    onClick={() => setPreferredResolution('GYM_PASS')}
+                    className={`p-3.5 rounded-xl border-2 text-left transition-all relative ${
+                      preferredResolution === 'GYM_PASS'
+                        ? 'border-blue-600 bg-blue-500/10 dark:bg-blue-500/15 ring-2 ring-blue-500/30'
+                        : 'border-[var(--border)] bg-[var(--surface-hover)] hover:border-blue-500/40'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2.5">
+                        <div className={`p-2 rounded-lg mt-0.5 ${
+                          preferredResolution === 'GYM_PASS'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                        }`}>
+                          <Dumbbell className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-black text-[var(--text)]">
+                              {t('Free 1-Month Gym Pass')}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-700 dark:text-blue-300">
+                              1 {t('Month')} VIP
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[var(--text-muted)] mt-1 leading-snug">
+                            {t('Exchange remaining sessions for 1 full month of unlimited gym & fitness access.')}
+                          </p>
+                          <div className="mt-1.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>{t('Instant activation upon review')}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {preferredResolution === 'GYM_PASS' && (
+                        <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
+                          <Check className="w-3.5 h-3.5" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Option 3: Cash / Bank Refund */}
+                  <button
+                    type="button"
+                    onClick={() => setPreferredResolution('CASH_REFUND')}
+                    className={`p-3.5 rounded-xl border-2 text-left transition-all relative ${
+                      preferredResolution === 'CASH_REFUND'
+                        ? 'border-purple-600 bg-purple-500/10 dark:bg-purple-500/15 ring-2 ring-purple-500/30'
+                        : 'border-[var(--border)] bg-[var(--surface-hover)] hover:border-purple-500/40'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2.5">
+                        <div className={`p-2 rounded-lg mt-0.5 ${
+                          preferredResolution === 'CASH_REFUND'
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                        }`}>
+                          <DollarSign className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-black text-[var(--text)]">
+                              {t('Cash / Bank Refund Request')}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-700 dark:text-purple-300">
+                              {!preview.hasStarted ? formatMoney(preview.classPrice) : formatMoney(preview.proratedCredit)}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[var(--text-muted)] mt-1 leading-snug">
+                            {t('Request remaining class tuition refunded via bank transfer or cash at counter.')}
+                          </p>
+                          <div className="mt-1.5 text-[10px] font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>{t('Requires Center Manager approval')}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {preferredResolution === 'CASH_REFUND' && (
+                        <div className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0">
+                          <Check className="w-3.5 h-3.5" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Area: 1-Click Cancel (if not started & credit voucher) OR Support Form */}
+              {!preview.hasStarted && preferredResolution === 'ISSUE_CREDIT' ? (
                 <div className="space-y-4 pt-2">
-                  <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-700 dark:text-blue-300 space-y-1">
-                    <p className="font-bold">{t('Terms & Guarantee:')}</p>
-                    <ul className="list-disc pl-4 space-y-0.5">
+                  <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>{t('Terms & Guarantee:')}</span>
+                    </p>
+                    <ul className="list-disc pl-4 space-y-0.5 text-[11px]">
                       <li>{t('100% of your course price will be credited as a 60-day voucher.')}</li>
                       <li>{t('Use the voucher at checkout for any other class or gym membership.')}</li>
                       <li>{t('All upcoming sessions will be released for other members.')}</li>
@@ -339,14 +508,14 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
                       ) : (
                         <>
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>{t('Confirm Cancel & Receive Credit')}</span>
+                          <span>{t('Confirm Cancel & Receive Credit Now')}</span>
                         </>
                       )}
                     </button>
                   </div>
                 </div>
               ) : (
-                /* Scenario 2: Started -> Submit Support Ticket to Receptionist */
+                /* Support Ticket Form to Receptionist / Manager */
                 <form onSubmit={handleSubmitSupportRequest} className="space-y-4 pt-2">
                   <div className="space-y-2">
                     <label htmlFor="cancel-reason-select" className="block text-xs font-bold text-[var(--text)]">

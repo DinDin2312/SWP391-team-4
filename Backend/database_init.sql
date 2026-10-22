@@ -309,6 +309,7 @@ CREATE TABLE IF NOT EXISTS `SUPPORT_REQUESTS` (
     `user_id` INT NOT NULL,
     `class_id` INT DEFAULT NULL,
     `category` VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
+    `preferred_resolution` VARCHAR(50) DEFAULT 'ISSUE_CREDIT',
     `title` VARCHAR(255) NOT NULL,
     `content` TEXT NOT NULL,
     `status` VARCHAR(50) NOT NULL DEFAULT 'PENDING',

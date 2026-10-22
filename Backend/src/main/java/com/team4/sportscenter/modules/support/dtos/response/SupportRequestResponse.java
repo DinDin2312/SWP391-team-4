@@ -29,6 +29,7 @@ public class SupportRequestResponse {
     private BigDecimal calculatedCreditAmount;
     
     private SupportCategory category;
+    private String preferredResolution;
     private String title;
     private String content;
     private SupportStatus status;

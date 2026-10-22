@@ -4,7 +4,7 @@ import {
   LifeBuoy, Search, Filter, RefreshCw, CheckCircle2,
   Clock, AlertTriangle, ShieldCheck, X, ChevronLeft,
   ChevronRight, CreditCard, MessageSquare, ArrowUpRight,
-  Eye, Phone, Mail, User
+  Eye, Phone, Mail, User, Dumbbell, DollarSign, Sparkles
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
@@ -173,6 +173,31 @@ const SupportDeskView = (props) => {
         return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-red-500/10 text-red-700 dark:text-red-300">{t('Complaint')}</span>;
       default:
         return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300">{t('General Inquiry')}</span>;
+    }
+  };
+
+  const getPreferredResolutionBadge = (pref) => {
+    switch (pref) {
+      case 'ISSUE_CREDIT':
+        return (
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 inline-flex items-center gap-1">
+            <CreditCard className="w-3 h-3" /> {t('Credit Voucher')}
+          </span>
+        );
+      case 'GYM_PASS':
+        return (
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 inline-flex items-center gap-1">
+            <Dumbbell className="w-3 h-3" /> {t('1-Month Gym Pass')}
+          </span>
+        );
+      case 'CASH_REFUND':
+        return (
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 inline-flex items-center gap-1">
+            <DollarSign className="w-3 h-3" /> {t('Cash / Bank Refund')}
+          </span>
+        );
+      default:
+        return null;
     }
   };
 
@@ -382,7 +407,10 @@ const SupportDeskView = (props) => {
                       )}
                     </td>
                     <td className="px-5 py-4 max-w-xs">
-                      <div className="mb-1">{getCategoryBadge(req.category)}</div>
+                      <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                        {getCategoryBadge(req.category)}
+                        {getPreferredResolutionBadge(req.preferredResolution)}
+                      </div>
                       <div className="font-semibold line-clamp-1">{req.title}</div>
                       <div className="text-[11px] text-[var(--text-muted)] line-clamp-1">{req.content}</div>
                     </td>

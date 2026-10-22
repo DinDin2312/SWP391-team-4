@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   X, AlertTriangle, CheckCircle2, ShieldAlert,
   Send, User, Phone, Mail, BookOpen, Clock, Calendar,
-  CreditCard, ArrowUpRight, DollarSign, RotateCcw
+  CreditCard, ArrowUpRight, DollarSign, RotateCcw, Dumbbell, Sparkles
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
@@ -28,20 +28,36 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
       const suggested = request.calculatedCreditAmount ?? request.proratedCredit ?? request.classPrice ?? 0;
       setCreditAmount(suggested);
       setValidDays(60);
-      const isEscalatedClassCancel = isManager && (request.status === 'ESCALATED' || request.category === 'CLASS_CANCELLATION');
-      const defaultType = isEscalatedClassCancel
-        ? 'CASH_REFUND'
-        : (request.category === 'CLASS_CANCELLATION' ? 'ISSUE_CREDIT' : 'APPROVE_GENERAL');
+
+      const pref = request.preferredResolution;
+      let defaultType = 'APPROVE_GENERAL';
+
+      if (request.category === 'CLASS_CANCELLATION') {
+        if (pref === 'GYM_PASS') {
+          defaultType = 'GYM_PASS';
+        } else if (pref === 'CASH_REFUND') {
+          defaultType = isManager ? 'CASH_REFUND' : 'ESCALATE';
+        } else {
+          // Default or ISSUE_CREDIT
+          defaultType = isManager && (request.status === 'ESCALATED') ? 'CASH_REFUND' : 'ISSUE_CREDIT';
+        }
+      }
+
       setResolutionType(defaultType);
 
       const rolePrefix = isManager ? 'Quản lý trung tâm' : 'Lễ tân';
-      setResponseNote(
-        isEscalatedClassCancel
-          ? `Quản lý trung tâm đã phê duyệt hoàn tiền học phí lớp ${request.className || ""}. Số tiền ${formatMoney(suggested)} sẽ được hoàn trả trực tiếp tại quầy hoặc chuyển khoản.`
-          : (request.category === 'CLASS_CANCELLATION'
-              ? `${rolePrefix} đã phê duyệt yêu cầu bảo lưu lớp ${request.className || ""}. Mã tín dụng 60 ngày trị giá ${formatMoney(suggested)} đã được cấp vào tài khoản học viên.`
-              : `${rolePrefix} đã tiếp nhận và xử lý yêu cầu của bạn.`)
-      );
+      if (defaultType === 'GYM_PASS') {
+        setResponseNote(`${rolePrefix} đã phê duyệt yêu cầu đổi lớp ${request.className || ""} sang Thẻ tập Gym 01 tháng miễn phí cho học viên.`);
+      } else if (defaultType === 'CASH_REFUND') {
+        setResponseNote(`Quản lý trung tâm đã phê duyệt hoàn tiền học phí lớp ${request.className || ""}. Số tiền ${formatMoney(suggested)} sẽ được hoàn trả trực tiếp tại quầy hoặc chuyển khoản.`);
+      } else if (defaultType === 'ESCALATE') {
+        setResponseNote(`Lễ tân đã tiếp nhận nguyện vọng hoàn tiền mặt của học viên đối với lớp ${request.className || ""} và chuyển tiếp đến Quản lý trung tâm phê duyệt.`);
+      } else if (request.category === 'CLASS_CANCELLATION') {
+        setResponseNote(`${rolePrefix} đã phê duyệt yêu cầu bảo lưu lớp ${request.className || ""}. Mã tín dụng 60 ngày trị giá ${formatMoney(suggested)} đã được cấp vào tài khoản học viên.`);
+      } else {
+        setResponseNote(`${rolePrefix} đã tiếp nhận và xử lý yêu cầu của bạn.`);
+      }
+
       setError('');
     }
   }, [isOpen, request, isManager]);
@@ -273,6 +289,38 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
             </div>
           )}
 
+          {/* Member's Preferred Compensation Benefit Card */}
+          {request.preferredResolution && (
+            <div className="p-3.5 rounded-xl border bg-[var(--surface-hover)] border-[var(--border)] space-y-1.5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  {t("Member's Requested Benefit:")}
+                </span>
+                {request.preferredResolution === 'ISSUE_CREDIT' && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
+                    <CreditCard className="w-3 h-3" /> {t('Credit Voucher')}
+                  </span>
+                )}
+                {request.preferredResolution === 'GYM_PASS' && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 inline-flex items-center gap-1">
+                    <Dumbbell className="w-3 h-3" /> {t('1-Month Gym Pass')}
+                  </span>
+                )}
+                {request.preferredResolution === 'CASH_REFUND' && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 inline-flex items-center gap-1">
+                    <DollarSign className="w-3 h-3" /> {t('Cash / Bank Refund')}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[var(--text)] font-semibold leading-relaxed">
+                {request.preferredResolution === 'ISSUE_CREDIT' && t('Member requested compensation: Credit Voucher.')}
+                {request.preferredResolution === 'GYM_PASS' && t('Member requested compensation: 1-Month Gym Pass.')}
+                {request.preferredResolution === 'CASH_REFUND' && t('Member requested compensation: Cash / Bank Refund.')}
+              </p>
+            </div>
+          )}
+
           {/* If Read-Only (Closed Ticket or Escalated for Receptionist): Show Resolution Summary */}
           {isReadOnly ? (
             <div className="space-y-4">
@@ -440,9 +488,20 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                               {t('Issue Credit Voucher (Recommended)')}
                             </span>
                           </span>
-                          {resolutionType === 'ISSUE_CREDIT' && (
-                            <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            {request.preferredResolution === 'ISSUE_CREDIT' && (
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                                resolutionType === 'ISSUE_CREDIT'
+                                  ? 'bg-white/20 text-white border border-white/40'
+                                  : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                              }`}>
+                                ★ {t("Member's Choice")}
+                              </span>
+                            )}
+                            {resolutionType === 'ISSUE_CREDIT' && (
+                              <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                            )}
+                          </div>
                         </span>
                         <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
                           resolutionType === 'ISSUE_CREDIT'
@@ -471,9 +530,20 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                               {t('Grant Free 1-Month Gym Pass')}
                             </span>
                           </span>
-                          {resolutionType === 'GYM_PASS' && (
-                            <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            {request.preferredResolution === 'GYM_PASS' && (
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                                resolutionType === 'GYM_PASS'
+                                  ? 'bg-white/20 text-white border border-white/40'
+                                  : 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                              }`}>
+                                ★ {t("Member's Choice")}
+                              </span>
+                            )}
+                            {resolutionType === 'GYM_PASS' && (
+                              <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                            )}
+                          </div>
                         </span>
                         <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
                           resolutionType === 'GYM_PASS'
@@ -539,9 +609,20 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                             {t('Phê Duyệt Hoàn Tiền Mặt / Chuyển Khoản')}
                           </span>
                         </span>
-                        {resolutionType === 'CASH_REFUND' && (
-                          <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {request.preferredResolution === 'CASH_REFUND' && (
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                              resolutionType === 'CASH_REFUND'
+                                ? 'bg-white/20 text-white border border-white/40'
+                                : 'bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30'
+                            }`}>
+                              ★ {t("Member's Choice")}
+                            </span>
+                          )}
+                          {resolutionType === 'CASH_REFUND' && (
+                            <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                          )}
+                        </div>
                       </span>
                       <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
                         resolutionType === 'CASH_REFUND'
@@ -570,9 +651,20 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                             {t('Escalate to Center Manager')}
                           </span>
                         </span>
-                        {resolutionType === 'ESCALATE' && (
-                          <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {request.preferredResolution === 'CASH_REFUND' && (
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                              resolutionType === 'ESCALATE'
+                                ? 'bg-white/20 text-white border border-white/40'
+                                : 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30'
+                            }`}>
+                              ★ {t("Member's Choice")}
+                            </span>
+                          )}
+                          {resolutionType === 'ESCALATE' && (
+                            <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                          )}
+                        </div>
                       </span>
                       <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
                         resolutionType === 'ESCALATE'

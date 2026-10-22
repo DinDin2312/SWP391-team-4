@@ -12,6 +12,7 @@ import lombok.*;
 public class CreateSupportRequest {
     private Integer classId;
     private SupportCategory category;
+    private String preferredResolution;
     @NotBlank(message = "Title cannot be blank")
     private String title;
     @NotBlank(message = "Content cannot be blank")
