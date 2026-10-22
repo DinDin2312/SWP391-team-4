@@ -4,11 +4,16 @@ import {
   LifeBuoy, Search, Filter, RefreshCw, CheckCircle2,
   Clock, AlertTriangle, ShieldCheck, X, ChevronLeft,
   ChevronRight, CreditCard, MessageSquare, ArrowUpRight,
-  Eye, Phone, Mail, User, Dumbbell, DollarSign, Sparkles,
-  AlertCircle, ArrowUp, Minus, ArrowDown
+  Eye, Phone, Mail, User, Dumbbell, DollarSign, Sparkles
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
+import {
+  getPriorityBadge,
+  getStatusBadge,
+  getCategoryBadge,
+  getPreferredResolutionBadge
+} from '../../../utils/supportDisplayUtils';
 import receptionistService from '../services/receptionistService';
 import RespondSupportModal from './RespondSupportModal';
 
@@ -108,119 +113,6 @@ const SupportDeskView = (props) => {
     showToast(t('Support ticket resolved and member notified successfully.'), 'success');
     fetchStats();
     fetchRequests();
-  };
-
-  const getPriorityBadge = (priority, preferredResolution) => {
-    const effectivePriority = (priority === 'HIGH' || preferredResolution === 'CASH_REFUND') ? 'HIGH' : priority;
-    switch (effectivePriority) {
-      case 'URGENT':
-        return (
-          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 shadow-xs">
-            <AlertCircle className="w-3 h-3 shrink-0" />
-            <span>{t('Urgent')}</span>
-          </span>
-        );
-      case 'HIGH':
-        return (
-          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 shadow-xs">
-            <ArrowUp className="w-3 h-3 shrink-0" />
-            <span>{t('High')}</span>
-          </span>
-        );
-      case 'LOW':
-        return (
-          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20">
-            <ArrowDown className="w-3 h-3 shrink-0" />
-            <span>{t('Low')}</span>
-          </span>
-        );
-      case 'NORMAL':
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-500/10 text-slate-700 dark:text-slate-300 border border-slate-500/20">
-            <Minus className="w-3 h-3 shrink-0" />
-            <span>{t('Normal')}</span>
-          </span>
-        );
-    }
-  };
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'PENDING':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 inline-flex items-center gap-1">
-            <Clock className="w-3 h-3" /> {t('Pending')}
-          </span>
-        );
-      case 'IN_PROGRESS':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 inline-flex items-center gap-1">
-            <RefreshCw className="w-3 h-3 animate-spin" /> {t('In Progress')}
-          </span>
-        );
-      case 'APPROVED':
-      case 'RESOLVED':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> {t('Resolved')}
-          </span>
-        );
-      case 'ESCALATED':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 inline-flex items-center gap-1">
-            <ArrowUpRight className="w-3 h-3" /> {t('Escalated')}
-          </span>
-        );
-      case 'REJECTED':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 inline-flex items-center gap-1">
-            <X className="w-3 h-3" /> {t('Rejected')}
-          </span>
-        );
-      default:
-        return <span className="px-2 py-0.5 rounded text-xs bg-zinc-500/10 text-zinc-600">{status}</span>;
-    }
-  };
-
-  const getCategoryBadge = (category) => {
-    switch (category) {
-      case 'CLASS_CANCELLATION':
-        return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300">{t('Class Cancellation')}</span>;
-      case 'FACILITY_ISSUE':
-        return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300">{t('Facility Issue')}</span>;
-      case 'COACH_FEEDBACK':
-        return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-500/10 text-indigo-700 dark:text-indigo-300">{t('Coach Feedback')}</span>;
-      case 'COMPLAINT':
-        return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-red-500/10 text-red-700 dark:text-red-300">{t('Complaint')}</span>;
-      default:
-        return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300">{t('General Inquiry')}</span>;
-    }
-  };
-
-  const getPreferredResolutionBadge = (pref) => {
-    switch (pref) {
-      case 'ISSUE_CREDIT':
-        return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 inline-flex items-center gap-1">
-            <CreditCard className="w-3 h-3" /> {t('Credit Voucher')}
-          </span>
-        );
-      case 'GYM_PASS':
-        return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 inline-flex items-center gap-1">
-            <Dumbbell className="w-3 h-3" /> {t('1-Month Gym Pass')}
-          </span>
-        );
-      case 'CASH_REFUND':
-        return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 inline-flex items-center gap-1">
-            <DollarSign className="w-3 h-3" /> {t('Cash / Bank Refund')}
-          </span>
-        );
-      default:
-        return null;
-    }
   };
 
   return (

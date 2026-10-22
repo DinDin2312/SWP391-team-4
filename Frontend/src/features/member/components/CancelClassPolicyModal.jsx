@@ -1,101 +1,62 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  X, AlertTriangle, CheckCircle2,
-  CreditCard, Send
-} from 'lucide-react';
+import { X, AlertTriangle, CreditCard } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import memberService from '../services/memberService';
+import { useClassCancellation } from '../hooks/useClassCancellation';
+import { getReasonLabel } from '../../../utils/supportDisplayUtils';
 import {
   ClassCancellationPreviewCard,
   ClassCancellationSuccessCard,
-  CancellationGuaranteeNotice
+  ClassCancellationFormSection
 } from './ClassCancellationCards';
 
 const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
   useLanguage();
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [preview, setPreview] = useState(null);
+  const {
+    loading,
+    error,
+    setError,
+    preview,
+    loadPreview,
+    executeDirectCancel,
+    reset: resetCancellation
+  } = useClassCancellation();
 
-  // Form state for in-progress support request
+  const [submitting, setSubmitting] = useState(false);
   const [reasonCategory, setReasonCategory] = useState('CLASS_CANCELLATION');
   const [reasonContent, setReasonContent] = useState('');
-  const [preferredResolution, setPreferredResolution] = useState('ISSUE_CREDIT'); // 'ISSUE_CREDIT' | 'GYM_PASS' | 'CASH_REFUND'
-
-  // Result state
+  const [preferredResolution, setPreferredResolution] = useState('ISSUE_CREDIT');
   const [successResult, setSuccessResult] = useState(null);
   const [copiedCode, setCopiedCode] = useState(false);
 
   useEffect(() => {
     if (isOpen && classId) {
-      fetchPreview();
+      loadPreview(classId);
     } else {
-      resetState();
+      resetCancellation();
+      setSubmitting(false);
+      setReasonContent('');
+      setPreferredResolution('ISSUE_CREDIT');
+      setSuccessResult(null);
+      setCopiedCode(false);
     }
-  }, [isOpen, classId]);
-
-  const resetState = () => {
-    setLoading(false);
-    setSubmitting(false);
-    setError('');
-    setPreview(null);
-    setReasonContent('');
-    setPreferredResolution('ISSUE_CREDIT');
-    setSuccessResult(null);
-    setCopiedCode(false);
-  };
-
-  const fetchPreview = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const data = await memberService.getCancelClassPreview(classId);
-      setPreview(data);
-    } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.message || err.message || t('Failed to load cancellation policy preview.'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [isOpen, classId, loadPreview, resetCancellation]);
 
   const handleDirectCancel = async () => {
-    try {
-      setSubmitting(true);
-      setError('');
-      const res = await memberService.cancelClassDirectly(classId);
-      setSuccessResult({
-        type: 'DIRECT_CANCEL_SUCCESS',
-        requestId: res.requestId,
-        creditCode: res.creditCode,
-        creditAmount: res.creditAmount,
-        expiryDate: res.expiryDate,
-        message: res.message
-      });
+    setSubmitting(true);
+    const res = await executeDirectCancel(classId);
+    setSubmitting(false);
+    if (res.success) {
+      setSuccessResult(res.data);
       if (onSuccess) onSuccess();
-    } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.message || err.message || t('Failed to cancel class.'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const getReasonLabel = (val) => {
-    switch (val) {
-      case 'CLASS_CANCELLATION': return t('Mid-Course Emergency / Medical / Relocation');
-      case 'GENERAL_INQUIRY': return t('Schedule Conflict / Need Class Transfer');
-      case 'COMPLAINT': return t('Course Quality / Other Reason');
-      default: return t('Other');
     }
   };
 
   const handleSubmitSupportRequest = async (e) => {
-    if (e) e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!reasonContent.trim()) {
       setError(t('Please describe the reason for your support request.'));
       return;
@@ -215,103 +176,18 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
                 onSelectResolution={setPreferredResolution}
               />
 
-              {/* Action Area: 1-Click Cancel (if not started & credit voucher) OR Support Form */}
-              {!preview.hasStarted && preferredResolution === 'ISSUE_CREDIT' ? (
-                <div className="space-y-4 pt-2">
-                  <CancellationGuaranteeNotice />
-
-                  <div className="flex items-center justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      disabled={submitting}
-                      className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors"
-                    >
-                      {t('Keep My Booking')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDirectCancel}
-                      disabled={submitting}
-                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-colors flex items-center gap-2 shadow-lg shadow-emerald-600/20"
-                    >
-                      {submitting ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          <span>{t('Processing...')}</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>{t('Confirm Cancel & Receive Credit Now')}</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* Support Ticket Form to Receptionist / Manager */
-                <form onSubmit={handleSubmitSupportRequest} className="space-y-4 pt-2">
-                  <div className="space-y-2">
-                    <label htmlFor="cancel-reason-select" className="block text-xs font-bold text-[var(--text)]">
-                      {t('Reason for Request')}
-                    </label>
-                    <select
-                      id="cancel-reason-select"
-                      value={reasonCategory}
-                      onChange={(e) => setReasonCategory(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                    >
-                      <option value="CLASS_CANCELLATION">{t('Mid-Course Emergency / Medical / Relocation')}</option>
-                      <option value="GENERAL_INQUIRY">{t('Schedule Conflict / Need Class Transfer')}</option>
-                      <option value="COMPLAINT">{t('Course Quality / Other Reason')}</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="cancel-reason-content" className="block text-xs font-bold text-[var(--text)]">
-                      {t('Detailed Situation & Note for Receptionist')} <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      id="cancel-reason-content"
-                      rows={3}
-                      value={reasonContent}
-                      onChange={(e) => setReasonContent(e.target.value)}
-                      placeholder={t('Please specify your reason (e.g. medical reason, work relocation). Receptionist will review and approve your credit voucher or compensation.')}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
-                      required
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      disabled={submitting}
-                      className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors"
-                    >
-                      {t('Keep My Booking')}
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submitting || !reasonContent.trim()}
-                      className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 disabled:opacity-50"
-                    >
-                      {submitting ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          <span>{t('Submitting...')}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4" />
-                          <span>{t('Send Request to Reception')}</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              )}
+              <ClassCancellationFormSection
+                preview={preview}
+                preferredResolution={preferredResolution}
+                reasonCategory={reasonCategory}
+                onChangeReasonCategory={setReasonCategory}
+                reasonContent={reasonContent}
+                onChangeReasonContent={setReasonContent}
+                submitting={submitting}
+                onClose={onClose}
+                onDirectCancel={handleDirectCancel}
+                onSubmitSupport={handleSubmitSupportRequest}
+              />
             </>
           )}
         </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  CheckCircle2, Clock, Sparkles, CreditCard, Dumbbell, DollarSign, Check, Copy
+  CheckCircle2, Clock, Sparkles, CreditCard, Dumbbell, DollarSign, Check, Copy, Send
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
@@ -368,3 +368,124 @@ export const ClassCancellationSuccessCard = ({
     </div>
   );
 };
+
+export const ClassCancellationFormSection = ({
+  preview,
+  preferredResolution,
+  reasonCategory,
+  onChangeReasonCategory,
+  reasonContent,
+  onChangeReasonContent,
+  submitting,
+  onClose,
+  onDirectCancel,
+  onSubmitSupport,
+  directCancelDisabled = false,
+  supportSubmitDisabled = false
+}) => {
+  useLanguage();
+
+  if (!preview) return null;
+
+  if (!preview.hasStarted && preferredResolution === 'ISSUE_CREDIT') {
+    return (
+      <div className="space-y-4 pt-2">
+        <CancellationGuaranteeNotice />
+
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors cursor-pointer"
+          >
+            {t('Keep My Booking')}
+          </button>
+          <button
+            type="button"
+            onClick={onDirectCancel}
+            disabled={submitting || directCancelDisabled}
+            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-colors flex items-center gap-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {submitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>{t('Processing...')}</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{t('Confirm Cancel & Receive Credit Now')}</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 pt-2">
+      <div className="space-y-2">
+        <label htmlFor="cancel-reason-select" className="block text-xs font-bold text-[var(--text)]">
+          {t('Reason for Request')}
+        </label>
+        <select
+          id="cancel-reason-select"
+          value={reasonCategory}
+          onChange={(e) => onChangeReasonCategory(e.target.value)}
+          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+        >
+          <option value="CLASS_CANCELLATION">{t('Mid-Course Emergency / Medical / Relocation')}</option>
+          <option value="GENERAL_INQUIRY">{t('Schedule Conflict / Need Class Transfer')}</option>
+          <option value="COMPLAINT">{t('Course Quality / Other Reason')}</option>
+        </select>
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor="cancel-reason-content" className="block text-xs font-bold text-[var(--text)]">
+          {t('Detailed Situation & Note for Receptionist')} <span className="text-red-500">*</span>
+        </label>
+        <textarea
+          id="cancel-reason-content"
+          rows={3}
+          value={reasonContent}
+          onChange={(e) => onChangeReasonContent(e.target.value)}
+          placeholder={t('Please specify your reason (e.g. medical reason, work relocation). Receptionist will review and approve your credit voucher or compensation.')}
+          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
+          required
+        />
+      </div>
+
+      <div className="flex items-center justify-end gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={submitting}
+          className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors cursor-pointer"
+        >
+          {t('Keep My Booking')}
+        </button>
+        <button
+          type="button"
+          onClick={onSubmitSupport}
+          disabled={submitting || !reasonContent?.trim() || supportSubmitDisabled}
+          className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        >
+          {submitting ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span>{t('Submitting...')}</span>
+            </>
+          ) : (
+            <>
+              <Send className="w-4 h-4" />
+              <span>{t('Send Request to Reception')}</span>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
+

@@ -3,17 +3,29 @@ import {
   HelpCircle, CreditCard, Ticket, Clock, CheckCircle2,
   AlertTriangle, Plus, Send, X, Copy, Check, MessageSquare,
   ShieldCheck, AlertCircle, ChevronDown, ChevronUp, RefreshCw,
-  Dumbbell, DollarSign, Sparkles, Wrench, UserCheck, Calendar, RotateCcw,
-  ArrowUp, Minus, ArrowDown
+  Dumbbell, DollarSign, Sparkles, Wrench, UserCheck, Calendar, RotateCcw
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import memberService from '../services/memberService';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';
+import { useClassCancellation } from '../hooks/useClassCancellation';
+import {
+  getDaysLeft,
+  getReasonLabel,
+  getCoachAspectLabel,
+  getFacilityAreaLabel,
+  getScheduleTypeLabel,
+  getComplaintTypeLabel,
+  getCategoryLabel,
+  getStatusBadge,
+  getPriorityBadge
+} from '../../../utils/supportDisplayUtils';
 import {
   ClassCancellationPreviewCard,
   ClassCancellationSuccessCard,
-  CancellationGuaranteeNotice
+  CancellationGuaranteeNotice,
+  ClassCancellationFormSection
 } from '../components/ClassCancellationCards';
 
 const CATEGORY_OPTIONS = [
@@ -92,10 +104,16 @@ const MemberSupportView = () => {
     priority: 'NORMAL'
   });
 
-  // Cancellation preview state
-  const [cancelPreview, setCancelPreview] = useState(null);
-  const [loadingPreview, setLoadingPreview] = useState(false);
-  const [previewError, setPreviewError] = useState('');
+  // Cancellation preview hook
+  const {
+    loading: loadingPreview,
+    error: previewError,
+    setError: setPreviewError,
+    preview: cancelPreview,
+    setPreview: setCancelPreview,
+    loadPreview: fetchCancelPreview,
+    executeDirectCancel
+  } = useClassCancellation();
 
   // Modal success state
   const [modalSuccess, setModalSuccess] = useState(null);
@@ -234,107 +252,15 @@ const MemberSupportView = () => {
     }
   }, [isModalOpen, ticketForm.category, ticketForm.classId, classes]);
 
-  const fetchCancelPreview = async (classId) => {
-    try {
-      setLoadingPreview(true);
-      setPreviewError('');
-      const data = await memberService.getCancelClassPreview(classId);
-      setCancelPreview(data);
-    } catch (err) {
-      console.error(err);
-      setPreviewError(err.response?.data?.message || err.message || t('Failed to load cancellation policy preview.'));
-    } finally {
-      setLoadingPreview(false);
-    }
-  };
-
   const handleDirectCancel = async (classId) => {
-    try {
-      setCreating(true);
-      setPreviewError('');
-      const res = await memberService.cancelClassDirectly(classId);
-      setModalSuccess({
-        type: 'DIRECT_CANCEL_SUCCESS',
-        requestId: res.requestId,
-        creditCode: res.creditCode,
-        creditAmount: res.creditAmount,
-        expiryDate: res.expiryDate,
-        message: res.message
-      });
+    setCreating(true);
+    const res = await executeDirectCancel(classId);
+    setCreating(false);
+    if (res.success) {
+      setModalSuccess(res.data);
       fetchData();
-    } catch (err) {
-      console.error(err);
-      showToast(err.response?.data?.message || err.message || t('Failed to cancel class.'), 'error');
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const getDaysLeft = (expiryDate, providedDays) => {
-    if (providedDays != null && !isNaN(providedDays)) return providedDays;
-    if (!expiryDate) return 0;
-    try {
-      const parts = String(expiryDate).split('-');
-      if (parts.length === 3) {
-        const exp = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const diffDays = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        return Math.max(0, diffDays);
-      }
-    } catch {
-      // fallback
-    }
-    return 0;
-  };
-
-  const getReasonLabel = (val) => {
-    switch (val) {
-      case 'CLASS_CANCELLATION': return t('Mid-Course Emergency / Medical / Relocation');
-      case 'GENERAL_INQUIRY': return t('Schedule Conflict / Need Class Transfer');
-      case 'COMPLAINT': return t('Course Quality / Other Reason');
-      default: return t('Other');
-    }
-  };
-
-  const getCoachAspectLabel = (val) => {
-    switch (val) {
-      case 'TEACHING_METHOD': return t('Teaching Method & Delivery');
-      case 'ATTITUDE': return t('Attitude & Member Care');
-      case 'PUNCTUALITY': return t('Punctuality & Professionalism');
-      case 'TECHNICAL_GUIDANCE': return t('Technical Expertise & Form Correction');
-      default: return t('Other Feedback');
-    }
-  };
-
-  const getFacilityAreaLabel = (val) => {
-    switch (val) {
-      case 'GYM_FLOOR': return t('Gym & Free Weights Area');
-      case 'CARDIO_ZONE': return t('Cardio Zone');
-      case 'STUDIO_ROOM': return t('Studio / Yoga / Aerobics Room');
-      case 'SWIMMING_POOL': return t('Swimming Pool & Jacuzzi');
-      case 'LOCKER_SAUNA': return t('Locker Room & Sauna');
-      case 'LOBBY_RECEPTION': return t('Lobby & Reception Area');
-      default: return t('Other Area');
-    }
-  };
-
-  const getScheduleTypeLabel = (val) => {
-    switch (val) {
-      case 'SINGLE_ABSENCE': return t('Request Single Session Absence');
-      case 'MAKEUP_CLASS': return t('Register Makeup Session');
-      case 'CLASS_TRANSFER': return t('Request Class Time Transfer');
-      case 'SCHEDULE_INQUIRY': return t('Schedule & Holiday Inquiry');
-      default: return t('Schedule Support');
-    }
-  };
-
-  const getComplaintTypeLabel = (val) => {
-    switch (val) {
-      case 'STAFF_BEHAVIOR': return t('Staff / Receptionist Service');
-      case 'CLEANLINESS': return t('Cleanliness & Environment');
-      case 'BILLING_POLICY': return t('Pricing, Membership & Billing Policy');
-      default: return t('Other Issue');
+    } else {
+      showToast(res.error, 'error');
     }
   };
 
@@ -452,90 +378,6 @@ const MemberSupportView = () => {
       showToast(err.response?.data?.message || t('Failed to create ticket.'), 'error');
     } finally {
       setCreating(false);
-    }
-  };
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'PENDING':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" /> {t('Pending Reception Review')}
-          </span>
-        );
-      case 'IN_PROGRESS':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center gap-1.5">
-            <RefreshCw className="w-3.5 h-3.5 animate-spin" /> {t('In Progress')}
-          </span>
-        );
-      case 'APPROVED':
-      case 'RESOLVED':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5" /> {t('Approved & Resolved')}
-          </span>
-        );
-      case 'ESCALATED':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5" /> {t('Escalated to Manager')}
-          </span>
-        );
-      case 'REJECTED':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 flex items-center gap-1.5">
-            <X className="w-3.5 h-3.5" /> {t('Rejected')}
-          </span>
-        );
-      default:
-        return <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-zinc-500/10 text-zinc-600">{status}</span>;
-    }
-  };
-
-  const getPriorityBadge = (priority, preferredResolution) => {
-    const effectivePriority = (priority === 'HIGH' || preferredResolution === 'CASH_REFUND') ? 'HIGH' : priority;
-    switch (effectivePriority) {
-      case 'URGENT':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 shadow-xs">
-            <AlertCircle className="w-3 h-3 shrink-0" />
-            <span>{t('Urgent')}</span>
-          </span>
-        );
-      case 'HIGH':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 shadow-xs">
-            <ArrowUp className="w-3 h-3 shrink-0" />
-            <span>{t('High')}</span>
-          </span>
-        );
-      case 'LOW':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20">
-            <ArrowDown className="w-3 h-3 shrink-0" />
-            <span>{t('Low')}</span>
-          </span>
-        );
-      case 'NORMAL':
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-500/10 text-slate-700 dark:text-slate-300 border border-slate-500/20">
-            <Minus className="w-3 h-3 shrink-0" />
-            <span>{t('Normal')}</span>
-          </span>
-        );
-    }
-  };
-
-  const getCategoryLabel = (category) => {
-    switch (category) {
-      case 'CLASS_CANCELLATION': return t('Class Cancellation & Proration');
-      case 'FACILITY_ISSUE': return t('Facility & Equipment Report');
-      case 'COACH_FEEDBACK': return t('Coach & Training Feedback');
-      case 'SCHEDULE_SUPPORT': return t('Schedule Support & Absence/Makeup');
-      case 'COMPLAINT': return t('Service Complaint');
-      default: return t('General Inquiry');
     }
   };
 
@@ -725,7 +567,7 @@ const MemberSupportView = () => {
                           <span className="text-xs font-medium px-2 py-0.5 rounded bg-[var(--surface-hover)] text-[var(--text-muted)] border border-[var(--border)]">
                             {getCategoryLabel(tkt.category)}
                           </span>
-                          {getStatusBadge(tkt.status)}
+                          {getStatusBadge(tkt.status, { isMember: true })}
                           {getPriorityBadge(tkt.priority, tkt.preferredResolution)}
                         </div>
                         <h4 className="text-base font-bold text-[var(--text)]">
@@ -1071,103 +913,20 @@ const MemberSupportView = () => {
                             onSelectResolution={(res) => setTicketForm({ ...ticketForm, preferredResolution: res })}
                           />
 
-                          {/* Action Area: Direct Cancel or Support Form */}
-                          {!cancelPreview.hasStarted && ticketForm.preferredResolution === 'ISSUE_CREDIT' ? (
-                            <div className="space-y-4 pt-2">
-                              <CancellationGuaranteeNotice />
-
-                              <div className="flex items-center justify-end gap-3 pt-2">
-                                <button
-                                  type="button"
-                                  onClick={handleCloseModal}
-                                  disabled={creating}
-                                  className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors"
-                                >
-                                  {t('Keep My Booking')}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDirectCancel(ticketForm.classId)}
-                                  disabled={creating || !cancelPreview.canDirectCancelWithCredit || !!existingPendingTicketForSelectedClass}
-                                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-colors flex items-center gap-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {creating ? (
-                                    <>
-                                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                      <span>{t('Processing...')}</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <CheckCircle2 className="w-4 h-4" />
-                                      <span>{t('Confirm Cancel & Receive Credit Now')}</span>
-                                    </>
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            /* Support Ticket Form to Reception */
-                            <div className="space-y-4 pt-2">
-                              <div className="space-y-2">
-                                <label htmlFor="cancel-reason-select" className="block text-xs font-bold text-[var(--text)]">
-                                  {t('Reason for Request')}
-                                </label>
-                                <select
-                                  id="cancel-reason-select"
-                                  value={ticketForm.cancellationReason}
-                                  onChange={(e) => setTicketForm({ ...ticketForm, cancellationReason: e.target.value })}
-                                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                                >
-                                  <option value="CLASS_CANCELLATION">{t('Mid-Course Emergency / Medical / Relocation')}</option>
-                                  <option value="GENERAL_INQUIRY">{t('Schedule Conflict / Need Class Transfer')}</option>
-                                  <option value="COMPLAINT">{t('Course Quality / Other Reason')}</option>
-                                </select>
-                              </div>
-
-                              <div className="space-y-2">
-                                <label htmlFor="cancel-reason-content" className="block text-xs font-bold text-[var(--text)]">
-                                  {t('Detailed Situation & Note for Receptionist')} <span className="text-red-500">*</span>
-                                </label>
-                                <textarea
-                                  id="cancel-reason-content"
-                                  rows={3}
-                                  value={ticketForm.content}
-                                  onChange={(e) => setTicketForm({ ...ticketForm, content: e.target.value })}
-                                  placeholder={t('Please specify your reason (e.g. medical reason, work relocation). Receptionist will review and approve your credit voucher or compensation.')}
-                                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
-                                  required
-                                />
-                              </div>
-
-                              <div className="flex items-center justify-end gap-3 pt-2">
-                                <button
-                                  type="button"
-                                  onClick={handleCloseModal}
-                                  disabled={creating}
-                                  className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors"
-                                >
-                                  {t('Keep My Booking')}
-                                </button>
-                                <button
-                                  type="submit"
-                                  disabled={creating || !ticketForm.content.trim() || !!existingPendingTicketForSelectedClass}
-                                  className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {creating ? (
-                                    <>
-                                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                      <span>{t('Submitting...')}</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Send className="w-4 h-4" />
-                                      <span>{t('Send Request to Reception')}</span>
-                                    </>
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                          )}
+                          <ClassCancellationFormSection
+                            preview={cancelPreview}
+                            preferredResolution={ticketForm.preferredResolution}
+                            reasonCategory={ticketForm.cancellationReason}
+                            onChangeReasonCategory={(val) => setTicketForm({ ...ticketForm, cancellationReason: val })}
+                            reasonContent={ticketForm.content}
+                            onChangeReasonContent={(val) => setTicketForm({ ...ticketForm, content: val })}
+                            submitting={creating}
+                            onClose={handleCloseModal}
+                            onDirectCancel={() => handleDirectCancel(ticketForm.classId)}
+                            onSubmitSupport={handleCreateTicket}
+                            directCancelDisabled={!cancelPreview.canDirectCancelWithCredit || !!existingPendingTicketForSelectedClass}
+                            supportSubmitDisabled={!!existingPendingTicketForSelectedClass}
+                          />
                         </div>
                       )}
                     </div>

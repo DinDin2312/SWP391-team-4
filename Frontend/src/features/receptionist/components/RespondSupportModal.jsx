@@ -3,10 +3,17 @@ import {
   X, AlertTriangle, CheckCircle2, ShieldAlert,
   Send, User, Phone, Mail, BookOpen, Clock, Calendar,
   CreditCard, ArrowUpRight, DollarSign, RotateCcw, Dumbbell, Sparkles,
-  Wrench, UserCheck, AlertCircle, ArrowUp, Minus, ArrowDown
+  Wrench, UserCheck
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
+import {
+  getPriorityBadge as renderPriorityBadge,
+  getPriorityLabel,
+  getDisplayTitle,
+  formatRespondedAt,
+  getStatusBadge
+} from '../../../utils/supportDisplayUtils';
 import receptionistService from '../services/receptionistService';
 
 const COLOR_THEMES = {
@@ -219,109 +226,9 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
     }
   }, [isOpen, request, isManager]);
 
-  const renderPriorityBadge = (priority, preferredResolution) => {
-    const effectivePriority = (priority === 'HIGH' || preferredResolution === 'CASH_REFUND') ? 'HIGH' : priority;
-    switch (effectivePriority) {
-      case 'URGENT':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 shadow-xs">
-            <AlertCircle className="w-3 h-3 shrink-0" />
-            <span>{t('Urgent')}</span>
-          </span>
-        );
-      case 'HIGH':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 shadow-xs">
-            <ArrowUp className="w-3 h-3 shrink-0" />
-            <span>{t('High')}</span>
-          </span>
-        );
-      case 'LOW':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20">
-            <ArrowDown className="w-3 h-3 shrink-0" />
-            <span>{t('Low')}</span>
-          </span>
-        );
-      case 'NORMAL':
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-500/10 text-slate-700 dark:text-slate-300 border border-slate-500/20">
-            <Minus className="w-3 h-3 shrink-0" />
-            <span>{t('Normal')}</span>
-          </span>
-        );
-    }
-  };
-
-  const getPriorityLabel = (priority) => {
-    switch (priority) {
-      case 'URGENT': return t('Urgent');
-      case 'HIGH': return t('High');
-      case 'LOW': return t('Low');
-      case 'NORMAL':
-      default:
-        return t('Normal');
-    }
-  };
-
-  const getDisplayTitle = (title) => {
-    if (!title) return '';
-    return title.replace('Cancellation & Retention Request for', t('Cancellation & Retention Request for'));
-  };
-
-  const formatRespondedAt = (val) => {
-    if (!val) return '';
-    try {
-      const d = new Date(val);
-      if (!isNaN(d.getTime())) {
-        return d.toLocaleString('vi-VN', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-      }
-    } catch {
-      // fallback
-    }
-    return String(val).replace('T', ' ');
-  };
-
   const isClosed = request?.status === 'APPROVED' || request?.status === 'RESOLVED' || request?.status === 'REJECTED';
   const isEscalatedForReceptionist = !isManager && request?.status === 'ESCALATED';
   const isReadOnly = isClosed || isEscalatedForReceptionist;
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'APPROVED':
-      case 'RESOLVED':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" /> {t('Resolved')}
-          </span>
-        );
-      case 'ESCALATED':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 inline-flex items-center gap-1">
-            <ArrowUpRight className="w-3.5 h-3.5" /> {t('Escalated')}
-          </span>
-        );
-      case 'REJECTED':
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 inline-flex items-center gap-1">
-            <X className="w-3.5 h-3.5" /> {t('Rejected')}
-          </span>
-        );
-      default:
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 inline-flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5" /> {t('Pending')}
-          </span>
-        );
-    }
-  };
 
   if (!isOpen || !request) return null;
 
