@@ -144,6 +144,10 @@ export const memberService = {
   getMyCredits: async () => {
     return await axiosClient.get('/v1/member/support/credits');
   },
+
+  withdrawSupportRequest: async (requestId) => {
+    return await axiosClient.put(`/v1/member/support/requests/${requestId}/withdraw`);
+  },
 };
 
 export default memberService;

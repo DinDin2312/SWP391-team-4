@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   X, AlertTriangle, CheckCircle2, ShieldAlert,
   Send, User, Phone, Mail, BookOpen, Clock, Calendar,
-  CreditCard, ArrowUpRight, DollarSign, RotateCcw, Dumbbell, Sparkles
+  CreditCard, ArrowUpRight, DollarSign, RotateCcw, Dumbbell, Sparkles,
+  Wrench, UserCheck, AlertCircle, ArrowUp, Minus, ArrowDown
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
@@ -21,18 +22,91 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
   const [revokeReason, setRevokeReason] = useState('');
   const [revoking, setRevoking] = useState(false);
 
+  const isClassCancellationOrCompensation = Boolean(
+    request?.category === 'CLASS_CANCELLATION' ||
+    request?.category === 'REFUND_REQUEST' ||
+    (request?.preferredResolution && ['ISSUE_CREDIT', 'GYM_PASS', 'CASH_REFUND'].includes(request.preferredResolution)) ||
+    (request?.title && /cancellation|hủy|bảo lưu|retention/i.test(request.title))
+  );
+
+  const getNoteTemplate = (type, amt = creditAmount) => {
+    const rolePrefix = isManager ? 'Quản lý trung tâm' : 'Lễ tân';
+    const clsName = request?.className ? ` lớp "${request.className}"` : '';
+    const roundedAmt = Math.round(Number(amt || 0) / 1000) * 1000;
+    const formattedAmt = formatMoney(roundedAmt);
+
+    switch (type) {
+      // Cancellation actions
+      case 'ISSUE_CREDIT':
+        return `${rolePrefix} đã phê duyệt bảo lưu${clsName}. Mã tín dụng 60 ngày trị giá ${formattedAmt} đã được cấp vào ví tài khoản học viên.`;
+      case 'GYM_PASS':
+        return `${rolePrefix} đã phê duyệt chuyển đổi${clsName} sang Thẻ tập Gym 01 tháng miễn phí. Mã voucher kích hoạt trị giá ${formattedAmt} đã được cấp vào ví tài khoản học viên.`;
+      case 'CASH_REFUND':
+        return `Quản lý trung tâm đã phê duyệt hoàn tiền học phí${clsName}. Số tiền ${formattedAmt} sẽ được hoàn trả trực tiếp tại quầy hoặc chuyển khoản.`;
+
+      // Coach feedback actions
+      case 'ACKNOWLEDGE_AND_TRAIN':
+        return `${rolePrefix} đã tiếp nhận phản ánh của học viên về HLV phụ trách${clsName}. Trung tâm đã làm việc với Trưởng bộ môn và nhắc nhở HLV để chấn chỉnh, nâng cao chất lượng giảng dạy.`;
+      case 'TRANSFER_CLASS_SUGGESTION':
+        return `${rolePrefix} đã ghi nhận phản hồi và tư vấn hỗ trợ học viên chuyển sang lớp của HLV khác phù hợp hơn với nhu cầu tập luyện.`;
+
+      // Facility actions
+      case 'ASSIGN_MAINTENANCE':
+        return `${rolePrefix} đã tiếp nhận thông tin và chuyển ngay lệnh kiểm tra, bảo trì thiết bị tới bộ phận kỹ thuật để khắc phục sớm nhất.`;
+      case 'SCHEDULED_FIX':
+        return `Thiết bị đã được gắn biển bảo trì và dự kiến sẽ hoàn tất kiểm tra, sửa chữa đưa vào sử dụng trong vòng 24h - 48h tới.`;
+
+      // Schedule support actions
+      case 'APPROVE_SCHEDULE_CHANGE':
+        return `${rolePrefix} đã hỗ trợ cập nhật lịch học mới cho học viên trên hệ thống. Chúc bạn có buổi tập hiệu quả!`;
+      case 'GUIDE_BOOKING':
+        return `${rolePrefix} đã gửi hướng dẫn qua ứng dụng để học viên có thể chủ động chuyển đổi lịch tập theo thời gian biểu mong muốn.`;
+
+      // Complaint actions
+      case 'RESOLVE_COMPLAINT':
+        return `Trung tâm chân thành xin lỗi học viên về trải nghiệm chưa tốt. ${rolePrefix} đã làm việc với các bộ phận liên quan để khắc phục ngay vấn đề này.`;
+
+      // Inquiry actions
+      case 'ANSWER_INQUIRY':
+        return `${rolePrefix} đã giải đáp chi tiết thắc mắc của bạn. Nếu cần hỗ trợ thêm, bạn vui lòng liên hệ trực tiếp quầy lễ tân.`;
+      case 'CONTACT_DIRECTLY':
+        return `${rolePrefix} đã liên hệ trực tiếp với học viên để giải đáp và hướng dẫn chi tiết mọi nội dung thắc mắc.`;
+
+      // Common actions
+      case 'ESCALATE':
+        return `${rolePrefix} đã tiếp nhận yêu cầu của học viên và chuyển tiếp đến Quản lý trung tâm xem xét, giải quyết.`;
+      case 'REJECT':
+        return `${rolePrefix} rất tiếc chưa thể phê duyệt yêu cầu của học viên do không thỏa điều kiện theo quy định của trung tâm.`;
+      case 'APPROVE_GENERAL':
+      default:
+        return `${rolePrefix} đã tiếp nhận và xử lý yêu cầu của bạn.`;
+    }
+  };
+
+  const handleSelectResolution = (type) => {
+    setResolutionType(type);
+    setResponseNote(getNoteTemplate(type, creditAmount));
+  };
+
+  const handleAmountChange = (newVal) => {
+    setCreditAmount(newVal);
+    const parsed = parseFloat(newVal) || 0;
+    setResponseNote(getNoteTemplate(resolutionType, parsed));
+  };
+
   useEffect(() => {
     if (isOpen && request) {
       setShowRevokeConfirm(false);
       setRevokeReason('');
-      const suggested = request.calculatedCreditAmount ?? request.proratedCredit ?? request.classPrice ?? 0;
+      const rawSuggested = request.calculatedCreditAmount ?? request.proratedCredit ?? request.classPrice ?? 0;
+      const suggested = Math.round(Number(rawSuggested) / 1000) * 1000;
       setCreditAmount(suggested);
       setValidDays(60);
 
       const pref = request.preferredResolution;
       let defaultType = 'APPROVE_GENERAL';
 
-      if (request.category === 'CLASS_CANCELLATION') {
+      if (isClassCancellationOrCompensation) {
         if (pref === 'GYM_PASS') {
           defaultType = 'GYM_PASS';
         } else if (pref === 'CASH_REFUND') {
@@ -41,26 +115,58 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
           // Default or ISSUE_CREDIT
           defaultType = isManager && (request.status === 'ESCALATED') ? 'CASH_REFUND' : 'ISSUE_CREDIT';
         }
+      } else if (request.category === 'COACH_FEEDBACK') {
+        defaultType = 'ACKNOWLEDGE_AND_TRAIN';
+      } else if (request.category === 'FACILITY_ISSUE') {
+        defaultType = 'ASSIGN_MAINTENANCE';
+      } else if (request.category === 'SCHEDULE_SUPPORT') {
+        defaultType = 'APPROVE_SCHEDULE_CHANGE';
+      } else if (request.category === 'COMPLAINT') {
+        defaultType = 'RESOLVE_COMPLAINT';
+      } else {
+        defaultType = 'ANSWER_INQUIRY';
       }
 
       setResolutionType(defaultType);
-
-      const rolePrefix = isManager ? 'Quản lý trung tâm' : 'Lễ tân';
-      if (defaultType === 'GYM_PASS') {
-        setResponseNote(`${rolePrefix} đã phê duyệt yêu cầu đổi lớp ${request.className || ""} sang Thẻ tập Gym 01 tháng miễn phí cho học viên.`);
-      } else if (defaultType === 'CASH_REFUND') {
-        setResponseNote(`Quản lý trung tâm đã phê duyệt hoàn tiền học phí lớp ${request.className || ""}. Số tiền ${formatMoney(suggested)} sẽ được hoàn trả trực tiếp tại quầy hoặc chuyển khoản.`);
-      } else if (defaultType === 'ESCALATE') {
-        setResponseNote(`Lễ tân đã tiếp nhận nguyện vọng hoàn tiền mặt của học viên đối với lớp ${request.className || ""} và chuyển tiếp đến Quản lý trung tâm phê duyệt.`);
-      } else if (request.category === 'CLASS_CANCELLATION') {
-        setResponseNote(`${rolePrefix} đã phê duyệt yêu cầu bảo lưu lớp ${request.className || ""}. Mã tín dụng 60 ngày trị giá ${formatMoney(suggested)} đã được cấp vào tài khoản học viên.`);
-      } else {
-        setResponseNote(`${rolePrefix} đã tiếp nhận và xử lý yêu cầu của bạn.`);
-      }
-
+      setResponseNote(getNoteTemplate(defaultType, suggested));
       setError('');
     }
   }, [isOpen, request, isManager]);
+
+  const renderPriorityBadge = (priority, preferredResolution) => {
+    const effectivePriority = (priority === 'HIGH' || preferredResolution === 'CASH_REFUND') ? 'HIGH' : priority;
+    switch (effectivePriority) {
+      case 'URGENT':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 shadow-xs">
+            <AlertCircle className="w-3 h-3 shrink-0" />
+            <span>{t('Urgent')}</span>
+          </span>
+        );
+      case 'HIGH':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 shadow-xs">
+            <ArrowUp className="w-3 h-3 shrink-0" />
+            <span>{t('High')}</span>
+          </span>
+        );
+      case 'LOW':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20">
+            <ArrowDown className="w-3 h-3 shrink-0" />
+            <span>{t('Low')}</span>
+          </span>
+        );
+      case 'NORMAL':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-500/10 text-slate-700 dark:text-slate-300 border border-slate-500/20">
+            <Minus className="w-3 h-3 shrink-0" />
+            <span>{t('Normal')}</span>
+          </span>
+        );
+    }
+  };
 
   const getPriorityLabel = (priority) => {
     switch (priority) {
@@ -147,10 +253,10 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
       let status = 'APPROVED';
       let finalCreditAmount = null;
 
-      if (resolutionType === 'ISSUE_CREDIT' || resolutionType === 'CASH_REFUND') {
+      if (resolutionType === 'ISSUE_CREDIT' || resolutionType === 'CASH_REFUND' || resolutionType === 'GYM_PASS') {
         status = 'APPROVED';
         finalCreditAmount = parseFloat(creditAmount) || 0;
-      } else if (resolutionType === 'GYM_PASS' || resolutionType === 'APPROVE_GENERAL') {
+      } else if (resolutionType === 'APPROVE_GENERAL') {
         status = 'APPROVED';
         finalCreditAmount = null;
       } else if (resolutionType === 'ESCALATE') {
@@ -166,8 +272,8 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
         resolutionType,
         responseNote: responseNote.trim(),
         creditAmount: finalCreditAmount,
-        validityDays: resolutionType === 'ISSUE_CREDIT' ? parseInt(validDays, 10) : 60,
-        creditExpiryDays: resolutionType === 'ISSUE_CREDIT' ? parseInt(validDays, 10) : 60
+        validityDays: (resolutionType === 'ISSUE_CREDIT' || resolutionType === 'GYM_PASS') ? parseInt(validDays, 10) : 60,
+        creditExpiryDays: (resolutionType === 'ISSUE_CREDIT' || resolutionType === 'GYM_PASS') ? parseInt(validDays, 10) : 60
       });
 
       if (onSuccess) onSuccess();
@@ -202,6 +308,607 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
     }
   };
 
+
+  const renderResolutionActions = () => {
+    // 1. CLASS CANCELLATION & REFUND
+    if (isClassCancellationOrCompensation) {
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('ISSUE_CREDIT')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'ISSUE_CREDIT'
+                ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40'
+                : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <CreditCard className={`w-4 h-4 ${resolutionType === 'ISSUE_CREDIT' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                <span className={resolutionType === 'ISSUE_CREDIT' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Issue Credit Voucher (Recommended)')}
+                </span>
+              </span>
+              <div className="flex items-center gap-1.5">
+                {(request.preferredResolution === 'ISSUE_CREDIT' || !request.preferredResolution) && (
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                    resolutionType === 'ISSUE_CREDIT' ? 'bg-white/20 text-white border border-white/40' : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                  }`}>
+                    ★ {t("Member's Choice")}
+                  </span>
+                )}
+                {resolutionType === 'ISSUE_CREDIT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+              </div>
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ISSUE_CREDIT' ? 'text-emerald-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Generates 60-day voucher code for member to re-enroll without losing money.')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('GYM_PASS')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'GYM_PASS'
+                ? 'border-blue-600 bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/40'
+                : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Clock className={`w-4 h-4 ${resolutionType === 'GYM_PASS' ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
+                <span className={resolutionType === 'GYM_PASS' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Grant Free 1-Month Gym Pass')}
+                </span>
+              </span>
+              <div className="flex items-center gap-1.5">
+                {request.preferredResolution === 'GYM_PASS' && (
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                    resolutionType === 'GYM_PASS' ? 'bg-white/20 text-white border border-white/40' : 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                  }`}>
+                    ★ {t("Member's Choice")}
+                  </span>
+                )}
+                {resolutionType === 'GYM_PASS' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+              </div>
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'GYM_PASS' ? 'text-blue-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Alternative perk when student prefers gym workouts over class credit.')}
+            </span>
+          </button>
+
+          {isManager ? (
+            <button
+              type="button"
+              onClick={() => handleSelectResolution('CASH_REFUND')}
+              className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                resolutionType === 'CASH_REFUND' ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
+              }`}
+            >
+              <span className="font-bold text-xs flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <DollarSign className={`w-4 h-4 ${resolutionType === 'CASH_REFUND' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
+                  <span className={resolutionType === 'CASH_REFUND' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                    {t('Phê Duyệt Hoàn Tiền Mặt / Chuyển Khoản')}
+                  </span>
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {request.preferredResolution === 'CASH_REFUND' && (
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                      resolutionType === 'CASH_REFUND' ? 'bg-white/20 text-white border border-white/40' : 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30'
+                    }`}>
+                      ★ {t("Member's Choice")}
+                    </span>
+                  )}
+                  {resolutionType === 'CASH_REFUND' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+                </div>
+              </span>
+              <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'CASH_REFUND' ? 'text-purple-50' : 'text-[var(--text-muted)]'}`}>
+                {t('Duyệt lệnh xuất quỹ/kế toán chuyển khoản hoàn trả học phí cho học viên.')}
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleSelectResolution('ESCALATE')}
+              className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                resolutionType === 'ESCALATE' ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
+              }`}
+            >
+              <span className="font-bold text-xs flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <ArrowUpRight className={`w-4 h-4 ${resolutionType === 'ESCALATE' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
+                  <span className={resolutionType === 'ESCALATE' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                    {t('Escalate to Center Manager')}
+                  </span>
+                </span>
+                {resolutionType === 'ESCALATE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+              </span>
+              <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ESCALATE' ? 'text-purple-50' : 'text-[var(--text-muted)]'}`}>
+                {t('For special cash refunds or high-dispute exceptions.')}
+              </span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('REJECT')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'REJECT' ? 'border-rose-600 bg-rose-600 text-white shadow-lg ring-2 ring-rose-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <X className={`w-4 h-4 ${resolutionType === 'REJECT' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
+                <span className={resolutionType === 'REJECT' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Reject Request')}
+                </span>
+              </span>
+              {resolutionType === 'REJECT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'REJECT' ? 'text-rose-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Course completed >80% or violates center policies.')}
+            </span>
+          </button>
+        </>
+      );
+    }
+
+    // 2. COACH FEEDBACK
+    if (request.category === 'COACH_FEEDBACK') {
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('ACKNOWLEDGE_AND_TRAIN')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'ACKNOWLEDGE_AND_TRAIN' ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <UserCheck className={`w-4 h-4 ${resolutionType === 'ACKNOWLEDGE_AND_TRAIN' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                <span className={resolutionType === 'ACKNOWLEDGE_AND_TRAIN' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Ghi nhận & Làm việc với HLV')}
+                </span>
+              </span>
+              {resolutionType === 'ACKNOWLEDGE_AND_TRAIN' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ACKNOWLEDGE_AND_TRAIN' ? 'text-emerald-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Nhắc nhở HLV, làm việc cùng Trưởng bộ môn để nâng cao chất lượng bài giảng.')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('TRANSFER_CLASS_SUGGESTION')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'TRANSFER_CLASS_SUGGESTION' ? 'border-blue-600 bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <BookOpen className={`w-4 h-4 ${resolutionType === 'TRANSFER_CLASS_SUGGESTION' ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
+                <span className={resolutionType === 'TRANSFER_CLASS_SUGGESTION' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Đề xuất đổi lớp / HLV khác')}
+                </span>
+              </span>
+              {resolutionType === 'TRANSFER_CLASS_SUGGESTION' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'TRANSFER_CLASS_SUGGESTION' ? 'text-blue-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Tư vấn hỗ trợ học viên chuyển sang lớp của HLV khác phù hợp với phong cách học.')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('ESCALATE')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'ESCALATE' ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <ArrowUpRight className={`w-4 h-4 ${resolutionType === 'ESCALATE' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
+                <span className={resolutionType === 'ESCALATE' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Chuyển Quản lý Chuyên môn')}
+                </span>
+              </span>
+              {resolutionType === 'ESCALATE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ESCALATE' ? 'text-purple-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Phản ánh nghiêm trọng về vi phạm kỷ luật hoặc thái độ cần cấp quản lý xử lý.')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('REJECT')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'REJECT' ? 'border-rose-600 bg-rose-600 text-white shadow-lg ring-2 ring-rose-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <X className={`w-4 h-4 ${resolutionType === 'REJECT' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
+                <span className={resolutionType === 'REJECT' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Đóng phản ánh (Không có cơ sở)')}
+                </span>
+              </span>
+              {resolutionType === 'REJECT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'REJECT' ? 'text-rose-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Sau khi kiểm tra camera/lịch sử thấy HLV thực hiện đúng giáo án chuẩn.')}
+            </span>
+          </button>
+        </>
+      );
+    }
+
+    // 3. FACILITY ISSUE
+    if (request.category === 'FACILITY_ISSUE') {
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('ASSIGN_MAINTENANCE')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'ASSIGN_MAINTENANCE' ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Wrench className={`w-4 h-4 ${resolutionType === 'ASSIGN_MAINTENANCE' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                <span className={resolutionType === 'ASSIGN_MAINTENANCE' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Báo Kỹ thuật / Bảo trì ngay')}
+                </span>
+              </span>
+              {resolutionType === 'ASSIGN_MAINTENANCE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ASSIGN_MAINTENANCE' ? 'text-emerald-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Chuyển ngay lệnh sửa chữa tới đội bảo trì, gắn biển kiểm tra thiết bị.')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('SCHEDULED_FIX')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'SCHEDULED_FIX' ? 'border-blue-600 bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Clock className={`w-4 h-4 ${resolutionType === 'SCHEDULED_FIX' ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
+                <span className={resolutionType === 'SCHEDULED_FIX' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Thông báo lịch sửa chữa')}
+                </span>
+              </span>
+              {resolutionType === 'SCHEDULED_FIX' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'SCHEDULED_FIX' ? 'text-blue-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Báo lịch máy đang sửa chữa, dự kiến hoàn thành đưa vào sử dụng trong 24-48h.')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('ESCALATE')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'ESCALATE' ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <ArrowUpRight className={`w-4 h-4 ${resolutionType === 'ESCALATE' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
+                <span className={resolutionType === 'ESCALATE' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Chuyển Quản lý CSVC (Thay mới)')}
+                </span>
+              </span>
+              {resolutionType === 'ESCALATE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ESCALATE' ? 'text-purple-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Thiết bị hỏng nặng không thể sửa, cần Quản lý duyệt mua mới thay thế.')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('REJECT')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'REJECT' ? 'border-rose-600 bg-rose-600 text-white shadow-lg ring-2 ring-rose-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <X className={`w-4 h-4 ${resolutionType === 'REJECT' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
+                <span className={resolutionType === 'REJECT' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Đã kiểm tra (Máy hoạt động tốt)')}
+                </span>
+              </span>
+              {resolutionType === 'REJECT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'REJECT' ? 'text-rose-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Kỹ thuật đã test máy bình thường, lễ tân sẽ hướng dẫn hội viên thao tác đúng.')}
+            </span>
+          </button>
+        </>
+      );
+    }
+
+    // 4. SCHEDULE SUPPORT
+    if (request.category === 'SCHEDULE_SUPPORT') {
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('APPROVE_SCHEDULE_CHANGE')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'APPROVE_SCHEDULE_CHANGE' ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Calendar className={`w-4 h-4 ${resolutionType === 'APPROVE_SCHEDULE_CHANGE' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                <span className={resolutionType === 'APPROVE_SCHEDULE_CHANGE' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Hỗ trợ đổi buổi / Xếp lịch bù')}
+                </span>
+              </span>
+              {resolutionType === 'APPROVE_SCHEDULE_CHANGE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'APPROVE_SCHEDULE_CHANGE' ? 'text-emerald-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Lễ tân đã cập nhật lịch học mới cho học viên trên hệ thống quản lý.')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('GUIDE_BOOKING')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'GUIDE_BOOKING' ? 'border-blue-600 bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <BookOpen className={`w-4 h-4 ${resolutionType === 'GUIDE_BOOKING' ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
+                <span className={resolutionType === 'GUIDE_BOOKING' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Hướng dẫn tự đổi lịch trên App')}
+                </span>
+              </span>
+              {resolutionType === 'GUIDE_BOOKING' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'GUIDE_BOOKING' ? 'text-blue-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Hướng dẫn học viên chủ động đổi lịch trên app trước 24h quy định.')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('ESCALATE')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'ESCALATE' ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <ArrowUpRight className={`w-4 h-4 ${resolutionType === 'ESCALATE' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
+                <span className={resolutionType === 'ESCALATE' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Chuyển Quản lý (Đặc cách xếp ca)')}
+                </span>
+              </span>
+              {resolutionType === 'ESCALATE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ESCALATE' ? 'text-purple-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Yêu cầu xếp ca ngoài lịch học chuẩn cần cấp quản lý phê duyệt.')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('REJECT')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'REJECT' ? 'border-rose-600 bg-rose-600 text-white shadow-lg ring-2 ring-rose-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <X className={`w-4 h-4 ${resolutionType === 'REJECT' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
+                <span className={resolutionType === 'REJECT' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Từ chối đổi lịch (Hết chỗ / Quá hạn)')}
+                </span>
+              </span>
+              {resolutionType === 'REJECT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'REJECT' ? 'text-rose-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Ca học mong muốn đã đầy sĩ số hoặc báo trễ không thỏa mãn điều kiện.')}
+            </span>
+          </button>
+        </>
+      );
+    }
+
+    // 5. COMPLAINT
+    if (request.category === 'COMPLAINT') {
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('RESOLVE_COMPLAINT')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'RESOLVE_COMPLAINT' ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className={`w-4 h-4 ${resolutionType === 'RESOLVE_COMPLAINT' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                <span className={resolutionType === 'RESOLVE_COMPLAINT' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Tiếp nhận xin lỗi & Khắc phục sự cố')}
+                </span>
+              </span>
+              {resolutionType === 'RESOLVE_COMPLAINT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'RESOLVE_COMPLAINT' ? 'text-emerald-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Xin lỗi học viên, ghi nhận thiếu sót và đưa ra biện pháp khắc phục quy trình.')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('CONTACT_DIRECTLY')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'CONTACT_DIRECTLY' ? 'border-blue-600 bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Phone className={`w-4 h-4 ${resolutionType === 'CONTACT_DIRECTLY' ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
+                <span className={resolutionType === 'CONTACT_DIRECTLY' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Đã liên hệ trực tiếp hòa giải')}
+                </span>
+              </span>
+              {resolutionType === 'CONTACT_DIRECTLY' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'CONTACT_DIRECTLY' ? 'text-blue-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Lễ tân/Trưởng ca đã gặp trực tiếp hoặc gọi điện trao đổi thỏa đáng với hội viên.')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('ESCALATE')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'ESCALATE' ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <ArrowUpRight className={`w-4 h-4 ${resolutionType === 'ESCALATE' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
+                <span className={resolutionType === 'ESCALATE' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Chuyển Quản lý Trung tâm')}
+                </span>
+              </span>
+              {resolutionType === 'ESCALATE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ESCALATE' ? 'text-purple-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Khiếu nại phức tạp cần cấp Quản lý trung tâm trực tiếp vào cuộc.')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectResolution('REJECT')}
+            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+              resolutionType === 'REJECT' ? 'border-rose-600 bg-rose-600 text-white shadow-lg ring-2 ring-rose-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/50'
+            }`}
+          >
+            <span className="font-bold text-xs flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <X className={`w-4 h-4 ${resolutionType === 'REJECT' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
+                <span className={resolutionType === 'REJECT' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                  {t('Bác bỏ khiếu nại (Không vi phạm)')}
+                </span>
+              </span>
+              {resolutionType === 'REJECT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+            </span>
+            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'REJECT' ? 'text-rose-50' : 'text-[var(--text-muted)]'}`}>
+              {t('Xác minh quy trình đúng quy chế, không có sai sót từ phía trung tâm.')}
+            </span>
+          </button>
+        </>
+      );
+    }
+
+    // 6. GENERAL INQUIRY (Default)
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => handleSelectResolution('ANSWER_INQUIRY')}
+          className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+            resolutionType === 'ANSWER_INQUIRY' ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50'
+          }`}
+        >
+          <span className="font-bold text-xs flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className={`w-4 h-4 ${resolutionType === 'ANSWER_INQUIRY' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
+              <span className={resolutionType === 'ANSWER_INQUIRY' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                {t('Giải đáp & Hướng dẫn hội viên')}
+              </span>
+            </span>
+            {resolutionType === 'ANSWER_INQUIRY' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+          </span>
+          <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ANSWER_INQUIRY' ? 'text-emerald-50' : 'text-[var(--text-muted)]'}`}>
+            {t('Phản hồi câu trả lời giải đáp đầy đủ thông tin hội viên cần hỗ trợ.')}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleSelectResolution('CONTACT_DIRECTLY')}
+          className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+            resolutionType === 'CONTACT_DIRECTLY' ? 'border-blue-600 bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/50'
+          }`}
+        >
+          <span className="font-bold text-xs flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Phone className={`w-4 h-4 ${resolutionType === 'CONTACT_DIRECTLY' ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
+              <span className={resolutionType === 'CONTACT_DIRECTLY' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                {t('Đã tư vấn trực tiếp / Qua điện thoại')}
+              </span>
+            </span>
+            {resolutionType === 'CONTACT_DIRECTLY' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+          </span>
+          <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'CONTACT_DIRECTLY' ? 'text-blue-50' : 'text-[var(--text-muted)]'}`}>
+            {t('Lễ tân đã liên hệ trực tiếp hỗ trợ chi tiết tại quầy hoặc qua hotline.')}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleSelectResolution('ESCALATE')}
+          className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+            resolutionType === 'ESCALATE' ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
+          }`}
+        >
+          <span className="font-bold text-xs flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <ArrowUpRight className={`w-4 h-4 ${resolutionType === 'ESCALATE' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
+              <span className={resolutionType === 'ESCALATE' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                {t('Chuyển Quản lý giải đáp')}
+              </span>
+            </span>
+            {resolutionType === 'ESCALATE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+          </span>
+          <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ESCALATE' ? 'text-purple-50' : 'text-[var(--text-muted)]'}`}>
+            {t('Câu hỏi chính sách vượt quá thẩm quyền của nhân viên lễ tân.')}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleSelectResolution('REJECT')}
+          className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+            resolutionType === 'REJECT' ? 'border-rose-600 bg-rose-600 text-white shadow-lg ring-2 ring-rose-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/50'
+          }`}
+        >
+          <span className="font-bold text-xs flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <X className={`w-4 h-4 ${resolutionType === 'REJECT' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
+              <span className={resolutionType === 'REJECT' ? 'text-white font-black' : 'text-[var(--text)]'}>
+                {t('Đóng yêu cầu hỗ trợ')}
+              </span>
+            </span>
+            {resolutionType === 'REJECT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+          </span>
+          <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'REJECT' ? 'text-rose-50' : 'text-[var(--text-muted)]'}`}>
+            {t('Nội dung đã được xử lý hoặc đóng theo yêu cầu hội viên.')}
+          </span>
+        </button>
+      </>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
       <div
@@ -220,8 +927,11 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
               <h2 id="respond-modal-title" className="text-lg font-bold text-[var(--text)]">
                 {isReadOnly ? t('Support Ticket Details') : t('Resolve Support Ticket')} #{request.requestId}
               </h2>
-              <p className="text-xs text-[var(--text-muted)]">
-                {getDisplayTitle(request.title)} &bull; {t('Priority:')} <span className="font-semibold">{getPriorityLabel(request.priority)}</span>
+              <p className="text-xs text-[var(--text-muted)] flex flex-wrap items-center gap-1.5 mt-0.5">
+                <span>{getDisplayTitle(request.title)}</span>
+                <span>&bull;</span>
+                <span>{t('Priority:')}</span>
+                {renderPriorityBadge(request.priority, request.preferredResolution)}
               </p>
             </div>
           </div>
@@ -302,14 +1012,16 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                   <span className="font-bold text-amber-600">{request.remainingSessions || 0}</span>
                 </div>
               </div>
-              <div className="flex justify-between items-center pt-1 text-xs">
-                <span className="font-bold text-[var(--text)]">
-                  {t('Prorated Remaining Value (Recommended Credit):')}
-                </span>
-                <span className="text-base font-extrabold text-[var(--primary)]">
-                  {formatMoney(request.calculatedCreditAmount ?? request.proratedCredit ?? request.classPrice ?? 0)}
-                </span>
-              </div>
+              {isClassCancellationOrCompensation && (
+                <div className="flex justify-between items-center pt-1 text-xs">
+                  <span className="font-bold text-[var(--text)]">
+                    {t('Prorated Remaining Value (Recommended Credit):')}
+                  </span>
+                  <span className="text-base font-extrabold text-[var(--primary)]">
+                    {formatMoney(request.calculatedCreditAmount ?? request.proratedCredit ?? request.classPrice ?? 0)}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
@@ -392,17 +1104,17 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                   )}
 
                   {/* If Cash Refund Approved */}
-                  {request.status === 'APPROVED' && !request.generatedCreditCode && request.category === 'CLASS_CANCELLATION' && (
-                    <div className="p-3.5 rounded-xl bg-teal-500/10 border border-teal-500/30 flex flex-wrap items-center justify-between gap-3">
+                  {request.status === 'APPROVED' && !request.generatedCreditCode && isClassCancellationOrCompensation && (
+                    <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <div className="text-xs font-bold text-teal-700 dark:text-teal-400 flex items-center gap-1.5">
+                        <div className="text-xs font-bold text-purple-700 dark:text-purple-400 flex items-center gap-1.5">
                           <DollarSign className="w-4 h-4" /> {t('Direct Cash / Bank Refund Approved')}
                         </div>
                         <div className="text-xs text-[var(--text-muted)] mt-1 font-medium">
                           {t('Authorized by Center Management')}
                         </div>
                       </div>
-                      <div className="text-base font-extrabold text-teal-600 dark:text-teal-400">
+                      <div className="text-base font-extrabold text-purple-600 dark:text-purple-400">
                         {formatMoney(request.calculatedCreditAmount ?? request.classPrice)}
                       </div>
                     </div>
@@ -493,244 +1205,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                   {t('Select Resolution Action')} <span className="text-red-500 font-bold">*</span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {request.category === 'CLASS_CANCELLATION' ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setResolutionType('ISSUE_CREDIT')}
-                        className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-                          resolutionType === 'ISSUE_CREDIT'
-                            ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40'
-                            : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50'
-                        }`}
-                      >
-                        <span className="font-bold text-xs flex items-center justify-between">
-                          <span className="flex items-center gap-1.5">
-                            <CreditCard className={`w-4 h-4 ${
-                              resolutionType === 'ISSUE_CREDIT' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'
-                            }`} />
-                            <span className={resolutionType === 'ISSUE_CREDIT' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                              {t('Issue Credit Voucher (Recommended)')}
-                            </span>
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            {request.preferredResolution === 'ISSUE_CREDIT' && (
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                                resolutionType === 'ISSUE_CREDIT'
-                                  ? 'bg-white/20 text-white border border-white/40'
-                                  : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                              }`}>
-                                ★ {t("Member's Choice")}
-                              </span>
-                            )}
-                            {resolutionType === 'ISSUE_CREDIT' && (
-                              <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                            )}
-                          </div>
-                        </span>
-                        <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
-                          resolutionType === 'ISSUE_CREDIT'
-                            ? 'text-emerald-50'
-                            : 'text-[var(--text-muted)]'
-                        }`}>
-                          {t('Generates 60-day voucher code for member to re-enroll without losing money.')}
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setResolutionType('GYM_PASS')}
-                        className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-                          resolutionType === 'GYM_PASS'
-                            ? 'border-blue-600 bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/40'
-                            : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/50'
-                        }`}
-                      >
-                        <span className="font-bold text-xs flex items-center justify-between">
-                          <span className="flex items-center gap-1.5">
-                            <Clock className={`w-4 h-4 ${
-                              resolutionType === 'GYM_PASS' ? 'text-white' : 'text-blue-600 dark:text-blue-400'
-                            }`} />
-                            <span className={resolutionType === 'GYM_PASS' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                              {t('Grant Free 1-Month Gym Pass')}
-                            </span>
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            {request.preferredResolution === 'GYM_PASS' && (
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                                resolutionType === 'GYM_PASS'
-                                  ? 'bg-white/20 text-white border border-white/40'
-                                  : 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30'
-                              }`}>
-                                ★ {t("Member's Choice")}
-                              </span>
-                            )}
-                            {resolutionType === 'GYM_PASS' && (
-                              <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                            )}
-                          </div>
-                        </span>
-                        <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
-                          resolutionType === 'GYM_PASS'
-                            ? 'text-blue-50'
-                            : 'text-[var(--text-muted)]'
-                        }`}>
-                          {t('Alternative perk when student prefers gym workouts over class credit.')}
-                        </span>
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setResolutionType('APPROVE_GENERAL')}
-                      className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-                        resolutionType === 'APPROVE_GENERAL'
-                          ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40'
-                        : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50'
-                      }`}
-                    >
-                      <span className="font-bold text-xs flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <CheckCircle2 className={`w-4 h-4 ${
-                            resolutionType === 'APPROVE_GENERAL' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'
-                          }`} />
-                          <span className={resolutionType === 'APPROVE_GENERAL' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                            {t('Approve & Resolve Issue')}
-                          </span>
-                        </span>
-                        {resolutionType === 'APPROVE_GENERAL' && (
-                          <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                        )}
-                      </span>
-                      <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
-                        resolutionType === 'APPROVE_GENERAL'
-                          ? 'text-emerald-50'
-                          : 'text-[var(--text-muted)]'
-                      }`}>
-                        {t('Acknowledge repair, feedback or inquiry as fully resolved.')}
-                      </span>
-                    </button>
-                  )}
-
-                  {isManager ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setResolutionType('CASH_REFUND');
-                        setResponseNote(`Quản lý trung tâm đã phê duyệt hoàn tiền học phí lớp ${request.className || ""}. Số tiền ${formatMoney(creditAmount)} sẽ được hoàn trả trực tiếp tại quầy hoặc chuyển khoản.`);
-                      }}
-                      className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-                        resolutionType === 'CASH_REFUND'
-                          ? 'border-teal-600 bg-teal-600 text-white shadow-lg ring-2 ring-teal-400/40'
-                          : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-teal-500/50'
-                      }`}
-                    >
-                      <span className="font-bold text-xs flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <DollarSign className={`w-4 h-4 ${
-                            resolutionType === 'CASH_REFUND' ? 'text-white' : 'text-teal-600 dark:text-teal-400'
-                          }`} />
-                          <span className={resolutionType === 'CASH_REFUND' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                            {t('Phê Duyệt Hoàn Tiền Mặt / Chuyển Khoản')}
-                          </span>
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          {request.preferredResolution === 'CASH_REFUND' && (
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                              resolutionType === 'CASH_REFUND'
-                                ? 'bg-white/20 text-white border border-white/40'
-                                : 'bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30'
-                            }`}>
-                              ★ {t("Member's Choice")}
-                            </span>
-                          )}
-                          {resolutionType === 'CASH_REFUND' && (
-                            <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                          )}
-                        </div>
-                      </span>
-                      <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
-                        resolutionType === 'CASH_REFUND'
-                          ? 'text-teal-50'
-                          : 'text-[var(--text-muted)]'
-                      }`}>
-                        {t('Duyệt lệnh xuất quỹ/kế toán chuyển khoản hoàn trả học phí cho học viên.')}
-                      </span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setResolutionType('ESCALATE')}
-                      className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-                        resolutionType === 'ESCALATE'
-                          ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40'
-                          : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
-                      }`}
-                    >
-                      <span className="font-bold text-xs flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <ArrowUpRight className={`w-4 h-4 ${
-                            resolutionType === 'ESCALATE' ? 'text-white' : 'text-purple-600 dark:text-purple-400'
-                          }`} />
-                          <span className={resolutionType === 'ESCALATE' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                            {t('Escalate to Center Manager')}
-                          </span>
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          {request.preferredResolution === 'CASH_REFUND' && (
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                              resolutionType === 'ESCALATE'
-                                ? 'bg-white/20 text-white border border-white/40'
-                                : 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30'
-                            }`}>
-                              ★ {t("Member's Choice")}
-                            </span>
-                          )}
-                          {resolutionType === 'ESCALATE' && (
-                            <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                          )}
-                        </div>
-                      </span>
-                      <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
-                        resolutionType === 'ESCALATE'
-                          ? 'text-purple-50'
-                          : 'text-[var(--text-muted)]'
-                      }`}>
-                        {t('For special cash refunds or high-dispute exceptions.')}
-                      </span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setResolutionType('REJECT')}
-                    className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-                      resolutionType === 'REJECT'
-                        ? 'border-rose-600 bg-rose-600 text-white shadow-lg ring-2 ring-rose-400/40'
-                        : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/50'
-                    }`}
-                  >
-                    <span className="font-bold text-xs flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <X className={`w-4 h-4 ${
-                          resolutionType === 'REJECT' ? 'text-white' : 'text-rose-600 dark:text-rose-400'
-                        }`} />
-                        <span className={resolutionType === 'REJECT' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                          {t('Reject Request')}
-                        </span>
-                      </span>
-                      {resolutionType === 'REJECT' && (
-                        <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
-                      )}
-                    </span>
-                    <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
-                      resolutionType === 'REJECT'
-                        ? 'text-rose-50'
-                        : 'text-[var(--text-muted)]'
-                    }`}>
-                      {t('Course completed >80% or violates center policies.')}
-                    </span>
-                  </button>
+                  {renderResolutionActions()}
                 </div>
               </div>
 
@@ -745,10 +1220,10 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                       <input
                         id="credit-amount-input"
                         type="number"
-                        min="10000"
-                        step="5000"
+                        min="0"
+                        step="any"
                         value={creditAmount}
-                        onChange={(e) => setCreditAmount(e.target.value)}
+                        onChange={(e) => handleAmountChange(e.target.value)}
                         className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-[var(--text)] font-black text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         required
                       />
@@ -774,9 +1249,9 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
 
               {/* Conditional Cash Refund fields */}
               {resolutionType === 'CASH_REFUND' && (
-                <div className="p-4 rounded-xl bg-[var(--surface-hover)] border-2 border-teal-500/50 space-y-3">
+                <div className="p-4 rounded-xl bg-[var(--surface-hover)] border-2 border-purple-500/50 space-y-3">
                   <div className="flex items-center gap-2 text-xs font-extrabold text-[var(--text)]">
-                    <CheckCircle2 className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    <CheckCircle2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                     <span>{t('Xác nhận lệnh hoàn tiền mặt / chuyển khoản (Thẩm quyền Quản lý)')}</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -788,10 +1263,10 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                         id="cash-refund-amount"
                         type="number"
                         min="0"
-                        step="1000"
+                        step="any"
                         value={creditAmount}
-                        onChange={(e) => setCreditAmount(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-[var(--text)] font-black text-base focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        onChange={(e) => handleAmountChange(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-[var(--text)] font-black text-base focus:outline-none focus:ring-2 focus:ring-purple-500"
                         required
                       />
                     </div>
@@ -809,9 +1284,20 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
 
               {/* Response Note (sent to member notification) */}
               <div className="space-y-1.5">
-                <label htmlFor="response-note-textarea" className="block text-xs font-black text-[var(--text)]">
-                  {t('Official Response & Explanation to Member')} <span className="text-red-500 font-bold">*</span>
-                </label>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label htmlFor="response-note-textarea" className="block text-xs font-black text-[var(--text)]">
+                    {t('Official Response & Explanation to Member')} <span className="text-red-500 font-bold">*</span>
+                  </label>
+                  {resolutionType === 'REJECT' && (
+                    <button
+                      type="button"
+                      onClick={() => setResponseNote(`${isManager ? 'Quản lý trung tâm' : 'Lễ tân'} xin phép đóng đơn do yêu cầu này đã được giải quyết hoặc bị trùng lặp với đơn hỗ trợ khác.`)}
+                      className="px-2 py-0.5 rounded-lg text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/20 transition-colors flex items-center gap-1"
+                    >
+                      <span>⚠️ {t('Mẫu: Đóng do trùng lặp')}</span>
+                    </button>
+                  )}
+                </div>
                 <textarea
                   id="response-note-textarea"
                   rows={3}

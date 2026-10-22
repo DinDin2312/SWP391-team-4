@@ -34,4 +34,6 @@ public interface SupportRequestService {
     List<UserCreditResponse> getMemberCredits(String memberEmail);
 
     SupportRequestResponse createOnBehalfOfMember(Integer memberUserId, CreateSupportRequest request, String staffEmail);
+
+    SupportRequestResponse withdrawRequest(Integer requestId, String memberEmail);
 }

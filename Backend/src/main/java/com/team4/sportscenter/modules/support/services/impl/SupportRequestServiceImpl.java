@@ -34,6 +34,7 @@ import java.math.RoundingMode;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -52,8 +53,12 @@ public class SupportRequestServiceImpl implements SupportRequestService {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private String generateCreditCode(Integer classId, Integer userId) {
+        return generateCreditCodeWithPrefix("CRED-", classId, userId);
+    }
+
+    private String generateCreditCodeWithPrefix(String prefix, Integer classId, Integer userId) {
         int rand = 1000 + RANDOM.nextInt(9000);
-        return "CRED-" + (classId != null ? classId : "GEN") + "-" + userId + "-" + rand;
+        return prefix + (classId != null ? classId : "GEN") + "-" + userId + "-" + rand;
     }
 
     @Override
@@ -95,9 +100,11 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         if (!hasStarted) {
             estimatedCreditAmount = classPrice;
         } else if (totalSessions > 0) {
-            estimatedCreditAmount = classPrice
+            BigDecimal raw = classPrice
                     .multiply(BigDecimal.valueOf(remainingSessions))
                     .divide(BigDecimal.valueOf(totalSessions), 0, RoundingMode.HALF_UP);
+            estimatedCreditAmount = raw.divide(BigDecimal.valueOf(1000), 0, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(1000));
         } else {
             estimatedCreditAmount = BigDecimal.ZERO;
         }
@@ -183,6 +190,21 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                 .build();
         userCreditRepository.save(credit);
 
+        // 3. Auto-close any pending duplicate support requests for this member & class
+        List<SupportRequest> pendingDuplicateTickets = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
+                .filter(r -> !Objects.equals(r.getRequestId(), savedTicket.getRequestId()))
+                .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), classId))
+                .filter(r -> r.getCategory() == SupportCategory.CLASS_CANCELLATION || r.getCategory() == SupportCategory.REFUND_REQUEST)
+                .filter(r -> r.getStatus() == SupportStatus.PENDING || r.getStatus() == SupportStatus.IN_PROGRESS || r.getStatus() == SupportStatus.ESCALATED)
+                .toList();
+
+        for (SupportRequest pt : pendingDuplicateTickets) {
+            pt.setStatus(SupportStatus.RESOLVED);
+            pt.setResponseNote("Hệ thống tự động đóng đơn do hội viên đã hủy trực tiếp và nhận voucher bảo lưu học phí qua đơn #" + savedTicket.getRequestId() + ".");
+            pt.setRespondedAt(LocalDateTime.now());
+            supportRequestRepository.save(pt);
+        }
+
         // Send confirmation notification to member
         Notification notif = Notification.builder()
                 .user(user)
@@ -216,17 +238,77 @@ public class SupportRequestServiceImpl implements SupportRequestService {
             gymClass = coachClassRepository.findById(request.getClassId()).orElse(null);
         }
 
+        boolean isCancellationCategory = request.getCategory() == SupportCategory.CLASS_CANCELLATION
+                || request.getCategory() == SupportCategory.REFUND_REQUEST;
+
+        if (isCancellationCategory && request.getClassId() != null) {
+            // 1. Check if user actually has active bookings for this class
+            List<Booking> activeBookings = bookingRepository.findAllBookingsByEmail(memberEmail).stream()
+                    .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
+                            && Objects.equals(b.getSchedule().getGymClass().getClassId(), request.getClassId())
+                            && !"CANCELLED".equals(b.getStatus()))
+                    .toList();
+            if (activeBookings.isEmpty()) {
+                throw new IllegalStateException("Bạn không còn lịch học khả dụng nào trong lớp này để yêu cầu hủy hoặc bảo lưu (lớp có thể đã bị hủy hoặc kết thúc trước đó).");
+            }
+
+            // 2. Check if user already has an active pending/in_progress/escalated ticket for this class
+            List<SupportRequest> existingActive = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
+                    .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), request.getClassId()))
+                    .filter(r -> r.getCategory() == SupportCategory.CLASS_CANCELLATION || r.getCategory() == SupportCategory.REFUND_REQUEST)
+                    .filter(r -> r.getStatus() == SupportStatus.PENDING || r.getStatus() == SupportStatus.IN_PROGRESS || r.getStatus() == SupportStatus.ESCALATED)
+                    .toList();
+            if (!existingActive.isEmpty()) {
+                throw new IllegalStateException("Bạn đang có đơn yêu cầu #" + existingActive.get(0).getRequestId() 
+                        + " cho lớp học này đang chờ xử lý. Vui lòng không gửi lặp lại yêu cầu để tránh làm chậm tiến độ hỗ trợ.");
+            }
+
+            // 3. Check if user already had an approved/resolved ticket for this class
+            List<SupportRequest> resolvedWithComp = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
+                    .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), request.getClassId()))
+                    .filter(r -> r.getStatus() == SupportStatus.APPROVED || r.getStatus() == SupportStatus.RESOLVED)
+                    .toList();
+            if (!resolvedWithComp.isEmpty()) {
+                throw new IllegalStateException("Lớp học này đã được giải quyết hủy hoặc bảo lưu học phí trước đó (Đơn #" 
+                        + resolvedWithComp.get(0).getRequestId() + "). Không thể tạo thêm yêu cầu.");
+            }
+        }
+
+        String prefRes = null;
+        if (request.getPreferredResolution() != null && !request.getPreferredResolution().isBlank()) {
+            prefRes = request.getPreferredResolution();
+        } else if (isCancellationCategory) {
+            prefRes = "ISSUE_CREDIT";
+        }
+
+        // Auto-priority intelligence
+        SupportPriority calculatedPriority = request.getPriority();
+        if (calculatedPriority == null || calculatedPriority == SupportPriority.NORMAL) {
+            if ("CASH_REFUND".equalsIgnoreCase(prefRes) || "MANAGER_REFUND".equalsIgnoreCase(prefRes)) {
+                calculatedPriority = SupportPriority.HIGH;
+            } else if (request.getCategory() == SupportCategory.COMPLAINT) {
+                calculatedPriority = SupportPriority.HIGH;
+            } else if (isCancellationCategory && request.getContent() != null) {
+                String cLower = request.getContent().toLowerCase();
+                if (cLower.contains("cấp cứu") || cLower.contains("y tế") || cLower.contains("tai nạn") 
+                        || cLower.contains("bệnh") || cLower.contains("medical") || cLower.contains("emergency")) {
+                    calculatedPriority = SupportPriority.HIGH;
+                }
+            }
+        }
+        if (calculatedPriority == null) {
+            calculatedPriority = SupportPriority.NORMAL;
+        }
+
         SupportRequest entity = SupportRequest.builder()
                 .user(user)
                 .gymClass(gymClass)
                 .category(request.getCategory() != null ? request.getCategory() : SupportCategory.GENERAL_INQUIRY)
-                .preferredResolution(request.getPreferredResolution() != null && !request.getPreferredResolution().isBlank()
-                        ? request.getPreferredResolution()
-                        : "ISSUE_CREDIT")
+                .preferredResolution(prefRes)
                 .title(request.getTitle())
                 .content(request.getContent())
                 .status(SupportStatus.PENDING)
-                .priority(request.getPriority() != null ? request.getPriority() : SupportPriority.NORMAL)
+                .priority(calculatedPriority)
                 .build();
 
         SupportRequest saved = supportRequestRepository.save(entity);
@@ -315,26 +397,69 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         boolean isApproved = request.getStatus() == SupportStatus.RESOLVED || request.getStatus() == SupportStatus.APPROVED;
         boolean isCashRefund = "CASH_REFUND".equalsIgnoreCase(dto.getResolutionType()) 
                 || "MANAGER_REFUND".equalsIgnoreCase(dto.getResolutionType());
+        boolean isGymPass = "GYM_PASS".equalsIgnoreCase(dto.getResolutionType())
+                || ("APPROVE_GENERAL".equalsIgnoreCase(dto.getResolutionType()) && "GYM_PASS".equalsIgnoreCase(request.getPreferredResolution()));
         boolean wantsCredit = !isCashRefund && ("CREDIT".equalsIgnoreCase(dto.getResolutionType()) 
                 || "ISSUE_CREDIT".equalsIgnoreCase(dto.getResolutionType()) 
-                || (dto.getCreditAmount() != null && dto.getCreditAmount().compareTo(BigDecimal.ZERO) > 0));
+                || isGymPass
+                || (dto.getCreditAmount() != null && dto.getCreditAmount().compareTo(BigDecimal.ZERO) > 0)
+                || ("APPROVE_GENERAL".equalsIgnoreCase(dto.getResolutionType())
+                    && (request.getGymClass() != null || request.getCategory() == SupportCategory.CLASS_CANCELLATION)
+                    && (request.getPreferredResolution() == null 
+                        || "ISSUE_CREDIT".equalsIgnoreCase(request.getPreferredResolution()) 
+                        || "CREDIT".equalsIgnoreCase(request.getPreferredResolution())
+                        || "GYM_PASS".equalsIgnoreCase(request.getPreferredResolution())))
+        );
 
-        if (isApproved && isCashRefund) {
-            // Manager approved cash / bank refund: cancel future bookings so remaining slots are released
-            Integer classId = request.getGymClass() != null ? request.getGymClass().getClassId() : null;
-            if (classId != null) {
-                List<Booking> bookings = bookingRepository.findAllBookingsByEmail(request.getUser().getEmail()).stream()
-                        .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
-                                && Objects.equals(b.getSchedule().getGymClass().getClassId(), classId)
-                                && !"CANCELLED".equals(b.getStatus())
-                                && !"PRESENT".equalsIgnoreCase(b.getAttendanceStatus()))
-                        .toList();
-                for (Booking b : bookings) {
-                    b.setStatus("CANCELLED");
-                    bookingRepository.save(b);
-                }
+        boolean isCompensating = isApproved && (isCashRefund || wantsCredit || isGymPass);
+
+        if (isCompensating && request.getGymClass() != null) {
+            Integer classId = request.getGymClass().getClassId();
+            Integer memberUserId = request.getUser().getUserId();
+
+            // 1. Safeguard: Check if this user and class was already compensated in another ticket
+            List<SupportRequest> alreadyResolvedTickets = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(memberUserId).stream()
+                    .filter(r -> !Objects.equals(r.getRequestId(), request.getRequestId()))
+                    .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), classId))
+                    .filter(r -> r.getStatus() == SupportStatus.APPROVED || r.getStatus() == SupportStatus.RESOLVED)
+                    .toList();
+
+            if (!alreadyResolvedTickets.isEmpty()) {
+                throw new IllegalStateException("Lớp học này đã được giải quyết hoặc bồi thường trước đó tại đơn #" 
+                        + alreadyResolvedTickets.get(0).getRequestId() 
+                        + ". Không thể thực hiện bồi thường tiếp để tránh bồi hoàn trùng lặp.");
             }
-        } else if (isApproved && wantsCredit) {
+
+            // 2. Safeguard: Check if active bookings exist
+            List<Booking> activeBookings = bookingRepository.findAllBookingsByEmail(request.getUser().getEmail()).stream()
+                    .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
+                            && Objects.equals(b.getSchedule().getGymClass().getClassId(), classId)
+                            && !"CANCELLED".equals(b.getStatus()))
+                    .toList();
+            if (activeBookings.isEmpty()) {
+                throw new IllegalStateException("Hội viên không còn buổi học khả dụng nào trong lớp này (toàn bộ lịch học đã bị hủy trước đó). Không thể thực hiện bồi thường.");
+            }
+        }
+
+        // 3. ALWAYS cancel future un-attended bookings for this class whenever cancellation/compensation is approved
+        if (isApproved && request.getGymClass() != null 
+                && (request.getCategory() == SupportCategory.CLASS_CANCELLATION 
+                    || request.getCategory() == SupportCategory.REFUND_REQUEST
+                    || isCompensating)) {
+            Integer classId = request.getGymClass().getClassId();
+            List<Booking> bookings = bookingRepository.findAllBookingsByEmail(request.getUser().getEmail()).stream()
+                    .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
+                            && Objects.equals(b.getSchedule().getGymClass().getClassId(), classId)
+                            && !"CANCELLED".equals(b.getStatus())
+                            && !"PRESENT".equalsIgnoreCase(b.getAttendanceStatus()))
+                    .toList();
+            for (Booking b : bookings) {
+                b.setStatus("CANCELLED");
+                bookingRepository.save(b);
+            }
+        }
+
+        if (isApproved && wantsCredit) {
             BigDecimal creditAmount = dto.getCreditAmount();
             if (creditAmount == null || creditAmount.compareTo(BigDecimal.ZERO) <= 0) {
                 // Auto calculate if class linked
@@ -346,15 +471,23 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                         creditAmount = request.getGymClass().getPrice();
                     }
                 }
+            } else {
+                creditAmount = creditAmount.divide(BigDecimal.valueOf(1000), 0, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(1000));
             }
 
             if (creditAmount != null && creditAmount.compareTo(BigDecimal.ZERO) > 0) {
                 Integer classId = request.getGymClass() != null ? request.getGymClass().getClassId() : null;
-                generatedCreditCode = generateCreditCode(classId, request.getUser().getUserId());
+                String prefix = isGymPass ? "GYMPASS-" : "CRED-";
+                generatedCreditCode = generateCreditCodeWithPrefix(prefix, classId, request.getUser().getUserId());
                 generatedCreditAmount = creditAmount;
 
                 int validityDays = dto.getEffectiveValidityDays() != null ? dto.getEffectiveValidityDays() : 60;
                 LocalDate expiryDate = LocalDate.now().plusDays(validityDays);
+
+                String reason = isGymPass
+                        ? ("Thẻ tập Gym 01 tháng (Chuyển đổi theo đơn #" + request.getRequestId() + ": " + request.getTitle() + ")")
+                        : ("Bảo lưu theo yêu cầu #" + request.getRequestId() + ": " + request.getTitle());
 
                 UserCredit credit = UserCredit.builder()
                         .user(request.getUser())
@@ -363,29 +496,47 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                         .creditCode(generatedCreditCode)
                         .amount(creditAmount)
                         .remainingAmount(creditAmount)
-                        .reason("Bảo lưu theo yêu cầu #" + request.getRequestId() + ": " + request.getTitle())
+                        .reason(reason)
                         .expiryDate(expiryDate)
                         .status(CreditStatus.ACTIVE)
                         .build();
                 userCreditRepository.save(credit);
+            }
+        }
 
-                // Cancel future bookings of this class if linked
-                if (classId != null) {
-                    List<Booking> bookings = bookingRepository.findAllBookingsByEmail(request.getUser().getEmail()).stream()
-                            .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
-                                    && Objects.equals(b.getSchedule().getGymClass().getClassId(), classId)
-                                    && !"CANCELLED".equals(b.getStatus())
-                                    && !"PRESENT".equalsIgnoreCase(b.getAttendanceStatus()))
-                            .toList();
-                    for (Booking b : bookings) {
-                        b.setStatus("CANCELLED");
-                        bookingRepository.save(b);
-                    }
-                }
+        if (generatedCreditCode != null && (request.getResponseNote() == null || request.getResponseNote().contains("tiếp nhận và xử lý") || isGymPass)) {
+            String rolePrefix = isManagerStaff ? "Quản lý trung tâm" : "Lễ tân";
+            String className = request.getGymClass() != null ? (" " + request.getGymClass().getClassName()) : "";
+            if (isGymPass) {
+                request.setResponseNote(rolePrefix + " đã phê duyệt chuyển đổi lớp" + className
+                        + " sang Thẻ tập Gym 01 tháng miễn phí cho học viên. Mã kích hoạt voucher: " + generatedCreditCode + " trị giá " + generatedCreditAmount.longValue() + "đ (Hạn dùng 60 ngày).");
+            } else {
+                request.setResponseNote(rolePrefix + " đã phê duyệt yêu cầu bảo lưu lớp" + className
+                        + ". Mã tín dụng 60 ngày " + generatedCreditCode + " trị giá " + generatedCreditAmount.longValue() + "đ đã được cấp vào tài khoản học viên.");
             }
         }
 
         supportRequestRepository.save(request);
+
+        // Auto-close any other pending duplicate tickets for this member & class if approved with compensation
+        if (isCompensating && request.getGymClass() != null) {
+            Integer classId = request.getGymClass().getClassId();
+            Integer memberUserId = request.getUser().getUserId();
+            List<SupportRequest> otherPending = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(memberUserId).stream()
+                    .filter(r -> !Objects.equals(r.getRequestId(), request.getRequestId()))
+                    .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), classId))
+                    .filter(r -> r.getCategory() == SupportCategory.CLASS_CANCELLATION || r.getCategory() == SupportCategory.REFUND_REQUEST)
+                    .filter(r -> r.getStatus() == SupportStatus.PENDING || r.getStatus() == SupportStatus.IN_PROGRESS || r.getStatus() == SupportStatus.ESCALATED)
+                    .toList();
+
+            for (SupportRequest op : otherPending) {
+                op.setStatus(SupportStatus.RESOLVED);
+                op.setResponseNote("Hệ thống tự động đóng đơn do yêu cầu hủy lớp này đã được giải quyết qua đơn #" + request.getRequestId() + ".");
+                op.setRespondedBy(staff);
+                op.setRespondedAt(LocalDateTime.now());
+                supportRequestRepository.save(op);
+            }
+        }
 
         // Send notification to member with appropriate role title
         String roleTitle = isManagerStaff ? "Quản lý trung tâm" : "Lễ tân";
@@ -419,28 +570,95 @@ public class SupportRequestServiceImpl implements SupportRequestService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<UserCreditResponse> getMemberCredits(String memberEmail) {
         User user = userRepository.findByEmail(memberEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + memberEmail));
 
+        // Auto-heal: Ensure approved requests that intended to grant credit have their UserCredit generated
+        List<SupportRequest> approvedRequests = supportRequestRepository.findAll().stream()
+                .filter(r -> r.getUser() != null && Objects.equals(r.getUser().getUserId(), user.getUserId()))
+                .filter(r -> r.getStatus() == SupportStatus.APPROVED || r.getStatus() == SupportStatus.RESOLVED)
+                .filter(r -> r.getGymClass() != null)
+                .filter(r -> r.getCategory() == SupportCategory.CLASS_CANCELLATION || r.getCategory() == SupportCategory.REFUND_REQUEST || "ISSUE_CREDIT".equalsIgnoreCase(r.getPreferredResolution()) || "GYM_PASS".equalsIgnoreCase(r.getPreferredResolution()))
+                .filter(r -> !"CASH_REFUND".equalsIgnoreCase(r.getPreferredResolution()))
+                .filter(r -> userCreditRepository.findBySupportRequestRequestId(r.getRequestId()).isEmpty())
+                .toList();
+
+        for (SupportRequest req : approvedRequests) {
+            BigDecimal creditAmount = null;
+            try {
+                CancelClassPreviewResponse preview = getCancelClassPreview(req.getGymClass().getClassId(), memberEmail);
+                creditAmount = preview.getEstimatedCreditAmount();
+            } catch (Exception e) {
+                creditAmount = req.getGymClass().getPrice();
+            }
+
+            if (creditAmount != null && creditAmount.compareTo(BigDecimal.ZERO) > 0) {
+                Integer classId = req.getGymClass().getClassId();
+                boolean reqIsGymPass = "GYM_PASS".equalsIgnoreCase(req.getPreferredResolution());
+                String prefix = reqIsGymPass ? "GYMPASS-" : "CRED-";
+                String creditCode = generateCreditCodeWithPrefix(prefix, classId, user.getUserId());
+                LocalDate expiryDate = LocalDate.now().plusDays(60);
+
+                String reason = reqIsGymPass
+                        ? ("Thẻ tập Gym 01 tháng (Chuyển đổi theo đơn #" + req.getRequestId() + ": " + req.getTitle() + ")")
+                        : ("Bảo lưu theo yêu cầu #" + req.getRequestId() + ": " + req.getTitle());
+
+                UserCredit credit = UserCredit.builder()
+                        .user(user)
+                        .supportRequest(req)
+                        .gymClass(req.getGymClass())
+                        .creditCode(creditCode)
+                        .amount(creditAmount)
+                        .remainingAmount(creditAmount)
+                        .reason(reason)
+                        .expiryDate(expiryDate)
+                        .status(CreditStatus.ACTIVE)
+                        .build();
+                userCreditRepository.save(credit);
+
+                // Cancel future bookings of this class
+                List<Booking> bookings = bookingRepository.findAllBookingsByEmail(memberEmail).stream()
+                        .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
+                                && Objects.equals(b.getSchedule().getGymClass().getClassId(), classId)
+                                && !"CANCELLED".equals(b.getStatus())
+                                && !"PRESENT".equalsIgnoreCase(b.getAttendanceStatus()))
+                        .toList();
+                for (Booking b : bookings) {
+                    b.setStatus("CANCELLED");
+                    bookingRepository.save(b);
+                }
+
+                if (req.getResponseNote() == null || req.getResponseNote().contains("tiếp nhận và xử lý")) {
+                    req.setResponseNote("Lễ tân đã phê duyệt yêu cầu bảo lưu lớp " + req.getGymClass().getClassName()
+                            + ". Mã tín dụng 60 ngày " + creditCode + " trị giá " + creditAmount.longValue() + "đ đã được cấp vào tài khoản học viên.");
+                    supportRequestRepository.save(req);
+                }
+            }
+        }
+
         LocalDate today = LocalDate.now();
         return userCreditRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
-                .map(c -> UserCreditResponse.builder()
-                        .creditId(c.getCreditId())
-                        .userId(c.getUser().getUserId())
-                        .requestId(c.getSupportRequest() != null ? c.getSupportRequest().getRequestId() : null)
-                        .classId(c.getGymClass() != null ? c.getGymClass().getClassId() : null)
-                        .className(c.getGymClass() != null ? c.getGymClass().getClassName() : null)
-                        .creditCode(c.getCreditCode())
-                        .amount(c.getAmount())
-                        .remainingAmount(c.getRemainingAmount())
-                        .reason(c.getReason())
-                        .expiryDate(c.getExpiryDate())
-                        .status(c.getStatus())
-                        .createdAt(c.getCreatedAt())
-                        .isExpired(c.getExpiryDate().isBefore(today))
-                        .build())
+                .map(c -> {
+                    long daysUntilExpiry = ChronoUnit.DAYS.between(today, c.getExpiryDate());
+                    return UserCreditResponse.builder()
+                            .creditId(c.getCreditId())
+                            .userId(c.getUser().getUserId())
+                            .requestId(c.getSupportRequest() != null ? c.getSupportRequest().getRequestId() : null)
+                            .classId(c.getGymClass() != null ? c.getGymClass().getClassId() : null)
+                            .className(c.getGymClass() != null ? c.getGymClass().getClassName() : null)
+                            .creditCode(c.getCreditCode())
+                            .amount(c.getAmount())
+                            .remainingAmount(c.getRemainingAmount())
+                            .reason(c.getReason())
+                            .expiryDate(c.getExpiryDate())
+                            .daysUntilExpiry(Math.max(0, daysUntilExpiry))
+                            .status(c.getStatus())
+                            .createdAt(c.getCreatedAt())
+                            .isExpired(c.getExpiryDate().isBefore(today))
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 
@@ -454,6 +672,30 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         GymClass gymClass = null;
         if (request.getClassId() != null) {
             gymClass = coachClassRepository.findById(request.getClassId()).orElse(null);
+        }
+
+        boolean isCancellationCategory = request.getCategory() == SupportCategory.CLASS_CANCELLATION
+                || request.getCategory() == SupportCategory.REFUND_REQUEST;
+
+        if (isCancellationCategory && request.getClassId() != null) {
+            List<Booking> activeBookings = bookingRepository.findAllBookingsByEmail(member.getEmail()).stream()
+                    .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
+                            && Objects.equals(b.getSchedule().getGymClass().getClassId(), request.getClassId())
+                            && !"CANCELLED".equals(b.getStatus()))
+                    .toList();
+            if (activeBookings.isEmpty()) {
+                throw new IllegalStateException("Hội viên không còn lịch học khả dụng nào trong lớp này để yêu cầu hủy/bảo lưu.");
+            }
+
+            List<SupportRequest> existingActive = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(member.getUserId()).stream()
+                    .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), request.getClassId()))
+                    .filter(r -> r.getCategory() == SupportCategory.CLASS_CANCELLATION || r.getCategory() == SupportCategory.REFUND_REQUEST)
+                    .filter(r -> r.getStatus() == SupportStatus.PENDING || r.getStatus() == SupportStatus.IN_PROGRESS || r.getStatus() == SupportStatus.ESCALATED)
+                    .toList();
+            if (!existingActive.isEmpty()) {
+                throw new IllegalStateException("Hội viên đang có đơn yêu cầu #" + existingActive.get(0).getRequestId() 
+                        + " cho lớp học này đang chờ xử lý. Vui lòng không tạo thêm.");
+            }
         }
 
         SupportRequest entity = SupportRequest.builder()
@@ -544,6 +786,43 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         return mapToResponse(request);
     }
 
+    @Override
+    @Transactional
+    public SupportRequestResponse withdrawRequest(Integer requestId, String memberEmail) {
+        SupportRequest request = supportRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn yêu cầu hỗ trợ #" + requestId));
+
+        if (!request.getUser().getEmail().equalsIgnoreCase(memberEmail)) {
+            throw new org.springframework.security.access.AccessDeniedException("Bạn không có quyền thao tác trên đơn yêu cầu này.");
+        }
+
+        if (request.getStatus() == SupportStatus.RESOLVED || request.getStatus() == SupportStatus.APPROVED) {
+            throw new IllegalStateException("Đơn yêu cầu #" + requestId + " đã được phê duyệt và giải quyết, không thể rút lại.");
+        }
+
+        if (request.getStatus() == SupportStatus.REJECTED) {
+            throw new IllegalStateException("Đơn yêu cầu #" + requestId + " đã đóng hồ sơ trước đó.");
+        }
+
+        request.setStatus(SupportStatus.REJECTED);
+        String oldNote = request.getResponseNote() != null ? request.getResponseNote() : "";
+        request.setResponseNote("[HỘI VIÊN CHỦ ĐỘNG RÚT ĐƠN] Học viên đã hủy yêu cầu hỗ trợ này."
+                + (oldNote.isEmpty() ? "" : " (Ghi chú cũ: " + oldNote + ")"));
+        request.setRespondedAt(LocalDateTime.now());
+        SupportRequest saved = supportRequestRepository.save(request);
+
+        Notification notif = Notification.builder()
+                .user(request.getUser())
+                .title("Rút yêu cầu hỗ trợ thành công")
+                .message("Bạn đã rút yêu cầu hỗ trợ #" + requestId + " (\"" + request.getTitle() + "\") thành công. Bạn có thể gửi lại yêu cầu mới nếu cần.")
+                .type("SUPPORT")
+                .isRead(false)
+                .build();
+        notificationRepository.save(notif);
+
+        return mapToResponse(saved);
+    }
+
     private SupportRequestResponse mapToResponse(SupportRequest r) {
         GymClass gc = r.getGymClass();
         BigDecimal classPrice = gc != null ? gc.getPrice() : null;
@@ -569,10 +848,21 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                                     || (b.getSchedule() != null && b.getSchedule().getStartTime().isBefore(now)))
                             .count();
                     remainingSessions = Math.max(0, totalSessions - attendedSessions);
-                    if (classPrice != null && totalSessions > 0) {
-                        calculatedCredit = classPrice
+
+                    boolean isCancellationOrRefund = r.getCategory() == SupportCategory.CLASS_CANCELLATION
+                            || r.getCategory() == SupportCategory.REFUND_REQUEST
+                            || (r.getPreferredResolution() != null && !r.getPreferredResolution().isBlank())
+                            || (r.getTitle() != null && (r.getTitle().toLowerCase().contains("cancellation")
+                                    || r.getTitle().toLowerCase().contains("hủy")
+                                    || r.getTitle().toLowerCase().contains("bảo lưu")));
+
+                    // ONLY calculate prorated credit if this request is a cancellation/refund request
+                    if (isCancellationOrRefund && classPrice != null && totalSessions > 0) {
+                        BigDecimal raw = classPrice
                                 .multiply(BigDecimal.valueOf(remainingSessions))
                                 .divide(BigDecimal.valueOf(totalSessions), 0, RoundingMode.HALF_UP);
+                        calculatedCredit = raw.divide(BigDecimal.valueOf(1000), 0, RoundingMode.HALF_UP)
+                                .multiply(BigDecimal.valueOf(1000));
                     }
                 }
             } catch (Exception ignored) {
@@ -583,6 +873,11 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         Optional<UserCredit> optCredit = userCreditRepository.findBySupportRequestRequestId(r.getRequestId());
         String generatedCreditCode = optCredit.map(UserCredit::getCreditCode).orElse(null);
         BigDecimal generatedCreditAmount = optCredit.map(UserCredit::getAmount).orElse(null);
+
+        SupportPriority effectivePriority = r.getPriority();
+        if (effectivePriority == SupportPriority.NORMAL && "CASH_REFUND".equalsIgnoreCase(r.getPreferredResolution())) {
+            effectivePriority = SupportPriority.HIGH;
+        }
 
         return SupportRequestResponse.builder()
                 .requestId(r.getRequestId())
@@ -602,7 +897,7 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                 .title(r.getTitle())
                 .content(r.getContent())
                 .status(r.getStatus())
-                .priority(r.getPriority())
+                .priority(effectivePriority)
                 .responseNote(r.getResponseNote())
                 .responderId(r.getRespondedBy() != null ? r.getRespondedBy().getUserId() : null)
                 .responderName(r.getRespondedBy() != null ? r.getRespondedBy().getFullName() : null)

@@ -81,6 +81,15 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
     }
   };
 
+  const getReasonLabel = (val) => {
+    switch (val) {
+      case 'CLASS_CANCELLATION': return t('Mid-Course Emergency / Medical / Relocation');
+      case 'GENERAL_INQUIRY': return t('Schedule Conflict / Need Class Transfer');
+      case 'COMPLAINT': return t('Course Quality / Other Reason');
+      default: return t('Other');
+    }
+  };
+
   const handleSubmitSupportRequest = async (e) => {
     if (e) e.preventDefault();
     if (!reasonContent.trim()) {
@@ -93,10 +102,10 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
       const title = t('Cancellation & Retention Request for') + ` ${preview?.className || ''}`;
       const res = await memberService.createSupportRequest({
         classId,
-        category: reasonCategory,
+        category: 'CLASS_CANCELLATION',
         preferredResolution,
         title,
-        content: reasonContent.trim(),
+        content: `[${t('Reason')}: ${getReasonLabel(reasonCategory)}] ${reasonContent.trim()}`,
         priority: 'NORMAL'
       });
 

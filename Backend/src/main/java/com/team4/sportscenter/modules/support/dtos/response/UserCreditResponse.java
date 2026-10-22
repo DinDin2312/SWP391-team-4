@@ -22,6 +22,7 @@ public class UserCreditResponse {
     private BigDecimal remainingAmount;
     private String reason;
     private LocalDate expiryDate;
+    private Long daysUntilExpiry;
     private CreditStatus status;
     private LocalDateTime createdAt;
     private boolean isExpired;

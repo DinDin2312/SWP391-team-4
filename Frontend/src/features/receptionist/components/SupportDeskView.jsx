@@ -4,7 +4,8 @@ import {
   LifeBuoy, Search, Filter, RefreshCw, CheckCircle2,
   Clock, AlertTriangle, ShieldCheck, X, ChevronLeft,
   ChevronRight, CreditCard, MessageSquare, ArrowUpRight,
-  Eye, Phone, Mail, User, Dumbbell, DollarSign, Sparkles
+  Eye, Phone, Mail, User, Dumbbell, DollarSign, Sparkles,
+  AlertCircle, ArrowUp, Minus, ArrowDown
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
@@ -109,17 +110,38 @@ const SupportDeskView = (props) => {
     fetchRequests();
   };
 
-  const getPriorityBadge = (priority) => {
-    switch (priority) {
+  const getPriorityBadge = (priority, preferredResolution) => {
+    const effectivePriority = (priority === 'HIGH' || preferredResolution === 'CASH_REFUND') ? 'HIGH' : priority;
+    switch (effectivePriority) {
       case 'URGENT':
-        return <span className="block mt-0.5 text-[10px] text-red-600 dark:text-red-400 font-bold uppercase">{t('Urgent')}</span>;
+        return (
+          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 shadow-xs">
+            <AlertCircle className="w-3 h-3 shrink-0" />
+            <span>{t('Urgent')}</span>
+          </span>
+        );
       case 'HIGH':
-        return <span className="block mt-0.5 text-[10px] text-amber-600 dark:text-amber-400 font-semibold">{t('High')}</span>;
+        return (
+          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 shadow-xs">
+            <ArrowUp className="w-3 h-3 shrink-0" />
+            <span>{t('High')}</span>
+          </span>
+        );
       case 'LOW':
-        return <span className="block mt-0.5 text-[10px] text-[var(--text-muted)] font-medium">{t('Low')}</span>;
+        return (
+          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20">
+            <ArrowDown className="w-3 h-3 shrink-0" />
+            <span>{t('Low')}</span>
+          </span>
+        );
       case 'NORMAL':
       default:
-        return <span className="block mt-0.5 text-[10px] text-[var(--text-muted)] font-medium">{t('Normal')}</span>;
+        return (
+          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-500/10 text-slate-700 dark:text-slate-300 border border-slate-500/20">
+            <Minus className="w-3 h-3 shrink-0" />
+            <span>{t('Normal')}</span>
+          </span>
+        );
     }
   };
 
@@ -393,7 +415,7 @@ const SupportDeskView = (props) => {
                   <tr key={req.requestId} className="hover:bg-[var(--surface-hover)]/70 transition-colors">
                     <td className="px-5 py-4 font-mono font-bold text-[var(--primary)]">
                       #{req.requestId}
-                      {getPriorityBadge(req.priority)}
+                      {getPriorityBadge(req.priority, req.preferredResolution)}
                     </td>
                     <td className="px-5 py-4">
                       <div className="font-bold">{req.userFullName || req.memberName}</div>
@@ -421,7 +443,7 @@ const SupportDeskView = (props) => {
                           <div className="text-[11px] text-[var(--text-muted)]">
                             {req.attendedSessions || 0}/{req.totalSessions || 0} {t('taken')}
                           </div>
-                          {(req.calculatedCreditAmount != null || req.proratedCredit != null) && (
+                          {(req.category === 'CLASS_CANCELLATION' || req.category === 'REFUND_REQUEST' || req.preferredResolution) && (req.calculatedCreditAmount != null || req.proratedCredit != null) && (
                             <div className="text-[11px] font-bold text-[var(--primary)] mt-0.5">
                               {t('Est. Credit')}: {formatMoney(req.calculatedCreditAmount ?? req.proratedCredit)}
                             </div>

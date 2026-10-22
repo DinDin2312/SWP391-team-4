@@ -57,4 +57,11 @@ public class MemberSupportController {
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(supportRequestService.getMemberCredits(userDetails.getUsername()));
     }
+
+    @PutMapping("/requests/{requestId}/withdraw")
+    public ResponseEntity<SupportRequestResponse> withdrawRequest(
+            @PathVariable Integer requestId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(supportRequestService.withdrawRequest(requestId, userDetails.getUsername()));
+    }
 }

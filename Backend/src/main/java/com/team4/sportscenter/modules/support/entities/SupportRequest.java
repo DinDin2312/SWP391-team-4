@@ -38,8 +38,7 @@ public class SupportRequest {
     private SupportCategory category = SupportCategory.GENERAL_INQUIRY;
 
     @Column(name = "preferred_resolution", length = 50)
-    @Builder.Default
-    private String preferredResolution = "ISSUE_CREDIT";
+    private String preferredResolution;
 
     @Column(name = "title", nullable = false)
     private String title;

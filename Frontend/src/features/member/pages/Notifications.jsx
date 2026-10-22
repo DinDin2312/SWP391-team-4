@@ -1,5 +1,6 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDateTime } from '../../../utils/displayFormat';
+import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
@@ -19,6 +20,7 @@ import {
 const Notifications = () => {
   useLanguage();
   const [notifications, setNotifications] = useState([]);
+  const [isConfirmAllOpen, setIsConfirmAllOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchNotifications = async () => {
@@ -78,18 +80,16 @@ const Notifications = () => {
     }
   };
 
-  const handleDeleteAll = async () => {
-    if (window.confirm("Are you sure you want to delete ALL notifications? This action cannot be undone.")) {
-      try {
-        const token = localStorage.getItem('token');
-        await axios.delete('http://localhost:8080/api/v1/notifications', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setNotifications([]);
-        window.dispatchEvent(new Event('notificationUpdated'));
-      } catch (err) {
-        console.error("Failed to delete all notifications", err);
-      }
+  const confirmDeleteAll = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete('http://localhost:8080/api/v1/notifications', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications([]);
+      window.dispatchEvent(new Event('notificationUpdated'));
+    } catch (err) {
+      console.error("Failed to delete all notifications", err);
     }
   };
 
@@ -124,7 +124,7 @@ const Notifications = () => {
         <div className="flex items-center gap-3 flex-wrap mt-4 lg:mt-0">
           {notifications.length > 0 && (
             <button
-              onClick={handleDeleteAll}
+              onClick={() => setIsConfirmAllOpen(true)}
               className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-error-container text-on-error-container text-sm font-bold transition-all shadow-[var(--shadow)] active:scale-95 hover:brightness-95 cursor-pointer"
             >
               <Trash2 className="w-4 h-4 shrink-0" />
@@ -221,6 +221,16 @@ const Notifications = () => {
           })
         )}
       </div>
+      <ConfirmModal
+        isOpen={isConfirmAllOpen}
+        onClose={() => setIsConfirmAllOpen(false)}
+        onConfirm={confirmDeleteAll}
+        title="Clear All"
+        message="Are you sure you want to delete ALL notifications? This action cannot be undone."
+        confirmText="Clear All"
+        cancelText="Cancel"
+        isDestructive={true}
+      />
     </div>
   );
 };
