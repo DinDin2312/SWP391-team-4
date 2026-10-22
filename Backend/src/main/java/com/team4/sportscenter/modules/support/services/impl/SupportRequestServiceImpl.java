@@ -249,10 +249,14 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         stats.put("total", supportRequestRepository.count());
         stats.put("pending", supportRequestRepository.countByStatus(SupportStatus.PENDING));
         stats.put("inProgress", supportRequestRepository.countByStatus(SupportStatus.IN_PROGRESS));
-        stats.put("resolved", supportRequestRepository.countByStatus(SupportStatus.RESOLVED) + supportRequestRepository.countByStatus(SupportStatus.APPROVED));
-        stats.put("approved", supportRequestRepository.countByStatus(SupportStatus.APPROVED));
+        long approvedCount = supportRequestRepository.countByStatus(SupportStatus.APPROVED);
+        long resolvedCount = supportRequestRepository.countByStatus(SupportStatus.RESOLVED);
+        long rejectedCount = supportRequestRepository.countByStatus(SupportStatus.REJECTED);
+        long closedTotal = approvedCount + resolvedCount + rejectedCount;
+        stats.put("resolved", closedTotal);
+        stats.put("approved", approvedCount);
         stats.put("escalated", supportRequestRepository.countByStatus(SupportStatus.ESCALATED));
-        stats.put("rejected", supportRequestRepository.countByStatus(SupportStatus.REJECTED));
+        stats.put("rejected", rejectedCount);
         return stats;
     }
 

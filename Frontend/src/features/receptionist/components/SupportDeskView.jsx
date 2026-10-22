@@ -21,7 +21,9 @@ const SupportDeskView = (props) => {
     cancellations: 0,
     facilities: 0,
     resolved: 0,
-    escalated: 0
+    escalated: 0,
+    approved: 0,
+    rejected: 0
   });
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,12 +53,17 @@ const SupportDeskView = (props) => {
     try {
       const res = await receptionistService.getSupportStats();
       if (res) {
+        const approved = res.approved || 0;
+        const rejected = res.rejected || 0;
+        const resolved = (res.resolved !== undefined) ? res.resolved : (approved + rejected);
         setStats({
           pending: res.pending || 0,
           cancellations: res.classCancellations || 0,
           facilities: res.facilityIssues || 0,
-          resolved: res.approved || 0,
-          escalated: res.escalated || 0
+          resolved,
+          escalated: res.escalated || 0,
+          approved,
+          rejected
         });
       }
     } catch (err) {
@@ -242,13 +249,21 @@ const SupportDeskView = (props) => {
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3.5">
+        <div
+          onClick={() => setSelectedStatus(selectedStatus === 'APPROVED' ? 'ALL' : 'APPROVED')}
+          className={`p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3.5 cursor-pointer hover:border-emerald-500 transition-all ${selectedStatus === 'APPROVED' ? 'ring-2 ring-emerald-500' : ''}`}
+        >
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-5 h-5" />
           </div>
           <div>
             <div className="text-2xl font-black text-[var(--text)]">{stats.resolved}</div>
             <div className="text-xs font-medium text-[var(--text-muted)]">{t('Resolved Tickets')}</div>
+            {(stats.approved > 0 || stats.rejected > 0) && (
+              <div className="text-[10px] text-[var(--text-muted)] font-medium mt-0.5">
+                {stats.approved} {t('Approved')} • {stats.rejected} {t('Rejected')}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -287,7 +302,7 @@ const SupportDeskView = (props) => {
             <option value="ALL">{t('All Statuses')}</option>
             <option value="PENDING">{t('Pending')}</option>
             <option value="IN_PROGRESS">{t('In Progress')}</option>
-            <option value="APPROVED">{t('Resolved')}</option>
+            <option value="APPROVED">{t('Approved')}</option>
             <option value="ESCALATED">{t('Escalated to Manager')}</option>
             <option value="REJECTED">{t('Rejected')}</option>
           </select>
