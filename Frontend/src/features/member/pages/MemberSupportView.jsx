@@ -120,6 +120,7 @@ const MemberSupportView = () => {
           </span>
         );
       case 'APPROVED':
+      case 'RESOLVED':
         return (
           <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5" /> {t('Approved & Resolved')}

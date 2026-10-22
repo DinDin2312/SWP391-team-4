@@ -20,7 +20,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
 
   useEffect(() => {
     if (isOpen && request) {
-      const suggested = request.proratedCredit || request.classPrice || 0;
+      const suggested = request.calculatedCreditAmount ?? request.proratedCredit ?? request.classPrice ?? 0;
       setCreditAmount(suggested);
       setValidDays(60);
       const isEscalatedClassCancel = isManager && (request.status === 'ESCALATED' || request.category === 'CLASS_CANCELLATION');
@@ -40,6 +40,17 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
       setError('');
     }
   }, [isOpen, request, isManager]);
+
+  const getPriorityLabel = (priority) => {
+    switch (priority) {
+      case 'URGENT': return t('Urgent');
+      case 'HIGH': return t('High');
+      case 'LOW': return t('Low');
+      case 'NORMAL':
+      default:
+        return t('Normal');
+    }
+  };
 
   if (!isOpen || !request) return null;
 
@@ -109,7 +120,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                 {t('Resolve Support Ticket')} #{request.requestId}
               </h2>
               <p className="text-xs text-[var(--text-muted)]">
-                {request.title} &bull; {t('Priority:')} <span className="font-semibold">{request.priority}</span>
+                {request.title} &bull; {t('Priority:')} <span className="font-semibold">{getPriorityLabel(request.priority)}</span>
               </p>
             </div>
           </div>
@@ -136,17 +147,17 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
           <div className="p-3.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2">
               <User className="w-4 h-4 text-[var(--primary)]" />
-              <span className="font-bold text-[var(--text)]">{request.userFullName}</span>
+              <span className="font-bold text-[var(--text)]">{request.userFullName || request.memberName}</span>
             </div>
-            {request.userPhone && (
+            {(request.userPhone || request.memberPhone) && (
               <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
                 <Phone className="w-3.5 h-3.5" />
-                <span>{request.userPhone}</span>
+                <span>{request.userPhone || request.memberPhone}</span>
               </div>
             )}
             <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
               <Mail className="w-3.5 h-3.5" />
-              <span>{request.userEmail}</span>
+              <span>{request.userEmail || request.memberEmail}</span>
             </div>
           </div>
 
@@ -195,7 +206,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                   {t('Prorated Remaining Value (Recommended Credit):')}
                 </span>
                 <span className="text-base font-extrabold text-[var(--primary)]">
-                  {formatMoney(request.proratedCredit)}
+                  {formatMoney(request.calculatedCreditAmount ?? request.proratedCredit ?? request.classPrice ?? 0)}
                 </span>
               </div>
             </div>
@@ -212,12 +223,30 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                   <button
                     type="button"
                     onClick={() => setResolutionType('ISSUE_CREDIT')}
-                    className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${resolutionType === 'ISSUE_CREDIT' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}
+                    className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                      resolutionType === 'ISSUE_CREDIT'
+                        ? 'border-emerald-500 bg-emerald-500/15 text-emerald-950 dark:text-emerald-100 shadow-sm'
+                        : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/40'
+                    }`}
                   >
-                    <span className="font-bold text-xs flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                      <CreditCard className="w-4 h-4" /> {t('Issue Credit Voucher (Recommended)')}
+                    <span className={`font-bold text-xs flex items-center justify-between ${
+                      resolutionType === 'ISSUE_CREDIT'
+                        ? 'text-emerald-700 dark:text-emerald-300'
+                        : 'text-[var(--text)]'
+                    }`}>
+                      <span className="flex items-center gap-1.5">
+                        <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        {t('Issue Credit Voucher (Recommended)')}
+                      </span>
+                      {resolutionType === 'ISSUE_CREDIT' && (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      )}
                     </span>
-                    <span className="text-[11px] mt-1 opacity-80">
+                    <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
+                      resolutionType === 'ISSUE_CREDIT'
+                        ? 'text-emerald-900 dark:text-emerald-200'
+                        : 'text-[var(--text-muted)]'
+                    }`}>
                       {t('Generates 60-day voucher code for member to re-enroll without losing money.')}
                     </span>
                   </button>
@@ -225,12 +254,30 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                   <button
                     type="button"
                     onClick={() => setResolutionType('GYM_PASS')}
-                    className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${resolutionType === 'GYM_PASS' ? 'border-blue-500 bg-blue-500/10 text-blue-900 dark:text-blue-200' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}
+                    className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                      resolutionType === 'GYM_PASS'
+                        ? 'border-blue-500 bg-blue-500/15 text-blue-950 dark:text-blue-100 shadow-sm'
+                        : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/40'
+                    }`}
                   >
-                    <span className="font-bold text-xs flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
-                      <Clock className="w-4 h-4" /> {t('Grant Free 1-Month Gym Pass')}
+                    <span className={`font-bold text-xs flex items-center justify-between ${
+                      resolutionType === 'GYM_PASS'
+                        ? 'text-blue-700 dark:text-blue-300'
+                        : 'text-[var(--text)]'
+                    }`}>
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        {t('Grant Free 1-Month Gym Pass')}
+                      </span>
+                      {resolutionType === 'GYM_PASS' && (
+                        <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                      )}
                     </span>
-                    <span className="text-[11px] mt-1 opacity-80">
+                    <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
+                      resolutionType === 'GYM_PASS'
+                        ? 'text-blue-900 dark:text-blue-200'
+                        : 'text-[var(--text-muted)]'
+                    }`}>
                       {t('Alternative perk when student prefers gym workouts over class credit.')}
                     </span>
                   </button>
@@ -239,12 +286,30 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                 <button
                   type="button"
                   onClick={() => setResolutionType('APPROVE_GENERAL')}
-                  className={`p-3 rounded-xl border text-left transition-all ${resolutionType === 'APPROVE_GENERAL' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}
+                  className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                    resolutionType === 'APPROVE_GENERAL'
+                      ? 'border-emerald-500 bg-emerald-500/15 text-emerald-950 dark:text-emerald-100 shadow-sm'
+                      : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/40'
+                  }`}
                 >
-                  <span className="font-bold text-xs flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 className="w-4 h-4" /> {t('Approve & Resolve Issue')}
+                  <span className={`font-bold text-xs flex items-center justify-between ${
+                    resolutionType === 'APPROVE_GENERAL'
+                      ? 'text-emerald-700 dark:text-emerald-300'
+                      : 'text-[var(--text)]'
+                  }`}>
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      {t('Approve & Resolve Issue')}
+                    </span>
+                    {resolutionType === 'APPROVE_GENERAL' && (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    )}
                   </span>
-                  <span className="text-[11px] mt-1 block opacity-80">
+                  <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
+                    resolutionType === 'APPROVE_GENERAL'
+                      ? 'text-emerald-900 dark:text-emerald-200'
+                      : 'text-[var(--text-muted)]'
+                  }`}>
                     {t('Acknowledge repair, feedback or inquiry as fully resolved.')}
                   </span>
                 </button>
@@ -257,12 +322,30 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                     setResolutionType('CASH_REFUND');
                     setResponseNote(`Quản lý trung tâm đã phê duyệt hoàn tiền học phí lớp ${request.className || ""}. Số tiền ${formatMoney(creditAmount)} sẽ được hoàn trả trực tiếp tại quầy hoặc chuyển khoản.`);
                   }}
-                  className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${resolutionType === 'CASH_REFUND' ? 'border-emerald-600 bg-emerald-600/10 text-emerald-900 dark:text-emerald-200 ring-2 ring-emerald-500' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}
+                  className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                    resolutionType === 'CASH_REFUND'
+                      ? 'border-teal-600 bg-teal-500/15 text-teal-950 dark:text-teal-100 shadow-sm ring-2 ring-teal-500'
+                      : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-teal-500/40'
+                  }`}
                 >
-                  <span className="font-bold text-xs flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                    <CreditCard className="w-4 h-4" /> {t('Phê Duyệt Hoàn Tiền Mặt / Chuyển Khoản')}
+                  <span className={`font-bold text-xs flex items-center justify-between ${
+                    resolutionType === 'CASH_REFUND'
+                      ? 'text-teal-700 dark:text-teal-300'
+                      : 'text-[var(--text)]'
+                  }`}>
+                    <span className="flex items-center gap-1.5">
+                      <DollarSign className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                      {t('Phê Duyệt Hoàn Tiền Mặt / Chuyển Khoản')}
+                    </span>
+                    {resolutionType === 'CASH_REFUND' && (
+                      <CheckCircle2 className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                    )}
                   </span>
-                  <span className="text-[11px] mt-1 opacity-80">
+                  <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
+                    resolutionType === 'CASH_REFUND'
+                      ? 'text-teal-900 dark:text-teal-200'
+                      : 'text-[var(--text-muted)]'
+                  }`}>
                     {t('Duyệt lệnh xuất quỹ/kế toán chuyển khoản hoàn trả học phí cho học viên.')}
                   </span>
                 </button>
@@ -270,12 +353,30 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                 <button
                   type="button"
                   onClick={() => setResolutionType('ESCALATE')}
-                  className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${resolutionType === 'ESCALATE' ? 'border-purple-500 bg-purple-500/10 text-purple-900 dark:text-purple-200' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}
+                  className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                    resolutionType === 'ESCALATE'
+                      ? 'border-purple-500 bg-purple-500/15 text-purple-950 dark:text-purple-100 shadow-sm'
+                      : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/40'
+                  }`}
                 >
-                  <span className="font-bold text-xs flex items-center gap-1.5 text-purple-600 dark:text-purple-400">
-                    <ArrowUpRight className="w-4 h-4" /> {t('Escalate to Center Manager')}
+                  <span className={`font-bold text-xs flex items-center justify-between ${
+                    resolutionType === 'ESCALATE'
+                      ? 'text-purple-700 dark:text-purple-300'
+                      : 'text-[var(--text)]'
+                  }`}>
+                    <span className="flex items-center gap-1.5">
+                      <ArrowUpRight className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      {t('Escalate to Center Manager')}
+                    </span>
+                    {resolutionType === 'ESCALATE' && (
+                      <CheckCircle2 className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                    )}
                   </span>
-                  <span className="text-[11px] mt-1 opacity-80">
+                  <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
+                    resolutionType === 'ESCALATE'
+                      ? 'text-purple-900 dark:text-purple-200'
+                      : 'text-[var(--text-muted)]'
+                  }`}>
                     {t('For special cash refunds or high-dispute exceptions.')}
                   </span>
                 </button>
@@ -284,12 +385,30 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
               <button
                 type="button"
                 onClick={() => setResolutionType('REJECT')}
-                className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${resolutionType === 'REJECT' ? 'border-red-500 bg-red-500/10 text-red-900 dark:text-red-200' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}
+                className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+                  resolutionType === 'REJECT'
+                    ? 'border-rose-500 bg-rose-500/15 text-rose-950 dark:text-rose-100 shadow-sm'
+                    : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/40'
+                }`}
               >
-                <span className="font-bold text-xs flex items-center gap-1.5 text-red-600 dark:text-red-400">
-                  <X className="w-4 h-4" /> {t('Reject Request')}
+                <span className={`font-bold text-xs flex items-center justify-between ${
+                  resolutionType === 'REJECT'
+                    ? 'text-rose-700 dark:text-rose-300'
+                    : 'text-[var(--text)]'
+                }`}>
+                  <span className="flex items-center gap-1.5">
+                    <X className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                    {t('Reject Request')}
+                  </span>
+                  {resolutionType === 'REJECT' && (
+                    <CheckCircle2 className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                  )}
                 </span>
-                <span className="text-[11px] mt-1 opacity-80">
+                <span className={`text-[11px] mt-1.5 leading-snug font-medium ${
+                  resolutionType === 'REJECT'
+                    ? 'text-rose-900 dark:text-rose-200'
+                    : 'text-[var(--text-muted)]'
+                }`}>
                   {t('Course completed >80% or violates center policies.')}
                 </span>
               </button>
@@ -298,10 +417,10 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
 
           {/* Conditional Credit Voucher fields */}
           {resolutionType === 'ISSUE_CREDIT' && (
-            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-3">
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label htmlFor="credit-amount-input" className="block text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                  <label htmlFor="credit-amount-input" className="block text-xs font-bold text-emerald-950 dark:text-emerald-200">
                     {t('Voucher Credit Amount (VND)')}
                   </label>
                   <input
@@ -316,7 +435,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                   />
                 </div>
                 <div className="space-y-1">
-                  <label htmlFor="credit-validity-input" className="block text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                  <label htmlFor="credit-validity-input" className="block text-xs font-bold text-emerald-950 dark:text-emerald-200">
                     {t('Validity (Days)')}
                   </label>
                   <input
@@ -336,14 +455,14 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
 
           {/* Conditional Cash Refund fields */}
           {resolutionType === 'CASH_REFUND' && (
-            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                <CheckCircle2 className="w-4 h-4" />
+            <div className="p-4 rounded-xl bg-teal-500/10 border border-teal-500/30 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-teal-800 dark:text-teal-200">
+                <CheckCircle2 className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                 <span>{t('Xác nhận lệnh hoàn tiền mặt / chuyển khoản (Thẩm quyền Quản lý)')}</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label htmlFor="cash-refund-amount" className="block text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                  <label htmlFor="cash-refund-amount" className="block text-xs font-bold text-teal-950 dark:text-teal-200">
                     {t('Số tiền duyệt hoàn (VNĐ)')}
                   </label>
                   <input
@@ -353,12 +472,12 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                     step="1000"
                     value={creditAmount}
                     onChange={(e) => setCreditAmount(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3.5 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-sm font-bold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-teal-500"
                     required
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="block text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                  <label className="block text-xs font-bold text-teal-950 dark:text-teal-200">
                     {t('Hình thức chi trả')}
                   </label>
                   <div className="px-3.5 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs font-semibold text-[var(--text)]">

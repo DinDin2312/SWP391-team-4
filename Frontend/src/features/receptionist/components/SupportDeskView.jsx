@@ -102,6 +102,20 @@ const SupportDeskView = (props) => {
     fetchRequests();
   };
 
+  const getPriorityBadge = (priority) => {
+    switch (priority) {
+      case 'URGENT':
+        return <span className="block mt-0.5 text-[10px] text-red-600 dark:text-red-400 font-bold uppercase">{t('Urgent')}</span>;
+      case 'HIGH':
+        return <span className="block mt-0.5 text-[10px] text-amber-600 dark:text-amber-400 font-semibold">{t('High')}</span>;
+      case 'LOW':
+        return <span className="block mt-0.5 text-[10px] text-[var(--text-muted)] font-medium">{t('Low')}</span>;
+      case 'NORMAL':
+      default:
+        return <span className="block mt-0.5 text-[10px] text-[var(--text-muted)] font-medium">{t('Normal')}</span>;
+    }
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
       case 'PENDING':
@@ -117,6 +131,7 @@ const SupportDeskView = (props) => {
           </span>
         );
       case 'APPROVED':
+      case 'RESOLVED':
         return (
           <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3" /> {t('Resolved')}
@@ -150,7 +165,7 @@ const SupportDeskView = (props) => {
       case 'COMPLAINT':
         return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-red-500/10 text-red-700 dark:text-red-300">{t('Complaint')}</span>;
       default:
-        return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300">{t('General')}</span>;
+        return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300">{t('General Inquiry')}</span>;
     }
   };
 
@@ -338,18 +353,16 @@ const SupportDeskView = (props) => {
                   <tr key={req.requestId} className="hover:bg-[var(--surface-hover)]/70 transition-colors">
                     <td className="px-5 py-4 font-mono font-bold text-[var(--primary)]">
                       #{req.requestId}
-                      {req.priority === 'URGENT' && (
-                        <span className="block mt-0.5 text-[10px] text-red-500 font-bold uppercase">{t('Urgent')}</span>
-                      )}
+                      {getPriorityBadge(req.priority)}
                     </td>
                     <td className="px-5 py-4">
-                      <div className="font-bold">{req.userFullName}</div>
+                      <div className="font-bold">{req.userFullName || req.memberName}</div>
                       <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1 mt-0.5">
-                        <Mail className="w-3 h-3" /> {req.userEmail}
+                        <Mail className="w-3 h-3" /> {req.userEmail || req.memberEmail}
                       </div>
-                      {req.userPhone && (
+                      {(req.userPhone || req.memberPhone) && (
                         <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">
-                          <Phone className="w-3 h-3" /> {req.userPhone}
+                          <Phone className="w-3 h-3" /> {req.userPhone || req.memberPhone}
                         </div>
                       )}
                     </td>
@@ -365,9 +378,9 @@ const SupportDeskView = (props) => {
                           <div className="text-[11px] text-[var(--text-muted)]">
                             {req.attendedSessions || 0}/{req.totalSessions || 0} {t('taken')}
                           </div>
-                          {req.proratedCredit != null && (
+                          {(req.calculatedCreditAmount != null || req.proratedCredit != null) && (
                             <div className="text-[11px] font-bold text-[var(--primary)] mt-0.5">
-                              {t('Est. Credit')}: {formatMoney(req.proratedCredit)}
+                              {t('Est. Credit')}: {formatMoney(req.calculatedCreditAmount ?? req.proratedCredit)}
                             </div>
                           )}
                         </div>
