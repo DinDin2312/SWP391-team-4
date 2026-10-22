@@ -2951,7 +2951,9 @@ const supportTranslations = [
   ["Quick reception review","Ưu tiên lễ tân duyệt nhanh"],
   ["Requires Manager review","Cần Quản lý trung tâm duyệt"],
   ["System Automated","Hệ thống tự động"],
-  ["Approved & Resolved","Đã duyệt tự động"]
+  ["Approved & Resolved","Đã duyệt tự động"],
+  ["Cancellation & Retention Request for","Yêu cầu hủy & bảo lưu lớp"],
+  ["Warning:","Cảnh báo:"]
 ];
 for (const [en, vi] of supportTranslations) {
   translations[en] = [en, vi];

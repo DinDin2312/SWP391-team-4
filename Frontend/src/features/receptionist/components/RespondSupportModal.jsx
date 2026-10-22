@@ -73,6 +73,30 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
     }
   };
 
+  const getDisplayTitle = (title) => {
+    if (!title) return '';
+    return title.replace('Cancellation & Retention Request for', t('Cancellation & Retention Request for'));
+  };
+
+  const formatRespondedAt = (val) => {
+    if (!val) return '';
+    try {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleString('vi-VN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+    } catch {
+      // fallback
+    }
+    return String(val).replace('T', ' ');
+  };
+
   const isClosed = request?.status === 'APPROVED' || request?.status === 'RESOLVED' || request?.status === 'REJECTED';
   const isEscalatedForReceptionist = !isManager && request?.status === 'ESCALATED';
   const isReadOnly = isClosed || isEscalatedForReceptionist;
@@ -197,7 +221,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                 {isReadOnly ? t('Support Ticket Details') : t('Resolve Support Ticket')} #{request.requestId}
               </h2>
               <p className="text-xs text-[var(--text-muted)]">
-                {request.title} &bull; {t('Priority:')} <span className="font-semibold">{getPriorityLabel(request.priority)}</span>
+                {getDisplayTitle(request.title)} &bull; {t('Priority:')} <span className="font-semibold">{getPriorityLabel(request.priority)}</span>
               </p>
             </div>
           </div>
@@ -386,13 +410,13 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
 
                   {/* Responder Information & Official Response */}
                   <div className="space-y-2 text-xs pt-1">
-                    <div className="flex items-center justify-between text-[var(--text-muted)] font-medium">
-                      <span>{t('Processed By')}: <strong className="text-[var(--text)]">{request.responderName || t('System Automated')}</strong></span>
-                      {request.respondedAt && <span>{request.respondedAt}</span>}
+                    <div className="flex items-center justify-between text-slate-700 dark:text-zinc-300 font-semibold">
+                      <span>{t('Processed By')}: <strong className="text-slate-900 dark:text-white font-bold">{request.responderName || t('System Automated')}</strong></span>
+                      {request.respondedAt && <span>{formatRespondedAt(request.respondedAt)}</span>}
                     </div>
                     {request.responseNote && (
-                      <div className="p-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm font-medium text-[var(--text)] whitespace-pre-line leading-relaxed">
-                        <span className="text-xs font-bold text-[var(--text-muted)] block mb-1">
+                      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 text-sm font-semibold text-slate-900 dark:text-zinc-100 whitespace-pre-line leading-relaxed shadow-sm">
+                        <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 block mb-1">
                           {t('Official Response to Member')}:
                         </span>
                         "{request.responseNote}"
@@ -402,17 +426,18 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
 
                   {/* Revoke Confirmation Section (for Manager) */}
                   {showRevokeConfirm && (
-                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 space-y-3 animate-fade-in">
-                      <div className="flex items-center gap-2 text-xs font-bold text-red-700 dark:text-red-400">
-                        <ShieldAlert className="w-4 h-4 shrink-0" />
+                    <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-700 space-y-3 shadow-md animate-fade-in">
+                      <div className="flex items-center gap-2 text-sm font-extrabold text-red-800 dark:text-red-300">
+                        <ShieldAlert className="w-5 h-5 shrink-0 text-red-600 dark:text-red-400" />
                         <span>{t('Revoke Refund & Resolution')}</span>
                       </div>
-                      <p className="text-xs text-red-900 dark:text-red-200 leading-relaxed font-medium">
+                      <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-800 text-xs text-red-950 dark:text-red-200 leading-relaxed font-semibold shadow-sm">
+                        <span className="font-extrabold text-red-700 dark:text-red-400">{t('Warning:')} </span>
                         {t('Warning: Revoking will invalidate the granted credit voucher in the member\'s wallet and set the ticket to Rejected. If the voucher has already been spent, revocation will be blocked.')}
-                      </p>
-                      <div className="space-y-1">
-                        <label htmlFor="revoke-reason-input" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Revoke Reason (Required)')} <span className="text-red-500">*</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label htmlFor="revoke-reason-input" className="block text-xs font-black text-slate-900 dark:text-zinc-100 uppercase tracking-wide">
+                          {t('Revoke Reason (Required)')} <span className="text-red-600 font-bold">*</span>
                         </label>
                         <textarea
                           id="revoke-reason-input"
@@ -420,11 +445,11 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                           value={revokeReason}
                           onChange={(e) => setRevokeReason(e.target.value)}
                           placeholder={t('Enter reason for revoking approval (e.g. member policy violation, fraud, incorrect amount)...')}
-                          className="w-full px-3 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border-2 border-slate-300 dark:border-zinc-700 text-xs font-bold text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none shadow-sm"
                           required
                         />
                       </div>
-                      <div className="flex items-center justify-end gap-2 pt-1">
+                      <div className="flex items-center justify-end gap-2.5 pt-1">
                         <button
                           type="button"
                           onClick={() => {
@@ -432,7 +457,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                             setRevokeReason('');
                           }}
                           disabled={revoking}
-                          className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs font-semibold text-[var(--text)] hover:bg-[var(--surface)] transition-colors"
+                          className="px-4 py-2 rounded-xl border-2 border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-xs font-bold text-slate-800 dark:text-zinc-200 transition-colors shadow-sm"
                         >
                           {t('Cancel')}
                         </button>
@@ -440,7 +465,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                           type="button"
                           onClick={handleRevoke}
                           disabled={revoking || !revokeReason.trim()}
-                          className="px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                          className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black transition-colors flex items-center gap-1.5 shadow-md shadow-red-600/30 disabled:opacity-50"
                         >
                           {revoking ? (
                             <>
