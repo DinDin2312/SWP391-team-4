@@ -66,6 +66,7 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
       const res = await memberService.cancelClassDirectly(classId);
       setSuccessResult({
         type: 'DIRECT_CANCEL_SUCCESS',
+        requestId: res.requestId,
         creditCode: res.creditCode,
         creditAmount: res.creditAmount,
         expiryDate: res.expiryDate,
@@ -216,6 +217,12 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
                       <span className="text-[var(--text-muted)]">{t('Valid Until:')}</span>
                       <span className="font-semibold text-emerald-600 dark:text-emerald-400">{successResult.expiryDate} (60 {t('days')})</span>
                     </div>
+                    {successResult.requestId && (
+                      <div className="pt-2 border-t border-[var(--border)] flex justify-between items-center text-xs">
+                        <span className="text-[var(--text-muted)]">{t('Ticket ID')}:</span>
+                        <span className="font-bold text-[var(--text)]">#{successResult.requestId} &bull; <span className="text-emerald-600 font-bold">{t('Approved & Resolved')}</span></span>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (

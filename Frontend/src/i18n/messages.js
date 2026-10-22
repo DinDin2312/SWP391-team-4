@@ -2949,7 +2949,9 @@ const supportTranslations = [
   ["Send Special Request to Reception","Gửi yêu cầu đặc biệt đến Lễ tân"],
   ["Auto-issued instantly (1-click)","Cấp ngay lập tức (1 chạm)"],
   ["Quick reception review","Ưu tiên lễ tân duyệt nhanh"],
-  ["Requires Manager review","Cần Quản lý trung tâm duyệt"]
+  ["Requires Manager review","Cần Quản lý trung tâm duyệt"],
+  ["System Automated","Hệ thống tự động"],
+  ["Approved & Resolved","Đã duyệt tự động"]
 ];
 for (const [en, vi] of supportTranslations) {
   translations[en] = [en, vi];

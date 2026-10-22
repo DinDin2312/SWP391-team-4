@@ -154,9 +154,26 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         String creditCode = generateCreditCode(classId, user.getUserId());
         LocalDate expiryDate = LocalDate.now().plusDays(60);
 
+        // 1. Create auto-approved SupportRequest for audit trail & tracking
+        SupportRequest autoTicket = SupportRequest.builder()
+                .user(user)
+                .gymClass(gymClass)
+                .category(SupportCategory.CLASS_CANCELLATION)
+                .preferredResolution("ISSUE_CREDIT")
+                .title("Bảo lưu học phí tự động: " + gymClass.getClassName())
+                .content("Hội viên đã hủy lớp trước ngày khai giảng. Hệ thống đã tự động phê duyệt và cấp Voucher tín dụng 100% học phí theo quy chế trung tâm.")
+                .status(SupportStatus.APPROVED)
+                .priority(SupportPriority.NORMAL)
+                .responseNote("Hệ thống tự động phê duyệt bảo lưu 100% học phí lớp " + gymClass.getClassName() + ". Cấp mã tín dụng: " + creditCode + " trị giá " + creditAmount.longValue() + "đ (Hạn dùng 60 ngày).")
+                .respondedAt(LocalDateTime.now())
+                .build();
+        SupportRequest savedTicket = supportRequestRepository.save(autoTicket);
+
+        // 2. Generate 100% UserCredit voucher linked to the SupportRequest
         UserCredit credit = UserCredit.builder()
                 .user(user)
                 .gymClass(gymClass)
+                .supportRequest(savedTicket)
                 .creditCode(creditCode)
                 .amount(creditAmount)
                 .remainingAmount(creditAmount)
@@ -181,6 +198,7 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         result.put("success", true);
         result.put("classId", classId);
         result.put("className", gymClass.getClassName());
+        result.put("requestId", savedTicket.getRequestId());
         result.put("creditCode", creditCode);
         result.put("creditAmount", creditAmount);
         result.put("expiryDate", expiryDate.toString());

@@ -387,7 +387,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                   {/* Responder Information & Official Response */}
                   <div className="space-y-2 text-xs pt-1">
                     <div className="flex items-center justify-between text-[var(--text-muted)] font-medium">
-                      <span>{t('Processed By')}: <strong className="text-[var(--text)]">{request.responderName || t('Staff')}</strong></span>
+                      <span>{t('Processed By')}: <strong className="text-[var(--text)]">{request.responderName || t('System Automated')}</strong></span>
                       {request.respondedAt && <span>{request.respondedAt}</span>}
                     </div>
                     {request.responseNote && (
