@@ -10,6 +10,11 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import memberService from '../services/memberService';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';
+import {
+  ClassCancellationPreviewCard,
+  ClassCancellationSuccessCard,
+  CancellationGuaranteeNotice
+} from '../components/ClassCancellationCards';
 
 const CATEGORY_OPTIONS = [
   {
@@ -885,92 +890,18 @@ const MemberSupportView = () => {
             <div className="py-4 overflow-y-auto flex-1 space-y-4">
               {/* SUCCESS VIEW */}
               {modalSuccess ? (
-                <div className="py-4 text-center space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
-                    <CheckCircle2 className="w-10 h-10" />
-                  </div>
-
-                  {modalSuccess.type === 'DIRECT_CANCEL_SUCCESS' ? (
-                    <>
-                      <h4 className="text-xl font-bold text-[var(--text)]">
-                        {t('Class Cancelled & 100% Credit Granted!')}
-                      </h4>
-                      <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto">
-                        {t('Because this class has not started yet, 100% of your course fee has been converted into a Course Credit Voucher valid for 60 days.')}
-                      </p>
-
-                      <div className="p-4 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] max-w-sm mx-auto text-left space-y-2">
-                        <div className="text-xs text-[var(--text-muted)] font-medium">{t('Credit Voucher Code')}</div>
-                        <div className="flex items-center justify-between bg-[var(--surface)] p-2.5 rounded-lg border border-[var(--border)]">
-                          <code className="text-base font-bold text-[var(--primary)] tracking-wider">
-                            {modalSuccess.creditCode}
-                          </code>
-                          <button
-                            type="button"
-                            onClick={() => handleModalCopyCode(modalSuccess.creditCode)}
-                            className="px-2.5 py-1 text-xs font-semibold rounded-md bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-colors flex items-center gap-1.5"
-                          >
-                            {modalCopiedCode ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                            {modalCopiedCode ? t('Copied') : t('Copy')}
-                          </button>
-                        </div>
-                        <div className="flex justify-between text-xs pt-1">
-                          <span className="text-[var(--text-muted)]">{t('Amount:')}</span>
-                          <span className="font-bold text-[var(--text)]">{formatMoney(modalSuccess.creditAmount)}</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-[var(--text-muted)]">{t('Valid Until:')}</span>
-                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">{modalSuccess.expiryDate} (60 {t('days')})</span>
-                        </div>
-                        {modalSuccess.requestId && (
-                          <div className="pt-2 border-t border-[var(--border)] flex justify-between items-center text-xs">
-                            <span className="text-[var(--text-muted)]">{t('Ticket ID')}:</span>
-                            <span className="font-bold text-[var(--text)]">#{modalSuccess.requestId} &bull; <span className="text-emerald-600 font-bold">{t('Approved & Resolved')}</span></span>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <h4 className="text-xl font-bold text-[var(--text)]">
-                        {t('Support Ticket Submitted!')}
-                      </h4>
-                      <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto">
-                        {modalSuccess.message}
-                      </p>
-                      {modalSuccess.preferredLabel && (
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] text-xs font-bold border border-[var(--primary)]/20">
-                          <span>{t('Requested Benefit')}:</span>
-                          <span>{modalSuccess.preferredLabel}</span>
-                        </div>
-                      )}
-                      <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-medium">
-                        {t('Ticket ID')}: #{modalSuccess.requestId} &bull; {t('You will receive a notification once Reception reviews and resolves your ticket.')}
-                      </div>
-                    </>
-                  )}
-
-                  <div className="pt-4 flex items-center justify-center gap-3">
-                    <button
-                      type="button"
-                      onClick={handleCloseModal}
-                      className="px-5 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors"
-                    >
-                      {t('Close')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const targetTab = modalSuccess.type === 'DIRECT_CANCEL_SUCCESS' ? 'credits' : 'tickets';
-                        handleCloseModal();
-                        setActiveTab(targetTab);
-                      }}
-                      className="px-5 py-2.5 rounded-xl bg-[var(--primary)] text-white font-medium text-sm hover:opacity-90 transition-opacity"
-                    >
-                      {modalSuccess.type === 'DIRECT_CANCEL_SUCCESS' ? t('View My Credits & Tickets') : t('View My Support Tickets')}
-                    </button>
-                  </div>
-                </div>
+                <ClassCancellationSuccessCard
+                  result={modalSuccess}
+                  onClose={handleCloseModal}
+                  onViewDetails={() => {
+                    const targetTab = modalSuccess.type === 'DIRECT_CANCEL_SUCCESS' ? 'credits' : 'tickets';
+                    handleCloseModal();
+                    setActiveTab(targetTab);
+                  }}
+                  viewDetailsText={modalSuccess.type === 'DIRECT_CANCEL_SUCCESS' ? t('View My Credits & Tickets') : t('View My Support Tickets')}
+                  copiedCode={modalCopiedCode}
+                  onCopyCode={handleModalCopyCode}
+                />
               ) : (
                 /* FORM VIEW */
                 <form onSubmit={handleCreateTicket} className="space-y-4">
@@ -1134,227 +1065,16 @@ const MemberSupportView = () => {
                       {/* Preview Loaded Content */}
                       {!loadingPreview && cancelPreview && (
                         <div className="space-y-4">
-                          {/* Status Header Badge */}
-                          <div className={`p-4 rounded-xl border ${!cancelPreview.hasStarted ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-800 dark:text-emerald-300' : 'bg-amber-500/10 border-amber-500/20 text-amber-800 dark:text-amber-300'}`}>
-                            <div className="flex items-center gap-2.5 font-bold text-sm mb-1">
-                              {!cancelPreview.hasStarted ? (
-                                <>
-                                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                  <span>{t('Class Has Not Started Yet - 100% Credit Eligible')}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                                  <span>{t('Class In Progress - Reception Support Required')}</span>
-                                </>
-                              )}
-                            </div>
-                            <p className="text-xs leading-relaxed opacity-90">
-                              {cancelPreview.policyNotice}
-                            </p>
-                          </div>
-
-                          {/* Course Progress & Pricing Breakdown */}
-                          <div className="p-4 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] space-y-3">
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-[var(--text-muted)]">{t('Course Name')}:</span>
-                              <span className="font-bold text-[var(--text)]">{cancelPreview.className}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-[var(--text-muted)]">{t('Course Tuition')}:</span>
-                              <span className="font-bold text-[var(--text)]">{formatMoney(cancelPreview.classPrice)}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-[var(--text-muted)]">{t('Session Progress')}:</span>
-                              <span className="font-medium text-[var(--text)]">
-                                {cancelPreview.attendedSessions} / {cancelPreview.totalSessions} {t('sessions taken')} ({cancelPreview.remainingSessions} {t('remaining')})
-                              </span>
-                            </div>
-
-                            {/* Progress bar */}
-                            <div className="w-full bg-[var(--border)] h-2 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-[var(--primary)] rounded-full transition-all duration-300"
-                                style={{ width: `${cancelPreview.totalSessions > 0 ? (cancelPreview.attendedSessions / cancelPreview.totalSessions) * 100 : 0}%` }}
-                              />
-                            </div>
-
-                            {cancelPreview.hasStarted && (
-                              <div className="pt-2 border-t border-[var(--border)] flex justify-between items-center">
-                                <span className="text-xs font-semibold text-[var(--text-muted)]">
-                                  {t('Estimated Prorated Credit Value:')}
-                                </span>
-                                <span className="text-base font-extrabold text-[var(--primary)]">
-                                  {formatMoney(cancelPreview.proratedCredit)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Member Compensation Benefit Selection */}
-                          <div className="space-y-2.5 pt-1">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                              <label className="text-xs font-extrabold text-[var(--text)] uppercase tracking-wide flex items-center gap-1.5">
-                                <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                                <span>{t('Select Desired Compensation Benefit')}</span>
-                              </label>
-                              <span className="text-[11px] font-semibold text-[var(--text-muted)]">
-                                {t('Choose how you would like to be compensated if this class is cancelled.')}
-                              </span>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-2.5">
-                              {/* Option 1: Course Credit Voucher */}
-                              <button
-                                type="button"
-                                onClick={() => setTicketForm({ ...ticketForm, preferredResolution: 'ISSUE_CREDIT' })}
-                                className={`p-3.5 rounded-xl border-2 text-left transition-all relative ${
-                                  ticketForm.preferredResolution === 'ISSUE_CREDIT'
-                                    ? 'border-emerald-600 bg-emerald-500/10 dark:bg-emerald-500/15 ring-2 ring-emerald-500/30'
-                                    : 'border-[var(--border)] bg-[var(--surface-hover)] hover:border-emerald-500/40'
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex items-start gap-2.5">
-                                    <div className={`p-2 rounded-lg mt-0.5 ${
-                                      ticketForm.preferredResolution === 'ISSUE_CREDIT'
-                                        ? 'bg-emerald-600 text-white'
-                                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                    }`}>
-                                      <CreditCard className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <span className="text-xs font-black text-[var(--text)]">
-                                          {t('Course Credit Voucher (Recommended)')}
-                                        </span>
-                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
-                                          {!cancelPreview.hasStarted ? '100% ' + t('Tuition Value') : formatMoney(cancelPreview.proratedCredit)}
-                                        </span>
-                                      </div>
-                                      <p className="text-[11px] text-[var(--text-muted)] mt-1 leading-snug">
-                                        {t('100% or prorated value credited for 60 days to book any other class or gym package.')}
-                                      </p>
-                                      <div className="mt-1.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                        <CheckCircle2 className="w-3 h-3" />
-                                        <span>{!cancelPreview.hasStarted ? t('Auto-issued instantly (1-click)') : t('Quick reception review')}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  {ticketForm.preferredResolution === 'ISSUE_CREDIT' && (
-                                    <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                                      <Check className="w-3.5 h-3.5" />
-                                    </div>
-                                  )}
-                                </div>
-                              </button>
-
-                              {/* Option 2: 1-Month Gym Pass */}
-                              <button
-                                type="button"
-                                onClick={() => setTicketForm({ ...ticketForm, preferredResolution: 'GYM_PASS' })}
-                                className={`p-3.5 rounded-xl border-2 text-left transition-all relative ${
-                                  ticketForm.preferredResolution === 'GYM_PASS'
-                                    ? 'border-blue-600 bg-blue-500/10 dark:bg-blue-500/15 ring-2 ring-blue-500/30'
-                                    : 'border-[var(--border)] bg-[var(--surface-hover)] hover:border-blue-500/40'
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex items-start gap-2.5">
-                                    <div className={`p-2 rounded-lg mt-0.5 ${
-                                      ticketForm.preferredResolution === 'GYM_PASS'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                                    }`}>
-                                      <Dumbbell className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <span className="text-xs font-black text-[var(--text)]">
-                                          {t('Free 1-Month Gym Pass')}
-                                        </span>
-                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-700 dark:text-blue-300">
-                                          1 {t('Month')} VIP
-                                        </span>
-                                      </div>
-                                      <p className="text-[11px] text-[var(--text-muted)] mt-1 leading-snug">
-                                        {t('Exchange remaining sessions for 1 full month of unlimited gym & fitness access.')}
-                                      </p>
-                                      <div className="mt-1.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                                        <CheckCircle2 className="w-3 h-3" />
-                                        <span>{t('Instant activation upon review')}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  {ticketForm.preferredResolution === 'GYM_PASS' && (
-                                    <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
-                                      <Check className="w-3.5 h-3.5" />
-                                    </div>
-                                  )}
-                                </div>
-                              </button>
-
-                              {/* Option 3: Cash / Bank Refund */}
-                              <button
-                                type="button"
-                                onClick={() => setTicketForm({ ...ticketForm, preferredResolution: 'CASH_REFUND' })}
-                                className={`p-3.5 rounded-xl border-2 text-left transition-all relative ${
-                                  ticketForm.preferredResolution === 'CASH_REFUND'
-                                    ? 'border-purple-600 bg-purple-500/10 dark:bg-purple-500/15 ring-2 ring-purple-500/30'
-                                    : 'border-[var(--border)] bg-[var(--surface-hover)] hover:border-purple-500/40'
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex items-start gap-2.5">
-                                    <div className={`p-2 rounded-lg mt-0.5 ${
-                                      ticketForm.preferredResolution === 'CASH_REFUND'
-                                        ? 'bg-purple-600 text-white'
-                                        : 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                                    }`}>
-                                      <DollarSign className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <span className="text-xs font-black text-[var(--text)]">
-                                          {t('Cash / Bank Refund Request')}
-                                        </span>
-                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-700 dark:text-purple-300">
-                                          {!cancelPreview.hasStarted ? formatMoney(cancelPreview.classPrice) : formatMoney(cancelPreview.proratedCredit)}
-                                        </span>
-                                      </div>
-                                      <p className="text-[11px] text-[var(--text-muted)] mt-1 leading-snug">
-                                        {t('Request remaining class tuition refunded via bank transfer or cash at counter.')}
-                                      </p>
-                                      <div className="mt-1.5 text-[10px] font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1">
-                                        <CheckCircle2 className="w-3 h-3" />
-                                        <span>{t('Requires Center Manager approval')}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  {ticketForm.preferredResolution === 'CASH_REFUND' && (
-                                    <div className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0">
-                                      <Check className="w-3.5 h-3.5" />
-                                    </div>
-                                  )}
-                                </div>
-                              </button>
-                            </div>
-                          </div>
+                          <ClassCancellationPreviewCard
+                            preview={cancelPreview}
+                            preferredResolution={ticketForm.preferredResolution}
+                            onSelectResolution={(res) => setTicketForm({ ...ticketForm, preferredResolution: res })}
+                          />
 
                           {/* Action Area: Direct Cancel or Support Form */}
                           {!cancelPreview.hasStarted && ticketForm.preferredResolution === 'ISSUE_CREDIT' ? (
                             <div className="space-y-4 pt-2">
-                              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
-                                <p className="font-bold flex items-center gap-1.5">
-                                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                                  <span>{t('Terms & Guarantee:')}</span>
-                                </p>
-                                <ul className="list-disc pl-4 space-y-0.5 text-[11px]">
-                                  <li>{t('100% of your course price will be credited as a 60-day voucher.')}</li>
-                                  <li>{t('Use the voucher at checkout for any other class or gym membership.')}</li>
-                                  <li>{t('All upcoming sessions will be released for other members.')}</li>
-                                </ul>
-                              </div>
+                              <CancellationGuaranteeNotice />
 
                               <div className="flex items-center justify-end gap-3 pt-2">
                                 <button

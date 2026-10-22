@@ -9,6 +9,92 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import receptionistService from '../services/receptionistService';
 
+const COLOR_THEMES = {
+  emerald: {
+    selected: 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40',
+    unselected: 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50',
+    icon: 'text-emerald-600 dark:text-emerald-400',
+    badge: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30',
+    descSelected: 'text-emerald-50'
+  },
+  blue: {
+    selected: 'border-blue-600 bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/40',
+    unselected: 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/50',
+    icon: 'text-blue-600 dark:text-blue-400',
+    badge: 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30',
+    descSelected: 'text-blue-50'
+  },
+  purple: {
+    selected: 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40',
+    unselected: 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50',
+    icon: 'text-purple-600 dark:text-purple-400',
+    badge: 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30',
+    descSelected: 'text-purple-50'
+  },
+  rose: {
+    selected: 'border-rose-600 bg-rose-600 text-white shadow-lg ring-2 ring-rose-400/40',
+    unselected: 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/50',
+    icon: 'text-rose-600 dark:text-rose-400',
+    badge: 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30',
+    descSelected: 'text-rose-50'
+  }
+};
+
+const ResolutionActionCard = ({
+  actionType,
+  selectedType,
+  onSelect,
+  icon: Icon,
+  title,
+  desc,
+  color = 'blue',
+  isMemberChoice = false,
+  memberChoiceLabel
+}) => {
+  const isSelected = selectedType === actionType;
+  const theme = COLOR_THEMES[color] || COLOR_THEMES.blue;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(actionType)}
+      className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+        isSelected ? theme.selected : theme.unselected
+      }`}
+    >
+      <span className="font-bold text-xs flex items-center justify-between">
+        <span className="flex items-center gap-1.5">
+          <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : theme.icon}`} />
+          <span className={isSelected ? 'text-white font-black' : 'text-[var(--text)]'}>
+            {title}
+          </span>
+        </span>
+        <div className="flex items-center gap-1.5">
+          {isMemberChoice && (
+            <span
+              className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                isSelected
+                  ? 'bg-white/20 text-white border border-white/40'
+                  : theme.badge
+              }`}
+            >
+              ★ {memberChoiceLabel}
+            </span>
+          )}
+          {isSelected && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
+        </div>
+      </span>
+      <span
+        className={`text-[11px] mt-1.5 leading-snug font-medium ${
+          isSelected ? theme.descSelected : 'text-[var(--text-muted)]'
+        }`}
+      >
+        {desc}
+      </span>
+    </button>
+  );
+};
+
 const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSuccess }) => {
   useLanguage();
 
@@ -310,601 +396,226 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
 
 
   const renderResolutionActions = () => {
-    // 1. CLASS CANCELLATION & REFUND
+    let actions = [];
+
     if (isClassCancellationOrCompensation) {
-      return (
-        <>
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('ISSUE_CREDIT')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'ISSUE_CREDIT'
-                ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40'
-                : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <CreditCard className={`w-4 h-4 ${resolutionType === 'ISSUE_CREDIT' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
-                <span className={resolutionType === 'ISSUE_CREDIT' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Issue Credit Voucher (Recommended)')}
-                </span>
-              </span>
-              <div className="flex items-center gap-1.5">
-                {(request.preferredResolution === 'ISSUE_CREDIT' || !request.preferredResolution) && (
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                    resolutionType === 'ISSUE_CREDIT' ? 'bg-white/20 text-white border border-white/40' : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                  }`}>
-                    ★ {t("Member's Choice")}
-                  </span>
-                )}
-                {resolutionType === 'ISSUE_CREDIT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-              </div>
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ISSUE_CREDIT' ? 'text-emerald-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Generates 60-day voucher code for member to re-enroll without losing money.')}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('GYM_PASS')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'GYM_PASS'
-                ? 'border-blue-600 bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/40'
-                : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Clock className={`w-4 h-4 ${resolutionType === 'GYM_PASS' ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
-                <span className={resolutionType === 'GYM_PASS' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Grant Free 1-Month Gym Pass')}
-                </span>
-              </span>
-              <div className="flex items-center gap-1.5">
-                {request.preferredResolution === 'GYM_PASS' && (
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                    resolutionType === 'GYM_PASS' ? 'bg-white/20 text-white border border-white/40' : 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30'
-                  }`}>
-                    ★ {t("Member's Choice")}
-                  </span>
-                )}
-                {resolutionType === 'GYM_PASS' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-              </div>
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'GYM_PASS' ? 'text-blue-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Alternative perk when student prefers gym workouts over class credit.')}
-            </span>
-          </button>
-
-          {isManager ? (
-            <button
-              type="button"
-              onClick={() => handleSelectResolution('CASH_REFUND')}
-              className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-                resolutionType === 'CASH_REFUND' ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
-              }`}
-            >
-              <span className="font-bold text-xs flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <DollarSign className={`w-4 h-4 ${resolutionType === 'CASH_REFUND' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
-                  <span className={resolutionType === 'CASH_REFUND' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                    {t('Phê Duyệt Hoàn Tiền Mặt / Chuyển Khoản')}
-                  </span>
-                </span>
-                <div className="flex items-center gap-1.5">
-                  {request.preferredResolution === 'CASH_REFUND' && (
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                      resolutionType === 'CASH_REFUND' ? 'bg-white/20 text-white border border-white/40' : 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30'
-                    }`}>
-                      ★ {t("Member's Choice")}
-                    </span>
-                  )}
-                  {resolutionType === 'CASH_REFUND' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-                </div>
-              </span>
-              <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'CASH_REFUND' ? 'text-purple-50' : 'text-[var(--text-muted)]'}`}>
-                {t('Duyệt lệnh xuất quỹ/kế toán chuyển khoản hoàn trả học phí cho học viên.')}
-              </span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => handleSelectResolution('ESCALATE')}
-              className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-                resolutionType === 'ESCALATE' ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
-              }`}
-            >
-              <span className="font-bold text-xs flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <ArrowUpRight className={`w-4 h-4 ${resolutionType === 'ESCALATE' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
-                  <span className={resolutionType === 'ESCALATE' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                    {t('Escalate to Center Manager')}
-                  </span>
-                </span>
-                {resolutionType === 'ESCALATE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-              </span>
-              <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ESCALATE' ? 'text-purple-50' : 'text-[var(--text-muted)]'}`}>
-                {t('For special cash refunds or high-dispute exceptions.')}
-              </span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('REJECT')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'REJECT' ? 'border-rose-600 bg-rose-600 text-white shadow-lg ring-2 ring-rose-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <X className={`w-4 h-4 ${resolutionType === 'REJECT' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
-                <span className={resolutionType === 'REJECT' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Reject Request')}
-                </span>
-              </span>
-              {resolutionType === 'REJECT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'REJECT' ? 'text-rose-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Course completed >80% or violates center policies.')}
-            </span>
-          </button>
-        </>
-      );
+      actions = [
+        {
+          actionType: 'ISSUE_CREDIT',
+          icon: CreditCard,
+          title: t('Issue Credit Voucher (Recommended)'),
+          desc: t('Generates 60-day voucher code for member to re-enroll without losing money.'),
+          color: 'emerald',
+          isMemberChoice: request.preferredResolution === 'ISSUE_CREDIT' || !request.preferredResolution
+        },
+        {
+          actionType: 'GYM_PASS',
+          icon: Clock,
+          title: t('Grant Free 1-Month Gym Pass'),
+          desc: t('Alternative perk when student prefers gym workouts over class credit.'),
+          color: 'blue',
+          isMemberChoice: request.preferredResolution === 'GYM_PASS'
+        },
+        isManager
+          ? {
+              actionType: 'CASH_REFUND',
+              icon: DollarSign,
+              title: t('Phê Duyệt Hoàn Tiền Mặt / Chuyển Khoản'),
+              desc: t('Duyệt lệnh xuất quỹ/kế toán chuyển khoản hoàn trả học phí cho học viên.'),
+              color: 'purple',
+              isMemberChoice: request.preferredResolution === 'CASH_REFUND'
+            }
+          : {
+              actionType: 'ESCALATE',
+              icon: ArrowUpRight,
+              title: t('Escalate to Center Manager'),
+              desc: t('For special cash refunds or high-dispute exceptions.'),
+              color: 'purple',
+              isMemberChoice: false
+            },
+        {
+          actionType: 'REJECT',
+          icon: X,
+          title: t('Reject Request'),
+          desc: t('Course completed >80% or violates center policies.'),
+          color: 'rose',
+          isMemberChoice: false
+        }
+      ];
+    } else if (request.category === 'COACH_FEEDBACK') {
+      actions = [
+        {
+          actionType: 'ACKNOWLEDGE_AND_TRAIN',
+          icon: UserCheck,
+          title: t('Ghi nhận & Làm việc với HLV'),
+          desc: t('Nhắc nhở HLV, làm việc cùng Trưởng bộ môn để nâng cao chất lượng bài giảng.'),
+          color: 'emerald'
+        },
+        {
+          actionType: 'TRANSFER_CLASS_SUGGESTION',
+          icon: BookOpen,
+          title: t('Đề xuất đổi lớp / HLV khác'),
+          desc: t('Tư vấn hỗ trợ học viên chuyển sang lớp của HLV khác phù hợp với phong cách học.'),
+          color: 'blue'
+        },
+        {
+          actionType: 'ESCALATE',
+          icon: ArrowUpRight,
+          title: t('Chuyển Quản lý Chuyên môn'),
+          desc: t('Phản ánh nghiêm trọng về vi phạm kỷ luật hoặc thái độ cần cấp quản lý xử lý.'),
+          color: 'purple'
+        },
+        {
+          actionType: 'REJECT',
+          icon: X,
+          title: t('Đóng phản ánh (Không có cơ sở)'),
+          desc: t('Sau khi kiểm tra camera/lịch sử thấy HLV thực hiện đúng giáo án chuẩn.'),
+          color: 'rose'
+        }
+      ];
+    } else if (request.category === 'FACILITY_ISSUE') {
+      actions = [
+        {
+          actionType: 'ASSIGN_MAINTENANCE',
+          icon: Wrench,
+          title: t('Báo Kỹ thuật / Bảo trì ngay'),
+          desc: t('Chuyển ngay lệnh sửa chữa tới đội bảo trì, gắn biển kiểm tra thiết bị.'),
+          color: 'emerald'
+        },
+        {
+          actionType: 'SCHEDULED_FIX',
+          icon: Clock,
+          title: t('Thông báo lịch sửa chữa'),
+          desc: t('Báo lịch máy đang sửa chữa, dự kiến hoàn thành đưa vào sử dụng trong 24-48h.'),
+          color: 'blue'
+        },
+        {
+          actionType: 'ESCALATE',
+          icon: ArrowUpRight,
+          title: t('Chuyển Quản lý CSVC (Thay mới)'),
+          desc: t('Thiết bị hỏng nặng không thể sửa, cần Quản lý duyệt mua mới thay thế.'),
+          color: 'purple'
+        },
+        {
+          actionType: 'REJECT',
+          icon: X,
+          title: t('Đã kiểm tra (Máy hoạt động tốt)'),
+          desc: t('Kỹ thuật đã test máy bình thường, lễ tân sẽ hướng dẫn hội viên thao tác đúng.'),
+          color: 'rose'
+        }
+      ];
+    } else if (request.category === 'SCHEDULE_SUPPORT') {
+      actions = [
+        {
+          actionType: 'APPROVE_SCHEDULE_CHANGE',
+          icon: Calendar,
+          title: t('Hỗ trợ đổi buổi / Xếp lịch bù'),
+          desc: t('Lễ tân đã cập nhật lịch học mới cho học viên trên hệ thống quản lý.'),
+          color: 'emerald'
+        },
+        {
+          actionType: 'GUIDE_BOOKING',
+          icon: BookOpen,
+          title: t('Hướng dẫn tự đổi lịch trên App'),
+          desc: t('Hướng dẫn học viên chủ động đổi lịch trên app trước 24h quy định.'),
+          color: 'blue'
+        },
+        {
+          actionType: 'ESCALATE',
+          icon: ArrowUpRight,
+          title: t('Chuyển Quản lý (Đặc cách xếp ca)'),
+          desc: t('Yêu cầu xếp ca ngoài lịch học chuẩn cần cấp quản lý phê duyệt.'),
+          color: 'purple'
+        },
+        {
+          actionType: 'REJECT',
+          icon: X,
+          title: t('Từ chối đổi lịch (Hết chỗ / Quá hạn)'),
+          desc: t('Ca học mong muốn đã đầy sĩ số hoặc báo trễ không thỏa mãn điều kiện.'),
+          color: 'rose'
+        }
+      ];
+    } else if (request.category === 'COMPLAINT') {
+      actions = [
+        {
+          actionType: 'RESOLVE_COMPLAINT',
+          icon: CheckCircle2,
+          title: t('Tiếp nhận xin lỗi & Khắc phục sự cố'),
+          desc: t('Xin lỗi học viên, ghi nhận thiếu sót và đưa ra biện pháp khắc phục quy trình.'),
+          color: 'emerald'
+        },
+        {
+          actionType: 'CONTACT_DIRECTLY',
+          icon: Phone,
+          title: t('Đã liên hệ trực tiếp hòa giải'),
+          desc: t('Lễ tân/Trưởng ca đã gặp trực tiếp hoặc gọi điện trao đổi thỏa đáng với hội viên.'),
+          color: 'blue'
+        },
+        {
+          actionType: 'ESCALATE',
+          icon: ArrowUpRight,
+          title: t('Chuyển Quản lý Trung tâm'),
+          desc: t('Khiếu nại phức tạp cần cấp Quản lý trung tâm trực tiếp vào cuộc.'),
+          color: 'purple'
+        },
+        {
+          actionType: 'REJECT',
+          icon: X,
+          title: t('Bác bỏ khiếu nại (Không vi phạm)'),
+          desc: t('Xác minh quy trình đúng quy chế, không có sai sót từ phía trung tâm.'),
+          color: 'rose'
+        }
+      ];
+    } else {
+      // 6. GENERAL INQUIRY (Default)
+      actions = [
+        {
+          actionType: 'ANSWER_INQUIRY',
+          icon: CheckCircle2,
+          title: t('Giải đáp & Hướng dẫn hội viên'),
+          desc: t('Phản hồi câu trả lời giải đáp đầy đủ thông tin hội viên cần hỗ trợ.'),
+          color: 'emerald'
+        },
+        {
+          actionType: 'CONTACT_DIRECTLY',
+          icon: Phone,
+          title: t('Đã tư vấn trực tiếp / Qua điện thoại'),
+          desc: t('Lễ tân đã liên hệ trực tiếp hỗ trợ chi tiết tại quầy hoặc qua hotline.'),
+          color: 'blue'
+        },
+        {
+          actionType: 'ESCALATE',
+          icon: ArrowUpRight,
+          title: t('Chuyển Quản lý giải đáp'),
+          desc: t('Câu hỏi chính sách vượt quá thẩm quyền của nhân viên lễ tân.'),
+          color: 'purple'
+        },
+        {
+          actionType: 'REJECT',
+          icon: X,
+          title: t('Đóng yêu cầu hỗ trợ'),
+          desc: t('Nội dung đã được xử lý hoặc đóng theo yêu cầu hội viên.'),
+          color: 'rose'
+        }
+      ];
     }
 
-    // 2. COACH FEEDBACK
-    if (request.category === 'COACH_FEEDBACK') {
-      return (
-        <>
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('ACKNOWLEDGE_AND_TRAIN')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'ACKNOWLEDGE_AND_TRAIN' ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <UserCheck className={`w-4 h-4 ${resolutionType === 'ACKNOWLEDGE_AND_TRAIN' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
-                <span className={resolutionType === 'ACKNOWLEDGE_AND_TRAIN' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Ghi nhận & Làm việc với HLV')}
-                </span>
-              </span>
-              {resolutionType === 'ACKNOWLEDGE_AND_TRAIN' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ACKNOWLEDGE_AND_TRAIN' ? 'text-emerald-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Nhắc nhở HLV, làm việc cùng Trưởng bộ môn để nâng cao chất lượng bài giảng.')}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('TRANSFER_CLASS_SUGGESTION')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'TRANSFER_CLASS_SUGGESTION' ? 'border-blue-600 bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <BookOpen className={`w-4 h-4 ${resolutionType === 'TRANSFER_CLASS_SUGGESTION' ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
-                <span className={resolutionType === 'TRANSFER_CLASS_SUGGESTION' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Đề xuất đổi lớp / HLV khác')}
-                </span>
-              </span>
-              {resolutionType === 'TRANSFER_CLASS_SUGGESTION' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'TRANSFER_CLASS_SUGGESTION' ? 'text-blue-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Tư vấn hỗ trợ học viên chuyển sang lớp của HLV khác phù hợp với phong cách học.')}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('ESCALATE')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'ESCALATE' ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <ArrowUpRight className={`w-4 h-4 ${resolutionType === 'ESCALATE' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
-                <span className={resolutionType === 'ESCALATE' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Chuyển Quản lý Chuyên môn')}
-                </span>
-              </span>
-              {resolutionType === 'ESCALATE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ESCALATE' ? 'text-purple-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Phản ánh nghiêm trọng về vi phạm kỷ luật hoặc thái độ cần cấp quản lý xử lý.')}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('REJECT')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'REJECT' ? 'border-rose-600 bg-rose-600 text-white shadow-lg ring-2 ring-rose-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <X className={`w-4 h-4 ${resolutionType === 'REJECT' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
-                <span className={resolutionType === 'REJECT' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Đóng phản ánh (Không có cơ sở)')}
-                </span>
-              </span>
-              {resolutionType === 'REJECT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'REJECT' ? 'text-rose-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Sau khi kiểm tra camera/lịch sử thấy HLV thực hiện đúng giáo án chuẩn.')}
-            </span>
-          </button>
-        </>
-      );
-    }
-
-    // 3. FACILITY ISSUE
-    if (request.category === 'FACILITY_ISSUE') {
-      return (
-        <>
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('ASSIGN_MAINTENANCE')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'ASSIGN_MAINTENANCE' ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Wrench className={`w-4 h-4 ${resolutionType === 'ASSIGN_MAINTENANCE' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
-                <span className={resolutionType === 'ASSIGN_MAINTENANCE' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Báo Kỹ thuật / Bảo trì ngay')}
-                </span>
-              </span>
-              {resolutionType === 'ASSIGN_MAINTENANCE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ASSIGN_MAINTENANCE' ? 'text-emerald-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Chuyển ngay lệnh sửa chữa tới đội bảo trì, gắn biển kiểm tra thiết bị.')}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('SCHEDULED_FIX')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'SCHEDULED_FIX' ? 'border-blue-600 bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Clock className={`w-4 h-4 ${resolutionType === 'SCHEDULED_FIX' ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
-                <span className={resolutionType === 'SCHEDULED_FIX' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Thông báo lịch sửa chữa')}
-                </span>
-              </span>
-              {resolutionType === 'SCHEDULED_FIX' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'SCHEDULED_FIX' ? 'text-blue-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Báo lịch máy đang sửa chữa, dự kiến hoàn thành đưa vào sử dụng trong 24-48h.')}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('ESCALATE')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'ESCALATE' ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <ArrowUpRight className={`w-4 h-4 ${resolutionType === 'ESCALATE' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
-                <span className={resolutionType === 'ESCALATE' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Chuyển Quản lý CSVC (Thay mới)')}
-                </span>
-              </span>
-              {resolutionType === 'ESCALATE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ESCALATE' ? 'text-purple-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Thiết bị hỏng nặng không thể sửa, cần Quản lý duyệt mua mới thay thế.')}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('REJECT')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'REJECT' ? 'border-rose-600 bg-rose-600 text-white shadow-lg ring-2 ring-rose-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <X className={`w-4 h-4 ${resolutionType === 'REJECT' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
-                <span className={resolutionType === 'REJECT' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Đã kiểm tra (Máy hoạt động tốt)')}
-                </span>
-              </span>
-              {resolutionType === 'REJECT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'REJECT' ? 'text-rose-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Kỹ thuật đã test máy bình thường, lễ tân sẽ hướng dẫn hội viên thao tác đúng.')}
-            </span>
-          </button>
-        </>
-      );
-    }
-
-    // 4. SCHEDULE SUPPORT
-    if (request.category === 'SCHEDULE_SUPPORT') {
-      return (
-        <>
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('APPROVE_SCHEDULE_CHANGE')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'APPROVE_SCHEDULE_CHANGE' ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Calendar className={`w-4 h-4 ${resolutionType === 'APPROVE_SCHEDULE_CHANGE' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
-                <span className={resolutionType === 'APPROVE_SCHEDULE_CHANGE' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Hỗ trợ đổi buổi / Xếp lịch bù')}
-                </span>
-              </span>
-              {resolutionType === 'APPROVE_SCHEDULE_CHANGE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'APPROVE_SCHEDULE_CHANGE' ? 'text-emerald-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Lễ tân đã cập nhật lịch học mới cho học viên trên hệ thống quản lý.')}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('GUIDE_BOOKING')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'GUIDE_BOOKING' ? 'border-blue-600 bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <BookOpen className={`w-4 h-4 ${resolutionType === 'GUIDE_BOOKING' ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
-                <span className={resolutionType === 'GUIDE_BOOKING' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Hướng dẫn tự đổi lịch trên App')}
-                </span>
-              </span>
-              {resolutionType === 'GUIDE_BOOKING' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'GUIDE_BOOKING' ? 'text-blue-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Hướng dẫn học viên chủ động đổi lịch trên app trước 24h quy định.')}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('ESCALATE')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'ESCALATE' ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <ArrowUpRight className={`w-4 h-4 ${resolutionType === 'ESCALATE' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
-                <span className={resolutionType === 'ESCALATE' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Chuyển Quản lý (Đặc cách xếp ca)')}
-                </span>
-              </span>
-              {resolutionType === 'ESCALATE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ESCALATE' ? 'text-purple-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Yêu cầu xếp ca ngoài lịch học chuẩn cần cấp quản lý phê duyệt.')}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('REJECT')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'REJECT' ? 'border-rose-600 bg-rose-600 text-white shadow-lg ring-2 ring-rose-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <X className={`w-4 h-4 ${resolutionType === 'REJECT' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
-                <span className={resolutionType === 'REJECT' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Từ chối đổi lịch (Hết chỗ / Quá hạn)')}
-                </span>
-              </span>
-              {resolutionType === 'REJECT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'REJECT' ? 'text-rose-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Ca học mong muốn đã đầy sĩ số hoặc báo trễ không thỏa mãn điều kiện.')}
-            </span>
-          </button>
-        </>
-      );
-    }
-
-    // 5. COMPLAINT
-    if (request.category === 'COMPLAINT') {
-      return (
-        <>
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('RESOLVE_COMPLAINT')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'RESOLVE_COMPLAINT' ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className={`w-4 h-4 ${resolutionType === 'RESOLVE_COMPLAINT' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
-                <span className={resolutionType === 'RESOLVE_COMPLAINT' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Tiếp nhận xin lỗi & Khắc phục sự cố')}
-                </span>
-              </span>
-              {resolutionType === 'RESOLVE_COMPLAINT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'RESOLVE_COMPLAINT' ? 'text-emerald-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Xin lỗi học viên, ghi nhận thiếu sót và đưa ra biện pháp khắc phục quy trình.')}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('CONTACT_DIRECTLY')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'CONTACT_DIRECTLY' ? 'border-blue-600 bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Phone className={`w-4 h-4 ${resolutionType === 'CONTACT_DIRECTLY' ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
-                <span className={resolutionType === 'CONTACT_DIRECTLY' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Đã liên hệ trực tiếp hòa giải')}
-                </span>
-              </span>
-              {resolutionType === 'CONTACT_DIRECTLY' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'CONTACT_DIRECTLY' ? 'text-blue-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Lễ tân/Trưởng ca đã gặp trực tiếp hoặc gọi điện trao đổi thỏa đáng với hội viên.')}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('ESCALATE')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'ESCALATE' ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <ArrowUpRight className={`w-4 h-4 ${resolutionType === 'ESCALATE' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
-                <span className={resolutionType === 'ESCALATE' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Chuyển Quản lý Trung tâm')}
-                </span>
-              </span>
-              {resolutionType === 'ESCALATE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ESCALATE' ? 'text-purple-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Khiếu nại phức tạp cần cấp Quản lý trung tâm trực tiếp vào cuộc.')}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectResolution('REJECT')}
-            className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-              resolutionType === 'REJECT' ? 'border-rose-600 bg-rose-600 text-white shadow-lg ring-2 ring-rose-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/50'
-            }`}
-          >
-            <span className="font-bold text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <X className={`w-4 h-4 ${resolutionType === 'REJECT' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
-                <span className={resolutionType === 'REJECT' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                  {t('Bác bỏ khiếu nại (Không vi phạm)')}
-                </span>
-              </span>
-              {resolutionType === 'REJECT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-            </span>
-            <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'REJECT' ? 'text-rose-50' : 'text-[var(--text-muted)]'}`}>
-              {t('Xác minh quy trình đúng quy chế, không có sai sót từ phía trung tâm.')}
-            </span>
-          </button>
-        </>
-      );
-    }
-
-    // 6. GENERAL INQUIRY (Default)
     return (
       <>
-        <button
-          type="button"
-          onClick={() => handleSelectResolution('ANSWER_INQUIRY')}
-          className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-            resolutionType === 'ANSWER_INQUIRY' ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-emerald-500/50'
-          }`}
-        >
-          <span className="font-bold text-xs flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className={`w-4 h-4 ${resolutionType === 'ANSWER_INQUIRY' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
-              <span className={resolutionType === 'ANSWER_INQUIRY' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                {t('Giải đáp & Hướng dẫn hội viên')}
-              </span>
-            </span>
-            {resolutionType === 'ANSWER_INQUIRY' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-          </span>
-          <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ANSWER_INQUIRY' ? 'text-emerald-50' : 'text-[var(--text-muted)]'}`}>
-            {t('Phản hồi câu trả lời giải đáp đầy đủ thông tin hội viên cần hỗ trợ.')}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleSelectResolution('CONTACT_DIRECTLY')}
-          className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-            resolutionType === 'CONTACT_DIRECTLY' ? 'border-blue-600 bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-blue-500/50'
-          }`}
-        >
-          <span className="font-bold text-xs flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <Phone className={`w-4 h-4 ${resolutionType === 'CONTACT_DIRECTLY' ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`} />
-              <span className={resolutionType === 'CONTACT_DIRECTLY' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                {t('Đã tư vấn trực tiếp / Qua điện thoại')}
-              </span>
-            </span>
-            {resolutionType === 'CONTACT_DIRECTLY' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-          </span>
-          <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'CONTACT_DIRECTLY' ? 'text-blue-50' : 'text-[var(--text-muted)]'}`}>
-            {t('Lễ tân đã liên hệ trực tiếp hỗ trợ chi tiết tại quầy hoặc qua hotline.')}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleSelectResolution('ESCALATE')}
-          className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-            resolutionType === 'ESCALATE' ? 'border-purple-600 bg-purple-600 text-white shadow-lg ring-2 ring-purple-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-purple-500/50'
-          }`}
-        >
-          <span className="font-bold text-xs flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <ArrowUpRight className={`w-4 h-4 ${resolutionType === 'ESCALATE' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`} />
-              <span className={resolutionType === 'ESCALATE' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                {t('Chuyển Quản lý giải đáp')}
-              </span>
-            </span>
-            {resolutionType === 'ESCALATE' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-          </span>
-          <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'ESCALATE' ? 'text-purple-50' : 'text-[var(--text-muted)]'}`}>
-            {t('Câu hỏi chính sách vượt quá thẩm quyền của nhân viên lễ tân.')}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleSelectResolution('REJECT')}
-          className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
-            resolutionType === 'REJECT' ? 'border-rose-600 bg-rose-600 text-white shadow-lg ring-2 ring-rose-400/40' : 'border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)] hover:border-rose-500/50'
-          }`}
-        >
-          <span className="font-bold text-xs flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <X className={`w-4 h-4 ${resolutionType === 'REJECT' ? 'text-white' : 'text-rose-600 dark:text-rose-400'}`} />
-              <span className={resolutionType === 'REJECT' ? 'text-white font-black' : 'text-[var(--text)]'}>
-                {t('Đóng yêu cầu hỗ trợ')}
-              </span>
-            </span>
-            {resolutionType === 'REJECT' && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
-          </span>
-          <span className={`text-[11px] mt-1.5 leading-snug font-medium ${resolutionType === 'REJECT' ? 'text-rose-50' : 'text-[var(--text-muted)]'}`}>
-            {t('Nội dung đã được xử lý hoặc đóng theo yêu cầu hội viên.')}
-          </span>
-        </button>
+        {actions.map((act) => (
+          <ResolutionActionCard
+            key={act.actionType}
+            actionType={act.actionType}
+            selectedType={resolutionType}
+            onSelect={handleSelectResolution}
+            icon={act.icon}
+            title={act.title}
+            desc={act.desc}
+            color={act.color}
+            isMemberChoice={act.isMemberChoice}
+            memberChoiceLabel={t("Member's Choice")}
+          />
+        ))}
       </>
     );
   };
