@@ -381,6 +381,43 @@ const MemberSupportView = () => {
     }
   };
 
+  const getTitlePlaceholder = (cat) => {
+    switch (cat) {
+      case 'COACH_FEEDBACK':
+        return t('Brief summary of your feedback');
+      case 'FACILITY_ISSUE':
+        return t('Brief summary of facility issue');
+      case 'SCHEDULE_SUPPORT':
+        return t('Brief summary of schedule request');
+      case 'COMPLAINT':
+        return t('Brief summary of your complaint');
+      default:
+        return t('Brief summary of your issue or request');
+    }
+  };
+
+  const getContentPlaceholder = (cat) => {
+    if (cat === 'SCHEDULE_SUPPORT') {
+      return t('Please describe your schedule support request.');
+    }
+    return t('Please provide as much detail as possible so Reception can assist you accurately...');
+  };
+
+  const getSubmitButtonLabel = (cat) => {
+    switch (cat) {
+      case 'COACH_FEEDBACK':
+        return t('Submit Feedback to Reception');
+      case 'FACILITY_ISSUE':
+        return t('Submit Incident Report');
+      case 'SCHEDULE_SUPPORT':
+        return t('Submit Schedule Request');
+      case 'COMPLAINT':
+        return t('Submit Complaint to Reception');
+      default:
+        return t('Submit Question to Reception');
+    }
+  };
+
   return (
     <div className="flex flex-col w-full pb-12 space-y-6">
       {/* Toast Notification */}
@@ -935,454 +972,214 @@ const MemberSupportView = () => {
                   )}
 
                   {/* =========================================================================
-                      CASE 2: COACH_FEEDBACK (Góp ý HLV & Huấn luyện)
+                      CASE 2 to 6: NON-CANCELLATION CATEGORIES
                      ========================================================================= */}
-                  {ticketForm.category === 'COACH_FEEDBACK' && (
+                  {ticketForm.category !== 'CLASS_CANCELLATION' && (
                     <div className="space-y-4">
-                      {classes.length > 0 && (
-                        <div className="space-y-1.5">
-                          <label htmlFor="coach-class-select" className="block text-xs font-bold text-[var(--text)]">
-                            {t('Associated Class')}
-                          </label>
-                          <select
-                            id="coach-class-select"
-                            value={ticketForm.classId}
-                            onChange={(e) => setTicketForm({ ...ticketForm, classId: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                          >
-                            <option value="">-- {t('None / Not related to a specific class')} --</option>
-                            {classes.map((cls) => (
-                              <option key={cls.classId} value={cls.classId}>
-                                {cls.className} ({cls.coachName || 'Coach'})
-                              </option>
-                            ))}
-                          </select>
+                      {/* Sub-form: COACH_FEEDBACK */}
+                      {ticketForm.category === 'COACH_FEEDBACK' && (
+                        <>
+                          {classes.length > 0 && (
+                            <div className="space-y-1.5">
+                              <label htmlFor="coach-class-select" className="block text-xs font-bold text-[var(--text)]">
+                                {t('Associated Class')}
+                              </label>
+                              <select
+                                id="coach-class-select"
+                                value={ticketForm.classId}
+                                onChange={(e) => setTicketForm({ ...ticketForm, classId: e.target.value })}
+                                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                              >
+                                <option value="">-- {t('None / Not related to a specific class')} --</option>
+                                {classes.map((cls) => (
+                                  <option key={cls.classId} value={cls.classId}>
+                                    {cls.className} ({cls.coachName || 'Coach'})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+
+                          <div className="space-y-1.5">
+                            <label htmlFor="coach-aspect-select" className="block text-xs font-bold text-[var(--text)]">
+                              {t('Feedback Aspect')} <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                              id="coach-aspect-select"
+                              value={ticketForm.coachAspect}
+                              onChange={(e) => setTicketForm({ ...ticketForm, coachAspect: e.target.value })}
+                              className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                            >
+                              <option value="TEACHING_METHOD">{t('Teaching Method & Delivery')}</option>
+                              <option value="ATTITUDE">{t('Attitude & Member Care')}</option>
+                              <option value="PUNCTUALITY">{t('Punctuality & Professionalism')}</option>
+                              <option value="TECHNICAL_GUIDANCE">{t('Technical Expertise & Form Correction')}</option>
+                              <option value="OTHER">{t('Other Feedback')}</option>
+                            </select>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Sub-form: FACILITY_ISSUE */}
+                      {ticketForm.category === 'FACILITY_ISSUE' && (
+                        <>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <label htmlFor="facility-area-select" className="block text-xs font-bold text-[var(--text)]">
+                                {t('Facility Area')} <span className="text-red-500">*</span>
+                              </label>
+                              <select
+                                id="facility-area-select"
+                                value={ticketForm.facilityArea}
+                                onChange={(e) => setTicketForm({ ...ticketForm, facilityArea: e.target.value })}
+                                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                              >
+                                <option value="GYM_FLOOR">{t('Gym & Free Weights Area')}</option>
+                                <option value="CARDIO_ZONE">{t('Cardio Zone')}</option>
+                                <option value="STUDIO_ROOM">{t('Studio / Yoga / Aerobics Room')}</option>
+                                <option value="SWIMMING_POOL">{t('Swimming Pool & Jacuzzi')}</option>
+                                <option value="LOCKER_SAUNA">{t('Locker Room & Sauna')}</option>
+                                <option value="LOBBY_RECEPTION">{t('Lobby & Reception Area')}</option>
+                                <option value="OTHER">{t('Other Area')}</option>
+                              </select>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <label htmlFor="facility-urgency-select" className="block text-xs font-bold text-[var(--text)]">
+                                {t('Urgency Level')}
+                              </label>
+                              <select
+                                id="facility-urgency-select"
+                                value={ticketForm.facilityUrgency}
+                                onChange={(e) => setTicketForm({ ...ticketForm, facilityUrgency: e.target.value })}
+                                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                              >
+                                <option value="URGENT">{t('Urgent (Safety Risk / Major Breakdown)')}</option>
+                                <option value="NORMAL">{t('Normal (Affects Workout Experience)')}</option>
+                                <option value="LOW">{t('Low (Routine Maintenance / Cleaning)')}</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label htmlFor="facility-device-input" className="block text-xs font-bold text-[var(--text)]">
+                              {t('Device / Location Detail')}
+                            </label>
+                            <input
+                              id="facility-device-input"
+                              type="text"
+                              value={ticketForm.facilityDevice}
+                              onChange={(e) => setTicketForm({ ...ticketForm, facilityDevice: e.target.value })}
+                              placeholder={t('Device / Location Detail')}
+                              className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* Sub-form: SCHEDULE_SUPPORT */}
+                      {ticketForm.category === 'SCHEDULE_SUPPORT' && (
+                        <>
+                          <div className="space-y-1.5">
+                            <label htmlFor="schedule-class-select" className="block text-xs font-bold text-[var(--text)]">
+                              {t('Associated Class')} <span className="text-red-500">*</span>
+                            </label>
+                            {classes.length === 0 ? (
+                              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4 shrink-0" />
+                                <span>{t('You are not enrolled in any active classes to request cancellation or retention.')}</span>
+                              </div>
+                            ) : (
+                              <select
+                                id="schedule-class-select"
+                                value={ticketForm.classId}
+                                onChange={(e) => setTicketForm({ ...ticketForm, classId: e.target.value })}
+                                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm font-semibold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                                required
+                              >
+                                <option value="">-- {t('Select Enrolled Class')} --</option>
+                                {classes.map((cls) => (
+                                  <option key={cls.classId} value={cls.classId}>
+                                    {cls.className} ({cls.coachName || 'Coach'})
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <label htmlFor="schedule-type-select" className="block text-xs font-bold text-[var(--text)]">
+                                {t('Schedule Support Type')} <span className="text-red-500">*</span>
+                              </label>
+                              <select
+                                id="schedule-type-select"
+                                value={ticketForm.scheduleType}
+                                onChange={(e) => setTicketForm({ ...ticketForm, scheduleType: e.target.value })}
+                                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                              >
+                                <option value="SINGLE_ABSENCE">{t('Request Single Session Absence')}</option>
+                                <option value="MAKEUP_CLASS">{t('Register Makeup Session')}</option>
+                                <option value="CLASS_TRANSFER">{t('Request Class Time Transfer')}</option>
+                                <option value="SCHEDULE_INQUIRY">{t('Schedule & Holiday Inquiry')}</option>
+                              </select>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <label htmlFor="schedule-date-input" className="block text-xs font-bold text-[var(--text)]">
+                                {t('Session / Date Detail')}
+                              </label>
+                              <input
+                                id="schedule-date-input"
+                                type="text"
+                                value={ticketForm.scheduleDateInfo}
+                                onChange={(e) => setTicketForm({ ...ticketForm, scheduleDateInfo: e.target.value })}
+                                placeholder={t('Session / Date Detail')}
+                                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                              />
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Sub-form: COMPLAINT */}
+                      {ticketForm.category === 'COMPLAINT' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <label htmlFor="complaint-area-select" className="block text-xs font-bold text-[var(--text)]">
+                              {t('Complaint Area')} <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                              id="complaint-area-select"
+                              value={ticketForm.complaintType}
+                              onChange={(e) => setTicketForm({ ...ticketForm, complaintType: e.target.value })}
+                              className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                            >
+                              <option value="STAFF_BEHAVIOR">{t('Staff / Receptionist Service')}</option>
+                              <option value="CLEANLINESS">{t('Cleanliness & Environment')}</option>
+                              <option value="BILLING_POLICY">{t('Pricing, Membership & Billing Policy')}</option>
+                              <option value="OTHER">{t('Other Issue')}</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label htmlFor="complaint-date-input" className="block text-xs font-bold text-[var(--text)]">
+                              {t('Incident Date & Time')}
+                            </label>
+                            <input
+                              id="complaint-date-input"
+                              type="text"
+                              value={ticketForm.complaintDateInfo}
+                              onChange={(e) => setTicketForm({ ...ticketForm, complaintDateInfo: e.target.value })}
+                              placeholder={t('Incident Date & Time')}
+                              className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                            />
+                          </div>
                         </div>
                       )}
 
-                      <div className="space-y-1.5">
-                        <label htmlFor="coach-aspect-select" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Feedback Aspect')} <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                          id="coach-aspect-select"
-                          value={ticketForm.coachAspect}
-                          onChange={(e) => setTicketForm({ ...ticketForm, coachAspect: e.target.value })}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                        >
-                          <option value="TEACHING_METHOD">{t('Teaching Method & Delivery')}</option>
-                          <option value="ATTITUDE">{t('Attitude & Member Care')}</option>
-                          <option value="PUNCTUALITY">{t('Punctuality & Professionalism')}</option>
-                          <option value="TECHNICAL_GUIDANCE">{t('Technical Expertise & Form Correction')}</option>
-                          <option value="OTHER">{t('Other Feedback')}</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label htmlFor="coach-title-input" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Title / Subject')} <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          id="coach-title-input"
-                          type="text"
-                          value={ticketForm.title}
-                          onChange={(e) => setTicketForm({ ...ticketForm, title: e.target.value })}
-                          placeholder={t('Brief summary of your feedback')}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label htmlFor="coach-content-textarea" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Detailed Content')} <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                          id="coach-content-textarea"
-                          rows={4}
-                          value={ticketForm.content}
-                          onChange={(e) => setTicketForm({ ...ticketForm, content: e.target.value })}
-                          placeholder={t('Please provide as much detail as possible so Reception can assist you accurately...')}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
-                          required
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border)]">
-                        <button
-                          type="button"
-                          onClick={handleCloseModal}
-                          disabled={creating}
-                          className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors"
-                        >
-                          {t('Cancel')}
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={creating || !ticketForm.title.trim() || !ticketForm.content.trim()}
-                          className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 disabled:opacity-50"
-                        >
-                          {creating ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              <span>{t('Submitting...')}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Send className="w-4 h-4" />
-                              <span>{t('Submit Feedback to Reception')}</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* =========================================================================
-                      CASE 3: FACILITY_ISSUE (Báo sự cố thiết bị & CSVC)
-                     ========================================================================= */}
-                  {ticketForm.category === 'FACILITY_ISSUE' && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <label htmlFor="facility-area-select" className="block text-xs font-bold text-[var(--text)]">
-                            {t('Facility Area')} <span className="text-red-500">*</span>
-                          </label>
-                          <select
-                            id="facility-area-select"
-                            value={ticketForm.facilityArea}
-                            onChange={(e) => setTicketForm({ ...ticketForm, facilityArea: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                          >
-                            <option value="GYM_FLOOR">{t('Gym & Free Weights Area')}</option>
-                            <option value="CARDIO_ZONE">{t('Cardio Zone')}</option>
-                            <option value="STUDIO_ROOM">{t('Studio / Yoga / Aerobics Room')}</option>
-                            <option value="SWIMMING_POOL">{t('Swimming Pool & Jacuzzi')}</option>
-                            <option value="LOCKER_SAUNA">{t('Locker Room & Sauna')}</option>
-                            <option value="LOBBY_RECEPTION">{t('Lobby & Reception Area')}</option>
-                            <option value="OTHER">{t('Other Area')}</option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label htmlFor="facility-urgency-select" className="block text-xs font-bold text-[var(--text)]">
-                            {t('Urgency Level')}
-                          </label>
-                          <select
-                            id="facility-urgency-select"
-                            value={ticketForm.facilityUrgency}
-                            onChange={(e) => setTicketForm({ ...ticketForm, facilityUrgency: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                          >
-                            <option value="URGENT">{t('Urgent (Safety Risk / Major Breakdown)')}</option>
-                            <option value="NORMAL">{t('Normal (Affects Workout Experience)')}</option>
-                            <option value="LOW">{t('Low (Routine Maintenance / Cleaning)')}</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label htmlFor="facility-device-input" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Device / Location Detail')}
-                        </label>
-                        <input
-                          id="facility-device-input"
-                          type="text"
-                          value={ticketForm.facilityDevice}
-                          onChange={(e) => setTicketForm({ ...ticketForm, facilityDevice: e.target.value })}
-                          placeholder={t('Device / Location Detail')}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label htmlFor="facility-title-input" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Title / Subject')} <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          id="facility-title-input"
-                          type="text"
-                          value={ticketForm.title}
-                          onChange={(e) => setTicketForm({ ...ticketForm, title: e.target.value })}
-                          placeholder={t('Brief summary of facility issue')}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label htmlFor="facility-content-textarea" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Detailed Content')} <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                          id="facility-content-textarea"
-                          rows={4}
-                          value={ticketForm.content}
-                          onChange={(e) => setTicketForm({ ...ticketForm, content: e.target.value })}
-                          placeholder={t('Please provide as much detail as possible so Reception can assist you accurately...')}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
-                          required
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border)]">
-                        <button
-                          type="button"
-                          onClick={handleCloseModal}
-                          disabled={creating}
-                          className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors"
-                        >
-                          {t('Cancel')}
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={creating || !ticketForm.title.trim() || !ticketForm.content.trim()}
-                          className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 disabled:opacity-50"
-                        >
-                          {creating ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              <span>{t('Submitting...')}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Send className="w-4 h-4" />
-                              <span>{t('Submit Incident Report')}</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* =========================================================================
-                      CASE 4: SCHEDULE_SUPPORT (Hỗ trợ lịch tập & Xin nghỉ/Học bù)
-                     ========================================================================= */}
-                  {ticketForm.category === 'SCHEDULE_SUPPORT' && (
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label htmlFor="schedule-class-select" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Associated Class')} <span className="text-red-500">*</span>
-                        </label>
-                        {classes.length === 0 ? (
-                          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4 shrink-0" />
-                            <span>{t('You are not enrolled in any active classes to request cancellation or retention.')}</span>
-                          </div>
-                        ) : (
-                          <select
-                            id="schedule-class-select"
-                            value={ticketForm.classId}
-                            onChange={(e) => setTicketForm({ ...ticketForm, classId: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm font-semibold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                            required
-                          >
-                            <option value="">-- {t('Select Enrolled Class')} --</option>
-                            {classes.map((cls) => (
-                              <option key={cls.classId} value={cls.classId}>
-                                {cls.className} ({cls.coachName || 'Coach'})
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <label htmlFor="schedule-type-select" className="block text-xs font-bold text-[var(--text)]">
-                            {t('Schedule Support Type')} <span className="text-red-500">*</span>
-                          </label>
-                          <select
-                            id="schedule-type-select"
-                            value={ticketForm.scheduleType}
-                            onChange={(e) => setTicketForm({ ...ticketForm, scheduleType: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                          >
-                            <option value="SINGLE_ABSENCE">{t('Request Single Session Absence')}</option>
-                            <option value="MAKEUP_CLASS">{t('Register Makeup Session')}</option>
-                            <option value="CLASS_TRANSFER">{t('Request Class Time Transfer')}</option>
-                            <option value="SCHEDULE_INQUIRY">{t('Schedule & Holiday Inquiry')}</option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label htmlFor="schedule-date-input" className="block text-xs font-bold text-[var(--text)]">
-                            {t('Session / Date Detail')}
-                          </label>
-                          <input
-                            id="schedule-date-input"
-                            type="text"
-                            value={ticketForm.scheduleDateInfo}
-                            onChange={(e) => setTicketForm({ ...ticketForm, scheduleDateInfo: e.target.value })}
-                            placeholder={t('Session / Date Detail')}
-                            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label htmlFor="schedule-title-input" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Title / Subject')}
-                        </label>
-                        <input
-                          id="schedule-title-input"
-                          type="text"
-                          value={ticketForm.title}
-                          onChange={(e) => setTicketForm({ ...ticketForm, title: e.target.value })}
-                          placeholder={t('Brief summary of schedule request')}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label htmlFor="schedule-content-textarea" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Detailed Content')} <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                          id="schedule-content-textarea"
-                          rows={4}
-                          value={ticketForm.content}
-                          onChange={(e) => setTicketForm({ ...ticketForm, content: e.target.value })}
-                          placeholder={t('Please describe your schedule support request.')}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
-                          required
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border)]">
-                        <button
-                          type="button"
-                          onClick={handleCloseModal}
-                          disabled={creating}
-                          className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors"
-                        >
-                          {t('Cancel')}
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={creating || !ticketForm.content.trim()}
-                          className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 disabled:opacity-50"
-                        >
-                          {creating ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              <span>{t('Submitting...')}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Send className="w-4 h-4" />
-                              <span>{t('Submit Schedule Request')}</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* =========================================================================
-                      CASE 5: COMPLAINT (Khiếu nại dịch vụ & Phản ánh)
-                     ========================================================================= */}
-                  {ticketForm.category === 'COMPLAINT' && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <label htmlFor="complaint-area-select" className="block text-xs font-bold text-[var(--text)]">
-                            {t('Complaint Area')} <span className="text-red-500">*</span>
-                          </label>
-                          <select
-                            id="complaint-area-select"
-                            value={ticketForm.complaintType}
-                            onChange={(e) => setTicketForm({ ...ticketForm, complaintType: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                          >
-                            <option value="STAFF_BEHAVIOR">{t('Staff / Receptionist Service')}</option>
-                            <option value="CLEANLINESS">{t('Cleanliness & Environment')}</option>
-                            <option value="BILLING_POLICY">{t('Pricing, Membership & Billing Policy')}</option>
-                            <option value="OTHER">{t('Other Issue')}</option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label htmlFor="complaint-date-input" className="block text-xs font-bold text-[var(--text)]">
-                            {t('Incident Date & Time')}
-                          </label>
-                          <input
-                            id="complaint-date-input"
-                            type="text"
-                            value={ticketForm.complaintDateInfo}
-                            onChange={(e) => setTicketForm({ ...ticketForm, complaintDateInfo: e.target.value })}
-                            placeholder={t('Incident Date & Time')}
-                            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label htmlFor="complaint-title-input" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Title / Subject')} <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          id="complaint-title-input"
-                          type="text"
-                          value={ticketForm.title}
-                          onChange={(e) => setTicketForm({ ...ticketForm, title: e.target.value })}
-                          placeholder={t('Brief summary of your complaint')}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label htmlFor="complaint-content-textarea" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Detailed Content')} <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                          id="complaint-content-textarea"
-                          rows={4}
-                          value={ticketForm.content}
-                          onChange={(e) => setTicketForm({ ...ticketForm, content: e.target.value })}
-                          placeholder={t('Please provide as much detail as possible so Reception can assist you accurately...')}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
-                          required
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border)]">
-                        <button
-                          type="button"
-                          onClick={handleCloseModal}
-                          disabled={creating}
-                          className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors"
-                        >
-                          {t('Cancel')}
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={creating || !ticketForm.title.trim() || !ticketForm.content.trim()}
-                          className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 disabled:opacity-50"
-                        >
-                          {creating ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              <span>{t('Submitting...')}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Send className="w-4 h-4" />
-                              <span>{t('Submit Complaint to Reception')}</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* =========================================================================
-                      CASE 6: GENERAL_INQUIRY (Hỏi đáp chung & Thắc mắc khác)
-                     ========================================================================= */}
-                  {ticketForm.category === 'GENERAL_INQUIRY' && (
-                    <div className="space-y-4">
-                      {classes.length > 0 && (
+                      {/* Sub-form: GENERAL_INQUIRY */}
+                      {ticketForm.category === 'GENERAL_INQUIRY' && classes.length > 0 && (
                         <div className="space-y-1.5">
                           <label htmlFor="general-class-select" className="block text-xs font-bold text-[var(--text)]">
                             {t('Related Class (Optional)')}
@@ -1403,36 +1200,39 @@ const MemberSupportView = () => {
                         </div>
                       )}
 
+                      {/* Shared Title Field */}
                       <div className="space-y-1.5">
-                        <label htmlFor="general-title-input" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Title / Subject')} <span className="text-red-500">*</span>
+                        <label htmlFor="ticket-title-input" className="block text-xs font-bold text-[var(--text)]">
+                          {t('Title / Subject')} {ticketForm.category !== 'SCHEDULE_SUPPORT' && <span className="text-red-500">*</span>}
                         </label>
                         <input
-                          id="general-title-input"
+                          id="ticket-title-input"
                           type="text"
                           value={ticketForm.title}
                           onChange={(e) => setTicketForm({ ...ticketForm, title: e.target.value })}
-                          placeholder={t('Brief summary of your issue or request')}
+                          placeholder={getTitlePlaceholder(ticketForm.category)}
                           className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                          required
+                          required={ticketForm.category !== 'SCHEDULE_SUPPORT'}
                         />
                       </div>
 
+                      {/* Shared Detailed Content Field */}
                       <div className="space-y-1.5">
-                        <label htmlFor="general-content-textarea" className="block text-xs font-bold text-[var(--text)]">
+                        <label htmlFor="ticket-content-textarea" className="block text-xs font-bold text-[var(--text)]">
                           {t('Detailed Content')} <span className="text-red-500">*</span>
                         </label>
                         <textarea
-                          id="general-content-textarea"
+                          id="ticket-content-textarea"
                           rows={4}
                           value={ticketForm.content}
                           onChange={(e) => setTicketForm({ ...ticketForm, content: e.target.value })}
-                          placeholder={t('Please provide as much detail as possible so Reception can assist you accurately...')}
+                          placeholder={getContentPlaceholder(ticketForm.category)}
                           className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
                           required
                         />
                       </div>
 
+                      {/* Shared Action Buttons Footer */}
                       <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border)]">
                         <button
                           type="button"
@@ -1444,7 +1244,7 @@ const MemberSupportView = () => {
                         </button>
                         <button
                           type="submit"
-                          disabled={creating || !ticketForm.title.trim() || !ticketForm.content.trim()}
+                          disabled={creating || !ticketForm.content.trim() || (ticketForm.category !== 'SCHEDULE_SUPPORT' && !ticketForm.title.trim())}
                           className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 disabled:opacity-50"
                         >
                           {creating ? (
@@ -1455,7 +1255,7 @@ const MemberSupportView = () => {
                           ) : (
                             <>
                               <Send className="w-4 h-4" />
-                              <span>{t('Submit Question to Reception')}</span>
+                              <span>{getSubmitButtonLabel(ticketForm.category)}</span>
                             </>
                           )}
                         </button>
