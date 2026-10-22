@@ -8,12 +8,12 @@ import { t } from '../i18n/useLanguage';
  * Calculates remaining days from an ISO date string (YYYY-MM-DD) or returns provided days.
  */
 export const getDaysLeft = (expiryDate, providedDays) => {
-  if (providedDays != null && !isNaN(providedDays)) return providedDays;
+  if (providedDays != null && !Number.isNaN(Number(providedDays))) return providedDays;
   if (!expiryDate) return 0;
   try {
     const parts = String(expiryDate).split('-');
     if (parts.length === 3) {
-      const exp = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      const exp = new Date(Number.parseInt(parts[0], 10), Number.parseInt(parts[1], 10) - 1, Number.parseInt(parts[2], 10));
       const now = new Date();
       now.setHours(0, 0, 0, 0);
       const diffDays = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -224,7 +224,7 @@ export const formatRespondedAt = (val) => {
   if (!val) return '';
   try {
     const d = new Date(val);
-    if (!isNaN(d.getTime())) {
+    if (!Number.isNaN(d.getTime())) {
       return d.toLocaleString('vi-VN', {
         year: 'numeric',
         month: '2-digit',

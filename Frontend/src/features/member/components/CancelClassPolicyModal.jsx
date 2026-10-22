@@ -34,7 +34,7 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
 
   useEffect(() => {
     if (isOpen && classId) {
-      loadPreview(classId);
+      void loadPreview(classId);
     } else {
       resetCancellation();
       setSubmitting(false);
@@ -96,7 +96,7 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
 
   const handleCopyCode = (code) => {
     if (!code) return;
-    navigator.clipboard.writeText(code);
+    void navigator.clipboard.writeText(code);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2500);
   };

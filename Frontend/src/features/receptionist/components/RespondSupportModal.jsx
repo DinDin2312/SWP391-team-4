@@ -183,7 +183,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
 
   const handleAmountChange = (newVal) => {
     setCreditAmount(newVal);
-    const parsed = parseFloat(newVal) || 0;
+    const parsed = Number.parseFloat(newVal) || 0;
     setResponseNote(getNoteTemplate(resolutionType, parsed));
   };
 
@@ -248,7 +248,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
 
       if (resolutionType === 'ISSUE_CREDIT' || resolutionType === 'CASH_REFUND' || resolutionType === 'GYM_PASS') {
         status = 'APPROVED';
-        finalCreditAmount = parseFloat(creditAmount) || 0;
+        finalCreditAmount = Number.parseFloat(creditAmount) || 0;
       } else if (resolutionType === 'APPROVE_GENERAL') {
         status = 'APPROVED';
         finalCreditAmount = null;
@@ -265,8 +265,8 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
         resolutionType,
         responseNote: responseNote.trim(),
         creditAmount: finalCreditAmount,
-        validityDays: (resolutionType === 'ISSUE_CREDIT' || resolutionType === 'GYM_PASS') ? parseInt(validDays, 10) : 60,
-        creditExpiryDays: (resolutionType === 'ISSUE_CREDIT' || resolutionType === 'GYM_PASS') ? parseInt(validDays, 10) : 60
+        validityDays: (resolutionType === 'ISSUE_CREDIT' || resolutionType === 'GYM_PASS') ? Number.parseInt(validDays, 10) : 60,
+        creditExpiryDays: (resolutionType === 'ISSUE_CREDIT' || resolutionType === 'GYM_PASS') ? Number.parseInt(validDays, 10) : 60
       });
 
       if (onSuccess) onSuccess();

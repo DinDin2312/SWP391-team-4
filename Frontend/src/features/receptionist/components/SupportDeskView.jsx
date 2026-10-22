@@ -100,8 +100,8 @@ const SupportDeskView = (props) => {
   }, [selectedStatus, selectedCategory, searchKeyword, currentPage]);
 
   useEffect(() => {
-    fetchStats();
-    fetchRequests();
+    void fetchStats();
+    void fetchRequests();
   }, [fetchStats, fetchRequests]);
 
   const handleOpenModal = (req) => {
@@ -111,8 +111,8 @@ const SupportDeskView = (props) => {
 
   const handleResolutionSuccess = () => {
     showToast(t('Support ticket resolved and member notified successfully.'), 'success');
-    fetchStats();
-    fetchRequests();
+    void fetchStats();
+    void fetchRequests();
   };
 
   return (
@@ -143,8 +143,8 @@ const SupportDeskView = (props) => {
         <button
           type="button"
           onClick={() => {
-            fetchStats();
-            fetchRequests();
+            void fetchStats();
+            void fetchRequests();
           }}
           className="px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text)] text-xs font-semibold flex items-center gap-2 transition-colors self-start sm:self-auto"
         >
@@ -165,9 +165,10 @@ const SupportDeskView = (props) => {
           </div>
         </div>
 
-        <div
+        <button
+          type="button"
           onClick={() => setSelectedStatus(isManager ? (selectedStatus === 'ESCALATED' ? 'ALL' : 'ESCALATED') : 'ALL')}
-          className={`p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3.5 cursor-pointer hover:border-purple-500 transition-all ${isManager && selectedStatus === 'ESCALATED' ? 'ring-2 ring-purple-500' : ''}`}
+          className={`p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3.5 cursor-pointer hover:border-purple-500 transition-all text-left ${isManager && selectedStatus === 'ESCALATED' ? 'ring-2 ring-purple-500' : ''}`}
         >
           <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
             <ArrowUpRight className="w-5 h-5" />
@@ -176,7 +177,7 @@ const SupportDeskView = (props) => {
             <div className="text-2xl font-black text-[var(--text)]">{isManager ? (stats.escalated || 0) : stats.cancellations}</div>
             <div className="text-xs font-medium text-[var(--text-muted)]">{isManager ? t('Escalated to Manager') : t('Cancellation Requests')}</div>
           </div>
-        </div>
+        </button>
 
         <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
@@ -188,9 +189,10 @@ const SupportDeskView = (props) => {
           </div>
         </div>
 
-        <div
+        <button
+          type="button"
           onClick={() => setSelectedStatus(selectedStatus === 'APPROVED' ? 'ALL' : 'APPROVED')}
-          className={`p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3.5 cursor-pointer hover:border-emerald-500 transition-all ${selectedStatus === 'APPROVED' ? 'ring-2 ring-emerald-500' : ''}`}
+          className={`p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3.5 cursor-pointer hover:border-emerald-500 transition-all text-left ${selectedStatus === 'APPROVED' ? 'ring-2 ring-emerald-500' : ''}`}
         >
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-5 h-5" />
@@ -204,7 +206,7 @@ const SupportDeskView = (props) => {
               </div>
             )}
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Filter and Search Bar */}

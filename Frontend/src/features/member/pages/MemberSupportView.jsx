@@ -170,7 +170,7 @@ const MemberSupportView = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, []);
 
   const fetchData = async () => {
@@ -199,7 +199,7 @@ const MemberSupportView = () => {
   };
 
   const handleCopyCode = (code) => {
-    navigator.clipboard.writeText(code);
+    void navigator.clipboard.writeText(code);
     setCopiedCode(code);
     showToast(t('Copied credit code: ') + code, 'success');
     setTimeout(() => setCopiedCode(null), 2500);
@@ -207,7 +207,7 @@ const MemberSupportView = () => {
 
   const handleModalCopyCode = (code) => {
     if (!code) return;
-    navigator.clipboard.writeText(code);
+    void navigator.clipboard.writeText(code);
     setModalCopiedCode(true);
     setTimeout(() => setModalCopiedCode(false), 2500);
   };
@@ -244,7 +244,7 @@ const MemberSupportView = () => {
       if (!ticketForm.classId && classes.length > 0) {
         setTicketForm(prev => ({ ...prev, classId: String(classes[0].classId) }));
       } else if (ticketForm.classId) {
-        fetchCancelPreview(ticketForm.classId);
+        void fetchCancelPreview(ticketForm.classId);
       }
     } else {
       setCancelPreview(null);
@@ -258,7 +258,7 @@ const MemberSupportView = () => {
     setCreating(false);
     if (res.success) {
       setModalSuccess(res.data);
-      fetchData();
+      await fetchData();
     } else {
       showToast(res.error, 'error');
     }
@@ -270,7 +270,7 @@ const MemberSupportView = () => {
     let finalTitle = '';
     let finalContent = '';
     let finalPriority = ticketForm.priority || 'NORMAL';
-    const finalClassId = ticketForm.classId ? parseInt(ticketForm.classId, 10) : null;
+    const finalClassId = ticketForm.classId ? Number.parseInt(ticketForm.classId, 10) : null;
     let finalPreferredResolution = null;
 
     if (ticketForm.category === 'CLASS_CANCELLATION') {
@@ -372,7 +372,7 @@ const MemberSupportView = () => {
         preferredLabel: prefLabel,
         message: t('Your support ticket has been submitted to Reception. Our staff will review your request and issue a credit or alternative resolution.')
       });
-      fetchData();
+      await fetchData();
     } catch (err) {
       console.error(err);
       showToast(err.response?.data?.message || t('Failed to create ticket.'), 'error');
@@ -778,8 +778,10 @@ const MemberSupportView = () => {
                     {/* Floating Dropdown Menu with SVG Icons */}
                     {categoryDropdownOpen && (
                       <>
-                        <div
-                          className="fixed inset-0 z-20"
+                        <button
+                          type="button"
+                          aria-label={t('Close category dropdown')}
+                          className="fixed inset-0 z-20 cursor-default bg-transparent border-0 p-0 w-full h-full"
                           onClick={() => setCategoryDropdownOpen(false)}
                         />
                         <div className="absolute top-full left-0 right-0 mt-2 z-30 p-2 rounded-2xl bg-[var(--surface)] border-2 border-[var(--border)] shadow-2xl space-y-1 animate-fade-in max-h-72 overflow-y-auto">
