@@ -1,5 +1,4 @@
 import PackageDetailDialog from '../../../components/resource-images/PackageDetailDialog';
-import PackageBenefits from '../../../components/resource-images/PackageBenefits';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { formatDate } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
@@ -145,7 +144,7 @@ const Memberships = () => {
                       </div>
                     </div>
 
-                    <button type="button" className="text-sm underline mb-4" onClick={()=>setDetailId(pkg.membershipId)}>{t("Package details")}</button><PackageBenefits benefits={pkg.benefits} remaining/><div className="mb-4">
+                    <div className="mb-4">
                       <div className="flex justify-between items-end mb-2">
                         <span className="text-xs font-semibold text-on-surface-variant">{t("Time Remaining")}</span>
                         <span className="text-sm font-bold text-primary">{daysLeft}{' '}{t("Days")}</span>
@@ -156,6 +155,16 @@ const Memberships = () => {
                           style={{ width: `${Math.min(100, Math.max(0, (daysLeft / pkg.durationDays) * 100))}%` }}
                         ></div>
                       </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-surface-container-high flex justify-between items-center">
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                        onClick={() => setDetailId(pkg.membershipId)}
+                      >
+                        {t("Package details")}
+                      </button>
                     </div>
                   </div>
                 );
