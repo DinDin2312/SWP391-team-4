@@ -339,6 +339,7 @@ CREATE TABLE IF NOT EXISTS `USER_CREDITS` (
     `reason` VARCHAR(255) DEFAULT NULL,
     `expiry_date` DATE NOT NULL,
     `status` VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    `used_invoice_id` INT DEFAULT NULL,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY `idx_credit_user` (`user_id`, `status`),
     KEY `idx_credit_code` (`credit_code`)
@@ -347,3 +348,4 @@ CREATE TABLE IF NOT EXISTS `USER_CREDITS` (
 ALTER TABLE `USER_CREDITS` ADD CONSTRAINT `fk_credit_user` FOREIGN KEY (`user_id`) REFERENCES `USERS` (`user_id`) ON DELETE CASCADE;
 ALTER TABLE `USER_CREDITS` ADD CONSTRAINT `fk_credit_request` FOREIGN KEY (`request_id`) REFERENCES `SUPPORT_REQUESTS` (`request_id`) ON DELETE SET NULL;
 ALTER TABLE `USER_CREDITS` ADD CONSTRAINT `fk_credit_class` FOREIGN KEY (`class_id`) REFERENCES `CLASSES` (`class_id`) ON DELETE SET NULL;
+ALTER TABLE `USER_CREDITS` ADD CONSTRAINT `fk_credit_invoice` FOREIGN KEY (`used_invoice_id`) REFERENCES `INVOICES` (`invoice_id`) ON DELETE SET NULL;
