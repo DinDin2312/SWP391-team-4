@@ -85,6 +85,17 @@ const CoachWorkoutPlans = () => {
   const [selectedPlanDetail, setSelectedPlanDetail] = useState(null);
   const [detailActiveWeek, setDetailActiveWeek] = useState(1);
 
+  // Class Students for Single Workout Assignment
+  const [singleClassStudents, setSingleClassStudents] = useState([]);
+  const [loadingSingleStudents, setLoadingSingleStudents] = useState(false);
+
+  // Class Students for Training Plan Assignment
+  const [tpClassStudents, setTpClassStudents] = useState([]);
+  const [loadingTpStudents, setLoadingTpStudents] = useState(false);
+
+  // Cache to avoid refetching student list repeatedly
+  const [classStudentsCache, setClassStudentsCache] = useState({});
+
   // ==================== FORM 1: GIAO BÀI TẬP ĐƠN (SINGLE) ====================
   const [targetType, setTargetType] = useState('INDIVIDUAL'); // 'INDIVIDUAL' | 'CLASS'
   const [selectedStudentUserId, setSelectedStudentUserId] = useState('');
@@ -107,6 +118,74 @@ const CoachWorkoutPlans = () => {
   const [tpNote, setTpNote] = useState('');
   const [tpCurrentWeek, setTpCurrentWeek] = useState(1);
   const [tpWeeks, setTpWeeks] = useState({});
+
+  const fetchStudentsForClass = async (classId) => {
+    if (!classId) return [];
+    if (classStudentsCache[classId]) {
+      return classStudentsCache[classId];
+    }
+    try {
+      const res = await axios.get(`${API_BASE}/classes/${classId}/students`, { headers: getHeaders() });
+      const list = res.data || [];
+      setClassStudentsCache(prev => ({ ...prev, [classId]: list }));
+      return list;
+    } catch (err) {
+      console.error('Error fetching students for class:', err);
+      return [];
+    }
+  };
+
+  const handleSingleClassChange = async (classId) => {
+    setSelectedClassId(classId);
+    setSelectedStudentUserId('');
+    if (!classId) {
+      setSingleClassStudents([]);
+      return;
+    }
+    if (targetType === 'INDIVIDUAL') {
+      setLoadingSingleStudents(true);
+      const list = await fetchStudentsForClass(classId);
+      setSingleClassStudents(list);
+      setLoadingSingleStudents(false);
+    }
+  };
+
+  const handleTargetTypeChange = async (newType) => {
+    setTargetType(newType);
+    setSelectedStudentUserId('');
+    if (newType === 'INDIVIDUAL' && selectedClassId) {
+      setLoadingSingleStudents(true);
+      const list = await fetchStudentsForClass(selectedClassId);
+      setSingleClassStudents(list);
+      setLoadingSingleStudents(false);
+    }
+  };
+
+  const handleTpClassChange = async (classId) => {
+    setTpClassId(classId);
+    setTpStudentUserId('');
+    if (!classId) {
+      setTpClassStudents([]);
+      return;
+    }
+    if (tpTargetType === 'INDIVIDUAL') {
+      setLoadingTpStudents(true);
+      const list = await fetchStudentsForClass(classId);
+      setTpClassStudents(list);
+      setLoadingTpStudents(false);
+    }
+  };
+
+  const handleTpTargetTypeChange = async (newType) => {
+    setTpTargetType(newType);
+    setTpStudentUserId('');
+    if (newType === 'INDIVIDUAL' && tpClassId) {
+      setLoadingTpStudents(true);
+      const list = await fetchStudentsForClass(tpClassId);
+      setTpClassStudents(list);
+      setLoadingTpStudents(false);
+    }
+  };
 
   // Modal State for Adding New Exercise to Library
   const [isAddExModalOpen, setIsAddExModalOpen] = useState(false);
@@ -205,9 +284,15 @@ const CoachWorkoutPlans = () => {
       return;
     }
 
-    if (targetType === 'INDIVIDUAL' && !selectedStudentUserId) {
-      showBanner('error', t('Vui lòng chọn 1 học viên để giao bài.'));
-      return;
+    if (targetType === 'INDIVIDUAL') {
+      if (!selectedClassId) {
+        showBanner('error', t('Vui lòng chọn lớp học trước khi chọn học viên.'));
+        return;
+      }
+      if (!selectedStudentUserId) {
+        showBanner('error', t('Vui lòng chọn 1 học viên để giao bài.'));
+        return;
+      }
     }
 
     if (targetType === 'CLASS' && !selectedClassId) {
@@ -227,7 +312,7 @@ const CoachWorkoutPlans = () => {
       const payload = {
         targetType,
         studentUserId: targetType === 'INDIVIDUAL' ? parseInt(selectedStudentUserId) : null,
-        classId: targetType === 'CLASS' ? parseInt(selectedClassId) : null,
+        classId: parseInt(selectedClassId) || null,
         planType: 'SINGLE',
         title: planTitle.trim(),
         note: planNote.trim(),
@@ -247,6 +332,7 @@ const CoachWorkoutPlans = () => {
       setPlanNote('');
       setSelectedStudentUserId('');
       setSelectedClassId('');
+      setSingleClassStudents([]);
 
       const plRes = await axios.get(`${API_BASE}/workouts`, { headers: getHeaders() });
       setAssignedPlans(plRes.data || []);
@@ -453,9 +539,15 @@ const CoachWorkoutPlans = () => {
       return;
     }
 
-    if (tpTargetType === 'INDIVIDUAL' && !tpStudentUserId) {
-      showBanner('error', t('Vui lòng chọn 1 học viên để áp dụng kế hoạch.'));
-      return;
+    if (tpTargetType === 'INDIVIDUAL') {
+      if (!tpClassId) {
+        showBanner('error', t('Vui lòng chọn lớp học trước khi chọn học viên.'));
+        return;
+      }
+      if (!tpStudentUserId) {
+        showBanner('error', t('Vui lòng chọn 1 học viên để áp dụng kế hoạch.'));
+        return;
+      }
     }
 
     if (tpTargetType === 'CLASS' && !tpClassId) {
@@ -517,7 +609,7 @@ const CoachWorkoutPlans = () => {
       const payload = {
         targetType: tpTargetType,
         studentUserId: tpTargetType === 'INDIVIDUAL' ? parseInt(tpStudentUserId) : null,
-        classId: tpTargetType === 'CLASS' ? parseInt(tpClassId) : null,
+        classId: parseInt(tpClassId) || null,
         planType: 'TRAINING_PLAN',
         title: tpTitle.trim(),
         goal: tpGoal.trim() || null,
@@ -538,6 +630,7 @@ const CoachWorkoutPlans = () => {
       setTpNote('');
       setTpStudentUserId('');
       setTpClassId('');
+      setTpClassStudents([]);
 
       // Refresh plans
       const plRes = await axios.get(`${API_BASE}/workouts`, { headers: getHeaders() });
@@ -757,7 +850,7 @@ const CoachWorkoutPlans = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div
-                onClick={() => setTpTargetType('INDIVIDUAL')}
+                onClick={() => handleTpTargetTypeChange('INDIVIDUAL')}
                 className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-4 ${
                   tpTargetType === 'INDIVIDUAL'
                     ? 'border-[var(--primary)] bg-[var(--primary-soft)]/20 shadow-md'
@@ -779,7 +872,7 @@ const CoachWorkoutPlans = () => {
               </div>
 
               <div
-                onClick={() => setTpTargetType('CLASS')}
+                onClick={() => handleTpTargetTypeChange('CLASS')}
                 className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-4 ${
                   tpTargetType === 'CLASS'
                     ? 'border-[var(--primary)] bg-[var(--primary-soft)]/20 shadow-md'
@@ -804,22 +897,59 @@ const CoachWorkoutPlans = () => {
             {/* Target Selectors */}
             <div className="pt-2">
               {tpTargetType === 'INDIVIDUAL' ? (
-                <div className="space-y-1.5 max-w-xl">
-                  <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                    {t("Chọn Học Viên")} <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={tpStudentUserId}
-                    onChange={(e) => setTpStudentUserId(e.target.value)}
-                    className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition-all font-medium"
-                  >
-                    <option value="">{t("-- Chọn học viên từ danh sách ({0} học viên) --", [students.length])}</option>
-                    {students.map((st) => (
-                      <option key={st.userId} value={st.userId}>
-                        {st.fullName} ({st.email || st.phone || `ID: #${st.userId}`})
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl">
+                  {/* Bước 1: Chọn Lớp Học */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-4 h-4 rounded-full bg-[var(--primary)] text-[color:var(--on-primary)] text-[10px] flex items-center justify-center font-bold">1</span>
+                      {t("Bước 1: Chọn Lớp Học")} <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={tpClassId}
+                      onChange={(e) => handleTpClassChange(e.target.value)}
+                      className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition-all font-medium"
+                    >
+                      <option value="">{t("-- Chọn lớp học ({0} lớp) --", [classes.length])}</option>
+                      {classes.map((cls) => (
+                        <option key={cls.classId} value={cls.classId}>
+                          {cls.className} ({t("{0} học viên tham gia", [cls.enrolledCount || 0])})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Bước 2: Chọn Học Viên Trong Lớp */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-4 h-4 rounded-full bg-[var(--primary)] text-[color:var(--on-primary)] text-[10px] flex items-center justify-center font-bold">2</span>
+                      {t("Bước 2: Chọn Học Viên Trong Lớp")} <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={tpStudentUserId}
+                      onChange={(e) => setTpStudentUserId(e.target.value)}
+                      disabled={!tpClassId || loadingTpStudents}
+                      className={`w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition-all font-medium ${
+                        !tpClassId ? 'opacity-60 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      {!tpClassId ? (
+                        <option value="">{t("-- Vui lòng chọn lớp học trước --")}</option>
+                      ) : loadingTpStudents ? (
+                        <option value="">{t("Đang tải danh sách học viên của lớp...")}</option>
+                      ) : tpClassStudents.length === 0 ? (
+                        <option value="">{t("-- Lớp này hiện chưa có học viên nào --")}</option>
+                      ) : (
+                        <>
+                          <option value="">{t("-- Chọn học viên ({0} học viên) --", [tpClassStudents.length])}</option>
+                          {tpClassStudents.map((st) => (
+                            <option key={st.userId} value={st.userId}>
+                              {st.fullName} ({st.email || st.phone || `ID: #${st.userId}`})
+                            </option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-1.5 max-w-xl">
@@ -828,7 +958,7 @@ const CoachWorkoutPlans = () => {
                   </label>
                   <select
                     value={tpClassId}
-                    onChange={(e) => setTpClassId(e.target.value)}
+                    onChange={(e) => handleTpClassChange(e.target.value)}
                     className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition-all font-medium"
                   >
                     <option value="">{t("-- Chọn lớp học bạn đang dạy ({0} lớp) --", [classes.length])}</option>
@@ -1266,7 +1396,7 @@ const CoachWorkoutPlans = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div
-                onClick={() => setTargetType('INDIVIDUAL')}
+                onClick={() => handleTargetTypeChange('INDIVIDUAL')}
                 className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-4 ${
                   targetType === 'INDIVIDUAL'
                     ? 'border-[var(--primary)] bg-[var(--primary-soft)]/20 shadow-md'
@@ -1288,7 +1418,7 @@ const CoachWorkoutPlans = () => {
               </div>
 
               <div
-                onClick={() => setTargetType('CLASS')}
+                onClick={() => handleTargetTypeChange('CLASS')}
                 className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-4 ${
                   targetType === 'CLASS'
                     ? 'border-[var(--primary)] bg-[var(--primary-soft)]/20 shadow-md'
@@ -1313,22 +1443,59 @@ const CoachWorkoutPlans = () => {
             {/* Target Selectors */}
             <div className="pt-2">
               {targetType === 'INDIVIDUAL' ? (
-                <div className="space-y-1.5 max-w-xl">
-                  <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                    {t("Chọn Học Viên Nhận Bài Tập")} <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={selectedStudentUserId}
-                    onChange={(e) => setSelectedStudentUserId(e.target.value)}
-                    className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition-all font-medium"
-                  >
-                    <option value="">{t("-- Chọn học viên từ danh sách ({0}) --", [students.length])}</option>
-                    {students.map((st) => (
-                      <option key={st.userId} value={st.userId}>
-                        {st.fullName} ({st.email || st.phone || `ID: #${st.userId}`})
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl">
+                  {/* Bước 1: Chọn Lớp Học */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-4 h-4 rounded-full bg-[var(--primary)] text-[color:var(--on-primary)] text-[10px] flex items-center justify-center font-bold">1</span>
+                      {t("Bước 1: Chọn Lớp Học")} <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={selectedClassId}
+                      onChange={(e) => handleSingleClassChange(e.target.value)}
+                      className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition-all font-medium"
+                    >
+                      <option value="">{t("-- Chọn lớp học ({0} lớp) --", [classes.length])}</option>
+                      {classes.map((cls) => (
+                        <option key={cls.classId} value={cls.classId}>
+                          {cls.className} ({t("{0} học viên", [cls.enrolledCount || 0])})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Bước 2: Chọn Học Viên Trong Lớp */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-4 h-4 rounded-full bg-[var(--primary)] text-[color:var(--on-primary)] text-[10px] flex items-center justify-center font-bold">2</span>
+                      {t("Bước 2: Chọn Học Viên Trong Lớp")} <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={selectedStudentUserId}
+                      onChange={(e) => setSelectedStudentUserId(e.target.value)}
+                      disabled={!selectedClassId || loadingSingleStudents}
+                      className={`w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition-all font-medium ${
+                        !selectedClassId ? 'opacity-60 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      {!selectedClassId ? (
+                        <option value="">{t("-- Vui lòng chọn lớp học trước --")}</option>
+                      ) : loadingSingleStudents ? (
+                        <option value="">{t("Đang tải danh sách học viên của lớp...")}</option>
+                      ) : singleClassStudents.length === 0 ? (
+                        <option value="">{t("-- Lớp này hiện chưa có học viên nào --")}</option>
+                      ) : (
+                        <>
+                          <option value="">{t("-- Chọn học viên ({0} học viên) --", [singleClassStudents.length])}</option>
+                          {singleClassStudents.map((st) => (
+                            <option key={st.userId} value={st.userId}>
+                              {st.fullName} ({st.email || st.phone || `ID: #${st.userId}`})
+                            </option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-1.5 max-w-xl">
@@ -1337,7 +1504,7 @@ const CoachWorkoutPlans = () => {
                   </label>
                   <select
                     value={selectedClassId}
-                    onChange={(e) => setSelectedClassId(e.target.value)}
+                    onChange={(e) => handleSingleClassChange(e.target.value)}
                     className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition-all font-medium"
                   >
                     <option value="">{t("-- Chọn lớp học bạn phụ trách ({0}) --", [classes.length])}</option>
