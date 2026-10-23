@@ -5,7 +5,8 @@ import axios from 'axios';
 import {
   Dumbbell, Users, Plus, Trash2, Send, CheckCircle2, AlertCircle,
   Clock, Play, ShieldAlert, Sparkles, Filter, RefreshCw, X, ChevronRight,
-  BookOpen, Layers, Calendar, Copy, Target, Check, ChevronDown, Award, TrendingUp
+  BookOpen, Layers, Calendar, Copy, Target, Check, ChevronDown, Award, TrendingUp,
+  ChevronLeft, Eye, List
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8080/api/v1/coach';
@@ -118,6 +119,8 @@ const CoachWorkoutPlans = () => {
   const [tpNote, setTpNote] = useState('');
   const [tpCurrentWeek, setTpCurrentWeek] = useState(1);
   const [tpWeeks, setTpWeeks] = useState({});
+  const [tpSelectedDayKey, setTpSelectedDayKey] = useState('MONDAY');
+  const [tpViewMode, setTpViewMode] = useState('FOCUS'); // 'FOCUS' (tập trung 1 ngày) | 'ALL' (xem tất cả ngày)
 
   const fetchStudentsForClass = async (classId) => {
     if (!classId) return [];
@@ -705,6 +708,16 @@ const CoachWorkoutPlans = () => {
   const currentWeekData = tpWeeks[tpCurrentWeek] || createInitialWeekSchedule(exercises[0]?.exerciseId || '');
   const activeDaysInCurrentWeek = Object.values(currentWeekData.days).filter(d => d.active).length;
 
+  const totalPlanSessions = Object.values(tpWeeks).reduce((total, week) => {
+    if (!week || !week.days) return total;
+    return total + Object.values(week.days).filter(d => d.active).length;
+  }, 0);
+
+  const totalPlanExercises = Object.values(tpWeeks).reduce((total, week) => {
+    if (!week || !week.days) return total;
+    return total + Object.values(week.days).reduce((sum, d) => sum + (d.active && d.exercises ? d.exercises.length : 0), 0);
+  }, 0);
+
   return (
     <div className="flex flex-col w-full pb-12 space-y-6">
       {/* Header Bar */}
@@ -845,7 +858,10 @@ const CoachWorkoutPlans = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-2 border-b border-[var(--border)] pb-3">
               <span className="w-6 h-6 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center">1</span>
-              <h3 className="text-base font-bold text-[var(--text)]">{t("Chọn Đối Tượng Áp Dụng Kế Hoạch")}</h3>
+              <div>
+                <h3 className="text-base font-bold text-[var(--text)]">{t("Chọn Đối Tượng Áp Dụng Kế Hoạch")}</h3>
+                <p className="text-xs text-[var(--text-muted)]">{t("Chọn phân bổ kế hoạch theo học viên riêng biệt hoặc đồng bộ cả lớp")}</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -853,7 +869,7 @@ const CoachWorkoutPlans = () => {
                 onClick={() => handleTpTargetTypeChange('INDIVIDUAL')}
                 className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-4 ${
                   tpTargetType === 'INDIVIDUAL'
-                    ? 'border-[var(--primary)] bg-[var(--primary-soft)]/20 shadow-md'
+                    ? 'border-[var(--primary)] bg-[var(--primary-soft)]/20 shadow-md ring-2 ring-[var(--primary)]/20'
                     : 'border-[var(--border)] bg-[var(--surface)] hover:border-slate-600'
                 }`}
               >
@@ -875,7 +891,7 @@ const CoachWorkoutPlans = () => {
                 onClick={() => handleTpTargetTypeChange('CLASS')}
                 className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-4 ${
                   tpTargetType === 'CLASS'
-                    ? 'border-[var(--primary)] bg-[var(--primary-soft)]/20 shadow-md'
+                    ? 'border-[var(--primary)] bg-[var(--primary-soft)]/20 shadow-md ring-2 ring-[var(--primary)]/20'
                     : 'border-[var(--border)] bg-[var(--surface)] hover:border-slate-600'
                 }`}
               >
@@ -977,10 +993,14 @@ const CoachWorkoutPlans = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-2 border-b border-[var(--border)] pb-3">
               <span className="w-6 h-6 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center">2</span>
-              <h3 className="text-base font-bold text-[var(--text)]">{t("Thông Tin & Mục Tiêu Kế Hoạch")}</h3>
+              <div>
+                <h3 className="text-base font-bold text-[var(--text)]">{t("Thông Tin & Mục Tiêu Kế Hoạch")}</h3>
+                <p className="text-xs text-[var(--text-muted)]">{t("Thiết lập tên kế hoạch, mục tiêu rèn luyện và khung thời gian áp dụng")}</p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Tiêu đề kế hoạch */}
               <div className="space-y-1.5 md:col-span-2">
                 <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
                   {t("Tiêu Đề Kế Hoạch")} <span className="text-rose-500">*</span>
@@ -994,8 +1014,9 @@ const CoachWorkoutPlans = () => {
                 />
               </div>
 
+              {/* Mục tiêu tập luyện */}
               <div className="space-y-1.5 md:col-span-2">
-                <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider flex items-center gap-1">
+                <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider flex items-center gap-1.5">
                   <Target className="w-3.5 h-3.5 text-[var(--primary)]" />
                   <span>{t("Mục Tiêu Tập Luyện")}</span>
                 </label>
@@ -1006,14 +1027,14 @@ const CoachWorkoutPlans = () => {
                   placeholder={t("VD: Giảm 3kg mỡ, tăng 1.5kg cơ, cải thiện mức tạ squat...")}
                   className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-2.5 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)]"
                 />
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[10px] text-[var(--text-muted)]">{t("Gợi ý nhanh:")}</span>
+                <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
+                  <span className="text-[11px] text-[var(--text-muted)] font-medium">{t("Gợi ý nhanh:")}</span>
                   {GOAL_SUGGESTIONS.map((g, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => setTpGoal(t(g))}
-                      className="px-2 py-0.5 rounded-lg bg-[var(--surface-hover)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary)] text-[10px] text-[var(--text-muted)] border border-[var(--border)] transition-all"
+                      className="px-2.5 py-1 rounded-lg bg-[var(--surface-hover)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary)] text-[11px] text-[var(--text-muted)] border border-[var(--border)] transition-all cursor-pointer"
                     >
                       {t(g)}
                     </button>
@@ -1029,7 +1050,7 @@ const CoachWorkoutPlans = () => {
                 <select
                   value={tpTotalWeeks}
                   onChange={(e) => handleTotalWeeksChange(e.target.value)}
-                  className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] font-bold"
+                  className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] font-bold cursor-pointer"
                 >
                   {[1, 2, 3, 4, 6, 8, 10, 12].map(w => (
                     <option key={w} value={w}>
@@ -1040,7 +1061,7 @@ const CoachWorkoutPlans = () => {
               </div>
 
               {/* Start Date & End Date */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">{t("Ngày Bắt Đầu")}</label>
                   <input
@@ -1061,6 +1082,25 @@ const CoachWorkoutPlans = () => {
                 </div>
               </div>
 
+              {/* Visual Summary Pill */}
+              <div className="md:col-span-2 bg-[var(--surface-hover)]/60 border border-[var(--border)] rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 text-[var(--text)] font-semibold">
+                  <Calendar className="w-4 h-4 text-[var(--primary)]" />
+                  <span>
+                    {tpTotalWeeks} {t("tuần")} ({tpTotalWeeks * 7} {t("ngày")}) • {tpStartDate || '---'} ➔ {tpEndDate || '---'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-[11px]">
+                    {totalPlanSessions} {t("buổi tập được lên lịch")}
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] font-bold text-[11px]">
+                    {totalPlanExercises} {t("bài tập")}
+                  </span>
+                </div>
+              </div>
+
+              {/* General Note */}
               <div className="space-y-1.5 md:col-span-2">
                 <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">{t("Ghi Chú Chung & Dặn Dò Dinh Dưỡng")}</label>
                 <textarea
@@ -1076,282 +1116,740 @@ const CoachWorkoutPlans = () => {
 
           {/* Section 3: Trình dựng lịch theo Mốc/Tuần & Ngày (Milestone Builder) */}
           <div className="space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
+            {/* Header Toolbar */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
               <div className="flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center">3</span>
                 <div>
                   <h3 className="text-base font-bold text-[var(--text)]">{t("Xây Dựng Chi Tiết Từng Mốc Tuần")}</h3>
-                  <p className="text-xs text-[var(--text-muted)]">{t("Chọn tuần để soạn thảo bài tập theo từng thứ trong tuần.")}</p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {t("Chọn tuần để soạn thảo bài tập theo từng thứ trong tuần.")}
+                  </p>
                 </div>
               </div>
 
-              {/* Nút sao chép Tuần 1 sang tất cả tuần khác */}
-              {tpTotalWeeks > 1 && (
-                <button
-                  type="button"
-                  onClick={handleCopyWeek1ToAll}
-                  className="px-3.5 py-1.5 rounded-xl bg-[var(--surface-hover)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary)] text-xs text-[var(--text)] font-semibold border border-[var(--border)] flex items-center gap-2 transition-all"
-                  title={t("Sao chép cấu trúc buổi tập của Tuần 1 sang tất cả các tuần khác")}
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>{t("Sao Chép Tuần 1 ➔ Tất Cả Tuần")}</span>
-                </button>
-              )}
+              {/* Action Buttons: View Mode Toggle & Copy Week 1 */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* View Mode Switcher */}
+                <div className="flex items-center bg-[var(--surface-hover)] p-1 rounded-xl border border-[var(--border)] text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setTpViewMode('FOCUS')}
+                    className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                      tpViewMode === 'FOCUS'
+                        ? 'bg-[var(--surface)] text-[var(--primary)] shadow-sm font-bold'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+                    }`}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>{t("Tập trung từng ngày")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTpViewMode('ALL')}
+                    className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                      tpViewMode === 'ALL'
+                        ? 'bg-[var(--surface)] text-[var(--primary)] shadow-sm font-bold'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+                    }`}
+                  >
+                    <List className="w-3.5 h-3.5" />
+                    <span>{t("Xem tất cả các ngày")}</span>
+                  </button>
+                </div>
+
+                {/* Nút sao chép Tuần 1 sang tất cả tuần khác */}
+                {tpTotalWeeks > 1 && (
+                  <button
+                    type="button"
+                    onClick={handleCopyWeek1ToAll}
+                    className="px-3.5 py-2 rounded-xl bg-[var(--surface-hover)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary)] text-xs text-[var(--text)] font-semibold border border-[var(--border)] flex items-center gap-1.5 transition-all cursor-pointer"
+                    title={t("Sao chép cấu trúc buổi tập của Tuần 1 sang tất cả các tuần khác")}
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>{t("Sao Chép Tuần 1 ➔ Tất Cả Tuần")}</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Week Milestone Selector Tabs */}
+            {/* Week Milestone Selector Tabs with Volume Summary */}
             <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
               {Array.from({ length: tpTotalWeeks }, (_, i) => i + 1).map((weekNum) => {
                 const isSelected = tpCurrentWeek === weekNum;
                 const weekObj = tpWeeks[weekNum];
                 const activeDaysCount = weekObj ? Object.values(weekObj.days).filter(d => d.active).length : 0;
+                const exercisesCount = weekObj
+                  ? Object.values(weekObj.days).reduce((sum, d) => sum + (d.active && d.exercises ? d.exercises.length : 0), 0)
+                  : 0;
 
                 return (
                   <button
                     key={weekNum}
                     type="button"
                     onClick={() => setTpCurrentWeek(weekNum)}
-                    className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 border ${
+                    className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all shrink-0 flex items-center gap-2.5 border cursor-pointer ${
                       isSelected
-                        ? 'bg-[var(--primary)] text-[color:var(--on-primary)] border-[var(--primary)] shadow-md'
+                        ? 'bg-[var(--primary)] text-[color:var(--on-primary)] border-[var(--primary)] shadow-md shadow-amber-500/20'
                         : 'bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)] border-[var(--border)] hover:bg-[var(--surface-hover)]'
                     }`}
                   >
-                    <span>{t("Mốc Tuần {0}", [weekNum])}</span>
-                    <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-semibold ${
-                      isSelected ? 'bg-black/20 text-white' : 'bg-[var(--surface-hover)] text-[var(--text-muted)]'
-                    }`}>
-                      {t("{0} buổi", [activeDaysCount])}
-                    </span>
+                    <div className="flex flex-col text-left">
+                      <span className="text-xs font-extrabold">{t("Mốc Tuần {0}", [weekNum])}</span>
+                      <span className={`text-[10px] font-medium ${isSelected ? 'text-black/80' : 'text-[var(--text-muted)]'}`}>
+                        {t("{0} buổi", [activeDaysCount])} • {t("{0} bài tập", [exercisesCount])}
+                      </span>
+                    </div>
                   </button>
                 );
               })}
             </div>
 
-            {/* Days of the Current Week */}
-            <div className="bg-[var(--surface-hover)]/40 border border-[var(--border)] p-4 sm:p-6 rounded-2xl space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
-                <div className="flex items-center gap-2">
-                  <Award className="w-5 h-5 text-[var(--primary)]" />
-                  <span className="font-extrabold text-sm text-[var(--text)]">
-                    {t("Lịch tập Tuần {0} ({1} buổi tập được chọn)", [tpCurrentWeek, activeDaysInCurrentWeek])}
+            {/* Main Week Canvas Container */}
+            <div className="bg-[var(--surface-hover)]/30 border border-[var(--border)] p-4 sm:p-6 rounded-2xl space-y-6">
+              
+              {/* 7-Day Ribbon */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-[var(--text)] flex items-center gap-2">
+                    <Award className="w-4 h-4 text-[var(--primary)]" />
+                    <span>{t("Lịch tập Tuần {0} ({1} buổi tập được chọn)", [tpCurrentWeek, activeDaysInCurrentWeek])}</span>
+                  </span>
+                  <span className="text-[11px] text-[var(--text-muted)]">
+                    {t("Nhấn vào từng thứ để chọn ngày soạn bài hoặc bấm Bật/Nghỉ")}
                   </span>
                 </div>
-                <span className="text-xs text-[var(--text-muted)]">
-                  {t("Bấm vào các thứ bên dưới để Bật/Tắt ngày tập")}
-                </span>
-              </div>
 
-              {/* Day Selector Chips */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
-                {DAYS_OF_WEEK.map((day) => {
-                  const dayData = currentWeekData.days[day.key] || { active: false };
-                  const isActive = dayData.active;
-                  const exCount = dayData.exercises ? dayData.exercises.length : 0;
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+                  {DAYS_OF_WEEK.map((day) => {
+                    const dayData = currentWeekData.days[day.key] || { active: false };
+                    const isActive = dayData.active;
+                    const isSelected = tpSelectedDayKey === day.key;
+                    const exCount = dayData.exercises ? dayData.exercises.length : 0;
 
-                  return (
-                    <div
-                      key={day.key}
-                      onClick={() => handleToggleDay(tpCurrentWeek, day.key)}
-                      className={`p-3 rounded-xl border text-center cursor-pointer transition-all flex flex-col items-center gap-1 ${
-                        isActive
-                          ? 'border-[var(--primary)] bg-[var(--primary-soft)]/30 text-[var(--text)] shadow-sm'
-                          : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-slate-500 opacity-60'
-                      }`}
-                    >
-                      <span className="font-extrabold text-xs">{t(day.name)}</span>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                        isActive ? 'bg-[var(--primary)] text-[color:var(--on-primary)]' : 'bg-[var(--surface-hover)] text-[var(--text-muted)]'
-                      }`}>
-                        {isActive ? t("{0} bài tập", [exCount]) : t("Nghỉ")}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Detailed Exercises for each Active Day */}
-              <div className="space-y-6 pt-2">
-                {DAYS_OF_WEEK.filter(day => currentWeekData.days[day.key]?.active).map((day) => {
-                  const dayData = currentWeekData.days[day.key];
-
-                  return (
-                    <div key={day.key} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
-                      {/* Day Header */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
-                        <div className="flex items-center gap-3">
-                          <span className="px-2.5 py-1 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] font-extrabold text-xs border border-[var(--primary-soft)]">
+                    return (
+                      <div
+                        key={day.key}
+                        onClick={() => setTpSelectedDayKey(day.key)}
+                        className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between gap-2 relative ${
+                          isSelected
+                            ? 'border-[var(--primary)] bg-[var(--surface)] shadow-md ring-2 ring-[var(--primary)]/30'
+                            : isActive
+                              ? 'border-[var(--primary)]/40 bg-[var(--surface)] hover:border-[var(--primary)]'
+                              : 'border-[var(--border)] bg-[var(--surface)]/60 text-[var(--text-muted)] opacity-70 hover:opacity-100 hover:border-slate-500'
+                        }`}
+                      >
+                        {/* Day Header inside Card */}
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs font-extrabold ${isSelected ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}>
                             {t(day.name)}
                           </span>
-                          <input
-                            type="text"
-                            value={dayData.label || ''}
-                            onChange={(e) => handleDayLabelChange(tpCurrentWeek, day.key, e.target.value)}
-                            placeholder={t("Tên nhóm cơ / buổi tập (VD: Ngực & Tay sau)")}
-                            className="bg-transparent border-b border-[var(--border)] focus:border-[var(--primary)] px-2 py-1 text-xs font-bold text-[var(--text)] focus:outline-none min-w-[200px]"
-                          />
+                          {/* Toggle Active Switch */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleDay(tpCurrentWeek, day.key);
+                            }}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                              isActive
+                                ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                                : 'bg-[var(--surface-hover)] text-[var(--text-muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary)]'
+                            }`}
+                            title={isActive ? t("Nhấn để chuyển thành ngày nghỉ") : t("Nhấn để bật ngày tập")}
+                          >
+                            {isActive ? t("Tập") : t("Nghỉ")}
+                          </button>
                         </div>
 
-                        <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5 text-[var(--primary)]" />
-                            <span>{t("Thời lượng:")}</span>
-                            <input
-                              type="number"
-                              min="10"
-                              max="180"
-                              step="5"
-                              value={dayData.durationMinutes || 45}
-                              onChange={(e) => handleDayDurationChange(tpCurrentWeek, day.key, e.target.value)}
-                              className="w-14 bg-[var(--surface-hover)] border border-[var(--border)] rounded-lg px-2 py-1 text-center font-bold text-[var(--text)] text-xs"
-                            />
-                            <span>{t("phút")}</span>
+                        {/* Day Label / Muscle */}
+                        <div className="text-[11px] font-medium truncate text-[var(--text-muted)]">
+                          {isActive ? (dayData.label || t("Buổi tập")) : t("Nghỉ ngơi")}
+                        </div>
+
+                        {/* Ex Count & Duration */}
+                        <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] pt-1 border-t border-[var(--border)]/60">
+                          <span>{isActive ? `${exCount} bài` : 'Rest Day'}</span>
+                          {isActive && <span>{dayData.durationMinutes || 45}p</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Mode 1: FOCUS VIEW (Tập trung soạn ngày được chọn) */}
+              {tpViewMode === 'FOCUS' && (
+                <div className="pt-2 animate-fade-in">
+                  {(() => {
+                    const selectedDayMeta = DAYS_OF_WEEK.find(d => d.key === tpSelectedDayKey) || DAYS_OF_WEEK[0];
+                    const selectedDayData = currentWeekData.days[tpSelectedDayKey] || { active: false };
+                    const currentDayIdx = DAYS_OF_WEEK.findIndex(d => d.key === tpSelectedDayKey);
+                    const prevDay = currentDayIdx > 0 ? DAYS_OF_WEEK[currentDayIdx - 1] : null;
+                    const nextDay = currentDayIdx < DAYS_OF_WEEK.length - 1 ? DAYS_OF_WEEK[currentDayIdx + 1] : null;
+
+                    if (!selectedDayData.active) {
+                      return (
+                        <div className="bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-2xl p-8 sm:p-12 text-center flex flex-col items-center justify-center gap-3">
+                          <div className="w-14 h-14 rounded-2xl bg-[var(--surface-hover)] text-[var(--text-muted)] flex items-center justify-center">
+                            <Calendar className="w-7 h-7 text-[var(--text-muted)]" />
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="text-base font-bold text-[var(--text)]">
+                              {t(selectedDayMeta.name)} {t("là ngày nghỉ ngơi (Rest Day)")}
+                            </h4>
+                            <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto">
+                              {t("Học viên sẽ nghỉ ngơi phục hồi cơ bắp vào ngày này. Nếu bạn muốn thêm buổi tập cho {0}, hãy nhấn nút kích hoạt bên dưới.", [t(selectedDayMeta.name)])}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleDay(tpCurrentWeek, tpSelectedDayKey)}
+                            className="mt-2 px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-[color:var(--on-primary)] font-bold text-xs flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all cursor-pointer"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>{t("Kích Hoạt Buổi Tập Cho {0}", [t(selectedDayMeta.name)])}</span>
+                          </button>
+
+                          {/* Quick Day Switcher */}
+                          <div className="flex items-center gap-3 pt-6 text-xs text-[var(--text-muted)]">
+                            {prevDay && (
+                              <button
+                                type="button"
+                                onClick={() => setTpSelectedDayKey(prevDay.key)}
+                                className="px-3 py-1.5 rounded-xl bg-[var(--surface-hover)] hover:text-[var(--text)] flex items-center gap-1 cursor-pointer"
+                              >
+                                <ChevronLeft className="w-4 h-4" />
+                                <span>{t(prevDay.name)}</span>
+                              </button>
+                            )}
+                            {nextDay && (
+                              <button
+                                type="button"
+                                onClick={() => setTpSelectedDayKey(nextDay.key)}
+                                className="px-3 py-1.5 rounded-xl bg-[var(--surface-hover)] hover:text-[var(--text)] flex items-center gap-1 cursor-pointer"
+                              >
+                                <span>{t(nextDay.name)}</span>
+                                <ChevronRight className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
+                        {/* Day Editor Header */}
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[var(--border)] pb-4">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className="px-3 py-1.5 rounded-xl bg-[var(--primary)] text-[color:var(--on-primary)] font-extrabold text-xs shadow-sm">
+                              {t(selectedDayMeta.name)}
+                            </span>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                                {t("Tên buổi tập / Nhóm cơ chính")}
+                              </label>
+                              <input
+                                type="text"
+                                value={selectedDayData.label || ''}
+                                onChange={(e) => handleDayLabelChange(tpCurrentWeek, tpSelectedDayKey, e.target.value)}
+                                placeholder={t("VD: Ngực & Tay sau (Chest + Triceps)")}
+                                className="bg-[var(--surface-hover)] border border-[var(--border)] focus:border-[var(--primary)] rounded-xl px-3 py-2 text-xs font-bold text-[var(--text)] focus:outline-none min-w-[260px] sm:min-w-[320px]"
+                              />
+                            </div>
                           </div>
 
+                          <div className="flex flex-wrap items-center gap-4 text-xs">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-[var(--primary)]" />
+                                <span>{t("Thời lượng buổi tập")}</span>
+                              </label>
+                              <div className="flex items-center gap-1.5 bg-[var(--surface-hover)] border border-[var(--border)] rounded-xl px-3 py-1.5">
+                                <input
+                                  type="number"
+                                  min="10"
+                                  max="180"
+                                  step="5"
+                                  value={selectedDayData.durationMinutes || 45}
+                                  onChange={(e) => handleDayDurationChange(tpCurrentWeek, tpSelectedDayKey, e.target.value)}
+                                  className="w-12 bg-transparent text-center font-bold text-[var(--text)] text-xs focus:outline-none"
+                                />
+                                <span className="text-[var(--text-muted)] font-medium">phút</span>
+                              </div>
+                            </div>
+
+                            <div className="pt-4 lg:pt-3">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleDay(tpCurrentWeek, tpSelectedDayKey)}
+                                className="px-3 py-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white border border-rose-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                <span>{t("Chuyển thành ngày nghỉ")}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Exercise Rows Header on Desktop */}
+                        <div className="space-y-3">
+                          <div className="hidden md:grid grid-cols-12 gap-3 px-3 py-2 bg-[var(--surface-hover)]/70 rounded-xl text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                            <div className="col-span-1 text-center">STT</div>
+                            <div className="col-span-4">ĐỘNG TÁC LUYỆN TẬP</div>
+                            <div className="col-span-1 text-center">SETS</div>
+                            <div className="col-span-1 text-center">REPS</div>
+                            <div className="col-span-1 text-center">TẠ (KG)</div>
+                            <div className="col-span-1 text-center">NGHỈ (S)</div>
+                            <div className="col-span-2">GHI CHÚ HƯỚNG DẪN</div>
+                            <div className="col-span-1 text-center">XÓA</div>
+                          </div>
+
+                          {/* Exercise List */}
+                          {selectedDayData.exercises && selectedDayData.exercises.map((ex, exIdx) => {
+                            const exInfo = exercises.find(item => item.exerciseId === parseInt(ex.exerciseId));
+
+                            return (
+                              <div
+                                key={exIdx}
+                                className="bg-[var(--surface-hover)]/40 hover:bg-[var(--surface-hover)]/70 border border-[var(--border)] rounded-xl p-3 sm:p-3.5 transition-all"
+                              >
+                                {/* Desktop Row */}
+                                <div className="hidden md:grid grid-cols-12 gap-3 items-center">
+                                  {/* STT */}
+                                  <div className="col-span-1 flex justify-center">
+                                    <span className="w-6 h-6 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center">
+                                      #{exIdx + 1}
+                                    </span>
+                                  </div>
+
+                                  {/* Exercise Selector */}
+                                  <div className="col-span-4 space-y-1">
+                                    <select
+                                      value={ex.exerciseId}
+                                      onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, tpSelectedDayKey, exIdx, 'exerciseId', e.target.value)}
+                                      className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] font-semibold"
+                                    >
+                                      <option value="">{t("-- Chọn bài tập --")}</option>
+                                      {exercises.map((eItem) => (
+                                        <option key={eItem.exerciseId} value={eItem.exerciseId}>
+                                          {eItem.exerciseName} [{t(eItem.muscleGroup || 'Chung')}]
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {exInfo && exInfo.videoUrl && (
+                                      <a
+                                        href={exInfo.videoUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-[10px] text-blue-400 hover:underline flex items-center gap-1 pl-1"
+                                      >
+                                        <Play className="w-3 h-3 text-blue-400" /> {t("Xem video mẫu")}
+                                      </a>
+                                    )}
+                                  </div>
+
+                                  {/* Sets */}
+                                  <div className="col-span-1">
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max="20"
+                                      value={ex.sets}
+                                      onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, tpSelectedDayKey, exIdx, 'sets', e.target.value)}
+                                      className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-2 text-xs text-[var(--text)] text-center font-bold focus:outline-none focus:border-[var(--primary)]"
+                                    />
+                                  </div>
+
+                                  {/* Reps */}
+                                  <div className="col-span-1">
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max="200"
+                                      value={ex.reps}
+                                      onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, tpSelectedDayKey, exIdx, 'reps', e.target.value)}
+                                      className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-2 text-xs text-[var(--text)] text-center font-bold focus:outline-none focus:border-[var(--primary)]"
+                                    />
+                                  </div>
+
+                                  {/* Weight */}
+                                  <div className="col-span-1">
+                                    <input
+                                      type="number"
+                                      step="0.5"
+                                      min="0"
+                                      placeholder="0"
+                                      value={ex.weightKg}
+                                      onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, tpSelectedDayKey, exIdx, 'weightKg', e.target.value)}
+                                      className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-2 text-xs text-[var(--text)] text-center font-bold focus:outline-none focus:border-[var(--primary)]"
+                                    />
+                                  </div>
+
+                                  {/* Rest */}
+                                  <div className="col-span-1">
+                                    <input
+                                      type="number"
+                                      step="5"
+                                      min="0"
+                                      max="600"
+                                      value={ex.restSeconds}
+                                      onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, tpSelectedDayKey, exIdx, 'restSeconds', e.target.value)}
+                                      className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-2 text-xs text-[var(--text)] text-center font-bold focus:outline-none focus:border-[var(--primary)]"
+                                    />
+                                  </div>
+
+                                  {/* Note */}
+                                  <div className="col-span-2">
+                                    <input
+                                      type="text"
+                                      value={ex.coachNote || ''}
+                                      onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, tpSelectedDayKey, exIdx, 'coachNote', e.target.value)}
+                                      placeholder={t("VD: Giữ lưng thẳng, siết ngực...")}
+                                      className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)]"
+                                    />
+                                  </div>
+
+                                  {/* Delete */}
+                                  <div className="col-span-1 flex justify-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveExerciseFromDay(tpCurrentWeek, tpSelectedDayKey, exIdx)}
+                                      title={t("Xóa động tác")}
+                                      className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition-all cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Mobile Card Layout */}
+                                <div className="block md:hidden space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <span className="w-6 h-6 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center">
+                                      #{exIdx + 1}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveExerciseFromDay(tpCurrentWeek, tpSelectedDayKey, exIdx)}
+                                      className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition-all"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+
+                                  <div>
+                                    <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1">{t("Động tác")}</label>
+                                    <select
+                                      value={ex.exerciseId}
+                                      onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, tpSelectedDayKey, exIdx, 'exerciseId', e.target.value)}
+                                      className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] font-semibold"
+                                    >
+                                      <option value="">{t("-- Chọn bài tập --")}</option>
+                                      {exercises.map((eItem) => (
+                                        <option key={eItem.exerciseId} value={eItem.exerciseId}>
+                                          {eItem.exerciseName} [{t(eItem.muscleGroup || 'Chung')}]
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {exInfo && exInfo.videoUrl && (
+                                      <a href={exInfo.videoUrl} target="_blank" rel="noreferrer" className="text-[10px] text-blue-400 hover:underline flex items-center gap-1 mt-1">
+                                        <Play className="w-3 h-3 text-blue-400" /> {t("Xem video mẫu")}
+                                      </a>
+                                    )}
+                                  </div>
+
+                                  <div className="grid grid-cols-4 gap-2">
+                                    <div>
+                                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1">Sets</label>
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        max="20"
+                                        value={ex.sets}
+                                        onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, tpSelectedDayKey, exIdx, 'sets', e.target.value)}
+                                        className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-1.5 text-xs text-center font-bold"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1">Reps</label>
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        max="200"
+                                        value={ex.reps}
+                                        onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, tpSelectedDayKey, exIdx, 'reps', e.target.value)}
+                                        className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-1.5 text-xs text-center font-bold"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1">Tạ (kg)</label>
+                                      <input
+                                        type="number"
+                                        step="0.5"
+                                        min="0"
+                                        placeholder="0"
+                                        value={ex.weightKg}
+                                        onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, tpSelectedDayKey, exIdx, 'weightKg', e.target.value)}
+                                        className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-1.5 text-xs text-center font-bold"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1">Nghỉ (s)</label>
+                                      <input
+                                        type="number"
+                                        step="5"
+                                        min="0"
+                                        max="600"
+                                        value={ex.restSeconds}
+                                        onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, tpSelectedDayKey, exIdx, 'restSeconds', e.target.value)}
+                                        className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-1.5 text-xs text-center font-bold"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div>
+                                    <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1">{t("Ghi chú")}</label>
+                                    <input
+                                      type="text"
+                                      value={ex.coachNote || ''}
+                                      onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, tpSelectedDayKey, exIdx, 'coachNote', e.target.value)}
+                                      placeholder={t("VD: Giữ lưng thẳng, siết ngực...")}
+                                      className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-xs"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {/* Add Exercise to Day Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleAddExerciseToDay(tpCurrentWeek, tpSelectedDayKey)}
+                            className="w-full py-3 rounded-xl border border-dashed border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)]/20 text-xs font-bold text-[var(--text-muted)] hover:text-[var(--primary)] flex items-center justify-center gap-2 transition-all cursor-pointer"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>{t("+ Thêm bài tập cho {0}", [t(selectedDayMeta.name)])}</span>
+                          </button>
+                        </div>
+
+                        {/* Bottom Day Switcher Navigation */}
+                        <div className="flex items-center justify-between pt-3 border-t border-[var(--border)] text-xs text-[var(--text-muted)]">
+                          {prevDay ? (
+                            <button
+                              type="button"
+                              onClick={() => setTpSelectedDayKey(prevDay.key)}
+                              className="px-3.5 py-2 rounded-xl bg-[var(--surface-hover)] hover:text-[var(--text)] flex items-center gap-1.5 transition-all cursor-pointer font-semibold"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                              <span>{t("Sang {0}", [t(prevDay.name)])}</span>
+                            </button>
+                          ) : <div />}
+
+                          <span className="text-[11px] font-medium text-[var(--text-muted)]">
+                            {t("Đang xem {0} (Tuần {1})", [t(selectedDayMeta.name), tpCurrentWeek])}
+                          </span>
+
+                          {nextDay ? (
+                            <button
+                              type="button"
+                              onClick={() => setTpSelectedDayKey(nextDay.key)}
+                              className="px-3.5 py-2 rounded-xl bg-[var(--surface-hover)] hover:text-[var(--text)] flex items-center gap-1.5 transition-all cursor-pointer font-semibold"
+                            >
+                              <span>{t("Sang {0}", [t(nextDay.name)])}</span>
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          ) : <div />}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* Mode 2: ALL DAYS VIEW (Xem tất cả các ngày trong tuần) */}
+              {tpViewMode === 'ALL' && (
+                <div className="space-y-6 pt-2 animate-fade-in">
+                  {DAYS_OF_WEEK.map((day) => {
+                    const dayData = currentWeekData.days[day.key];
+                    if (!dayData?.active) {
+                      return (
+                        <div key={day.key} className="bg-[var(--surface)]/50 border border-dashed border-[var(--border)] rounded-xl p-3.5 flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <span className="px-2 py-0.5 rounded-lg bg-[var(--surface-hover)] text-[var(--text-muted)] font-bold text-xs">
+                              {t(day.name)}
+                            </span>
+                            <span className="text-xs text-[var(--text-muted)] italic">{t("Ngày nghỉ ngơi (Rest Day)")}</span>
+                          </div>
                           <button
                             type="button"
                             onClick={() => handleToggleDay(tpCurrentWeek, day.key)}
-                            className="text-[11px] text-rose-400 hover:underline"
+                            className="px-3 py-1 rounded-lg bg-[var(--primary-soft)] hover:bg-[var(--primary)] hover:text-[color:var(--on-primary)] text-[var(--primary)] text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
                           >
-                            {t("Chuyển thành ngày nghỉ")}
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>{t("Kích hoạt ngày tập")}</span>
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div key={day.key} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+                        {/* Day Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
+                          <div className="flex items-center gap-3">
+                            <span className="px-2.5 py-1 rounded-lg bg-[var(--primary)] text-[color:var(--on-primary)] font-extrabold text-xs">
+                              {t(day.name)}
+                            </span>
+                            <input
+                              type="text"
+                              value={dayData.label || ''}
+                              onChange={(e) => handleDayLabelChange(tpCurrentWeek, day.key, e.target.value)}
+                              placeholder={t("VD: Ngực & Tay sau")}
+                              className="bg-transparent border-b border-[var(--border)] focus:border-[var(--primary)] px-2 py-1 text-xs font-bold text-[var(--text)] focus:outline-none min-w-[200px]"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-[var(--primary)]" />
+                              <span>{t("Thời lượng:")}</span>
+                              <input
+                                type="number"
+                                min="10"
+                                max="180"
+                                step="5"
+                                value={dayData.durationMinutes || 45}
+                                onChange={(e) => handleDayDurationChange(tpCurrentWeek, day.key, e.target.value)}
+                                className="w-14 bg-[var(--surface-hover)] border border-[var(--border)] rounded-lg px-2 py-1 text-center font-bold text-[var(--text)] text-xs"
+                              />
+                              <span>phút</span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleToggleDay(tpCurrentWeek, day.key)}
+                              className="text-[11px] text-rose-400 hover:underline cursor-pointer"
+                            >
+                              {t("Chuyển thành ngày nghỉ")}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Exercises List in ALL mode */}
+                        <div className="space-y-3">
+                          {dayData.exercises.map((ex, exIdx) => {
+                            const exInfo = exercises.find(item => item.exerciseId === parseInt(ex.exerciseId));
+                            return (
+                              <div key={exIdx} className="bg-[var(--surface-hover)]/50 border border-[var(--border)] rounded-xl p-3 flex flex-col md:flex-row items-start md:items-center gap-3">
+                                <span className="w-6 h-6 rounded-md bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center shrink-0">
+                                  #{exIdx + 1}
+                                </span>
+                                <div className="flex-1 w-full space-y-1">
+                                  <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t("Động tác")}</label>
+                                  <select
+                                    value={ex.exerciseId}
+                                    onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, day.key, exIdx, 'exerciseId', e.target.value)}
+                                    className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] font-semibold"
+                                  >
+                                    <option value="">{t("-- Chọn bài tập --")}</option>
+                                    {exercises.map((eItem) => (
+                                      <option key={eItem.exerciseId} value={eItem.exerciseId}>
+                                        {eItem.exerciseName} [{t(eItem.muscleGroup || 'Chung')}]
+                                      </option>
+                                    ))}
+                                  </select>
+                                  {exInfo && exInfo.videoUrl && (
+                                    <a href={exInfo.videoUrl} target="_blank" rel="noreferrer" className="text-[10px] text-blue-400 hover:underline flex items-center gap-1">
+                                      <Play className="w-3 h-3" /> {t("Xem video mẫu")}
+                                    </a>
+                                  )}
+                                </div>
+                                <div className="w-20 space-y-1">
+                                  <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Sets</label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max="20"
+                                    value={ex.sets}
+                                    onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, day.key, exIdx, 'sets', e.target.value)}
+                                    className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-2 text-xs text-center font-bold"
+                                  />
+                                </div>
+                                <div className="w-24 space-y-1">
+                                  <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Reps</label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max="200"
+                                    value={ex.reps}
+                                    onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, day.key, exIdx, 'reps', e.target.value)}
+                                    className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-2 text-xs text-center font-bold"
+                                  />
+                                </div>
+                                <div className="w-24 space-y-1">
+                                  <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Tạ (kg)</label>
+                                  <input
+                                    type="number"
+                                    step="0.5"
+                                    min="0"
+                                    placeholder="0"
+                                    value={ex.weightKg}
+                                    onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, day.key, exIdx, 'weightKg', e.target.value)}
+                                    className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-2 text-xs text-center font-bold"
+                                  />
+                                </div>
+                                <div className="w-24 space-y-1">
+                                  <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Nghỉ (s)</label>
+                                  <input
+                                    type="number"
+                                    step="5"
+                                    min="0"
+                                    max="600"
+                                    value={ex.restSeconds}
+                                    onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, day.key, exIdx, 'restSeconds', e.target.value)}
+                                    className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-2 text-xs text-center font-bold"
+                                  />
+                                </div>
+                                <div className="flex-1 w-full space-y-1">
+                                  <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t("Ghi chú")}</label>
+                                  <input
+                                    type="text"
+                                    value={ex.coachNote || ''}
+                                    onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, day.key, exIdx, 'coachNote', e.target.value)}
+                                    placeholder={t("VD: Giữ lưng thẳng, siết ngực...")}
+                                    className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs"
+                                  />
+                                </div>
+                                <div className="pt-4 md:pt-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveExerciseFromDay(tpCurrentWeek, day.key, exIdx)}
+                                    title={t("Xóa động tác")}
+                                    className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition-all cursor-pointer"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <button
+                            type="button"
+                            onClick={() => handleAddExerciseToDay(tpCurrentWeek, day.key)}
+                            className="w-full py-2.5 rounded-xl border border-dashed border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)]/20 text-xs font-bold text-[var(--text-muted)] hover:text-[var(--primary)] flex items-center justify-center gap-2 transition-all cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>{t("+ Thêm bài tập cho {0}", [t(day.name)])}</span>
                           </button>
                         </div>
                       </div>
-
-                      {/* Exercises in this Day */}
-                      <div className="space-y-3">
-                        {dayData.exercises.map((ex, exIdx) => {
-                          const exInfo = exercises.find(item => item.exerciseId === parseInt(ex.exerciseId));
-
-                          return (
-                            <div key={exIdx} className="bg-[var(--surface-hover)]/60 border border-[var(--border)] rounded-xl p-3 sm:p-4 flex flex-col md:flex-row items-start md:items-center gap-3">
-                              <span className="w-6 h-6 rounded-md bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center shrink-0">
-                                #{exIdx + 1}
-                              </span>
-
-                              {/* Exercise Select */}
-                              <div className="flex-1 w-full space-y-1">
-                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t("Động tác")}</label>
-                                <select
-                                  value={ex.exerciseId}
-                                  onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, day.key, exIdx, 'exerciseId', e.target.value)}
-                                  className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] font-semibold"
-                                >
-                                  <option value="">{t("-- Chọn bài tập --")}</option>
-                                  {exercises.map((eItem) => (
-                                    <option key={eItem.exerciseId} value={eItem.exerciseId}>
-                                      {eItem.exerciseName} [{t(eItem.muscleGroup || 'Chung')}]
-                                    </option>
-                                  ))}
-                                </select>
-                                {exInfo && exInfo.videoUrl && (
-                                  <a href={exInfo.videoUrl} target="_blank" rel="noreferrer" className="text-[10px] text-blue-400 hover:underline flex items-center gap-1">
-                                    <Play className="w-3 h-3" /> {t("Video mẫu")}
-                                  </a>
-                                )}
-                              </div>
-
-                              {/* Sets */}
-                              <div className="w-20 space-y-1">
-                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t("Sets")}</label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max="20"
-                                  value={ex.sets}
-                                  onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, day.key, exIdx, 'sets', e.target.value)}
-                                  className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-2 text-xs text-[var(--text)] text-center font-bold focus:outline-none focus:border-[var(--primary)]"
-                                />
-                              </div>
-
-                              {/* Reps */}
-                              <div className="w-24 space-y-1">
-                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t("Reps")}</label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max="200"
-                                  value={ex.reps}
-                                  onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, day.key, exIdx, 'reps', e.target.value)}
-                                  className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-2 text-xs text-[var(--text)] text-center font-bold focus:outline-none focus:border-[var(--primary)]"
-                                />
-                              </div>
-
-                              {/* Weight (kg) */}
-                              <div className="w-24 space-y-1">
-                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t("Mức tạ (kg)")}</label>
-                                <input
-                                  type="number"
-                                  step="0.5"
-                                  min="0"
-                                  placeholder="0"
-                                  value={ex.weightKg}
-                                  onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, day.key, exIdx, 'weightKg', e.target.value)}
-                                  className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-2 text-xs text-[var(--text)] text-center font-bold focus:outline-none focus:border-[var(--primary)]"
-                                />
-                              </div>
-
-                              {/* Rest (s) */}
-                              <div className="w-24 space-y-1">
-                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t("Nghỉ (s)")}</label>
-                                <input
-                                  type="number"
-                                  step="5"
-                                  min="0"
-                                  max="600"
-                                  value={ex.restSeconds}
-                                  onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, day.key, exIdx, 'restSeconds', e.target.value)}
-                                  className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-2 py-2 text-xs text-[var(--text)] text-center font-bold focus:outline-none focus:border-[var(--primary)]"
-                                />
-                              </div>
-
-                              {/* Note for exercise */}
-                              <div className="flex-1 w-full space-y-1">
-                                <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t("Ghi chú động tác")}</label>
-                                <input
-                                  type="text"
-                                  value={ex.coachNote || ''}
-                                  onChange={(e) => handleExerciseFieldChange(tpCurrentWeek, day.key, exIdx, 'coachNote', e.target.value)}
-                                  placeholder={t("VD: Giữ lưng thẳng, siết ngực...")}
-                                  className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)]"
-                                />
-                              </div>
-
-                              {/* Delete Exercise */}
-                              <div className="pt-4 md:pt-0">
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveExerciseFromDay(tpCurrentWeek, day.key, exIdx)}
-                                  title={t("Xóa động tác")}
-                                  className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition-all cursor-pointer"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-
-                        {/* Add Exercise to Day Button */}
-                        <button
-                          type="button"
-                          onClick={() => handleAddExerciseToDay(tpCurrentWeek, day.key)}
-                          className="w-full py-2.5 rounded-xl border border-dashed border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)]/20 text-xs font-bold text-[var(--text-muted)] hover:text-[var(--primary)] flex items-center justify-center gap-2 transition-all cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>{t("+ Thêm bài tập cho {0}", [t(day.name)])}</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {activeDaysInCurrentWeek === 0 && (
-                  <div className="text-center py-8 text-xs text-[var(--text-muted)]">
-                    {t("Tuần này chưa có buổi tập nào. Hãy bấm vào các thứ ở trên để bật ngày tập.")}
-                  </div>
-                )}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
