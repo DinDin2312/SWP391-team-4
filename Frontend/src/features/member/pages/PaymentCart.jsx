@@ -16,6 +16,8 @@ const PaymentCart = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
+  const [availableCredits, setAvailableCredits] = useState([]);
+  const [selectedCredit, setSelectedCredit] = useState(null);
   const [selectedMethod, setSelectedMethod] = useState('credit');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [toast, setToast] = useState({ visible: false, type: 'success', title: '', message: '' });
@@ -78,7 +80,7 @@ const PaymentCart = () => {
     try {
       setCheckoutLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:8080/api/v1/payment/checkout', { paymentMethod: selectedMethod }, {
+      const response = await axios.post('http://localhost:8080/api/v1/payment/checkout', { paymentMethod: selectedMethod, creditCode: selectedCredit ? selectedCredit.creditCode : null }, {
         headers: { Authorization: `Bearer ${token}`}
       });
 
@@ -183,6 +185,51 @@ const PaymentCart = () => {
 
           {/* RIGHT: Payment Options & Summary */}
           <div className="lg:col-span-5 flex flex-col gap-6">
+            
+            {/* Course Credit Voucher Selector */}
+            {availableCredits.length > 0 && (
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-[var(--text)] flex items-center gap-2">
+                    <Ticket className="w-4 h-4 text-[var(--primary)]" />
+                    {t("Apply Course Credit Voucher")}
+                  </h3>
+                  <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    {availableCredits.length} {t("available")}
+                  </span>
+                </div>
+                <div className="space-y-2 mt-1">
+                  <select
+                    value={selectedCredit ? selectedCredit.creditCode : ''}
+                    onChange={(e) => {
+                      const found = availableCredits.find(c => c.creditCode === e.target.value);
+                      setSelectedCredit(found || null);
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-xs text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] font-mono"
+                  >
+                    <option value="">-- {t("Do not use credit voucher")} --</option>
+                    {availableCredits.map(c => (
+                      <option key={c.creditId} value={c.creditCode}>
+                        {c.creditCode} - {formatMoney(c.remainingAmount)} ({t("Expires")}: {c.expiryDate})
+                      </option>
+                    ))}
+                  </select>
+                  {selectedCredit && (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+                      <span>{t("Voucher applied:")} <strong className="font-mono">{selectedCredit.creditCode}</strong></span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCredit(null)}
+                        className="text-red-500 hover:underline font-semibold"
+                      >
+                        {t("Remove")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Payment Methods */}
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 flex flex-col gap-4">
               <h2 className="text-lg font-bold text-[var(--text)] mb-2">{t("Payment Method")}</h2>
@@ -235,7 +282,7 @@ const PaymentCart = () => {
 
               <div className="flex justify-between items-center">
                 <span className="text-[var(--text)]">{t("Total")}</span>
-                <span className="text-2xl font-black text-[var(--text)]">{formatMoney(totalPrice * (100 - discountPercent) / 100)}</span>
+                <span className="text-2xl font-black text-[var(--text)]">{formatMoney(Math.max(0, (totalPrice * (100 - discountPercent) / 100) - (selectedCredit ? selectedCredit.remainingAmount : 0)))}</span>
               </div>
 
               <button

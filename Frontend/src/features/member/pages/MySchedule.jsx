@@ -1,6 +1,7 @@
 import { locale } from '../../../i18n/languageStore.js';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';
+import CancelClassPolicyModal from '../components/CancelClassPolicyModal';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -232,7 +233,7 @@ const MySchedule = () => {
                 {selectedDateBookings.length}{' '}{t("Sessions")}</span>
             </div>
 
-            <div className="flex flex-col gap-4 max-h-[500px] overflow-y-auto scrollbar-none pr-1">
+            <div className="flex flex-col gap-3.5 max-h-[640px] overflow-y-auto pr-1">
               {loading ? (
                 <div className="text-center py-10 text-[var(--text-muted)]">{t("Loading...")}</div>
               ) : selectedDateBookings.length === 0 ? (
@@ -246,10 +247,10 @@ const MySchedule = () => {
                 selectedDateBookings.map((b, idx) => {
                   const startTime = new Date(b.startTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
                   const endTime = new Date(b.endTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
-                  const isConfirmed = b.status === 'CONFIRMED';
+                  const isConfirmed = b.status?.toUpperCase() === 'CONFIRMED';
 
                   return (
-                    <div key={idx} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-3 relative overflow-hidden group">
+                    <div key={idx} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-3 relative shrink-0 group transition-all hover:border-[var(--primary)]/30 hover:shadow-sm">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text)]">
                           <Clock className="w-3.5 h-3.5 text-[var(--primary)]" />
@@ -322,8 +323,23 @@ const MySchedule = () => {
 
                       {isConfirmed && (
                         <div className="flex items-center gap-2 mt-2 pt-3 border-t border-[var(--border)]">
-                          <button onClick={() => setQrModal({ isOpen: true, session: b })} className="flex-1 py-1.5 rounded-lg bg-[var(--primary)] text-[color:var(--on-primary)] hover:bg-[var(--primary)] text-xs font-bold transition-colors">{t("Check-in QR")}</button>
-                          <button onClick={() => setCancelModal({ isOpen: true, classId: b.classId })} className="px-3 py-1.5 rounded-lg bg-[var(--surface)] text-[var(--text)] hover:text-[var(--danger-text)] text-xs font-medium transition-colors">{t("Cancel")}</button>
+                          <button
+                            type="button"
+                            onClick={() => setQrModal({ isOpen: true, session: b })}
+                            className="flex-1 py-1.5 px-3 rounded-lg bg-[var(--primary)] text-[color:var(--on-primary)] hover:opacity-90 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                            <span>{t("Check-in QR")}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCancelModal({ isOpen: true, classId: b.classId })}
+                            className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold transition-colors flex items-center gap-1 shrink-0"
+                            title={t("Hủy lớp học")}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>{t("Cancel")}</span>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -334,18 +350,13 @@ const MySchedule = () => {
           </div>
         </div>
       </div>
-      <ConfirmModal
+      <CancelClassPolicyModal
         isOpen={cancelModal.isOpen}
+        classId={cancelModal.classId}
         onClose={() => setCancelModal({ isOpen: false, classId: null })}
-        onConfirm={() => {
-          memberService.cancelClass(cancelModal.classId).then(() => {
-            setCancelModal({ isOpen: false, classId: null });
-            fetchBookings();
-          }).catch(err => alert(err.response?.data || 'Failed to cancel class'));
+        onSuccess={() => {
+          fetchBookings();
         }}
-        title={t("Cancel Class Registration")}
-        message={t("Are you sure you want to cancel this class? All future sessions of this class will be dropped from your schedule. This action cannot be undone.")}
-        confirmText={t("Yes, Cancel Class")}
       />
       <MemberWorkoutsModal
         isOpen={workoutModal.isOpen}

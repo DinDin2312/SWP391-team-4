@@ -25,6 +25,7 @@ const PaymentResult = lazy(() => import('../features/member/pages/PaymentResult'
 const PackageStore = lazy(() => import('../features/member/pages/PackageStore'));
 const BillingHistory = lazy(() => import('../features/member/pages/BillingHistory'));
 const AttendanceHistory = lazy(() => import('../features/member/pages/AttendanceHistory'));
+const MemberSupportView = lazy(() => import('../features/member/pages/MemberSupportView'));
 
 import CoachLayout from '../layouts/CoachLayout';
 const CoachDashboard = lazy(() => import('../features/coach/pages/CoachDashboard'));
@@ -64,6 +65,7 @@ function AppRoutes() {
         <Route path="package-store" element={<PackageStore />} />
         <Route path="billing" element={<BillingHistory />} />
         <Route path="attendance" element={<AttendanceHistory />} />
+        <Route path="support" element={<MemberSupportView />} />
       </Route>
 
       {/* Coach Routes wrapped in CoachLayout */}
@@ -81,7 +83,7 @@ function AppRoutes() {
 
       {/* Legacy role path mappings */}
       <Route path={ROLE_ROUTES.customer} element={<Navigate to="/member/dashboard" replace />} />
-      <Route path={ROLE_ROUTES.staff} element={<ProtectedRoute allowedRoles={['Receptionist']}><ReceptionistDashboard /></ProtectedRoute>} />
+      <Route path={ROLE_ROUTES.staff} element={<ProtectedRoute allowedRoles={['Receptionist', 'Center Manager']}><ReceptionistDashboard /></ProtectedRoute>} />
       <Route path={ROLE_ROUTES.trainer} element={<Navigate to="/coach/dashboard" replace />} />
       <Route path={ROLE_ROUTES.admin} element={<ProtectedRoute allowedRoles={['Center Manager']}><ManagerDashboard /></ProtectedRoute>} />
 

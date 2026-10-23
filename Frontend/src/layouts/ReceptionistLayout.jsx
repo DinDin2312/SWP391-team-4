@@ -13,6 +13,7 @@ import {
   LogOut,
   ShieldCheck,
   Receipt,
+  LifeBuoy,
 } from 'lucide-react';
 
 const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSelectFeature }) => {
@@ -70,6 +71,14 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
       badge: '',
       isReady: true,
     },
+    {
+      id: 'support-desk',
+      label: t('Support Desk & Cancellations'),
+      icon: LifeBuoy,
+      badge: 'New',
+      isReady: true,
+    },
+
   ];
 
   return (
