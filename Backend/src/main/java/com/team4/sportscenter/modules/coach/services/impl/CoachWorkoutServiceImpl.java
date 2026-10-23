@@ -94,7 +94,11 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
                             () -> new RuntimeException("Không tìm thấy học viên ID: " + request.getStudentUserId()));
             targetStudents.add(student);
             if (request.getClassId() != null) {
-                assignedGymClass = coachClassRepository.findById(request.getClassId()).orElse(null);
+                GymClass gymClass = coachClassRepository.findById(request.getClassId()).orElse(null);
+                if (gymClass != null && gymClass.getCoach() != null && gymClass.getCoach().getEmail().equalsIgnoreCase(coachEmail)) {
+                    assignedGymClass = gymClass;
+                    classInfo = " (Lớp " + gymClass.getClassName() + ")";
+                }
             }
         } else if ("CLASS".equals(targetType)) {
             if (request.getClassId() == null) {

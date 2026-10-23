@@ -2439,8 +2439,15 @@ const workoutDictionary = {
   "Select Student": "Chọn Học Viên",
   "-- Select student from list ({0} students) --": "-- Chọn học viên từ danh sách ({0} học viên) --",
   "Select Class": "Chọn Lớp Học",
-  "-- Select class you coach ({0} classes) --": "-- Chọn lớp học bạn đang dạy ({0} lớp) --",
   "{0} enrolled students": "{0} học viên tham gia",
+  "Step 1: Select Class": "Bước 1: Chọn Lớp Học",
+  "Step 2: Select Student in Class": "Bước 2: Chọn Học Viên Trong Lớp",
+  "-- Please select a class first --": "-- Vui lòng chọn lớp học trước --",
+  "Loading class students...": "Đang tải danh sách học viên của lớp...",
+  "-- This class currently has no enrolled students --": "-- Lớp này hiện chưa có học viên nào --",
+  "-- Select student ({0} students) --": "-- Chọn học viên ({0} học viên) --",
+  "-- Select class ({0} classes) --": "-- Chọn lớp học ({0} lớp) --",
+  "Please select a class before selecting a student.": "Vui lòng chọn lớp học trước khi chọn học viên.",
 
   // Training Plan Info
   "Plan Information & Objectives": "Thông Tin & Mục Tiêu Kế Hoạch",
