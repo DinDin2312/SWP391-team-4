@@ -3069,7 +3069,13 @@ const supportTranslations = [
   ["View Workout Plan","Xem giáo án"],
   ["View Invoices","Xem hóa đơn"],
   ["View Packages","Xem gói tập"],
-  ["View Ticket","Xem yêu cầu"]
+  ["View Ticket","Xem yêu cầu"],
+  ["Class transferred","Chuyển lớp học"],
+  ["Member transferred class from '{0}' to '{1}'","Hội viên tự chuyển lớp từ '{0}' sang '{1}'"],
+  ["Session cancelled by reception","Lễ tân hủy buổi tập"],
+  ["Course cancelled by reception","Lễ tân hủy khóa học"],
+  ["Check-in","Điểm danh vào"],
+  ["Check-out","Điểm danh ra"]
 ];
 for (const [en, vi] of supportTranslations) {
   translations[en] = [en, vi];
