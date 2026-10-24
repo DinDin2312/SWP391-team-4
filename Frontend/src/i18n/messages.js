@@ -3075,7 +3075,9 @@ const supportTranslations = [
   ["Session cancelled by reception","Lễ tân hủy buổi tập"],
   ["Course cancelled by reception","Lễ tân hủy khóa học"],
   ["Check-in","Điểm danh vào"],
-  ["Check-out","Điểm danh ra"]
+  ["Check-out","Điểm danh ra"],
+  ["Payment Successful","Thanh toán thành công"],
+  ["Invoice #{0} has been paid successfully. Please click 'View Invoices' below to check transaction details.","Hóa đơn #{0} đã được thanh toán thành công. Vui lòng nhấn 'Xem hóa đơn' bên dưới để kiểm tra chi tiết giao dịch."]
 ];
 for (const [en, vi] of supportTranslations) {
   translations[en] = [en, vi];

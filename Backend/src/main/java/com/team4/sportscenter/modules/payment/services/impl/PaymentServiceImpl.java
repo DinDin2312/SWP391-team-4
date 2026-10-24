@@ -115,9 +115,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .filter(b -> "PENDING".equals(b.getStatus()))
                 .toList();
 
-        List<UserMembership> pendingMemberships = userMembershipRepository.findAll().stream()
-                .filter(m -> m.getUser().getEmail().equals(email) && "PENDING".equals(m.getStatus()))
-                .toList();
+        List<UserMembership> pendingMemberships = userMembershipRepository.findByEmailAndStatus(email, "PENDING");
 
         assertCartMutable(email);
         for(var membership:pendingMemberships)commerce.checkPurchase(user.getUserId(),membership.getAPackage().getPackageId(),null,true);
@@ -381,9 +379,7 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     @Transactional
     public void removePackageFromCart(String email, Integer packageId) {
         bookingRepository.lockOperations();assertCartMutable(email);
-        List<com.team4.sportscenter.modules.member.entities.UserMembership> memberships = userMembershipRepository.findAll().stream()
-            .filter(m -> m.getUser().getEmail().equals(email) && "PENDING".equals(m.getStatus()) && m.getAPackage().getPackageId().equals(packageId))
-            .toList();
+        List<com.team4.sportscenter.modules.member.entities.UserMembership> memberships = userMembershipRepository.findByEmailAndStatus(email, "PENDING").stream().filter(m -> m.getAPackage().getPackageId().equals(packageId)).toList();
         if (!memberships.isEmpty()) {
             for(var m:memberships){if(m.getCheckoutInvoiceId()!=null){m.setStatus("CANCELLED");userMembershipRepository.save(m);}else userMembershipRepository.delete(m);}
         }
@@ -399,9 +395,7 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
             bookingRepository.deleteAll(pendingBookings);
         }
         
-        List<com.team4.sportscenter.modules.member.entities.UserMembership> pendingMemberships = userMembershipRepository.findAll().stream()
-                .filter(m -> m.getUser().getEmail().equals(email) && "PENDING".equals(m.getStatus()))
-                .toList();
+        List<com.team4.sportscenter.modules.member.entities.UserMembership> pendingMemberships = userMembershipRepository.findByEmailAndStatus(email, "PENDING");
         if (!pendingMemberships.isEmpty()) {
             for(var m:pendingMemberships){if(m.getCheckoutInvoiceId()!=null){m.setStatus("CANCELLED");userMembershipRepository.save(m);}else userMembershipRepository.delete(m);}
         }
@@ -422,7 +416,7 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         finishPayment(invoice,"0".equals(query.get("resultCode")),query.get("transId"));
     }
 
-    private String paymentMethod(Invoice invoice){return paymentRepository.findAll().stream().filter(p->p.getInvoice().getInvoiceId().equals(invoice.getInvoiceId())).findFirst().orElseThrow().getPaymentMethod();}
+    private String paymentMethod(Invoice invoice){return paymentRepository.findByInvoice_InvoiceId(invoice.getInvoiceId()).orElseThrow().getPaymentMethod();}
 
     private void assertCartMutable(String email){
         Integer held=jdbc.queryForObject("SELECT COUNT(*) FROM INVOICES i JOIN USERS u ON u.user_id=i.user_id WHERE u.email=? AND i.status='PENDING' AND i.created_at>DATE_SUB(NOW(),INTERVAL 15 MINUTE)",Integer.class,email);
@@ -431,7 +425,7 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
 
     private void finishPayment(Invoice invoice,boolean success,String transaction){
         if(Set.of("PAID","REVIEW").contains(invoice.getStatus()))return;
-        var payment=paymentRepository.findAll().stream().filter(p->p.getInvoice().getInvoiceId().equals(invoice.getInvoiceId())).findFirst().orElseThrow();
+        var payment=paymentRepository.findByInvoice_InvoiceId(invoice.getInvoiceId()).orElseThrow();
         var maybeCredit = userCreditRepository.findByUsedInvoiceId(invoice.getInvoiceId());
         if(!success){
             if (maybeCredit.isPresent()) {
@@ -443,7 +437,7 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         }
         payment.setStatus("COMPLETED");payment.setTransactionNo(transaction);paymentRepository.save(payment);
         String issue=null;
-        var purchased=userMembershipRepository.findAll().stream().filter(m->invoice.getInvoiceId().equals(m.getCheckoutInvoiceId())).toList();
+        var purchased=userMembershipRepository.findByCheckoutInvoiceId(invoice.getInvoiceId());
         List<Integer> bookingIds=jdbc.queryForList("SELECT booking_id FROM INVOICE_BOOKINGS WHERE invoice_id=?",Integer.class,invoice.getInvoiceId());
         var booked=bookingRepository.findAllById(bookingIds);
         try{

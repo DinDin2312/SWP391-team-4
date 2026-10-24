@@ -951,8 +951,7 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + memberEmail));
 
         // Auto-heal: Ensure approved requests that intended to grant credit have their UserCredit generated
-        List<SupportRequest> approvedRequests = supportRequestRepository.findAll().stream()
-                .filter(r -> r.getUser() != null && Objects.equals(r.getUser().getUserId(), user.getUserId()))
+        List<SupportRequest> approvedRequests = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
                 .filter(r -> r.getStatus() == SupportStatus.APPROVED || r.getStatus() == SupportStatus.RESOLVED)
                 .filter(r -> r.getGymClass() != null)
                 .filter(r -> r.getCategory() == SupportCategory.CLASS_CANCELLATION || r.getCategory() == SupportCategory.REFUND_REQUEST || "ISSUE_CREDIT".equalsIgnoreCase(r.getPreferredResolution()) || "GYM_PASS".equalsIgnoreCase(r.getPreferredResolution()))

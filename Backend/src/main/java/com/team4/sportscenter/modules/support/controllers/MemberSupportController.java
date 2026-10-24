@@ -20,7 +20,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/member/support")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @PreAuthorize("hasAnyRole('MEMBER', 'Member')")
 public class MemberSupportController {
 

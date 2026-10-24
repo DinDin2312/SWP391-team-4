@@ -22,7 +22,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/receptionist/support")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER')")
 public class ReceptionistSupportController {
 

@@ -146,10 +146,7 @@ const getNotificationMeta = (type, title = '', message = '') => {
 
 const formatNotificationTitle = (title) => {
   if (!title) return '';
-  if (title === 'Payment Successful') {
-    return 'Thanh toán thành công / Payment Successful';
-  }
-  return title;
+  return t(title);
 };
 
 const formatNotificationMessage = (msg) => {
@@ -157,7 +154,7 @@ const formatNotificationMessage = (msg) => {
   const match = msg.match(/^Your invoice (\d+) is complete\.$/i);
   if (match) {
     const id = match[1];
-    return `Hóa đơn #${id} đã được thanh toán thành công.\nVui lòng nhấn "Xem hóa đơn" bên dưới để kiểm tra chi tiết giao dịch.`;
+    return t("Invoice #{0} has been paid successfully. Please click 'View Invoices' below to check transaction details.", id);
   }
   return t(msg);
 };
