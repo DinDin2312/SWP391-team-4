@@ -19,6 +19,10 @@ public class PackageBenefitsService {
 
     public void saveDefinition(int packageId, String type, List<SubjectBenefitRequest> benefits) {
         boolean requiresSubjects=Boolean.TRUE.equals(packageTypes.require(type).get("requiresSubjects"));
+        if (!requiresSubjects) {
+            jdbc.update("DELETE FROM PACKAGE_SUBJECT_BENEFITS WHERE package_id=?", packageId);
+            return;
+        }
         // Null preserves old clients' definitions on metadata-only updates.
         if(benefits==null) {
             if(requiresSubjects && packageBenefits(packageId).isEmpty())

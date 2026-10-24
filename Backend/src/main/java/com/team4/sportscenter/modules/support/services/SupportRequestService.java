@@ -4,6 +4,8 @@ import com.team4.sportscenter.modules.support.dtos.request.CreateSupportRequest;
 import com.team4.sportscenter.modules.support.dtos.request.RespondSupportRequest;
 import com.team4.sportscenter.modules.support.dtos.response.CancelClassPreviewResponse;
 import com.team4.sportscenter.modules.support.dtos.response.SupportRequestResponse;
+import com.team4.sportscenter.modules.support.dtos.response.TransferClassOptionResponse;
+import com.team4.sportscenter.modules.support.dtos.response.TransferClassPreviewResponse;
 import com.team4.sportscenter.modules.support.dtos.response.UserCreditResponse;
 import com.team4.sportscenter.modules.support.enums.SupportCategory;
 import com.team4.sportscenter.modules.support.enums.SupportStatus;
@@ -18,6 +20,10 @@ public interface SupportRequestService {
     CancelClassPreviewResponse getCancelClassPreview(Integer classId, String memberEmail);
 
     Map<String, Object> cancelClassDirectly(Integer classId, String memberEmail);
+
+    TransferClassPreviewResponse getTransferClassPreview(Integer classId, String memberEmail);
+
+    Map<String, Object> transferClassDirectly(Integer fromClassId, Integer toClassId, String memberEmail);
 
     SupportRequestResponse createSupportRequest(CreateSupportRequest request, String memberEmail);
 

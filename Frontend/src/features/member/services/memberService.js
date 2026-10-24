@@ -133,6 +133,14 @@ export const memberService = {
     return await axiosClient.post(`/v1/member/support/classes/${classId}/cancel-direct`, {});
   },
 
+  getTransferClassPreview: async (classId) => {
+    return await axiosClient.get(`/v1/member/support/classes/${classId}/transfer-preview`);
+  },
+
+  transferClassDirectly: async (fromClassId, toClassId) => {
+    return await axiosClient.post(`/v1/member/support/classes/${fromClassId}/transfer-to/${toClassId}`, {});
+  },
+
   createSupportRequest: async (payload) => {
     return await axiosClient.post('/v1/member/support/requests', payload);
   },

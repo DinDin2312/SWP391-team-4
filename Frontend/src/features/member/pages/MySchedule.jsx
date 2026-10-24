@@ -2,11 +2,12 @@ import { locale } from '../../../i18n/languageStore.js';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import CancelClassPolicyModal from '../components/CancelClassPolicyModal';
+import TransferClassModal from '../components/TransferClassModal';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, Plus, Activity, MapPin,
-  User, CheckCircle2, XCircle, Clock, Dumbbell, Award, QrCode, X
+  User, CheckCircle2, XCircle, Clock, Dumbbell, Award, QrCode, X, ArrowRightLeft
 } from 'lucide-react';
 import MemberWorkoutsModal from '../components/MemberWorkoutsModal';
 import MemberAssessmentsModal from '../components/MemberAssessmentsModal';
@@ -20,6 +21,7 @@ const MySchedule = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cancelModal, setCancelModal] = useState({ isOpen: false, classId: null });
+  const [transferModal, setTransferModal] = useState({ isOpen: false, classId: null });
   const [workoutModal, setWorkoutModal] = useState({ isOpen: false, classId: 'ALL' });
   const [assessmentModal, setAssessmentModal] = useState({ isOpen: false, classId: 'ALL' });
   const [qrModal, setQrModal] = useState({ isOpen: false, session: null });
@@ -331,7 +333,16 @@ const MySchedule = () => {
                             <QrCode className="w-3.5 h-3.5" />
                             <span>{t("Check-in QR")}</span>
                           </button>
-                          <button
+                                                    <button
+                            type="button"
+                            onClick={() => setTransferModal({ isOpen: true, classId: b.classId })}
+                            className="px-2.5 py-1.5 rounded-lg border border-[var(--primary)]/30 bg-[var(--primary-soft)] hover:bg-[var(--primary)] hover:text-white text-[var(--primary)] text-xs font-semibold transition-all flex items-center gap-1 shrink-0"
+                            title={t("Chuyển lớp học")}
+                          >
+                            <ArrowRightLeft className="w-3.5 h-3.5" />
+                            <span>{t("Chuyển lớp")}</span>
+                          </button>
+<button
                             type="button"
                             onClick={() => setCancelModal({ isOpen: true, classId: b.classId })}
                             className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold transition-colors flex items-center gap-1 shrink-0"
@@ -350,6 +361,14 @@ const MySchedule = () => {
           </div>
         </div>
       </div>
+            <TransferClassModal
+        isOpen={transferModal.isOpen}
+        classId={transferModal.classId}
+        onClose={() => setTransferModal({ isOpen: false, classId: null })}
+        onSuccess={() => {
+          fetchBookings();
+        }}
+      />
       <CancelClassPolicyModal
         isOpen={cancelModal.isOpen}
         classId={cancelModal.classId}

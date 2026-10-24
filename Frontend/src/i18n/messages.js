@@ -3027,7 +3027,25 @@ const supportTranslations = [
   ["This class has a pending request","Lớp học này đang có yêu cầu chờ xử lý"],
   ["You already submitted ticket","Bạn đã gửi đơn"],
   ["If you want to choose a different compensation option, you can withdraw this ticket to submit a new one.","Nếu bạn đổi ý muốn thay đổi phương án bồi hoàn, bạn có thể rút đơn này để gửi lại đơn mới."],
-  ["Template: Close as Duplicate","Mẫu: Đóng do trùng lặp"]
+  ["Template: Close as Duplicate","Mẫu: Đóng do trùng lặp"],
+  ["Transfer Class","Chuyển lớp"],
+  ["Chuyển lớp học","Class Transfer"],
+  ["Đổi sang lớp học tương đương đồng giá và chưa khai giảng","Switch to an equivalent class of the same price before course start"],
+  ["Đang kiểm tra lớp học & lịch đối chiếu...","Checking classes and schedules..."],
+  ["Chuyển lớp học thành công!","Class Transferred Successfully!"],
+  ["Xem lịch tập mới","View New Schedule"],
+  ["Lớp học hiện tại của bạn","Your Current Class"],
+  ["Chưa bắt đầu · Đủ điều kiện chuyển","Not Started · Eligible for Transfer"],
+  ["Chọn lớp học tương đương để chuyển sang","Select an Equivalent Class to Transfer To"],
+  ["Danh sách các lớp đồng giá","List of equivalent-priced classes"],
+  ["chưa khai giảng và không trùng lịch học","not yet started and without schedule conflicts"],
+  ["lớp khả dụng","classes available"],
+  ["Không trùng lịch · Còn","No conflict · Remaining"],
+  ["Đã hết chỗ trống","Fully Booked"],
+  ["Trùng lịch với lớp khác","Conflict with another class"],
+  ["Sẽ chuyển sang:","Will transfer to:"],
+  ["Vui lòng chọn 1 lớp học tương đương để tiếp tục","Please select an equivalent class to continue"],
+  ["Xác nhận chuyển lớp","Confirm Class Transfer"]
 ];
 for (const [en, vi] of supportTranslations) {
   translations[en] = [en, vi];
