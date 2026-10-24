@@ -143,6 +143,25 @@ const getNotificationMeta = (type, title = '', message = '') => {
   }
 };
 
+
+const formatNotificationTitle = (title) => {
+  if (!title) return '';
+  if (title === 'Payment Successful') {
+    return 'Thanh toán thành công / Payment Successful';
+  }
+  return title;
+};
+
+const formatNotificationMessage = (msg) => {
+  if (!msg) return '';
+  const match = msg.match(/^Your invoice (\d+) is complete\.$/i);
+  if (match) {
+    const id = match[1];
+    return `Hóa đơn #${id} đã được thanh toán thành công.\nVui lòng nhấn "Xem hóa đơn" bên dưới để kiểm tra chi tiết giao dịch.`;
+  }
+  return t(msg);
+};
+
 const Notifications = () => {
   useLanguage();
   const navigate = useNavigate();
@@ -499,7 +518,7 @@ const Notifications = () => {
                       <h3 className={`text-sm lg:text-base leading-snug ${
                         isUnread ? 'font-extrabold text-on-surface' : 'font-semibold text-on-surface-variant'
                       }`}>
-                        {notification.title}
+                        {formatNotificationTitle(notification.title)}
                       </h3>
                     </div>
 
@@ -521,14 +540,14 @@ const Notifications = () => {
                   <h3 className={`sm:hidden text-sm leading-snug ${
                     isUnread ? 'font-extrabold text-on-surface' : 'font-semibold text-on-surface-variant'
                   }`}>
-                    {notification.title}
+                    {formatNotificationTitle(notification.title)}
                   </h3>
 
                   {/* Notification Message */}
                   <p className={`text-xs sm:text-sm mt-0.5 leading-relaxed whitespace-pre-line ${
                     isUnread ? 'text-on-surface-variant font-medium' : 'text-on-surface-variant/80'
                   }`}>
-                    {t(notification.message)}
+                    {formatNotificationMessage(notification.message)}
                   </p>
 
                   {/* Actions Bar */}

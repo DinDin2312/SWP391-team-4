@@ -473,7 +473,39 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
                 userCreditRepository.save(c);
             }
         }
-        notificationService.createNotification(invoice.getUser().getEmail(),"Payment Successful","Your invoice "+invoice.getInvoiceId()+" is complete.","PAYMENT");
+        List<String> paidItems = new ArrayList<>();
+        if (!purchased.isEmpty()) {
+            for (var m : purchased) {
+                String pkgName = m.getAPackage() != null ? m.getAPackage().getPackageName() : "Gói hội viên";
+                int duration = m.purchasedDuration() > 0 ? m.purchasedDuration() : 30;
+                paidItems.add("Gói tập: " + pkgName + " (" + duration + " ngày)");
+            }
+        }
+        if (!booked.isEmpty()) {
+            String className = (booked.get(0).getSchedule() != null && booked.get(0).getSchedule().getGymClass() != null)
+                ? booked.get(0).getSchedule().getGymClass().getClassName() : "Khóa học";
+            paidItems.add("Khóa học: " + className + " (" + booked.size() + " buổi)");
+        }
+        String itemsSummary = paidItems.isEmpty() ? "Dịch vụ phòng tập" : String.join(", ", paidItems);
+        String formattedAmount = invoice.getTotalAmount() != null
+                ? String.format("%,d đ", invoice.getTotalAmount().longValue())
+                : "0 đ";
+        String method = (payment != null && payment.getPaymentMethod() != null) ? payment.getPaymentMethod() : "ONLINE";
+
+        String invoiceMsg = String.format(
+            "Hóa đơn #%d đã thanh toán thành công.\n• Dịch vụ: %s\n• Số tiền: %s (%s)\nCảm ơn bạn đã lựa chọn Sports Center!",
+            invoice.getInvoiceId(),
+            itemsSummary,
+            formattedAmount,
+            method
+        );
+
+        notificationService.createNotification(
+            invoice.getUser().getEmail(),
+            "Thanh toán thành công / Payment Successful #" + invoice.getInvoiceId(),
+            invoiceMsg,
+            "PAYMENT"
+        );
         if (!purchased.isEmpty()) {
             for (var m : purchased) {
                 String pkgName = m.getAPackage() != null ? m.getAPackage().getPackageName() : "Gói hội viên";
