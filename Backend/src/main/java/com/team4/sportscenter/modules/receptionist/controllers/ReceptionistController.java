@@ -18,7 +18,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/receptionist")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class ReceptionistController {
 
     private final ReceptionistMemberService memberService;
@@ -155,7 +154,7 @@ public class ReceptionistController {
     public ResponseEntity<?> cancelBookingForMember(@RequestBody CancelClassBookingRequest request) {
         try {
             memberService.cancelBookingForMember(request);
-            return ResponseEntity.ok("Session cancelled successfully. Remaining quota refunded to member's package.");
+            return ResponseEntity.ok("Session cancelled successfully.");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -165,7 +164,7 @@ public class ReceptionistController {
     public ResponseEntity<?> cancelCourseForMember(@RequestBody CancelClassBookingRequest request) {
         try {
             int count = memberService.cancelCourseForMember(request);
-            return ResponseEntity.ok("Cancelled " + count + " upcoming session(s). Quota refunded to member's package.");
+            return ResponseEntity.ok("Cancelled " + count + " upcoming session(s) successfully.");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository("memberPackageRepository")
 public interface PackageRepository extends JpaRepository<Package, Integer> {
+    java.util.List<Package> findBySellingStatus(String sellingStatus);
 }

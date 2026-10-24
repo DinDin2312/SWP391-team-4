@@ -20,4 +20,8 @@ public interface UserMembershipRepository extends JpaRepository<UserMembership, 
 
     @Query("SELECT um FROM UserMembership um JOIN FETCH um.aPackage JOIN FETCH um.user WHERE um.status = 'ACTIVE' AND um.endDate = :targetDate")
     java.util.List<UserMembership> findMembershipsExpiringOn(@Param("targetDate") java.time.LocalDate targetDate);
+
+    java.util.List<UserMembership> findByCheckoutInvoiceId(Integer checkoutInvoiceId);
+
+    boolean existsByUser_UserIdAndStatusAndAPackage_PackageId(Integer userId, String status, Integer packageId);
 }

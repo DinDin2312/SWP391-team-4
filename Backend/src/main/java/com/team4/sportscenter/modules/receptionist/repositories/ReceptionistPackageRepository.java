@@ -8,4 +8,5 @@ import java.util.List;
 @Repository
 public interface ReceptionistPackageRepository extends JpaRepository<Package, Integer> {
     List<Package> findAll();
+    List<Package> findBySellingStatus(String sellingStatus);
 }

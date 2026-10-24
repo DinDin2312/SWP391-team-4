@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   ShoppingCart, Trash2, ArrowRight, CreditCard,
-  Wallet, QrCode, AlertCircle, CheckCircle2
+  Wallet, QrCode, AlertCircle, CheckCircle2, Ticket
 } from 'lucide-react';
 
 const PaymentCart = () => {

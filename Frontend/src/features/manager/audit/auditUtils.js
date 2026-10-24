@@ -1,4 +1,4 @@
-export const actionLabels = { CREATE: 'Created', UPDATE: 'Updated', DELETE: 'Deleted', STATUS_CHANGE: 'Status changed', UPDATE_IMAGE: 'Image updated', REMOVE_IMAGE: 'Image removed', UPDATE_AVATAR: 'Avatar updated', PAYMENT_REVIEW: 'Payment needs review' };
+export const actionLabels = { CREATE: 'Created', UPDATE: 'Updated', DELETE: 'Deleted', STATUS_CHANGE: 'Status changed', UPDATE_IMAGE: 'Image updated', REMOVE_IMAGE: 'Image removed', UPDATE_AVATAR: 'Avatar updated', PAYMENT_REVIEW: 'Payment needs review', CLASS_TRANSFER: 'Class transferred', CANCEL_BOOKING_SUPPORT: 'Session cancelled by reception', CANCEL_COURSE_SUPPORT: 'Course cancelled by reception', CHECK_IN: 'Check-in', CHECK_OUT: 'Check-out' };
 export const entityLabels = { USER: 'Account', SUBJECT: 'Subject', ROOM: 'Room', CLASS: 'Class', SCHEDULE: 'Session', PACKAGE: 'Membership package', PACKAGE_TYPE: 'Package type', INVOICE: 'Invoice' };
 export function entityKey(value = '') { const code = String(value).toUpperCase(); return ({ PACKAGES: 'PACKAGE', SUBJECTS: 'SUBJECT', ROOMS: 'ROOM', CLASSES: 'CLASS', USERS: 'USER' })[code] || code; }
 export function changeFields(log) {

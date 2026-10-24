@@ -5,14 +5,19 @@ import com.team4.sportscenter.modules.auth.repositories.UserRepository;
 import com.team4.sportscenter.modules.coach.repositories.CoachClassRepository;
 import com.team4.sportscenter.modules.member.entities.Booking;
 import com.team4.sportscenter.modules.member.entities.GymClass;
+import com.team4.sportscenter.modules.member.entities.Room;
 import com.team4.sportscenter.modules.member.entities.Schedule;
+import com.team4.sportscenter.modules.member.entities.Subject;
 import com.team4.sportscenter.modules.member.repositories.BookingRepository;
+import com.team4.sportscenter.modules.member.repositories.ScheduleRepository;
 import com.team4.sportscenter.modules.notification.entities.Notification;
 import com.team4.sportscenter.modules.notification.repositories.NotificationRepository;
 import com.team4.sportscenter.modules.support.dtos.request.CreateSupportRequest;
 import com.team4.sportscenter.modules.support.dtos.request.RespondSupportRequest;
 import com.team4.sportscenter.modules.support.dtos.response.CancelClassPreviewResponse;
 import com.team4.sportscenter.modules.support.dtos.response.SupportRequestResponse;
+import com.team4.sportscenter.modules.support.dtos.response.TransferClassOptionResponse;
+import com.team4.sportscenter.modules.support.dtos.response.TransferClassPreviewResponse;
 import com.team4.sportscenter.modules.support.dtos.response.UserCreditResponse;
 import com.team4.sportscenter.modules.support.entities.SupportRequest;
 import com.team4.sportscenter.modules.support.entities.UserCredit;
@@ -26,14 +31,18 @@ import com.team4.sportscenter.modules.support.services.SupportRequestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.SecureRandom;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -48,7 +57,9 @@ public class SupportRequestServiceImpl implements SupportRequestService {
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
     private final CoachClassRepository coachClassRepository;
+    private final ScheduleRepository scheduleRepository;
     private final NotificationRepository notificationRepository;
+    private final JdbcTemplate jdbc;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -225,6 +236,370 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         result.put("creditAmount", creditAmount);
         result.put("expiryDate", expiryDate.toString());
         result.put("message", "Đã hủy lớp thành công và cấp Credit bảo lưu 100% học phí.");
+        return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TransferClassPreviewResponse getTransferClassPreview(Integer classId, String memberEmail) {
+        User user = userRepository.findByEmail(memberEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + memberEmail));
+
+        GymClass currentClass = coachClassRepository.findById(classId)
+                .orElseThrow(() -> new IllegalArgumentException("Class not found: " + classId));
+
+        List<Booking> currentBookings = bookingRepository.findAllBookingsByEmail(memberEmail).stream()
+                .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
+                        && Objects.equals(b.getSchedule().getGymClass().getClassId(), classId)
+                        && !"CANCELLED".equalsIgnoreCase(b.getStatus()))
+                .sorted(Comparator.comparing(b -> b.getSchedule().getStartTime()))
+                .toList();
+
+        if (currentBookings.isEmpty()) {
+            throw new IllegalArgumentException("Bạn chưa đăng ký lớp học này.");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        int totalSessions = currentBookings.size();
+        LocalDateTime firstSessionTime = currentBookings.get(0).getSchedule().getStartTime();
+        boolean hasStarted = firstSessionTime.isBefore(now)
+                || currentBookings.stream().anyMatch(b -> "PRESENT".equalsIgnoreCase(b.getAttendanceStatus())
+                || (b.getSchedule() != null && b.getSchedule().getStartTime().isBefore(now)));
+
+        DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("MMM dd, HH:mm");
+        DateTimeFormatter conflictFmt = DateTimeFormatter.ofPattern("dd/MM HH:mm");
+
+        Set<DayOfWeek> currentDays = currentBookings.stream()
+                .map(b -> b.getSchedule().getStartTime().getDayOfWeek())
+                .collect(Collectors.toSet());
+        String currentPattern = currentDays.stream()
+                .sorted()
+                .map(d -> d.getDisplayName(TextStyle.SHORT, Locale.ENGLISH))
+                .collect(Collectors.joining(", "));
+        List<String> currentDates = currentBookings.stream()
+                .map(b -> b.getSchedule().getStartTime().format(dateFmt))
+                .toList();
+
+        BigDecimal targetPrice = currentClass.getPrice() != null ? currentClass.getPrice() : BigDecimal.ZERO;
+
+        if (hasStarted) {
+            return TransferClassPreviewResponse.builder()
+                    .classId(classId)
+                    .subjectId(currentClass.getSubject() != null ? currentClass.getSubject().getSubjectId() : null)
+                    .subjectName(currentClass.getSubject() != null ? currentClass.getSubject().getSubjectName() : null)
+                    .className(currentClass.getClassName())
+                    .coachName(currentClass.getCoach() != null ? currentClass.getCoach().getFullName() : null)
+                    .roomName(currentClass.getRoom() != null ? currentClass.getRoom().getRoomName() : null)
+                    .classPrice(targetPrice)
+                    .totalSessions(totalSessions)
+                    .firstSessionTime(firstSessionTime)
+                    .schedulePattern(currentPattern)
+                    .upcomingDates(currentDates)
+                    .hasStarted(true)
+                    .canTransfer(false)
+                    .message("Khóa học đã bắt đầu hoặc đã có buổi học diễn ra. Chỉ được chuyển lớp trước ngày khai giảng. Nếu cần bảo lưu, vui lòng gửi phiếu hỗ trợ.")
+                    .equivalentClasses(Collections.emptyList())
+                    .build();
+        }
+
+        // Find other candidate classes
+        List<Schedule> allAvailableSchedules = scheduleRepository.findAvailableSchedules(now);
+        Map<GymClass, List<Schedule>> classSchedules = allAvailableSchedules.stream()
+                .collect(Collectors.groupingBy(Schedule::getGymClass, LinkedHashMap::new, Collectors.toList()));
+
+        Set<Integer> myConfirmedClassIds = bookingRepository.findConfirmedClassIdsByEmail(memberEmail);
+        Set<Integer> myPendingClassIds = bookingRepository.findPendingClassIdsByEmail(memberEmail);
+
+        List<Booking> otherActiveBookings = bookingRepository.findAllBookingsByEmail(memberEmail).stream()
+                .filter(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus()))
+                .filter(b -> b.getSchedule() != null && !"CANCELLED".equalsIgnoreCase(b.getSchedule().getStatus()))
+                .filter(b -> b.getSchedule().getGymClass() != null && !Objects.equals(b.getSchedule().getGymClass().getClassId(), classId))
+                .toList();
+
+        List<TransferClassOptionResponse> options = new ArrayList<>();
+
+        for (Map.Entry<GymClass, List<Schedule>> entry : classSchedules.entrySet()) {
+            GymClass candidate = entry.getKey();
+            List<Schedule> scheds = entry.getValue();
+
+            if (Objects.equals(candidate.getClassId(), classId)) continue;
+            if (!"ACTIVE".equalsIgnoreCase(candidate.getStatus())) continue;
+
+            // Must be same price
+            BigDecimal candPrice = candidate.getPrice() != null ? candidate.getPrice() : BigDecimal.ZERO;
+            if (candPrice.compareTo(targetPrice) != 0) continue;
+
+            // Member must not already be booked or pending
+            if (myConfirmedClassIds.contains(candidate.getClassId()) || myPendingClassIds.contains(candidate.getClassId())) {
+                continue;
+            }
+
+            scheds.sort(Comparator.comparing(Schedule::getStartTime));
+            LocalDateTime candFirstSession = scheds.get(0).getStartTime();
+
+            // Candidate class must not have started
+            if (candFirstSession.isBefore(now)) continue;
+
+            int maxBooked = 0;
+            for (Schedule s : scheds) {
+                int booked = bookingRepository.countBookedSlots(s.getScheduleId());
+                if (booked > maxBooked) maxBooked = booked;
+            }
+
+            boolean isFull = maxBooked >= (candidate.getMaxSlots() != null ? candidate.getMaxSlots() : 0);
+
+            // Schedule conflict check against member's other active classes
+            boolean hasConflict = false;
+            String conflictDetail = null;
+
+            for (Schedule candSched : scheds) {
+                for (Booking otherB : otherActiveBookings) {
+                    Schedule otherSched = otherB.getSchedule();
+                    if (candSched.getStartTime().isBefore(otherSched.getEndTime())
+                            && otherSched.getStartTime().isBefore(candSched.getEndTime())) {
+                        hasConflict = true;
+                        conflictDetail = "Trùng với lớp '" + otherSched.getGymClass().getClassName()
+                                + "' (" + candSched.getStartTime().format(conflictFmt) + ")";
+                        break;
+                    }
+                }
+                if (hasConflict) break;
+            }
+
+            Set<DayOfWeek> candDays = scheds.stream()
+                    .map(s -> s.getStartTime().getDayOfWeek())
+                    .collect(Collectors.toSet());
+            String candPattern = candDays.stream()
+                    .sorted()
+                    .map(d -> d.getDisplayName(TextStyle.SHORT, Locale.ENGLISH))
+                    .collect(Collectors.joining(", "));
+            List<String> candDates = scheds.stream()
+                    .map(s -> s.getStartTime().format(dateFmt))
+                    .toList();
+
+            options.add(TransferClassOptionResponse.builder()
+                    .classId(candidate.getClassId())
+                    .subjectId(candidate.getSubject() != null ? candidate.getSubject().getSubjectId() : null)
+                    .subjectName(candidate.getSubject() != null ? candidate.getSubject().getSubjectName() : null)
+                    .className(candidate.getClassName())
+                    .coachName(candidate.getCoach() != null ? candidate.getCoach().getFullName() : null)
+                    .roomName(candidate.getRoom() != null ? candidate.getRoom().getRoomName() : null)
+                    .price(candPrice)
+                    .maxSlots(candidate.getMaxSlots())
+                    .bookedSlots(maxBooked)
+                    .totalSessions(scheds.size())
+                    .nextSessionTime(candFirstSession)
+                    .schedulePattern(candPattern)
+                    .upcomingDates(candDates)
+                    .hasConflict(hasConflict)
+                    .conflictDetail(conflictDetail)
+                    .isFull(isFull)
+                    .canSelect(!isFull && !hasConflict)
+                    .build());
+        }
+
+        // Sort: selectable first, then by nextSessionTime
+        options.sort(Comparator.comparing(TransferClassOptionResponse::isCanSelect).reversed()
+                .thenComparing(TransferClassOptionResponse::getNextSessionTime));
+
+        String message = options.isEmpty()
+                ? "Hiện tại không có lớp học nào cùng mức học phí (" + targetPrice.longValue() + "đ) chưa khai giảng để chuyển sang."
+                : "Tìm thấy " + options.size() + " lớp học tương đương đồng giá (" + targetPrice.longValue() + "đ) chưa khai giảng.";
+
+        return TransferClassPreviewResponse.builder()
+                .classId(classId)
+                .subjectId(currentClass.getSubject() != null ? currentClass.getSubject().getSubjectId() : null)
+                .subjectName(currentClass.getSubject() != null ? currentClass.getSubject().getSubjectName() : null)
+                .className(currentClass.getClassName())
+                .coachName(currentClass.getCoach() != null ? currentClass.getCoach().getFullName() : null)
+                .roomName(currentClass.getRoom() != null ? currentClass.getRoom().getRoomName() : null)
+                .classPrice(targetPrice)
+                .totalSessions(totalSessions)
+                .firstSessionTime(firstSessionTime)
+                .schedulePattern(currentPattern)
+                .upcomingDates(currentDates)
+                .hasStarted(false)
+                .canTransfer(true)
+                .message(message)
+                .equivalentClasses(options)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> transferClassDirectly(Integer fromClassId, Integer toClassId, String memberEmail) {
+        bookingRepository.lockOperations();
+
+        if (Objects.equals(fromClassId, toClassId)) {
+            throw new IllegalArgumentException("Không thể chuyển sang cùng một lớp học.");
+        }
+
+        User user = userRepository.findByEmail(memberEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + memberEmail));
+
+        GymClass fromClass = coachClassRepository.findById(fromClassId)
+                .orElseThrow(() -> new IllegalArgumentException("Class not found: " + fromClassId));
+
+        GymClass toClass = coachClassRepository.findById(toClassId)
+                .orElseThrow(() -> new IllegalArgumentException("Class not found: " + toClassId));
+
+        // 1. Verify fromClass eligibility
+        List<Booking> fromBookings = bookingRepository.findAllBookingsByEmail(memberEmail).stream()
+                .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
+                        && Objects.equals(b.getSchedule().getGymClass().getClassId(), fromClassId)
+                        && !"CANCELLED".equalsIgnoreCase(b.getStatus()))
+                .sorted(Comparator.comparing(b -> b.getSchedule().getStartTime()))
+                .toList();
+
+        if (fromBookings.isEmpty()) {
+            throw new IllegalStateException("Bạn chưa đăng ký lớp học này.");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime fromFirstSession = fromBookings.get(0).getSchedule().getStartTime();
+        boolean fromStarted = fromFirstSession.isBefore(now)
+                || fromBookings.stream().anyMatch(b -> "PRESENT".equalsIgnoreCase(b.getAttendanceStatus())
+                || (b.getSchedule() != null && b.getSchedule().getStartTime().isBefore(now)));
+
+        if (fromStarted) {
+            throw new IllegalStateException("Không thể chuyển lớp: Khóa học hiện tại đã bắt đầu hoặc đã có buổi học diễn ra.");
+        }
+
+        // 2. Verify toClass eligibility
+        if (!"ACTIVE".equalsIgnoreCase(toClass.getStatus())) {
+            throw new IllegalStateException("Không thể chuyển sang lớp học đang ngừng hoạt động.");
+        }
+
+        BigDecimal fromPrice = fromClass.getPrice() != null ? fromClass.getPrice() : BigDecimal.ZERO;
+        BigDecimal toPrice = toClass.getPrice() != null ? toClass.getPrice() : BigDecimal.ZERO;
+        if (fromPrice.compareTo(toPrice) != 0) {
+            throw new IllegalArgumentException("Không thể chuyển lớp: Học phí lớp mới (" + toPrice.longValue()
+                    + "đ) không tương đương lớp cũ (" + fromPrice.longValue() + "đ).");
+        }
+
+        if (bookingRepository.existsConfirmedByEmailAndClassId(memberEmail, toClassId)
+                || bookingRepository.existsPendingByEmailAndClassId(memberEmail, toClassId)) {
+            throw new IllegalStateException("Bạn đã đăng ký hoặc đang giữ chỗ lớp học mục tiêu.");
+        }
+
+        List<Schedule> toSchedules = scheduleRepository.findAvailableSchedulesByClassId(toClassId, now);
+        if (toSchedules.isEmpty()) {
+            throw new IllegalStateException("Lớp học mục tiêu không có lịch học tương lai khả dụng.");
+        }
+
+        toSchedules.sort(Comparator.comparing(Schedule::getStartTime));
+        if (toSchedules.get(0).getStartTime().isBefore(now)) {
+            throw new IllegalStateException("Lớp học mục tiêu đã bắt đầu, không thể chuyển vào.");
+        }
+
+        int maxBooked = 0;
+        for (Schedule s : toSchedules) {
+            int booked = bookingRepository.countBookedSlots(s.getScheduleId());
+            if (booked > maxBooked) maxBooked = booked;
+        }
+
+        if (maxBooked >= (toClass.getMaxSlots() != null ? toClass.getMaxSlots() : 0)) {
+            throw new IllegalStateException("Lớp học mục tiêu đã hết chỗ trống (" + maxBooked + "/" + toClass.getMaxSlots() + ").");
+        }
+
+        // Check schedule conflict against other active bookings (excluding fromClassId)
+        List<Booking> otherActiveBookings = bookingRepository.findAllBookingsByEmail(memberEmail).stream()
+                .filter(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus()))
+                .filter(b -> b.getSchedule() != null && !"CANCELLED".equalsIgnoreCase(b.getSchedule().getStatus()))
+                .filter(b -> b.getSchedule().getGymClass() != null && !Objects.equals(b.getSchedule().getGymClass().getClassId(), fromClassId))
+                .toList();
+
+        DateTimeFormatter conflictFmt = DateTimeFormatter.ofPattern("dd/MM HH:mm");
+        for (Schedule newSched : toSchedules) {
+            for (Booking otherB : otherActiveBookings) {
+                Schedule otherSched = otherB.getSchedule();
+                if (newSched.getStartTime().isBefore(otherSched.getEndTime())
+                        && otherSched.getStartTime().isBefore(newSched.getEndTime())) {
+                    throw new IllegalStateException("Xung đột lịch học! Buổi học lúc " + newSched.getStartTime().format(conflictFmt)
+                            + " bị trùng với lớp '" + otherSched.getGymClass().getClassName() + "'.");
+                }
+            }
+        }
+
+        // 3. Perform atomic transfer
+        for (Booking b : fromBookings) {
+            b.setStatus("CANCELLED");
+            bookingRepository.save(b);
+        }
+
+        LocalDateTime bookingNow = LocalDateTime.now();
+        List<Booking> newBookings = new ArrayList<>();
+        for (Schedule s : toSchedules) {
+            Booking b = new Booking();
+            b.setUser(user);
+            b.setSchedule(s);
+            b.setStatus("CONFIRMED");
+            b.setBookingTime(bookingNow);
+            b.setAttendanceStatus("NOT_YET");
+            newBookings.add(b);
+        }
+        bookingRepository.saveAllAndFlush(newBookings);
+
+        // 4. Log 1: AUDIT_LOGS
+        String changesJson = String.format("{\"fromClassId\":%d,\"fromClassName\":\"%s\",\"toClassId\":%d,\"toClassName\":\"%s\",\"price\":%s,\"transferredAt\":\"%s\"}",
+                fromClassId, fromClass.getClassName().replace("\"", "\\\""),
+                toClassId, toClass.getClassName().replace("\"", "\\\""),
+                toPrice.toPlainString(),
+                LocalDateTime.now());
+        jdbc.update("INSERT INTO AUDIT_LOGS (actor_email, action, entity_type, entity_id, details, changes_json, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())",
+                memberEmail, "CLASS_TRANSFER", "CLASS", String.valueOf(toClassId),
+                "Hội viên tự chuyển lớp từ '" + fromClass.getClassName() + "' sang '" + toClass.getClassName() + "'",
+                changesJson);
+
+        // 5. Log 2: SUPPORT_REQUESTS (Auto-approved history)
+        SupportRequest transferTicket = SupportRequest.builder()
+                .user(user)
+                .gymClass(toClass)
+                .category(SupportCategory.SCHEDULE_SUPPORT)
+                .preferredResolution("APPROVE_GENERAL")
+                .title("Chuyển lớp tự động: " + fromClass.getClassName() + " ➔ " + toClass.getClassName())
+                .content("Học viên đã tự chuyển lớp thành công trước khai giảng từ lớp '"
+                        + fromClass.getClassName() + "' sang lớp '" + toClass.getClassName() + "' (học phí tương đương).")
+                .status(SupportStatus.APPROVED)
+                .priority(SupportPriority.NORMAL)
+                .responseNote("Hệ thống tự động phê duyệt chuyển lớp từ " + fromClass.getClassName() + " sang " + toClass.getClassName() + ".")
+                .respondedAt(LocalDateTime.now())
+                .build();
+        SupportRequest savedTicket = supportRequestRepository.save(transferTicket);
+
+        // Auto-close any pending tickets for the old class
+        List<SupportRequest> oldTickets = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
+                .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), fromClassId))
+                .filter(r -> r.getCategory() == SupportCategory.CLASS_CANCELLATION || r.getCategory() == SupportCategory.REFUND_REQUEST || r.getCategory() == SupportCategory.SCHEDULE_SUPPORT)
+                .filter(r -> r.getStatus() == SupportStatus.PENDING || r.getStatus() == SupportStatus.IN_PROGRESS || r.getStatus() == SupportStatus.ESCALATED)
+                .toList();
+        for (SupportRequest pt : oldTickets) {
+            pt.setStatus(SupportStatus.RESOLVED);
+            pt.setResponseNote("Hệ thống tự động đóng đơn do học viên đã chuyển sang lớp: " + toClass.getClassName() + " (Đơn #" + savedTicket.getRequestId() + ").");
+            pt.setRespondedAt(LocalDateTime.now());
+            supportRequestRepository.save(pt);
+        }
+
+        // 6. Log 3: NOTIFICATIONS
+        Notification notif = Notification.builder()
+                .user(user)
+                .title("Chuyển lớp học thành công / Class Transferred")
+                .message("Bạn đã chuyển thành công từ lớp '" + fromClass.getClassName() + "' sang lớp '"
+                        + toClass.getClassName() + "'. Lịch tập mới đã được cập nhật vào My Schedule.")
+                .type("BOOKING")
+                .isRead(false)
+                .build();
+        notificationRepository.save(notif);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", true);
+        result.put("fromClassId", fromClassId);
+        result.put("fromClassName", fromClass.getClassName());
+        result.put("toClassId", toClassId);
+        result.put("toClassName", toClass.getClassName());
+        result.put("totalSessions", toSchedules.size());
+        result.put("requestId", savedTicket.getRequestId());
+        result.put("message", "Chuyển lớp thành công sang " + toClass.getClassName() + "!");
         return result;
     }
 
@@ -576,8 +951,7 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + memberEmail));
 
         // Auto-heal: Ensure approved requests that intended to grant credit have their UserCredit generated
-        List<SupportRequest> approvedRequests = supportRequestRepository.findAll().stream()
-                .filter(r -> r.getUser() != null && Objects.equals(r.getUser().getUserId(), user.getUserId()))
+        List<SupportRequest> approvedRequests = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
                 .filter(r -> r.getStatus() == SupportStatus.APPROVED || r.getStatus() == SupportStatus.RESOLVED)
                 .filter(r -> r.getGymClass() != null)
                 .filter(r -> r.getCategory() == SupportCategory.CLASS_CANCELLATION || r.getCategory() == SupportCategory.REFUND_REQUEST || "ISSUE_CREDIT".equalsIgnoreCase(r.getPreferredResolution()) || "GYM_PASS".equalsIgnoreCase(r.getPreferredResolution()))

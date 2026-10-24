@@ -3,6 +3,7 @@ package com.team4.sportscenter.modules.support.controllers;
 import com.team4.sportscenter.modules.support.dtos.request.CreateSupportRequest;
 import com.team4.sportscenter.modules.support.dtos.response.CancelClassPreviewResponse;
 import com.team4.sportscenter.modules.support.dtos.response.SupportRequestResponse;
+import com.team4.sportscenter.modules.support.dtos.response.TransferClassPreviewResponse;
 import com.team4.sportscenter.modules.support.dtos.response.UserCreditResponse;
 import com.team4.sportscenter.modules.support.services.SupportRequestService;
 import jakarta.validation.Valid;
@@ -19,7 +20,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/member/support")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @PreAuthorize("hasAnyRole('MEMBER', 'Member')")
 public class MemberSupportController {
 
@@ -37,6 +37,21 @@ public class MemberSupportController {
             @PathVariable Integer classId,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(supportRequestService.cancelClassDirectly(classId, userDetails.getUsername()));
+    }
+
+    @GetMapping("/classes/{classId}/transfer-preview")
+    public ResponseEntity<TransferClassPreviewResponse> getTransferClassPreview(
+            @PathVariable Integer classId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(supportRequestService.getTransferClassPreview(classId, userDetails.getUsername()));
+    }
+
+    @PostMapping("/classes/{fromClassId}/transfer-to/{toClassId}")
+    public ResponseEntity<Map<String, Object>> transferClassDirectly(
+            @PathVariable Integer fromClassId,
+            @PathVariable Integer toClassId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(supportRequestService.transferClassDirectly(fromClassId, toClassId, userDetails.getUsername()));
     }
 
     @PostMapping("/requests")
