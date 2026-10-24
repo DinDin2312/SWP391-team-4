@@ -3045,7 +3045,31 @@ const supportTranslations = [
   ["Trùng lịch với lớp khác","Conflict with another class"],
   ["Sẽ chuyển sang:","Will transfer to:"],
   ["Vui lòng chọn 1 lớp học tương đương để tiếp tục","Please select an equivalent class to continue"],
-  ["Xác nhận chuyển lớp","Confirm Class Transfer"]
+  ["Xác nhận chuyển lớp","Confirm Class Transfer"],
+  ["Classes & Schedule","Lịch & Lớp học"],
+  ["Coach & Workouts","Huấn luyện viên"],
+  ["Packages & Billing","Gói & Thanh toán"],
+  ["Support Desk","Hỗ trợ học viên"],
+  ["System Alerts","Hệ thống & Cảnh báo"],
+  ["Unread only","Chỉ chưa đọc"],
+  ["Search notifications...","Tìm kiếm thông báo..."],
+  ["No notifications found in this category","Không có thông báo nào trong mục này"],
+  ["Try adjusting your keyword filter or show read notifications.","Hãy thử thay đổi từ khóa tìm kiếm hoặc bỏ chọn lọc chỉ chưa đọc."],
+  ["You don't have any notifications under this tab.","Bạn chưa có thông báo nào thuộc phân mục này."],
+  ["Clear filters","Xóa bộ lọc"],
+  ["Workout Plan","Giáo án rèn luyện"],
+  ["Membership Package","Gói hội viên"],
+  ["Member Support","Hỗ trợ học viên"],
+  ["Support Revoked","Thu hồi hỗ trợ"],
+  ["Urgent","Khẩn cấp"],
+  ["Announcement","Thông báo chung"],
+  ["System","Hệ thống"],
+  ["View Schedule","Xem lịch tập"],
+  ["View Dashboard","Xem tổng quan"],
+  ["View Workout Plan","Xem giáo án"],
+  ["View Invoices","Xem hóa đơn"],
+  ["View Packages","Xem gói tập"],
+  ["View Ticket","Xem yêu cầu"]
 ];
 for (const [en, vi] of supportTranslations) {
   translations[en] = [en, vi];
