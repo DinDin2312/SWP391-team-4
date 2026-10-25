@@ -83,6 +83,18 @@ function StaffPage({ data, filters, setFilters, reload, openModal, selectPage, c
     finally { setPendingId(null); }
   };
   const requestReset = (user) => setConfirmation({ type: 'reset', user });
+  const requestSingleDelete = (user) => {
+    if (protectedIds.has(user.userId)) { setActionError(managerEn.staff.protection.selfOrLastManager); return; }
+    setConfirmation({ type: 'delete-single', user });
+  };
+  const deleteSingle = async () => {
+    const user = confirmation?.user;
+    if (!user) return;
+    setPendingId(user.userId); setActionError('');
+    try { await managerService.deleteUser(user.userId); notify(`${user.fullName || user.email} deleted.`); setConfirmation(null); reload(); }
+    catch (err) { setActionError(apiError(err)); }
+    finally { setPendingId(null); }
+  };
   const requestDelete = () => {
     if (hasProtectedTarget(selectedUsers)) { setActionError(managerEn.staff.protection.selfOrLastManager); return; }
     setConfirmation({ type: 'delete' });
@@ -102,10 +114,11 @@ function StaffPage({ data, filters, setFilters, reload, openModal, selectPage, c
       <output className="manager-result-count" aria-live="polite">{managerEn.staff.filters.resultCount(visibleUsers.length)}</output>
     </div>
     <StaffBulkActions count={selected.size} disabled={pendingId !== null} onLock={requestBulkLock} onExport={() => { downloadStaffCsv(selectedUsers, managerEn.staff.bulk.csvFile); notify(managerEn.staff.feedback.exported(selectedUsers.length)); }} onDelete={requestDelete} />
-    <StaffTable users={visibleUsers} selected={selected} setSelected={setSelected} pending={pendingId !== null} protectedIds={protectedIds} onDetails={setSelectedUser} onEdit={(item) => openModal({ type: 'user', item })} onResetPassword={requestReset} onToggleLock={requestToggleLock} onViewLogs={() => selectPage('audit')} onRowClick={setSelectedUser} />
+    <StaffTable users={visibleUsers} selected={selected} setSelected={setSelected} pending={pendingId !== null} protectedIds={protectedIds} onDetails={setSelectedUser} onEdit={(item) => openModal({ type: 'user', item })} onResetPassword={requestReset} onToggleLock={requestToggleLock} onViewLogs={() => selectPage('audit')} onRowClick={setSelectedUser} onDelete={requestSingleDelete} />
     <StaffDrawer user={selectedUser} onClose={() => setSelectedUser(null)} onEdit={(item) => { setSelectedUser(null); openModal({ type: 'user', item }); }} onResetPassword={requestReset} onToggleLock={requestToggleLock} onViewLogs={() => { setSelectedUser(null); selectPage('audit'); }} lockDisabled={selectedUser ? protectedIds.has(selectedUser.userId) : false} />
     {lockTargets.length > 0 && <LockAccountModal users={lockTargets} busy={pendingId !== null} onClose={() => setLockTargets([])} onConfirm={confirmLock} />}
     <ConfirmDialog open={confirmation?.type === 'reset'} title={t("Reset password?")} message={t("You will be asked to set a new password for {0}.",[confirmation?.user?.fullName || 'this account'])} confirmLabel="Continue" tone="warning" busy={pendingId !== null} onClose={() => setConfirmation(null)} onConfirm={() => { const item = confirmation.user; setConfirmation(null); openModal({ type: 'user', item, focusPassword: true }); }} />
+    <ConfirmDialog open={confirmation?.type === 'delete-single'} title={t("Delete account?")} message={t("Permanently delete account {0} ({1}). This cannot be undone.", [confirmation?.user?.fullName || '', confirmation?.user?.email || ''])} confirmLabel={t("Delete")} tone="danger" busy={pendingId !== null} onClose={() => setConfirmation(null)} onConfirm={deleteSingle} />
     <ConfirmDialog open={confirmation?.type === 'delete'} title={t("Delete selected accounts?")} message={t("Permanently delete {0} selected account{1}. This cannot be undone.",[selectedUsers.length,selectedUsers.length === 1 ? '' : 's'])} confirmLabel="Delete" busy={pendingId !== null} onClose={() => setConfirmation(null)} onConfirm={deleteSelected} />
   </div>;
 }

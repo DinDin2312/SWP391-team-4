@@ -1,23 +1,47 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
+import { setLanguage } from '../../../i18n/languageStore';
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
-import { RefreshCw, Check, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ArrowLeft, 
+  ArrowRight, 
+  RefreshCw, 
+  Check, 
+  X, 
+  Mail, 
+  Dumbbell, 
+  Globe, 
+  Clock, 
+  ShieldCheck, 
+  Edit3 
+} from 'lucide-react';
 
 export default function OTPVerification() {
-  useLanguage();
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [loading, setLoading] = useState(false);
-  const [toastMessage, setToastMessage] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes = 300 seconds
-
-  const inputRefs = useRef([]);
+  const currentLang = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Get email passed from registration page (or use default if accessed directly)
-  const email = location.state?.email || 'alex@nexus.com';
+  // Retrieve email from route state or fallback to sessionStorage
+  const initialEmail = location.state?.email || sessionStorage.getItem('nexus_pending_email') || '';
+  const [email, setEmail] = useState(initialEmail);
+  const [isEditingEmail, setIsEditingEmail] = useState(!initialEmail);
+  const [tempEmail, setTempEmail] = useState(initialEmail);
 
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  // 5 minutes total OTP validity
+  const [timeLeft, setTimeLeft] = useState(300);
+  // 60 seconds cooldown for resend button
+  const [resendCooldown, setResendCooldown] = useState(60);
+
+  const inputRefs = useRef([]);
+
+  // Timer for OTP validity
   useEffect(() => {
     if (timeLeft <= 0) return;
     const timerId = setInterval(() => {
@@ -26,12 +50,68 @@ export default function OTPVerification() {
     return () => clearInterval(timerId);
   }, [timeLeft]);
 
+  // Timer for Resend button cooldown
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timerId = setInterval(() => {
+      setResendCooldown(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(timerId);
+  }, [resendCooldown]);
+
+  // Focus first input box on initial load
+  useEffect(() => {
+    if (inputRefs.current[0] && !isEditingEmail) {
+      inputRefs.current[0].focus();
+    }
+  }, [isEditingEmail]);
+
+  const toggleLanguage = () => {
+    setLanguage(currentLang === 'en' ? 'vi' : 'en');
+  };
+
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
   };
 
+  const handleOtpChange = (e, index) => {
+    let val = e.target.value.replace(/\D/g, '');
+    if (!val) {
+      const newOtp = [...otp];
+      newOtp[index] = '';
+      setOtp(newOtp);
+      return;
+    }
+
+    // Always take the last digit entered
+    val = val.slice(-1);
+    const newOtp = [...otp];
+    newOtp[index] = val;
+    setOtp(newOtp);
+
+    // Auto advance to next box
+    if (val !== '' && index < 5 && inputRefs.current[index + 1]) {
+      inputRefs.current[index + 1].focus();
+    }
+  };
+
+  const handleKeyDown = (e, index) => {
+    if (e.key === 'Backspace') {
+      if (otp[index] === '' && index > 0 && inputRefs.current[index - 1]) {
+        inputRefs.current[index - 1].focus();
+      } else {
+        const newOtp = [...otp];
+        newOtp[index] = '';
+        setOtp(newOtp);
+      }
+    } else if (e.key === 'ArrowLeft' && index > 0 && inputRefs.current[index - 1]) {
+      inputRefs.current[index - 1].focus();
+    } else if (e.key === 'ArrowRight' && index < 5 && inputRefs.current[index + 1]) {
+      inputRefs.current[index + 1].focus();
+    }
+  };
 
   const handlePaste = (e) => {
     e.preventDefault();
@@ -42,66 +122,50 @@ export default function OTPVerification() {
         newOtp[i] = char;
       });
       setOtp(newOtp);
-      const targetInput = e.target.parentNode.children[Math.min(pastedData.length, 5)];
-      if (targetInput) targetInput.focus();
+
+      const nextFocusIndex = Math.min(pastedData.length, 5);
+      if (inputRefs.current[nextFocusIndex]) {
+        inputRefs.current[nextFocusIndex].focus();
+      }
     }
   };
-
 
   const handleResend = async () => {
-    if (timeLeft > 0) return; // Prevent resend if timer hasn't expired (5 minutes)
-    try {
-      setLoading(true);
-      await authService.resendOtp(email);
-      setTimeLeft(300); // Reset timer to 5 minutes
-      setOtp(['', '', '', '', '', '']); // Clear input boxes
-      setToastMessage({ type: 'success', text: t('A new OTP code has been sent to your email.') });
+    if (resendCooldown > 0 || resending) return;
+    if (!email) {
+      setToastMessage({ type: 'error', text: t('Please enter a valid email address.') });
       setTimeout(() => setToastMessage(null), 3000);
-    } catch (err) {
-      setToastMessage({ type: 'error', text: err.response?.data?.message || 'Failed to resend code.' });
-      setTimeout(() => setToastMessage(null), 3000);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleChange = (e, index) => {
-    let val = e.target.value.replace(/\D/g, '');
-    if (!val) {
-      const newOtp = [...otp];
-      newOtp[index] = '';
-      setOtp(newOtp);
       return;
     }
 
-    // Get the last typed digit to override telex composition
-    val = val.slice(-1);
+    try {
+      setResending(true);
+      await authService.resendOtp(email);
+      setTimeLeft(300); // Reset OTP expiration to 5 mins
+      setResendCooldown(60); // Reset cooldown to 60s
+      setOtp(['', '', '', '', '', '']); // Clear input boxes
+      if (inputRefs.current[0]) inputRefs.current[0].focus();
 
-    const newOtp = [...otp];
-    newOtp[index] = val;
-    setOtp(newOtp);
-
-    // Focus next
-    if (val !== '' && e.target.nextElementSibling) {
-      e.target.nextElementSibling.focus();
-    }
-  };
-
-  const handleKeyDown = (e, index) => {
-    // Press Backspace to go to the previous input
-    if (e.key === 'Backspace') {
-      if (otp[index] === '' && e.target.previousSibling) {
-        e.target.previousSibling.focus();
-      } else {
-        const newOtp = [...otp];
-        newOtp[index] = '';
-        setOtp(newOtp);
-      }
+      setToastMessage({ type: 'success', text: t('A new OTP code has been sent to your email.') });
+      setTimeout(() => setToastMessage(null), 3500);
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.message || err.response?.data || t('Failed to resend code.');
+      setToastMessage({ type: 'error', text: typeof msg === 'string' ? msg : t('Failed to resend code.') });
+      setTimeout(() => setToastMessage(null), 4000);
+    } finally {
+      setResending(false);
     }
   };
 
   const handleVerify = async (e) => {
     e.preventDefault();
+    if (!email) {
+      setToastMessage({ type: 'error', text: t('Please provide an email address.') });
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
     const otpCode = otp.join('');
     if (otpCode.length < 6) {
       setToastMessage({ type: 'error', text: t('Please enter all 6 digits of the OTP code!') });
@@ -111,207 +175,295 @@ export default function OTPVerification() {
 
     setLoading(true);
     try {
-      // Call Verify OTP API
-      const data = await authService.verifyOtp(email, otpCode);
+      const res = await authService.verifyOtp(email, otpCode);
+      const successMsg = res?.data?.message || res?.message || t('Verification successful! Your account has been activated.');
+      setToastMessage({ type: 'success', text: successMsg });
 
-      setToastMessage({ type: 'success', text: data?.message || 'Verification successful! Your account has been activated.' });
-      setLoading(false);
+      // Clean up backup storage
+      sessionStorage.removeItem('nexus_pending_email');
+
       setTimeout(() => {
         navigate('/login');
-      }, 2000);
-
+      }, 1500);
     } catch (error) {
-      setToastMessage({ type: 'error', text: error.response?.data?.message || 'Invalid OTP code!' });
+      console.error(error);
+      const errMsg = error.response?.data?.message || error.response?.data || t('Invalid OTP code!');
+      setToastMessage({ type: 'error', text: typeof errMsg === 'string' ? errMsg : t('Invalid OTP code!') });
+      setTimeout(() => setToastMessage(null), 4000);
+    } finally {
       setLoading(false);
-      setTimeout(() => setToastMessage(null), 3000);
     }
   };
 
+  const handleSaveEmail = (e) => {
+    e.preventDefault();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(tempEmail)) {
+      setToastMessage({ type: 'error', text: t('Please enter a valid email address.') });
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+    setEmail(tempEmail);
+    sessionStorage.setItem('nexus_pending_email', tempEmail);
+    setIsEditingEmail(false);
+    // Trigger resend to the new email
+    setResendCooldown(0);
+  };
+
   return (
-    <div className="h-full bg-[var(--surface)] text-[var(--text)] font-sans antialiased flex flex-col justify-between overflow-x-hidden min-h-screen">
-      <main className="min-h-screen w-full flex flex-col lg:flex-row relative">
+    <motion.main 
+      className="relative w-full min-h-screen overflow-x-hidden overflow-y-auto select-none bg-slate-100 flex items-center justify-center p-4 sm:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.35 }}
+    >
+      {/* 1. BRIGHT DAYLIGHT ATHLETIC STATIC BACKGROUND */}
+      <div className="fixed inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <img
+          src="/images/register-static-bg.jpg"
+          alt="Nexus Athletic Track"
+          className="w-full h-full object-cover object-center filter contrast-[1.02] saturate-[1.08] brightness-[0.98]"
+        />
 
-        <section className="auth-hero relative w-full lg:w-1/2 min-h-[520px] lg:min-h-screen flex flex-col justify-between p-8 sm:p-12 lg:p-16 overflow-hidden select-none border-b lg:border-b-0 lg:border-r border-[var(--border)]">
-          <img alt="Nexus Gym Facility" className="absolute inset-0 w-full h-full object-cover object-center transform scale-105 filter brightness-90 contrast-110"
-               src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop" />
-          <div className="absolute inset-0 auth-hero-shade"></div>
+        {/* Airy daylight gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/45 via-slate-950/20 to-white/10" />
+        <div className="absolute inset-0 bg-sky-400/[0.04] mix-blend-overlay" />
+      </div>
 
-          <header className="relative z-10 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--primary-hover)] to-[var(--primary-hover)] flex items-center justify-center shadow-[var(--shadow)] border border-[var(--primary-soft)]">
-                <svg aria-hidden="true" className="w-5 h-5 text-[var(--hero-text)]" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-                </svg>
+      {/* 2. TOP BAR: Back to Register / Back to Sign In Button */}
+      <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-30">
+        <button 
+          onClick={() => navigate('/register')} 
+          className="flex items-center gap-2 text-slate-800 hover:text-slate-950 bg-white/75 hover:bg-white/95 backdrop-blur-xl px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 border border-white/80 shadow-md cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>{t("Back to Register")}</span>
+        </button>
+      </div>
+
+      {/* 3. CENTER FROSTED GLASS CARD */}
+      <motion.div 
+        className="relative z-10 w-full max-w-[450px] mx-auto my-auto"
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div className="w-full rounded-3xl bg-white/80 hover:bg-white/85 backdrop-blur-2xl border border-white/90 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.22)] p-6 sm:p-8 text-slate-900 transition-all">
+          
+          {/* Header Row: Logo & Language Switcher */}
+          <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-200/70">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-600/10 text-blue-600 flex items-center justify-center border border-blue-500/20 shadow-xs">
+                <Dumbbell className="w-4 h-4" strokeWidth={2.4} />
               </div>
-              <div>
-                <span className="block text-base font-extrabold tracking-wider text-[var(--hero-text)]">{t("NEXUS")}</span>
-                <span className="block text-[10px] font-semibold tracking-widest text-[var(--hero-text)] uppercase">{t("Performance Lab")}</span>
-              </div>
-            </div>
-            <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--hero-overlay)] border border-[var(--hero-line)] backdrop-blur-md">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--primary)] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--primary)]"></span>
-              </span>
-              <span className="text-xs font-semibold tracking-wider text-[var(--hero-text)] uppercase">{t("Sports Center")}</span>
-            </div>
-          </header>
-
-          <div className="relative z-10 mt-24 lg:mt-auto pt-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--hero-overlay)] border border-[var(--hero-line)] backdrop-blur-md mb-5">
-              <svg className="w-3.5 h-3.5 text-[var(--primary)]" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
-                <path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" strokeLinecap="round" strokeLinejoin="round"></path>
-              </svg>
-              <span className="text-xs font-bold tracking-wide text-[var(--hero-text)] uppercase">{t("Security Protocol")}</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--primary-soft)] text-[var(--primary)] font-mono font-medium">{t("STEP 2 OF 3")}</span>
-            </div>
-
-            <h2 className="text-4xl sm:text-5xl font-extrabold text-[var(--hero-text)] tracking-tight leading-[1.15]">{t("Verify Your")}<span className="text-[var(--hero-accent)]">{t("Identity")}</span>.
-            </h2>
-            <p className="mt-4 text-base sm:text-lg text-[var(--hero-text)] font-normal max-w-xl leading-relaxed">{t("Protecting your personal athletic metrics, biometric data, and facility access reservations across our network.")}</p>
-
-            <div className="w-full h-px bg-[var(--surface)] my-8"></div>
-
-            <div className="grid grid-cols-3 gap-4 text-left">
-              <div>
-                <div className="text-2xl font-bold tracking-tight text-[var(--hero-text)] font-mono">{t("256-Bit")}</div>
-                <div className="text-xs text-[var(--hero-text)] font-medium mt-0.5">{t("SSL Encrypted")}</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold tracking-tight text-[var(--hero-text)] font-mono">{t("Live Sync")}</div>
-                <div className="text-xs text-[var(--hero-text)] font-medium mt-0.5">{t("Instant Access")}</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold tracking-tight text-[var(--hero-text)] font-mono">{t("Biometric")}</div>
-                <div className="text-xs text-[var(--hero-text)] font-medium mt-0.5">{t("ID Protected")}</div>
+              <div className="leading-tight">
+                <h2 className="font-black text-sm text-slate-900 tracking-wider">{t("NEXUS")}</h2>
+                <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">{t("SPORTS CENTER")}</p>
               </div>
             </div>
-          </div>
-        </section>
 
-        <section className="w-full lg:w-1/2 flex flex-col justify-between p-6 sm:p-12 lg:p-16 bg-[var(--surface)] relative z-10">
-          <nav className="flex items-center justify-between sm:justify-end gap-3 w-full pb-8 sm:pb-0">
-            <span className="text-sm text-[var(--text-muted)]">{t("Already verified?")}</span>
-            <button onClick={() => navigate('/login')} className="inline-flex items-center text-sm font-semibold text-[var(--primary)] hover:text-[var(--primary)] transition-colors gap-1 group">{t("Sign in")}<svg className="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" strokeLinecap="round" strokeLinejoin="round"></path>
-              </svg>
+            {/* Language Switcher Pill */}
+            <button
+              type="button"
+              onClick={toggleLanguage}
+              title={currentLang === 'en' ? 'Chuyển sang Tiếng Việt' : 'Switch to English'}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80 transition-all cursor-pointer shadow-2xs"
+            >
+              <Globe className="w-3.5 h-3.5 text-blue-600" />
+              <span>{currentLang.toUpperCase()}</span>
             </button>
-          </nav>
-
-          <div className="max-w-md w-full mx-auto my-auto py-8">
-            <div className="text-center sm:text-left mb-8">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[var(--surface)] border border-[var(--primary-soft)] text-[var(--primary)] shadow-[var(--shadow)] mb-6">
-                <svg className="w-7 h-7 text-[var(--primary)]" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                  <path d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" strokeLinecap="round" strokeLinejoin="round"></path>
-                </svg>
-              </div>
-              <div className="flex items-center justify-center sm:justify-start gap-2.5">
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-[var(--text)] tracking-tight">{t("Check your email")}</h1>
-                <span className="text-[var(--primary)] inline-block">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
-                  </svg>
-                </span>
-              </div>
-              <p className="mt-3 text-[var(--text-muted)] text-sm leading-relaxed">{t("We sent a 6-digit verification code to")}<span className="text-[var(--text)] font-medium">{email}</span>{t(". Enter the code below to confirm your account.")}</p>
-            </div>
-
-            <form onSubmit={handleVerify} className="space-y-6">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-[var(--text)]">{t("Security PIN Code")}</label>
-                  <button type="button" className="text-xs text-[var(--primary)] hover:text-[var(--primary)] font-medium">{t("Change email")}</button>
-                </div>
-
-                <div className="grid grid-cols-6 gap-2 sm:gap-3">
-                  {otp.map((data, index) => (
-                    <input
-                      key={index}
-                      type="tel"
-                      autoComplete="off"
-                      value={data}
-                      onChange={(e) => handleChange(e, index)}
-                      onPaste={handlePaste}
-                      onKeyDown={(e) => handleKeyDown(e, index)}
-                      onFocus={(e) => e.target.select()}
-                      className="w-full h-13 sm:h-14 bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] text-center text-xl sm:text-2xl font-mono font-bold rounded-xl focus:border-[var(--primary)] focus:ring-2 ring-[var(--focus-ring)] focus:outline-none transition-all shadow-inner"
-                    />
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between mt-3 text-xs">
-                  <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
-                    <svg className="w-3.5 h-3.5 text-[var(--text-muted)]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"></path>
-                    </svg>
-                    <span>{t("Code expires in")}<span className={`font-mono font-medium ${timeLeft < 60 ? 'text-[var(--danger-text)]' : 'text-[var(--text)]'}`}>{formatTime(timeLeft)}</span></span>
-                  </div>
-                  <span className="text-[var(--primary)] font-medium">{t("Secure Delivery")}</span>
-                </div>
-              </div>
-
-              <button disabled={loading} type="submit" className="w-full py-3.5 px-4 bg-[var(--primary)] hover:bg-[var(--primary)] active:scale-[0.99] text-[color:var(--on-primary)] font-bold rounded-xl shadow-[var(--shadow)] transition-all duration-150 flex items-center justify-center gap-2 group text-base disabled:opacity-70">
-                {loading ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
-                    <span>{t("Verifying...")}</span>
-                  </>
-                ) : (
-                  <>
-                    <span>{t("Verify Account")}</span>
-                    <svg className="w-4 h-4 text-[var(--text)] transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      <path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" strokeLinecap="round" strokeLinejoin="round"></path>
-                    </svg>
-                  </>
-                )}
-              </button>
-
-              <div className="text-center pt-1 text-sm text-[var(--text-muted)]">{t("Didn't receive the code?")}<button type="button" onClick={handleResend} disabled={resending} className="text-[var(--primary)] hover:text-[var(--primary)] font-semibold transition-colors focus:underline ml-1 disabled:opacity-50">{resending ? t("Sending...") : t("Resend Code")}</button>
-              </div>
-            </form>
-
-            <div className="mt-8 p-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[var(--primary-soft)] border border-[var(--primary-soft)] flex items-center justify-center text-[var(--primary)] shrink-0">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M9 12.75L11.25 15 15 9.75m-2.18-7.228a2.25 2.25 0 00-.946-.867 2.25 2.25 0 00-2.234.334L5.688 9.5a2.25 2.25 0 00-.688 1.6V18a2.25 2.25 0 002.25 2.25h10.5A2.25 2.25 0 0020 18v-6.9a2.25 2.25 0 00-.688-1.6l-3.208-2.512z" strokeLinecap="round" strokeLinejoin="round"></path>
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-[var(--text)]">{t("Instant Access Portal")}</p>
-                  <p className="text-[11px] text-[var(--text-muted)]">{t("Synchronizes with your smart sports membership.")}</p>
-                </div>
-              </div>
-              <span className="text-[10px] font-mono font-bold text-[var(--primary)] bg-[var(--primary-soft)] border border-[var(--primary-soft)] px-2 py-0.5 rounded tracking-wider uppercase">{t("PENDING")}</span>
-            </div>
           </div>
 
-          <footer className="pt-8 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
-            <div>{t("© 2026 NEXUS Sports Technology Inc.")}</div>
-            <div className="flex items-center gap-4">
-              <button className="hover:text-[var(--text)] transition-colors">{t("Privacy Policy")}</button>
-              <button className="hover:text-[var(--text)] transition-colors">{t("Safety Code")}</button>
-              <button className="hover:text-[var(--text)] transition-colors">{t("Contact")}</button>
+          {/* Mail Icon & Title */}
+          <div className="text-center mb-6">
+            <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shadow-sm mx-auto mb-3.5">
+              <Mail className="w-7 h-7" strokeWidth={2.2} />
             </div>
-          </footer>
-        </section>
-      </main>
+            
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              {t("Verify Your Email")}
+            </h1>
+            
+            <p className="text-xs sm:text-sm text-slate-600 font-medium mt-1.5 leading-relaxed">
+              {t("We sent a 6-digit verification code to")}
+            </p>
 
-      {toastMessage && (
-        <div className={`fixed bottom-8 right-8 z-50 bg-[var(--surface)] border ${toastMessage.type === 'error' ? 'border-[var(--danger-soft)]' : 'border-[var(--primary-soft)]'} text-[var(--text)] rounded-xl p-4 shadow-[var(--shadow)] animate-fade-in-up flex items-center gap-3.5 max-w-sm`}>
-          <div className={`w-9 h-9 rounded-full ${toastMessage.type === 'error' ? 'bg-[var(--danger)]' : 'bg-[var(--primary)]'} flex items-center justify-center text-[var(--text)] shrink-0`}>
-            {toastMessage.type === 'error' ? (
-              <X className="w-5 h-5" />
+            {/* Email display / Edit mode */}
+            {isEditingEmail ? (
+              <form onSubmit={handleSaveEmail} className="mt-2.5 flex items-center gap-2 max-w-sm mx-auto">
+                <input
+                  type="email"
+                  value={tempEmail}
+                  onChange={(e) => setTempEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  required
+                  className="flex-1 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-600"
+                />
+                <button
+                  type="submit"
+                  className="px-3 py-1.5 text-xs font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 cursor-pointer shadow-2xs"
+                >
+                  {t("Save")}
+                </button>
+                {email && (
+                  <button
+                    type="button"
+                    onClick={() => { setTempEmail(email); setIsEditingEmail(false); }}
+                    className="p-1.5 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </form>
             ) : (
-              <Check className="w-5 h-5" />
+              <div className="inline-flex items-center gap-1.5 mt-1.5 px-3 py-1 rounded-full bg-blue-50/80 border border-blue-200/60 text-xs font-bold text-blue-700">
+                <span className="truncate max-w-[240px]">{email || 'alex@nexus.com'}</span>
+                <button 
+                  type="button" 
+                  onClick={() => { setTempEmail(email); setIsEditingEmail(true); }}
+                  title={t("Change email")}
+                  className="p-0.5 hover:text-blue-950 transition-colors cursor-pointer"
+                >
+                  <Edit3 className="w-3 h-3" />
+                </button>
+              </div>
             )}
           </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-semibold text-[var(--text)]">{t(toastMessage.type === 'error' ? t('Error!') : t('Success!'))}</span>
-            <span className="text-xs text-[var(--text-muted)]">{toastMessage.text}</span>
+
+          {/* OTP Input Form */}
+          <form onSubmit={handleVerify} className="space-y-4">
+            
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                  {t("Security PIN Code")}
+                </label>
+                <div className="flex items-center gap-1 text-xs font-semibold text-slate-500">
+                  <Clock className="w-3.5 h-3.5 text-blue-600" />
+                  <span>{t("Code expires in")}: </span>
+                  <span className={`font-mono font-bold ${timeLeft < 60 ? 'text-rose-600 animate-pulse' : 'text-blue-600'}`}>
+                    {formatTime(timeLeft)}
+                  </span>
+                </div>
+              </div>
+
+              {/* 6 OTP Input Boxes */}
+              <div className="grid grid-cols-6 gap-2 sm:gap-2.5">
+                {otp.map((digit, index) => (
+                  <input
+                    key={index}
+                    ref={(el) => (inputRefs.current[index] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(e, index)}
+                    onKeyDown={(e) => handleKeyDown(e, index)}
+                    onPaste={handlePaste}
+                    onFocus={(e) => e.target.select()}
+                    className="w-full h-12 sm:h-14 text-center text-xl sm:text-2xl font-mono font-black text-slate-900 bg-white/90 hover:bg-white focus:bg-white border-2 border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-500/20 rounded-xl outline-none shadow-xs transition-all"
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Resend Code Section */}
+            <div className="flex items-center justify-between text-xs text-slate-600 pt-1">
+              <span>{t("Didn't receive the code?")}</span>
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resendCooldown > 0 || resending}
+                className="font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors disabled:opacity-50 disabled:no-underline cursor-pointer disabled:cursor-not-allowed flex items-center gap-1"
+              >
+                {resending ? (
+                  <>
+                    <RefreshCw className="w-3 h-3 animate-spin shrink-0" />
+                    <span>{t("Sending...")}</span>
+                  </>
+                ) : resendCooldown > 0 ? (
+                  <span>{t("Resend code in")} ({resendCooldown}s)</span>
+                ) : (
+                  <span>{t("Resend Code")}</span>
+                )}
+              </button>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading || otp.join('').length < 6}
+              className="w-full mt-2 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
+                  <span>{t("Verifying...")}</span>
+                </>
+              ) : (
+                <>
+                  <span>{t("Verify Account")}</span>
+                  <ArrowRight className="w-4 h-4 shrink-0" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Security Assurance Badge */}
+          <div className="mt-5 p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 flex items-center justify-between text-xs text-slate-600">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{t("256-Bit SSL Encrypted Verification")}</span>
+            </div>
+            <span className="font-mono font-bold text-[10px] text-blue-600 uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded border border-blue-200/60">
+              {t("PENDING")}
+            </span>
           </div>
+
+          {/* Navigation link to Sign In */}
+          <div className="mt-4 text-center text-xs text-slate-700 font-medium">
+            <span>{t("Already verified?")} </span>
+            <button
+              type="button"
+              onClick={() => navigate('/login')}
+              className="text-blue-600 font-extrabold hover:underline cursor-pointer ml-1"
+            >
+              {t("Sign in")}
+            </button>
+          </div>
+
         </div>
-      )}
-    </div>
+      </motion.div>
+
+      {/* Floating Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className={`fixed bottom-6 right-6 z-50 rounded-2xl p-4 shadow-xl backdrop-blur-xl border flex items-center gap-3.5 max-w-sm ${
+              toastMessage.type === 'error' 
+                ? 'bg-rose-600 text-white border-rose-500' 
+                : 'bg-emerald-600 text-white border-emerald-500'
+            }`}
+          >
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0">
+              {toastMessage.type === 'error' ? (
+                <X className="w-4 h-4" />
+              ) : (
+                <Check className="w-4 h-4" />
+              )}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-bold">{t(toastMessage.type === 'error' ? 'Error!' : 'Success!')}</span>
+              <span className="text-xs text-white/95 leading-tight">{toastMessage.text}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.main>
   );
 }

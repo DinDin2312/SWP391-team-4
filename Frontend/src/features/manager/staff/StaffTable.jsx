@@ -17,7 +17,7 @@ function SortHeader({ column, sort, setSort }) {
   return <th><button type="button" className="manager-sort" aria-label={t(managerEn.staff.table.sortBy(label))} onClick={() => setSort({ key: column, direction: active && sort.direction === 'asc' ? 'desc' : 'asc' })}>{t(label)}{active ? <ChevronDown className={sort.direction === 'asc' ? t('is-asc') : t('')} size={13} /> : <ChevronsUpDown size={13} />}</button></th>;
 }
 
-function StaffTable({ users, selected, setSelected, pending, protectedIds, onDetails, onEdit, onResetPassword, onToggleLock, onViewLogs, onRowClick }) {
+function StaffTable({ users, selected, setSelected, pending, protectedIds, onDetails, onEdit, onResetPassword, onToggleLock, onViewLogs, onRowClick, onDelete }) {
   useLanguage();
   const [sort, setSort] = useState({ key: 'member', direction: 'asc' });
   const [pageSize, setPageSize] = useState(10);
@@ -43,7 +43,7 @@ function StaffTable({ users, selected, setSelected, pending, protectedIds, onDet
       <td className={user.phone ? 'manager-phone-cell' : 'manager-phone-cell manager-empty-value'}>{t(user.phone || '—')}</td>
       <td><RoleBadge role={user.roleName} /></td>
       <td><StatusBadge status={user.status} /></td>
-      <td><StaffActionsMenu user={user} disabled={pending} lockDisabled={protectedIds.has(user.userId)} onDetails={onDetails} onEdit={onEdit} onResetPassword={onResetPassword} onToggleLock={onToggleLock} onViewLogs={onViewLogs} /></td>
+      <td><StaffActionsMenu user={user} disabled={pending} lockDisabled={protectedIds.has(user.userId)} onDetails={onDetails} onEdit={onEdit} onResetPassword={onResetPassword} onToggleLock={onToggleLock} onViewLogs={onViewLogs} onDelete={onDelete} /></td>
     </tr>)}{pageRows.length === 0 && <tr><td colSpan={columns.length + 2}><div className="manager-empty"><strong>{t(managerEn.staff.feedback.emptyTitle)}</strong><span>{t(managerEn.staff.feedback.emptyBody)}</span></div></td></tr>}</tbody></table>
     <div className="manager-pagination"><label>{t(managerEn.staff.table.rowsPerPage)}<ManagerSelect value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>{[10, 20, 50].map((size) => <option key={size} value={size}>{size}</option>)}</ManagerSelect></label><span>{managerEn.staff.table.page(currentPage, totalPages)}</span><button type="button" title={t(managerEn.staff.table.previous)} aria-label={t(managerEn.staff.table.previous)} disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={16} /></button><button type="button" title={t(managerEn.staff.table.next)} aria-label={t(managerEn.staff.table.next)} disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)}><ChevronRight size={16} /></button></div>
   </div>;

@@ -1,10 +1,11 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
+import { setLanguage } from '../../../i18n/languageStore';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Zap, 
+  ArrowLeft,
   ArrowRight, 
   CheckCircle2, 
   User, 
@@ -18,12 +19,17 @@ import {
   Waves, 
   Check, 
   RefreshCw, 
-  X 
+  X,
+  Globe,
+  Sparkles,
+  ShieldCheck,
+  Calendar
 } from 'lucide-react';
 
 export default function Register() {
-  useLanguage();
+  const currentLang = useLanguage();
   const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -38,17 +44,21 @@ export default function Register() {
 
   const toggleAgreement = () => setIsAgreed(!isAgreed);
 
+  const toggleLanguage = () => {
+    setLanguage(currentLang === 'en' ? 'vi' : 'en');
+  };
+
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
   };
 
   const getPasswordStrength = () => {
     const len = formData.password.length;
-    if (len === 0) return { text: 'Weak', m1: '', m2: '', m3: '', m4: '', textClass: 'text-outline' };
-    if (len < 6) return { text: 'Weak', m1: 'bg-[var(--danger)]', m2: '', m3: '', m4: '', textClass: 'text-[var(--danger-text)]' };
-    if (len < 9) return { text: 'Fair', m1: 'bg-[var(--surface)]', m2: 'bg-[var(--surface)]', m3: '', m4: '', textClass: 'text-[var(--text)]' };
-    if (len < 12) return { text: 'Good', m1: 'bg-[var(--primary)]', m2: 'bg-[var(--primary)]', m3: 'bg-[var(--primary)]', m4: '', textClass: 'text-[var(--primary)]' };
-    return { text: 'Elite', m1: 'bg-[var(--primary)]', m2: 'bg-[var(--primary)]', m3: 'bg-[var(--primary)]', m4: 'bg-[var(--primary)]', textClass: 'text-[var(--primary)] font-bold' };
+    if (len === 0) return { text: '', m1: 'bg-slate-200', m2: 'bg-slate-200', m3: 'bg-slate-200', m4: 'bg-slate-200', textClass: 'text-slate-400' };
+    if (len < 6) return { text: t("Weak"), m1: 'bg-rose-500', m2: 'bg-slate-200', m3: 'bg-slate-200', m4: 'bg-slate-200', textClass: 'text-rose-600 font-extrabold' };
+    if (len < 9) return { text: t("Fair"), m1: 'bg-amber-500', m2: 'bg-amber-500', m3: 'bg-slate-200', m4: 'bg-slate-200', textClass: 'text-amber-600 font-extrabold' };
+    if (len < 12) return { text: t("Good"), m1: 'bg-blue-600', m2: 'bg-blue-600', m3: 'bg-blue-600', m4: 'bg-slate-200', textClass: 'text-blue-600 font-extrabold' };
+    return { text: t("Elite"), m1: 'bg-emerald-600', m2: 'bg-emerald-600', m3: 'bg-emerald-600', m4: 'bg-emerald-600', textClass: 'text-emerald-600 font-extrabold' };
   };
 
   const strength = getPasswordStrength();
@@ -71,6 +81,7 @@ export default function Register() {
       };
 
       await authService.register(payload);
+      sessionStorage.setItem('nexus_pending_email', formData.email);
 
       setToastMessage({ type: 'success', text: t("Registration successful! Verify your email.") });
       setTimeout(() => {
@@ -87,166 +98,347 @@ export default function Register() {
   };
 
   return (
-    <motion.main
+    <motion.main 
+      className="relative w-full min-h-screen overflow-x-hidden overflow-y-auto select-none bg-transparent flex items-center justify-center py-6 sm:py-8 lg:py-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="bg-[var(--bg)] text-[var(--text)] min-h-screen flex flex-col justify-between selection:bg-[var(--primary)] selection:text-[color:var(--on-primary)] relative"
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.35 }}
     >
-      <div className="flex-1 flex flex-col justify-center">
-        <div className="w-full flex flex-col lg:flex-row min-h-screen">
-          <div className="auth-hero relative w-full lg:w-[52%] xl:w-[54%] min-h-[460px] lg:min-h-screen flex flex-col justify-between p-8 sm:p-12 lg:p-14 overflow-hidden border-b lg:border-b-0 lg:border-r border-[var(--border)]">
-            <img alt="NEXUS High Performance" className="absolute inset-0 w-full h-full object-cover object-center scale-105 transition-transform duration-1000 hover:scale-100" src="https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1470&auto=format&fit=crop" />
-            <div className="absolute inset-0 auth-hero-shade"></div>
-            <div className="absolute inset-0 auth-hero-shade"></div>
+      {/* 2. TOP BAR: Back to Sign in Button */}
+      <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-30">
+        <button 
+          onClick={() => navigate('/login')} 
+          className="flex items-center gap-2 text-slate-800 hover:text-slate-950 bg-white/75 hover:bg-white/95 backdrop-blur-xl px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 border border-white/80 shadow-md cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>{t("Back to Sign in")}</span>
+        </button>
+      </div>
 
-            <div className="relative z-10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--primary-hover)] to-[var(--primary-hover)] flex items-center justify-center text-[color:var(--on-primary)] shadow-[var(--shadow)]">
-                  <Zap className="w-5 h-5" />
+      {/* 3. FOREGROUND 2-COLUMN LAYOUT */}
+      <div className="relative z-10 w-full flex items-center justify-center px-4 sm:px-8 lg:px-12 xl:px-20 my-auto">
+        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16 items-center">
+
+          {/* LEFT COLUMN: Hero Athletic Branding & Features */}
+          <motion.div 
+            className="hidden lg:flex lg:col-span-6 xl:col-span-7 flex-col justify-center text-white pr-4 xl:pr-10"
+            initial={{ x: -40, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {/* Kicker badge */}
+            <div className="flex items-center gap-2.5 text-sky-300 font-extrabold text-xs uppercase tracking-widest mb-3">
+              <span className="w-7 h-[2.5px] bg-sky-400 rounded-full shadow-[0_0_10px_rgba(56,189,248,0.9)]" />
+              <span>{t("START YOUR JOURNEY")}</span>
+            </div>
+
+            {/* Main Headline */}
+            <h1 className="text-4xl xl:text-5xl 2xl:text-6xl font-black text-white leading-[1.04] tracking-tight mb-4 drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]">
+              <span>{t("NEXUS:")}</span><br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-blue-200 to-indigo-200">
+                {t("Elevate")}
+              </span><br />
+              <span>{t("Your Training")}</span><br />
+              <span>{t("Today.")}</span>
+            </h1>
+
+            {/* Subtitle */}
+            <p className="text-sm xl:text-base text-slate-100 max-w-lg leading-relaxed font-normal mb-7 drop-shadow-md">
+              {t("Join an elite community of athletes, coaches, and sports enthusiasts.")}
+            </p>
+
+            {/* 3 High-Contrast Feature Pillars */}
+            <div className="space-y-3 max-w-md mb-8">
+              <div className="flex items-center gap-3.5 p-3 rounded-xl bg-white/20 backdrop-blur-xl border border-white/30 text-xs font-bold text-white shadow-lg">
+                <div className="w-8 h-8 rounded-lg bg-sky-500/30 text-sky-200 flex items-center justify-center shrink-0 border border-sky-400/40">
+                  <Calendar className="w-4 h-4" />
                 </div>
-                <div className="flex flex-col">
-                  <span className="font-bold text-[22px] tracking-wider text-[var(--hero-text)] leading-tight uppercase">{t("NEXUS")}</span>
-                  <span className="text-[10px] tracking-[0.2em] font-semibold text-[var(--hero-text)] uppercase">{t("Performance Lab")}</span>
-                </div>
+                <span>{t("Real-time court bookings & class schedules")}</span>
               </div>
-              <span className="px-3.5 py-1.5 rounded-full bg-[var(--hero-overlay)] backdrop-blur-md border border-[var(--hero-line)] text-[var(--hero-text)] font-semibold text-xs tracking-wider uppercase flex items-center gap-2 shadow-[var(--shadow)]">
-                <span className="w-2 h-2 rounded-full bg-[var(--surface)] animate-ping"></span>{t("SPORTS CENTER")}</span>
-            </div>
-
-            <div className="relative z-10 mt-20 lg:mt-auto pt-10">
-              <h2 className="text-3xl sm:text-4xl xl:text-5xl font-extrabold text-[var(--hero-text)] tracking-tight leading-[1.15] mb-5 max-w-xl">{t("Unleash Your")}<span className="bg-gradient-to-r from-[var(--hero-text)] via-[var(--hero-accent)] to-[var(--hero-accent)] bg-clip-text text-transparent">{t("Potential")}</span>.
-              </h2>
-              <p className="text-base lg:text-lg text-[var(--hero-text)] font-normal leading-relaxed max-w-lg mb-8">{t("Book courts, join classes, and track your athletic performance with real-time biometric integration at NEXUS.")}</p>
-            </div>
-          </div>
-
-          <div className="w-full lg:w-[48%] xl:w-[46%] min-h-screen flex flex-col justify-between p-6 sm:p-10 lg:p-12 xl:p-16 bg-[var(--surface)] relative overflow-y-auto">
-            <div className="w-full flex items-center justify-end gap-6 text-sm text-[var(--text-muted)] z-10 pb-4 lg:pb-0">
-              <span className="hidden sm:inline">{t("Already have an account?")}</span>
-              <a className="inline-flex items-center gap-1.5 text-[var(--primary)] hover:text-[var(--text)] font-semibold transition-colors" href="/login">
-                <span>{t("Sign in")}</span>
-                <ArrowRight className="w-4 h-4" />
-              </a>
-            </div>
-
-            <div className="w-full max-w-[500px] mx-auto my-auto py-6 relative z-10">
-              <div className="mb-7">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <h1 className="text-3xl lg:text-[34px] font-bold text-[var(--text)] tracking-tight leading-tight">{t("Join NEXUS")}</h1>
-                  <CheckCircle2 className="w-6 h-6 text-[var(--primary)] shrink-0" />
+              <div className="flex items-center gap-3.5 p-3 rounded-xl bg-white/20 backdrop-blur-xl border border-white/30 text-xs font-bold text-white shadow-lg">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/30 text-emerald-200 flex items-center justify-center shrink-0 border border-emerald-400/40">
+                  <ShieldCheck className="w-4 h-4" />
                 </div>
-                <p className="text-sm text-[var(--text-muted)] leading-relaxed">{t("Start your fitness journey and access live court bookings, class schedules, and elite personal coaching.")}</p>
+                <span>{t("Certified coaches & tailored training roadmaps")}</span>
+              </div>
+              <div className="flex items-center gap-3.5 p-3 rounded-xl bg-white/20 backdrop-blur-xl border border-white/30 text-xs font-bold text-white shadow-lg">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/30 text-amber-200 flex items-center justify-center shrink-0 border border-amber-400/40">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <span>{t("Smart attendance & performance tracking")}</span>
+              </div>
+            </div>
+
+            {/* Footer Tag */}
+            <div className="flex items-center gap-3 text-xs font-extrabold tracking-widest text-slate-200 uppercase drop-shadow-sm">
+              <span className="text-sky-300 font-black">02</span>
+              <span className="w-12 h-px bg-white/40" />
+              <span>{t("BEGIN WITH PASSION")}</span>
+            </div>
+          </motion.div>
+
+          {/* RIGHT COLUMN: Crisp High-Contrast Translucent Frosted Glass Card */}
+          <motion.div 
+            className="col-span-1 lg:col-span-6 xl:col-span-5 flex justify-center lg:justify-end w-full"
+            initial={{ x: 40, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.7, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {/* Luminous High-Contrast Frosted White Card */}
+            <div className="relative w-full max-w-[440px] rounded-2xl bg-white/75 hover:bg-white/80 backdrop-blur-2xl border border-white/90 shadow-[0_20px_50px_rgba(15,23,42,0.18)] p-5 sm:p-6 text-slate-900 transition-all">
+
+              {/* Header Row: Brand + Language Toggle */}
+              <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-200/70">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-600/10 text-blue-600 flex items-center justify-center border border-blue-500/20 shadow-xs">
+                    <Dumbbell className="w-4 h-4" strokeWidth={2.4} />
+                  </div>
+                  <div className="leading-tight">
+                    <h2 className="font-black text-sm text-slate-900 tracking-wider">{t("NEXUS")}</h2>
+                    <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">{t("SPORTS CENTER")}</p>
+                  </div>
+                </div>
+
+                {/* Language Switcher Pill */}
+                <button
+                  type="button"
+                  onClick={toggleLanguage}
+                  title={currentLang === 'en' ? 'Chuyển sang Tiếng Việt' : 'Switch to English'}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80 transition-all cursor-pointer shadow-2xs"
+                >
+                  <Globe className="w-3.5 h-3.5 text-blue-600" />
+                  <span>{currentLang.toUpperCase()}</span>
+                </button>
               </div>
 
-              <div className="bg-[var(--surface)] rounded-2xl p-6 sm:p-7 border border-[var(--border)] shadow-[var(--shadow)] relative">
-                <form className="space-y-4" onSubmit={handleRegistration}>
+              {/* Card Title */}
+              <div className="mb-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                    {t("Create Account")}
+                  </h3>
+                  <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />
+                </div>
+                <p className="text-xs text-slate-600 font-medium mt-0.5">
+                  {t("Start your journey at Nexus Sports Center")}
+                </p>
+              </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[var(--text-muted)] flex justify-between" htmlFor="fullName">
-                      <span>{t("Full Name")}</span><span className="text-[var(--text)] text-[11px] font-medium">{t("Required")}</span>
-                    </label>
-                    <div className="relative flex items-center">
-                      <User className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5" />
-                      <input className="w-full bg-[var(--surface)] text-[var(--text)] text-sm pl-11 pr-4 py-3 rounded-xl border border-[var(--border)] outline-none focus:border-[var(--primary)] focus:ring-2 ring-[var(--focus-ring)]"
-                        id="fullName" placeholder={t("Alex Morgan")} required value={formData.fullName} onChange={handleInputChange} />
-                    </div>
+              {/* Form */}
+              <form className="space-y-2.5" onSubmit={handleRegistration}>
+
+                {/* Full Name Field */}
+                <div>
+                  <label htmlFor="fullName" className="block text-xs font-bold text-slate-800 mb-1">
+                    {t("Full Name")} <span className="text-rose-500 font-bold">*</span>
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <input
+                      id="fullName"
+                      type="text"
+                      placeholder={t("Alex Morgan")}
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full pl-10 pr-3.5 py-2 sm:py-2.5 rounded-xl border border-slate-300/80 bg-white/80 hover:bg-white focus:bg-white text-xs sm:text-sm text-slate-900 font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-600 transition-all shadow-2xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Email Address Field */}
+                <div>
+                  <label htmlFor="email" className="block text-xs font-bold text-slate-800 mb-1">
+                    {t("Email Address")} <span className="text-rose-500 font-bold">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <input
+                      id="email"
+                      type="email"
+                      placeholder={t("alex@nexus.com")}
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
+                      autoComplete="email"
+                      className="w-full pl-10 pr-3.5 py-2 sm:py-2.5 rounded-xl border border-slate-300/80 bg-white/80 hover:bg-white focus:bg-white text-xs sm:text-sm text-slate-900 font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-600 transition-all shadow-2xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Phone Number Field */}
+                <div>
+                  <label htmlFor="phone" className="block text-xs font-bold text-slate-800 mb-1">
+                    {t("Phone Number")}
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <input
+                      id="phone"
+                      type="tel"
+                      placeholder="+84 901 234 567"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-3.5 py-2 sm:py-2.5 rounded-xl border border-slate-300/80 bg-white/80 hover:bg-white focus:bg-white text-xs sm:text-sm text-slate-900 font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-600 transition-all shadow-2xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Password Field */}
+                <div>
+                  <label htmlFor="password" className="block text-xs font-bold text-slate-800 mb-1">
+                    {t("Password")} <span className="text-rose-500 font-bold">*</span>
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder={t("Minimum 8 characters")}
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      required
+                      autoComplete="new-password"
+                      className="w-full pl-10 pr-10 py-2 sm:py-2.5 rounded-xl border border-slate-300/80 bg-white/80 hover:bg-white focus:bg-white text-xs sm:text-sm text-slate-900 font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-600 transition-all font-mono shadow-2xs"
+                    />
+                    <button
+                      type="button"
+                      aria-label={t(showPassword ? 'Hide password' : 'Show password')}
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[var(--text-muted)]" htmlFor="email">{t("Email Address")}</label>
-                    <div className="relative flex items-center">
-                      <Mail className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5" />
-                      <input className="w-full bg-[var(--surface)] text-[var(--text)] text-sm pl-11 pr-4 py-3 rounded-xl border border-[var(--border)] outline-none focus:border-[var(--primary)] focus:ring-2 ring-[var(--focus-ring)]"
-                        type="email" id="email" placeholder={t("alex@nexus.com")} required value={formData.email} onChange={handleInputChange} />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[var(--text-muted)]" htmlFor="phone">{t("Phone Number")}</label>
-                    <div className="relative flex items-center">
-                      <Phone className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5" />
-                      <input className="w-full bg-[var(--surface)] text-[var(--text)] text-sm pl-11 pr-4 py-3 rounded-xl border border-[var(--border)] outline-none focus:border-[var(--primary)] focus:ring-2 ring-[var(--focus-ring)]"
-                        type="tel" id="phone" placeholder={t("+1 (555) 019-2834")} value={formData.phone} onChange={handleInputChange} />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[var(--text-muted)]" htmlFor="password">{t("Password")}</label>
-                    <div className="relative flex items-center">
-                      <Lock className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5" />
-                      <input className="w-full bg-[var(--surface)] text-[var(--text)] text-sm pl-11 pr-11 py-3 rounded-xl border border-[var(--border)] outline-none focus:border-[var(--primary)] focus:ring-2 ring-[var(--focus-ring)]"
-                        type={showPassword ? "text" : "password"} id="password" placeholder={t("Minimum 8 characters")} required value={formData.password} onChange={handleInputChange} />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer">
-                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      </button>
-                    </div>
-
+                  {/* High-Contrast Password Strength Indicator */}
+                  {formData.password && (
                     <div className="flex items-center gap-1.5 pt-1.5 px-0.5">
-                      <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${strength.m1 || 'bg-[var(--surface)]'}`}></div>
-                      <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${strength.m2 || 'bg-[var(--surface)]'}`}></div>
-                      <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${strength.m3 || 'bg-[var(--surface)]'}`}></div>
-                      <div className={`h-1 flex-1 rounded-full transition-all duration-300 ${strength.m4 || 'bg-[var(--surface)]'}`}></div>
-                      <span className={`text-[11px] ml-2 min-w-[50px] text-right ${strength.textClass}`}>{strength.text}</span>
+                      <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${strength.m1}`}></div>
+                      <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${strength.m2}`}></div>
+                      <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${strength.m3}`}></div>
+                      <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${strength.m4}`}></div>
+                      <span className={`text-xs ml-2 min-w-[50px] text-right ${strength.textClass}`}>{strength.text}</span>
                     </div>
-                  </div>
+                  )}
+                </div>
 
-                  <div className="space-y-2 pt-1">
-                    <span className="text-xs font-semibold text-[var(--text-muted)] block">{t("Primary Athletic Focus")}</span>
-                    <div className="grid grid-cols-3 gap-2.5">
-                      {[
-                        { name: 'Gym', icon: Dumbbell },
-                        { name: 'Courts', icon: Activity },
-                        { name: 'Aquatics', icon: Waves }
-                      ].map(({ name, icon: SportIcon }) => (
-                        <button key={name} type="button" onClick={() => setSelectedSport(name)}
-                          className={`py-2.5 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all duration-200 border cursor-pointer ${selectedSport === name ? 'bg-[var(--primary)] text-[color:var(--on-primary)] border-[var(--primary-soft)] shadow-[var(--shadow)]' : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text)]'}`}>
-                          <SportIcon className={`w-4 h-4 shrink-0 ${selectedSport === name ? 'text-[color:var(--on-primary)]' : 'text-[var(--primary)]'}`} />
-                          <span>{name}</span>
-                        </button>
-                      ))}
-                    </div>
+                {/* Primary Athletic Focus */}
+                <div>
+                  <span className="text-xs font-bold text-slate-800 block mb-1">
+                    {t("Primary Athletic Focus")}
+                  </span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { name: 'Gym', label: t('Gym'), icon: Dumbbell },
+                      { name: 'Courts', label: t('Courts'), icon: Activity },
+                      { name: 'Aquatics', label: t('Aquatics'), icon: Waves }
+                    ].map(({ name, label, icon: SportIcon }) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => setSelectedSport(name)}
+                        className={`py-1.5 px-2 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all duration-200 border cursor-pointer ${
+                          selectedSport === name 
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/30' 
+                            : 'bg-white/70 hover:bg-white border-slate-300/80 text-slate-700 shadow-2xs'
+                        }`}
+                      >
+                        <SportIcon className={`w-3.5 h-3.5 shrink-0 ${selectedSport === name ? 'text-white' : 'text-blue-600'}`} />
+                        <span>{label}</span>
+                      </button>
+                    ))}
                   </div>
+                </div>
 
-                  <div className="flex items-start gap-3 pt-2 cursor-pointer select-none" onClick={toggleAgreement}>
-                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center mt-0.5 ${isAgreed ? 'bg-[var(--primary)] border-[var(--primary-soft)] text-[color:var(--on-primary)]' : 'bg-[var(--surface)] border-[var(--border)]'}`}>
-                      {isAgreed && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                    </div>
-                    <p className="text-xs text-[var(--text-muted)] leading-relaxed">{t("I accept the")}<span className="text-[var(--text)] underline hover:text-[var(--text)]">{t("Terms of Service")}</span>{t(", safety protocols, and health liability waivers.")}</p>
+                {/* Terms Agreement Checkbox */}
+                <div className="flex items-start gap-2.5 pt-0.5 cursor-pointer select-none" onClick={toggleAgreement}>
+                  <div className={`w-4 h-4 rounded-md border flex items-center justify-center mt-0.5 transition-colors shrink-0 ${
+                    isAgreed ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white/80 border-slate-300'
+                  }`}>
+                    {isAgreed && <Check className="w-3 h-3 stroke-[3]" />}
                   </div>
+                  <p className="text-xs text-slate-700 font-medium leading-normal">
+                    <span>{t("I accept the")} </span>
+                    <span className="text-blue-600 font-extrabold hover:underline">{t("Terms of Service")}</span>
+                    <span>{t(", safety protocols, and health liability waivers.")}</span>
+                  </p>
+                </div>
 
-                  <button type="submit" disabled={loading} className="w-full mt-4 py-3.5 px-5 bg-[var(--primary)] hover:bg-[var(--primary)] active:scale-[0.99] text-[color:var(--on-primary)] font-semibold text-sm rounded-xl shadow-[var(--shadow)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60">
-                    {loading ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
-                        <span>{t("Creating Account...")}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>{t("Create NEXUS Account")}</span>
-                        <ArrowRight className="w-4 h-4 shrink-0" />
-                      </>
-                    )}
-                  </button>
-                </form>
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full mt-1.5 py-2.5 sm:py-3 px-4 rounded-xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
+                >
+                  {loading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
+                      <span>{t("Creating Account...")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{t("Create NEXUS Account")}</span>
+                      <ArrowRight className="w-4 h-4 shrink-0" />
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Already have an account prompt */}
+              <div className="mt-3 text-center text-xs text-slate-700 font-medium">
+                <span>{t("Already have an account?")} </span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/login')}
+                  className="text-blue-600 font-extrabold hover:underline cursor-pointer ml-1"
+                >
+                  {t("Sign in")}
+                </button>
               </div>
+
+              {/* Footer Support Info */}
+              <div className="mt-2.5 pt-2 border-t border-slate-200/70 text-center text-[11px] text-slate-600 font-medium flex items-center justify-center gap-1.5 flex-wrap">
+                <span>{t("Support")}:</span>
+                <a href="mailto:support@nexus.com" className="hover:text-blue-600 transition-colors font-semibold">support@nexus.com</a>
+                <span>•</span>
+                <span>024 3771 2088</span>
+              </div>
+
             </div>
-          </div>
+          </motion.div>
+
         </div>
       </div>
 
-      <div className={`fixed bottom-8 right-8 z-50 bg-[var(--surface)] border ${toastMessage?.type === 'error' ? 'border-[var(--danger-soft)]' : 'border-[var(--primary-soft)]'} text-[var(--text)] rounded-xl p-4 shadow-[var(--shadow)] transition-all duration-300 ${toastMessage ? 'opacity-100 translate-y-0' : 'opacity-0 pointer-events-none translate-y-4'} flex items-center gap-3.5 max-w-sm`}>
-        <div className={`w-9 h-9 rounded-full ${toastMessage?.type === 'error' ? 'bg-[var(--danger)]' : 'bg-[var(--primary)]'} flex items-center justify-center text-[var(--text)] shrink-0`}>
-          {toastMessage?.type === 'error' ? (
-            <X className="w-5 h-5" />
-          ) : (
-            <Check className="w-5 h-5" />
-          )}
-        </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-sm font-semibold text-[var(--text)]">{t(toastMessage?.type === 'error' ? t('Error!') : t('Success!'))}</span>
-          <span className="text-xs text-[var(--text-muted)]">{toastMessage?.text}</span>
-        </div>
-      </div>
+      {/* Floating Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className={`fixed bottom-6 right-6 z-50 rounded-2xl p-4 shadow-xl backdrop-blur-xl border flex items-center gap-3.5 max-w-sm ${
+              toastMessage.type === 'error' 
+                ? 'bg-rose-600 text-white border-rose-500' 
+                : 'bg-emerald-600 text-white border-emerald-500'
+            }`}
+          >
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0">
+              {toastMessage.type === 'error' ? (
+                <X className="w-4 h-4" />
+              ) : (
+                <Check className="w-4 h-4" />
+              )}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-bold">{t(toastMessage.type === 'error' ? 'Error!' : 'Success!')}</span>
+              <span className="text-xs text-white/95 leading-tight">{toastMessage.text}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.main>
   );
 }
