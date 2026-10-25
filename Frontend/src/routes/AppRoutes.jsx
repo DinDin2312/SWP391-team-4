@@ -13,6 +13,7 @@ const OTPVerification = lazy(() => import('../features/auth/pages/OTPVerificatio
 const ForgotPassword = lazy(() => import('../features/auth/pages/ForgotPassword'));
 
 // Layouts & Pages
+import AuthLayout from '../layouts/AuthLayout';
 import MemberLayout from '../layouts/MemberLayout';
 const CustomerDashboard = lazy(() => import('../features/member/pages/CustomerDashboard'));
 const MySchedule = lazy(() => import('../features/member/pages/MySchedule'));
@@ -41,10 +42,12 @@ function AppRoutes() {
   const { pathname } = useLocation();
   const hasRoleHeader = /^\/(member|coach)(\/|$)/.test(pathname) || Object.values(ROLE_ROUTES).includes(pathname);
   return (
-    <>{!hasRoleHeader && <LanguageSwitcher floating />}<Suspense fallback={<div role="status" style={{ padding: 32 }}>{t("Loading Nexus...")}</div>}><Routes>
+    <>{!hasRoleHeader && pathname !== '/login' && pathname !== '/register' && pathname !== '/verify-otp' && <LanguageSwitcher floating />}<Suspense fallback={<div role="status" style={{ padding: 32 }}>{t("Loading Nexus...")}</div>}><Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<Register />} />
+      <Route element={<AuthLayout />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<Register />} />
+      </Route>
       <Route path="/verify-otp" element={<OTPVerification />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
 
