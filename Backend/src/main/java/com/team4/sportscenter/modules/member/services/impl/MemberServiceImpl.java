@@ -438,7 +438,7 @@ public class MemberServiceImpl implements MemberService {
     public List<com.team4.sportscenter.modules.member.dtos.response.PackageResponse> getAllPackages() {
         var allBenefits = packageBenefits.allPackageBenefits();
         var typeNames = packageTypes.names();
-        return packageRepository.findAll().stream().filter(p -> "SELLING".equals(p.getSellingStatus()))
+        return packageRepository.findBySellingStatus("SELLING").stream()
                 .map(p -> com.team4.sportscenter.modules.member.dtos.response.PackageResponse.builder()
                         .packageId(p.getPackageId())
                         .packageName(p.getPackageName())
@@ -484,9 +484,7 @@ public class MemberServiceImpl implements MemberService {
                 .orElseThrow(() -> new RuntimeException("Package not found"));
 
         commerce.checkPurchase(user.getUserId(), packageId, null, true);
-        boolean hasPending = membershipRepository.findAll().stream()
-                .anyMatch(m -> m.getUser().getUserId().equals(user.getUserId()) && "PENDING".equals(m.getStatus())
-                        && m.getAPackage().getPackageId().equals(packageId));
+        boolean hasPending = membershipRepository.existsByUser_UserIdAndStatusAndAPackage_PackageId(user.getUserId(), "PENDING", packageId);
 
         if (hasPending) {
             throw new RuntimeException("This exact package is already in your cart.");

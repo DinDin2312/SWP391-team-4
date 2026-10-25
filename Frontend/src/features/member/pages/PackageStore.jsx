@@ -1,5 +1,4 @@
 import PackageDetailDialog from '../../../components/resource-images/PackageDetailDialog';
-import PackageBenefits from '../../../components/resource-images/PackageBenefits';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
@@ -495,10 +494,10 @@ const PackageStore = () => {
 
                 <div className="flex flex-col gap-3 mb-6">
                   <span className={`text-[11px] uppercase tracking-wider font-semibold ${isPopular ? t('text-primary') : t('text-on-surface-variant')}`}>{t("Included Privileges")}</span>
-                  {pkg.benefits?.length ? <PackageBenefits benefits={pkg.benefits}/> : ['Full facility access', 'Smart locker usage', 'App telemetry sync'].map((feature, idx) => (
+                  {['Full facility access', 'Smart locker usage', 'AI Fitness assistant sync'].map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-3">
                       <CheckCircle2 className="w-4 h-4 text-tertiary shrink-0 mt-0.5" />
-                      <span className="text-[14px] text-on-surface">{feature}</span>
+                      <span className="text-[14px] text-on-surface">{t(feature)}</span>
                     </div>
                   ))}
                 </div>

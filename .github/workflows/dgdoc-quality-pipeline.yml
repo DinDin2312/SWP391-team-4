@@ -17,7 +17,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
   checks: write
 
 concurrency:
@@ -171,11 +171,71 @@ jobs:
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
 
-  # 5. Quality Gate Summary (Chặn merge nếu bất kỳ bài kiểm tra nào thất bại)
+  # 5. Phân tích chất lượng mã nguồn với SonarQube / SonarCloud (Trọng tâm DGDoC)
+  sonarqube-analysis:
+    name: SonarQube / SonarCloud Code Analysis
+    runs-on: ubuntu-latest
+    needs: [backend-quality, frontend-quality]
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java JDK 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: Backend/pom.xml
+
+      - name: Check Sonar Token Availability
+        id: sonar-check
+        run: |
+          if [ -n "${{ secrets.SONAR_TOKEN }}" ]; then
+            echo "configured=true" >> $GITHUB_OUTPUT
+            echo "SonarQube token found. Analysis enabled."
+          else
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "::warning title=SonarQube Not Configured::SONAR_TOKEN secret chưa được cài đặt trong GitHub Repository Secrets. Bỏ qua phân tích SonarQube để không chặn CI."
+            echo "### ⚠️ SonarQube / SonarCloud Code Quality" >> $GITHUB_STEP_SUMMARY
+            echo "Secret \`SONAR_TOKEN\` chưa được cài đặt trong Repository Secrets của repo gốc. Bước phân tích SonarQube được bỏ qua một cách an toàn để đảm bảo CI vẫn Pass 100%." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Execute SonarCloud Scanner
+        if: steps.sonar-check.outputs.configured == 'true'
+        working-directory: Backend
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+        run: |
+          chmod +x mvnw
+          ./mvnw --batch-mode --no-transfer-progress test-compile \
+            org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+            "-Dsonar.host.url=https://sonarcloud.io" \
+            "-Dsonar.token=$SONAR_TOKEN" \
+            "-Dsonar.organization=${SONAR_ORGANIZATION:-dindin2312}" \
+            "-Dsonar.projectKey=${SONAR_PROJECT_KEY:-DinDin2312_SWP391-team-4}" \
+            "-Dsonar.projectName=Sports Center Management" \
+            "-Dsonar.sources=src/main/java,../Frontend/src" \
+            "-Dsonar.tests=src/test/java,../Frontend/src" \
+            "-Dsonar.test.inclusions=**/*Test*.java,**/*.test.js,**/*.test.jsx" \
+            "-Dsonar.exclusions=**/*.sql,**/generate_seed_sql.js,**/node_modules/**,**/dist/**,**/target/**" \
+            "-Dsonar.java.binaries=target/classes" \
+            "-Dsonar.java.test.binaries=target/test-classes"
+
+  # 6. Quality Gate Summary (Chặn merge nếu bất kỳ bài kiểm tra nào thất bại)
   quality-gate-summary:
     name: Quality Gate Summary (Enforce All Pass)
     runs-on: ubuntu-latest
-    needs: [dockerfile-lint, frontend-quality, backend-quality, security-sast-scan]
+    needs: [dockerfile-lint, frontend-quality, backend-quality, security-sast-scan, sonarqube-analysis]
     if: always()
     steps:
       - name: Check overall quality gate results
@@ -183,12 +243,14 @@ jobs:
           if [ "${{ needs.dockerfile-lint.result }}" != "success" ] || \
              [ "${{ needs.frontend-quality.result }}" != "success" ] || \
              [ "${{ needs.backend-quality.result }}" != "success" ] || \
-             [ "${{ needs.security-sast-scan.result }}" != "success" ]; then
+             [ "${{ needs.security-sast-scan.result }}" != "success" ] || \
+             [ "${{ needs.sonarqube-analysis.result }}" != "success" ]; then
             echo "::error::Quality Gate failed! Pull Request cannot be merged until all quality checks pass."
             echo "Dockerfile Lint: ${{ needs.dockerfile-lint.result }}"
             echo "Frontend Quality: ${{ needs.frontend-quality.result }}"
             echo "Backend Quality: ${{ needs.backend-quality.result }}"
             echo "Security SAST: ${{ needs.security-sast-scan.result }}"
+            echo "SonarQube Analysis: ${{ needs.sonarqube-analysis.result }}"
             exit 1
           fi
           echo "All code quality and security checks passed! Ready to merge."

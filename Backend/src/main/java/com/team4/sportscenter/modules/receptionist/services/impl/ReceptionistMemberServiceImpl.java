@@ -838,7 +838,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
 
     @Override
     public List<PackageResponse> getAllActivePackages() {
-        return packageRepository.findAll().stream()
+        return packageRepository.findBySellingStatus("SELLING").stream()
                 .map(p -> PackageResponse.builder()
                         .packageId(p.getPackageId())
                         .packageName(p.getPackageName())
@@ -1490,8 +1490,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 notificationService.createNotification(
                         member.getEmail(),
                         "Lịch tập đã được hủy tại quầy / Session Cancelled",
-                        "Lễ tân đã hỗ trợ hủy buổi tập lớp " + className + " (" + sessionTime + ")."
-                                + reasonSuffix + " Lượt tập đã được hoàn trả vào gói hội viên của bạn.",
+                        "Lễ tân đã hỗ trợ hủy buổi tập lớp " + className + " (" + sessionTime + ")." + reasonSuffix,
                         "SYSTEM"
                 );
             } catch (Exception ignored) {}
@@ -1569,8 +1568,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 notificationService.createNotification(
                         member.getEmail(),
                         "Khóa học đã được hủy tại quầy / Course Cancelled",
-                        "Lễ tân đã hỗ trợ hủy " + cancelledCount + " buổi học còn lại của khóa " + className + "."
-                                + reasonSuffix + " Toàn bộ số lượt tập tương ứng đã được hoàn trả vào gói hội viên của bạn.",
+                        "Lễ tân đã hỗ trợ hủy " + cancelledCount + " buổi học còn lại của khóa " + className + "." + reasonSuffix,
                         "SYSTEM"
                 );
             } catch (Exception ignored) {}

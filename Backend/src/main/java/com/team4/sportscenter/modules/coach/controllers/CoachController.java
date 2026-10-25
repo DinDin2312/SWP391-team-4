@@ -23,7 +23,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/coach")
-@CrossOrigin(origins = "*")
 public class CoachController {
 
     private final CoachScheduleService coachScheduleService;
