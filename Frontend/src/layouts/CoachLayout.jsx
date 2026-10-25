@@ -7,9 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
 import {
   LayoutDashboard, CalendarDays, Users, Dumbbell,
-  Settings, LogOut, Award, Bell
+  Settings, LogOut, Award, Bell, Sparkles
 } from 'lucide-react';
 import SendNotificationModal from '../features/coach/components/SendNotificationModal';
+import CoachNexusAiChat from '../features/coach/components/CoachNexusAiChat';
 
 const CoachLayout = () => {
   useLanguage();
@@ -19,6 +20,7 @@ const CoachLayout = () => {
   const { userInfo, logout } = useContext(AuthContext);
 
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+  const [isAiChatOpen, setIsAiChatOpen] = useState(false);
 
 
 
@@ -157,6 +159,14 @@ const CoachLayout = () => {
 
           <div className="role-header-actions">
             <button
+              onClick={() => setIsAiChatOpen(!isAiChatOpen)}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2 cursor-pointer"
+              title={t("Mở trợ lý NEXUS Coach AI")}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
+              <span>{t("NEXUS Coach AI")}</span>
+            </button>
+            <button
               onClick={() => setIsNotifModalOpen(true)}
               className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-[var(--text)] font-bold text-xs shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer"
             >
@@ -197,6 +207,12 @@ const CoachLayout = () => {
       <SendNotificationModal
         isOpen={isNotifModalOpen}
         onClose={() => setIsNotifModalOpen(false)}
+      />
+
+      {/* Coach AI Assistant Floating Chat */}
+      <CoachNexusAiChat
+        isOpen={isAiChatOpen}
+        onClose={() => setIsAiChatOpen(false)}
       />
     </div>
   );

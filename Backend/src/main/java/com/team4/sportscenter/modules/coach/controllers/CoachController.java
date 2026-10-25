@@ -17,6 +17,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.team4.sportscenter.modules.coach.dtos.request.CoachAiMessageRequest;
+import com.team4.sportscenter.modules.coach.services.CoachAiChatService;
 import com.team4.sportscenter.modules.coach.dtos.request.UpdateCoachProfileRequest;
 import com.team4.sportscenter.modules.coach.services.CoachProfileService;
 import java.util.Map;
@@ -30,18 +32,21 @@ public class CoachController {
     private final CoachWorkoutService coachWorkoutService;
     private final CoachAssessmentService coachAssessmentService;
     private final CoachProfileService coachProfileService;
+    private final CoachAiChatService coachAiChatService;
 
     public CoachController(
             CoachScheduleService coachScheduleService,
             CoachNotificationService coachNotificationService,
             CoachWorkoutService coachWorkoutService,
             CoachAssessmentService coachAssessmentService,
-            CoachProfileService coachProfileService) {
+            CoachProfileService coachProfileService,
+            CoachAiChatService coachAiChatService) {
         this.coachScheduleService = coachScheduleService;
         this.coachNotificationService = coachNotificationService;
         this.coachWorkoutService = coachWorkoutService;
         this.coachAssessmentService = coachAssessmentService;
         this.coachProfileService = coachProfileService;
+        this.coachAiChatService = coachAiChatService;
     }
 
     // ==================== HỒ SƠ & CÀI ĐẶT HUẤN LUYỆN VIÊN ====================
@@ -205,5 +210,15 @@ public class CoachController {
         String coachEmail = authentication.getName();
         coachAssessmentService.deleteAssessment(assessmentId, coachEmail);
         return ResponseEntity.ok(Map.of("message", "Xóa đánh giá tiến độ thành công!"));
+    }
+
+    // ==================== TRỢ LÝ AI HUẤN LUYỆN VIÊN (COACH AI) ====================
+
+    @PostMapping("/ai/chat")
+    public ResponseEntity<String> chatWithAi(
+            Authentication authentication,
+            @RequestBody CoachAiMessageRequest request) {
+        String coachEmail = authentication.getName();
+        return ResponseEntity.ok(coachAiChatService.chat(request.getMessage(), coachEmail));
     }
 }

@@ -255,6 +255,148 @@ const CoachWorkoutPlans = () => {
     }, 6000);
   };
 
+  // ==================== NEXUS COACH AI AUTO-FILL LOGIC ====================
+  const applyAiPrefill = async (actionType, data) => {
+    if (!data) return;
+
+    if (actionType === 'PREFILL_SINGLE_WORKOUT') {
+      setActiveTab('assign');
+
+      const newTargetType = data.targetType || (data.studentUserId ? 'INDIVIDUAL' : 'CLASS');
+      setTargetType(newTargetType);
+
+      if (data.classId) {
+        setSelectedClassId(String(data.classId));
+        if (newTargetType === 'INDIVIDUAL') {
+          setLoadingSingleStudents(true);
+          const list = await fetchStudentsForClass(data.classId);
+          setSingleClassStudents(list);
+          setLoadingSingleStudents(false);
+        }
+      }
+
+      if (data.studentUserId) {
+        setSelectedStudentUserId(String(data.studentUserId));
+      }
+
+      if (data.title) {
+        setPlanTitle(data.title);
+      }
+
+      if (data.note) {
+        setPlanNote(data.note);
+      }
+
+      if (Array.isArray(data.exercises) && data.exercises.length > 0) {
+        setSelectedExercises(data.exercises.map(ex => ({
+          exerciseId: ex.exerciseId !== undefined ? ex.exerciseId : (exercises[0]?.exerciseId || ''),
+          sets: ex.sets || 3,
+          reps: ex.reps || 10,
+          restSeconds: ex.restSeconds || 60
+        })));
+      }
+
+      showBanner('success', t('NEXUS Coach AI đã điền bài tập vào Form. Coach hãy kiểm tra và nhấn Giao bài tập!'));
+    } else if (actionType === 'PREFILL_TRAINING_PLAN') {
+      setActiveTab('trainingPlan');
+
+      const newTargetType = data.targetType || (data.studentUserId ? 'INDIVIDUAL' : 'CLASS');
+      setTpTargetType(newTargetType);
+
+      if (data.classId) {
+        setTpClassId(String(data.classId));
+        if (newTargetType === 'INDIVIDUAL') {
+          setLoadingTpStudents(true);
+          const list = await fetchStudentsForClass(data.classId);
+          setTpClassStudents(list);
+          setLoadingTpStudents(false);
+        }
+      }
+
+      if (data.studentUserId) {
+        setTpStudentUserId(String(data.studentUserId));
+      }
+
+      if (data.title) setTpTitle(data.title);
+      if (data.goal) setTpGoal(data.goal);
+      if (data.note) setTpNote(data.note);
+      if (data.totalWeeks) {
+        const weeksCount = Math.min(Math.max(parseInt(data.totalWeeks) || 4, 1), 12);
+        setTpTotalWeeks(weeksCount);
+        setTpEndDate(getFutureDateStr(weeksCount * 7));
+      }
+
+      if (data.schedule && typeof data.schedule === 'object') {
+        const defaultExId = exercises.length > 0 ? exercises[0].exerciseId : '';
+        setTpWeeks(prev => {
+          const updated = { ...prev };
+          const totalW = data.totalWeeks || tpTotalWeeks || 4;
+          for (let w = 1; w <= totalW; w++) {
+            const baseWeek = updated[w] || createInitialWeekSchedule(defaultExId);
+            const newDays = { ...baseWeek.days };
+
+            Object.keys(data.schedule).forEach(dayKey => {
+              const upperKey = dayKey.toUpperCase();
+              if (newDays[upperKey]) {
+                const dayPlan = data.schedule[dayKey];
+                newDays[upperKey] = {
+                  ...newDays[upperKey],
+                  active: dayPlan.active !== undefined ? dayPlan.active : true,
+                  label: dayPlan.label || newDays[upperKey].label,
+                  durationMinutes: dayPlan.durationMinutes || newDays[upperKey].durationMinutes || 45,
+                  exercises: Array.isArray(dayPlan.exercises) && dayPlan.exercises.length > 0
+                    ? dayPlan.exercises.map(ex => ({
+                        exerciseId: ex.exerciseId !== undefined ? ex.exerciseId : defaultExId,
+                        sets: ex.sets || 3,
+                        reps: ex.reps || 10,
+                        restSeconds: ex.restSeconds || 60,
+                        weightKg: ex.weightKg !== undefined ? ex.weightKg : '',
+                        coachNote: ex.coachNote || ''
+                      }))
+                    : newDays[upperKey].exercises
+                };
+              }
+            });
+            updated[w] = { days: newDays };
+          }
+          return updated;
+        });
+      }
+
+      showBanner('success', t('NEXUS Coach AI đã điền kế hoạch tập luyện vào Form. Coach hãy kiểm tra và nhấn Giao kế hoạch!'));
+    }
+  };
+
+  useEffect(() => {
+    const handleAiPrefillEvent = (e) => {
+      if (e.detail?.actionType && e.detail?.data) {
+        sessionStorage.removeItem('coach_ai_workout_prefill');
+        applyAiPrefill(e.detail.actionType, e.detail.data);
+      }
+    };
+
+    window.addEventListener('coachAiPrefillWorkout', handleAiPrefillEvent);
+    return () => window.removeEventListener('coachAiPrefillWorkout', handleAiPrefillEvent);
+  }, [exercises.length, classes.length]);
+
+  // Kiểm tra sessionStorage khi load trang / chuyển trang
+  useEffect(() => {
+    if (!loading && exercises.length > 0) {
+      try {
+        const raw = sessionStorage.getItem('coach_ai_workout_prefill');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.actionType && parsed.data && Date.now() - (parsed.timestamp || 0) < 30000) {
+            sessionStorage.removeItem('coach_ai_workout_prefill');
+            applyAiPrefill(parsed.actionType, parsed.data);
+          }
+        }
+      } catch (err) {
+        console.warn('Error reading coach AI prefill from sessionStorage:', err);
+      }
+    }
+  }, [loading, exercises.length]);
+
   // ==================== SINGLE WORKOUT ACTIONS ====================
   const handleAddExerciseRow = () => {
     const defaultExId = exercises.length > 0 ? exercises[0].exerciseId : '';
