@@ -23,5 +23,6 @@ public interface UserMembershipRepository extends JpaRepository<UserMembership, 
 
     java.util.List<UserMembership> findByCheckoutInvoiceId(Integer checkoutInvoiceId);
 
-    boolean existsByUser_UserIdAndStatusAndAPackage_PackageId(Integer userId, String status, Integer packageId);
+    @Query("SELECT COUNT(um) > 0 FROM UserMembership um WHERE um.user.userId = :userId AND um.status = :status AND um.aPackage.packageId = :packageId")
+    boolean existsByUser_UserIdAndStatusAndAPackage_PackageId(@Param("userId") Integer userId, @Param("status") String status, @Param("packageId") Integer packageId);
 }
