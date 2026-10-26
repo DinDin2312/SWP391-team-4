@@ -34,6 +34,7 @@ export function localizedCopy(object) {
   return new Proxy(object, { get(target,key) {
     const value = target[key];
     if (typeof value === 'function') return (...args) => t(value(...args));
+    if (Array.isArray(value)) return value.map(item => typeof item === 'string' ? t(item) : (item && typeof item === 'object' ? localizedCopy(item) : item));
     if (value && typeof value === 'object') return localizedCopy(value);
     return typeof value === 'string' ? t(value) : value;
   } });

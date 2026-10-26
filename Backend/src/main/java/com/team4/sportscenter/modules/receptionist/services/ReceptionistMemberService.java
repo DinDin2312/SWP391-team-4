@@ -1,5 +1,6 @@
 package com.team4.sportscenter.modules.receptionist.services;
 
+import com.team4.sportscenter.modules.receptionist.dtos.request.CoachCheckInRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.MemberCheckInRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.MemberRegisterRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.RenewBookingRequest;
@@ -24,6 +25,10 @@ public interface ReceptionistMemberService {
     MemberCheckInRecordResponse checkOutMember(Long checkInId);
     List<MemberCheckInRecordResponse> getCheckInHistory(LocalDate date, String keyword, String statusFilter);
 
+    List<CoachScheduleCheckInResponse> getTodayCoachSchedules(LocalDate date, String keyword, String statusFilter);
+    CoachScheduleCheckInResponse checkInCoach(CoachCheckInRequest request);
+    CoachScheduleCheckInResponse checkOutCoach(Long checkInId);
+
     void cancelBookingForMember(com.team4.sportscenter.modules.receptionist.dtos.request.CancelClassBookingRequest request);
     int cancelCourseForMember(com.team4.sportscenter.modules.receptionist.dtos.request.CancelClassBookingRequest request);
     ReceiptResponse enrollMemberToClass(com.team4.sportscenter.modules.receptionist.dtos.request.EnrollClassRequest request);
@@ -33,4 +38,3 @@ public interface ReceptionistMemberService {
     List<ReceiptResponse> getMemberInvoices(Integer userId);
     List<ReceiptResponse> getAllInvoices();
 }
-

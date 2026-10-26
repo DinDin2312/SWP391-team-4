@@ -1,4 +1,4 @@
-import managerEn from '../i18n/en';
+import managerEn from '../i18n/en.js';
 
 export const roleLabel = (roleName) => managerEn.staff.roles[roleName] || roleName;
 

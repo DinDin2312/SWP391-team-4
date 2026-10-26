@@ -37,5 +37,10 @@ class SchedulePlannerTests {
         var busy=List.of(new BusyPeriod(first.atTime(9,0),first.atTime(10,0)));
         assertTrue(SchedulePlanner.free(s,busy,0)); assertFalse(SchedulePlanner.free(s,busy,15));
         assertThrows(IllegalArgumentException.class,()->SchedulePlanner.propose(rules(1,first.plusDays(366),List.of()),List.of(),now));
+        assertThrows(IllegalArgumentException.class,()->SchedulePlanner.validateRules(null,now));
+        var policy=new com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy(LocalTime.of(9,0),LocalTime.of(12,0),15,60,List.of());
+        var fixed=SchedulePlanner.proposeFixed(rules(2,first.plusDays(3),List.of(first.plusDays(1))),List.of(new BusyPeriod(first.atTime(9,0),first.atTime(12,0))),now,policy);
+        assertEquals(2,fixed.sessions().size());
+        assertEquals(2,fixed.skipped().size());
     }
 }

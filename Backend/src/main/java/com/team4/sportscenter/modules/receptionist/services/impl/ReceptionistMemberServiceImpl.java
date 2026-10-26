@@ -7,6 +7,7 @@ import com.team4.sportscenter.modules.member.entities.Booking;
 import com.team4.sportscenter.modules.member.entities.GymClass;
 import com.team4.sportscenter.modules.member.entities.Schedule;
 import com.team4.sportscenter.modules.member.entities.UserMembership;
+import com.team4.sportscenter.modules.receptionist.dtos.request.CoachCheckInRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.CancelClassBookingRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.EnrollClassRequest;
 import com.team4.sportscenter.modules.receptionist.dtos.request.MemberRegisterRequest;
@@ -1963,5 +1964,348 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 .items(items)
                 .build();
     }
-}
 
+    @Override
+    public List<CoachScheduleCheckInResponse> getTodayCoachSchedules(LocalDate date, String keyword, String statusFilter) {
+        LocalDate targetDate = (date != null) ? date : LocalDate.now();
+        LocalDateTime dayStart = targetDate.atStartOfDay();
+        LocalDateTime dayEnd = targetDate.atTime(LocalTime.MAX);
+
+        List<Schedule> schedules = scheduleRepository.findSchedulesBetweenDates(dayStart, dayEnd);
+        if (schedules == null || schedules.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Query all Coach Check-in audit logs for targetDate
+        List<Map<String, Object>> checkInRows = jdbcTemplate.queryForList(
+                "SELECT audit_id, actor_email, action, entity_id, details, changes_json, created_at " +
+                "FROM AUDIT_LOGS " +
+                "WHERE entity_type = 'COACH_CHECKIN' " +
+                "AND created_at >= ? AND created_at <= ? " +
+                "ORDER BY created_at DESC",
+                java.sql.Timestamp.valueOf(dayStart),
+                java.sql.Timestamp.valueOf(dayEnd)
+        );
+
+        // Map scheduleId -> latest CheckIn Record
+        Map<Integer, Map<String, Object>> checkInMapBySchedule = new HashMap<>();
+        for (Map<String, Object> row : checkInRows) {
+            String cJson = (String) row.get("changes_json");
+            if (cJson != null && !cJson.isBlank()) {
+                try {
+                    Map<String, Object> data = jsonMapper.readValue(cJson, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+                    Integer schedId = (data.get("scheduleId") != null) ? ((Number) data.get("scheduleId")).intValue() : null;
+                    if (schedId != null && !checkInMapBySchedule.containsKey(schedId)) {
+                        data.put("auditId", row.get("audit_id"));
+                        checkInMapBySchedule.put(schedId, data);
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+
+        String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim().toLowerCase() : null;
+        String cleanStatus = (statusFilter != null && !statusFilter.trim().isEmpty() && !statusFilter.equalsIgnoreCase("ALL"))
+                ? statusFilter.trim().toUpperCase() : null;
+
+        List<CoachScheduleCheckInResponse> results = new ArrayList<>();
+
+        for (Schedule s : schedules) {
+            GymClass gymClass = s.getGymClass();
+            if (gymClass == null) continue;
+            User coach = gymClass.getCoach();
+            if (coach == null) continue;
+
+            String coachName = coach.getFullName() != null ? coach.getFullName() : "HLV #" + coach.getUserId();
+            String coachEmail = coach.getEmail() != null ? coach.getEmail() : "";
+            String coachPhone = coach.getPhone() != null ? coach.getPhone() : "";
+            String className = gymClass.getClassName() != null ? gymClass.getClassName() : "Lớp học";
+            String roomName = (gymClass.getRoom() != null && gymClass.getRoom().getRoomName() != null)
+                    ? gymClass.getRoom().getRoomName() : "Phòng tập";
+            Integer roomId = (gymClass.getRoom() != null) ? gymClass.getRoom().getRoomId() : null;
+
+            // Filter keyword
+            if (cleanKeyword != null) {
+                boolean matchCoach = coachName.toLowerCase().contains(cleanKeyword) ||
+                                     coachEmail.toLowerCase().contains(cleanKeyword) ||
+                                     coachPhone.toLowerCase().contains(cleanKeyword);
+                boolean matchClass = className.toLowerCase().contains(cleanKeyword);
+                boolean matchRoom = roomName.toLowerCase().contains(cleanKeyword);
+                if (!matchCoach && !matchClass && !matchRoom) {
+                    continue;
+                }
+            }
+
+            Map<String, Object> checkInData = checkInMapBySchedule.get(s.getScheduleId());
+            Long checkInId = null;
+            String checkInStatus = "PENDING";
+            LocalDateTime checkInTime = null;
+            LocalDateTime checkOutTime = null;
+            String checkedInBy = null;
+            String note = null;
+
+            if (checkInData != null) {
+                checkInId = (checkInData.get("auditId") != null) ? ((Number) checkInData.get("auditId")).longValue() : null;
+                checkInStatus = (String) checkInData.getOrDefault("status", "CHECKED_IN");
+                String cTimeStr = (String) checkInData.get("checkInTime");
+                if (cTimeStr != null && !cTimeStr.isBlank()) {
+                    try { checkInTime = LocalDateTime.parse(cTimeStr); } catch (Exception ignored) {}
+                }
+                String oTimeStr = (String) checkInData.get("checkOutTime");
+                if (oTimeStr != null && !oTimeStr.isBlank()) {
+                    try { checkOutTime = LocalDateTime.parse(oTimeStr); } catch (Exception ignored) {}
+                }
+                checkedInBy = (String) checkInData.get("checkedInBy");
+                note = (String) checkInData.get("note");
+            }
+
+            // Filter status
+            if (cleanStatus != null) {
+                if (!cleanStatus.equalsIgnoreCase(checkInStatus)) {
+                    continue;
+                }
+            }
+
+            results.add(CoachScheduleCheckInResponse.builder()
+                    .coachId(coach.getUserId())
+                    .coachName(coachName)
+                    .coachEmail(coachEmail)
+                    .coachPhone(coachPhone)
+                    .scheduleId(s.getScheduleId())
+                    .classId(gymClass.getClassId())
+                    .className(className)
+                    .roomId(roomId)
+                    .roomName(roomName)
+                    .startTime(s.getStartTime())
+                    .endTime(s.getEndTime())
+                    .checkInId(checkInId)
+                    .checkInStatus(checkInStatus)
+                    .checkInTime(checkInTime)
+                    .checkOutTime(checkOutTime)
+                    .checkedInBy(checkedInBy)
+                    .note(note)
+                    .build());
+        }
+
+        return results;
+    }
+
+    @Override
+    @Transactional
+    public CoachScheduleCheckInResponse checkInCoach(CoachCheckInRequest request) {
+        if (request.getCoachId() == null) {
+            throw new IllegalArgumentException("Vui lòng chọn Huấn luyện viên để Check-in.");
+        }
+        if (request.getScheduleId() == null) {
+            throw new IllegalArgumentException("Vui lòng chọn Ca dạy (Schedule) để Check-in.");
+        }
+
+        bookingRepository.lockOperations();
+
+        User coach = userRepository.findById(request.getCoachId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Huấn luyện viên với ID: " + request.getCoachId()));
+
+        Schedule schedule = scheduleRepository.findById(request.getScheduleId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca dạy với ID: " + request.getScheduleId()));
+
+        GymClass gymClass = schedule.getGymClass();
+        if (gymClass == null || gymClass.getCoach() == null || !gymClass.getCoach().getUserId().equals(coach.getUserId())) {
+            throw new IllegalArgumentException("Huấn luyện viên " + coach.getFullName() + " không phụ trách ca dạy này.");
+        }
+
+        // Check if already checked in
+        LocalDate today = schedule.getStartTime().toLocalDate();
+        LocalDateTime dayStart = today.atStartOfDay();
+        LocalDateTime dayEnd = today.atTime(LocalTime.MAX);
+
+        List<Map<String, Object>> existingLogs = jdbcTemplate.queryForList(
+                "SELECT audit_id, changes_json FROM AUDIT_LOGS " +
+                "WHERE entity_type = 'COACH_CHECKIN' " +
+                "AND created_at >= ? AND created_at <= ?",
+                java.sql.Timestamp.valueOf(dayStart),
+                java.sql.Timestamp.valueOf(dayEnd)
+        );
+
+        for (Map<String, Object> log : existingLogs) {
+            String cJson = (String) log.get("changes_json");
+            if (cJson != null && cJson.contains("\"scheduleId\":" + schedule.getScheduleId())) {
+                try {
+                    Map<String, Object> data = jsonMapper.readValue(cJson, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+                    Integer loggedSchedId = data.get("scheduleId") != null ? ((Number) data.get("scheduleId")).intValue() : null;
+                    if (Objects.equals(loggedSchedId, schedule.getScheduleId()) && "CHECKED_IN".equalsIgnoreCase((String) data.get("status"))) {
+                        throw new IllegalArgumentException("Huấn luyện viên " + coach.getFullName() +
+                                " đã Check-in cho ca dạy này lúc " + data.get("checkInTime") + ".");
+                    }
+                } catch (IllegalArgumentException ex) {
+                    throw ex;
+                } catch (Exception ignored) {}
+            }
+        }
+
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+        String actorEmail = (request.getReceptionistEmail() != null && !request.getReceptionistEmail().trim().isEmpty())
+                ? request.getReceptionistEmail().trim()
+                : "receptionist@sport.com";
+
+        String roomName = (gymClass.getRoom() != null && gymClass.getRoom().getRoomName() != null)
+                ? gymClass.getRoom().getRoomName() : "Phòng tập";
+        Integer roomId = (gymClass.getRoom() != null) ? gymClass.getRoom().getRoomId() : null;
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("coachId", coach.getUserId());
+        payload.put("coachName", coach.getFullName());
+        payload.put("coachEmail", coach.getEmail());
+        payload.put("coachPhone", coach.getPhone());
+        payload.put("scheduleId", schedule.getScheduleId());
+        payload.put("classId", gymClass.getClassId());
+        payload.put("className", gymClass.getClassName());
+        payload.put("roomId", roomId);
+        payload.put("roomName", roomName);
+        payload.put("startTime", schedule.getStartTime().toString());
+        payload.put("endTime", schedule.getEndTime().toString());
+        payload.put("status", "CHECKED_IN");
+        payload.put("checkInTime", now.toString());
+        payload.put("checkOutTime", null);
+        payload.put("checkedInBy", actorEmail);
+        payload.put("note", request.getNote());
+
+        String jsonString;
+        try {
+            jsonString = jsonMapper.writeValueAsString(payload);
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi ghi dữ liệu Check-in HLV.", e);
+        }
+
+        String details = String.format("Check-in HLV %s (#%d) - Lớp: %s - Ca: %s",
+                coach.getFullName(), coach.getUserId(), gymClass.getClassName(), schedule.getStartTime().toString());
+
+        org.springframework.jdbc.support.KeyHolder keyHolder = new org.springframework.jdbc.support.GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            java.sql.PreparedStatement ps = connection.prepareStatement(
+                    "INSERT INTO AUDIT_LOGS (actor_email, action, entity_type, entity_id, details, changes_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    java.sql.Statement.RETURN_GENERATED_KEYS
+            );
+            ps.setString(1, actorEmail);
+            ps.setString(2, "COACH_CHECK_IN");
+            ps.setString(3, "COACH_CHECKIN");
+            ps.setString(4, String.valueOf(coach.getUserId()));
+            ps.setString(5, details);
+            ps.setString(6, jsonString);
+            ps.setTimestamp(7, java.sql.Timestamp.valueOf(now));
+            return ps;
+        }, keyHolder);
+
+        Long checkInId = (keyHolder.getKey() != null) ? keyHolder.getKey().longValue() : null;
+
+        return CoachScheduleCheckInResponse.builder()
+                .coachId(coach.getUserId())
+                .coachName(coach.getFullName())
+                .coachEmail(coach.getEmail())
+                .coachPhone(coach.getPhone())
+                .scheduleId(schedule.getScheduleId())
+                .classId(gymClass.getClassId())
+                .className(gymClass.getClassName())
+                .roomId(roomId)
+                .roomName(roomName)
+                .startTime(schedule.getStartTime())
+                .endTime(schedule.getEndTime())
+                .checkInId(checkInId)
+                .checkInStatus("CHECKED_IN")
+                .checkInTime(now)
+                .checkOutTime(null)
+                .checkedInBy(actorEmail)
+                .note(request.getNote())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public CoachScheduleCheckInResponse checkOutCoach(Long checkInId) {
+        if (checkInId == null) {
+            throw new IllegalArgumentException("Mã lượt Check-in HLV không hợp lệ.");
+        }
+
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT audit_id, actor_email, action, entity_id, details, changes_json, created_at " +
+                "FROM AUDIT_LOGS WHERE audit_id = ? AND entity_type = 'COACH_CHECKIN'",
+                checkInId
+        );
+
+        if (rows.isEmpty()) {
+            throw new IllegalArgumentException("Không tìm thấy bản ghi Check-in HLV với mã #" + checkInId);
+        }
+
+        Map<String, Object> row = rows.get(0);
+        String changesJson = (String) row.get("changes_json");
+
+        Map<String, Object> payload;
+        try {
+            payload = jsonMapper.readValue(changesJson, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi phân tích dữ liệu Check-in HLV.", e);
+        }
+
+        if ("COMPLETED".equalsIgnoreCase((String) payload.get("status"))) {
+            throw new IllegalArgumentException("Ca dạy này đã được Check-out kết thúc trước đó.");
+        }
+
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+        payload.put("status", "COMPLETED");
+        payload.put("checkOutTime", now.toString());
+
+        String updatedJson;
+        try {
+            updatedJson = jsonMapper.writeValueAsString(payload);
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi cập nhật dữ liệu Check-out HLV.", e);
+        }
+
+        jdbcTemplate.update(
+                "UPDATE AUDIT_LOGS SET action = 'COACH_CHECK_OUT', changes_json = ? WHERE audit_id = ?",
+                updatedJson, checkInId
+        );
+
+        Integer coachId = (payload.get("coachId") != null) ? ((Number) payload.get("coachId")).intValue() : null;
+        Integer scheduleId = (payload.get("scheduleId") != null) ? ((Number) payload.get("scheduleId")).intValue() : null;
+        Integer classId = (payload.get("classId") != null) ? ((Number) payload.get("classId")).intValue() : null;
+        Integer roomId = (payload.get("roomId") != null) ? ((Number) payload.get("roomId")).intValue() : null;
+
+        LocalDateTime checkInTime = null;
+        String cTimeStr = (String) payload.get("checkInTime");
+        if (cTimeStr != null && !cTimeStr.isBlank()) {
+            try { checkInTime = LocalDateTime.parse(cTimeStr); } catch (Exception ignored) {}
+        }
+
+        LocalDateTime startTime = null;
+        String sTimeStr = (String) payload.get("startTime");
+        if (sTimeStr != null && !sTimeStr.isBlank()) {
+            try { startTime = LocalDateTime.parse(sTimeStr); } catch (Exception ignored) {}
+        }
+
+        LocalDateTime endTime = null;
+        String eTimeStr = (String) payload.get("endTime");
+        if (eTimeStr != null && !eTimeStr.isBlank()) {
+            try { endTime = LocalDateTime.parse(eTimeStr); } catch (Exception ignored) {}
+        }
+
+        return CoachScheduleCheckInResponse.builder()
+                .coachId(coachId)
+                .coachName((String) payload.get("coachName"))
+                .coachEmail((String) payload.get("coachEmail"))
+                .coachPhone((String) payload.get("coachPhone"))
+                .scheduleId(scheduleId)
+                .classId(classId)
+                .className((String) payload.get("className"))
+                .roomId(roomId)
+                .roomName((String) payload.get("roomName"))
+                .startTime(startTime)
+                .endTime(endTime)
+                .checkInId(checkInId)
+                .checkInStatus("COMPLETED")
+                .checkInTime(checkInTime)
+                .checkOutTime(now)
+                .checkedInBy((String) payload.get("checkedInBy"))
+                .note((String) payload.get("note"))
+                .build();
+    }
+
+}

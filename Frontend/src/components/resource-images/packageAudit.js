@@ -1,5 +1,5 @@
-import { formatMoney } from '../../utils/displayFormat';
-import { t } from '../../i18n/useLanguage';
+import { formatMoney } from '../../utils/displayFormat.js';
+import { t } from '../../i18n/useLanguage.js';
 export function auditValue(field,value){
   if(value==null)return '—';
   if(field==='price')return formatMoney(value);

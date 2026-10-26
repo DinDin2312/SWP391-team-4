@@ -107,6 +107,12 @@ class CoachProfileServiceTests {
         assertThrows(IllegalArgumentException.class,()->coachProfileService.updateCoachProfile("coach@example.com",UpdateCoachProfileRequest.builder().subjectId(2).build()));
         assertEquals(1,testCoach.getSpecialties().get(0).getSubjectId());
         verify(userRepository,never()).save(any());
+        when(subjectRepository.findAll()).thenReturn(List.of(gymSubject, yogaSubject));
+        assertEquals(2, coachProfileService.getAllSubjects().size());
+        testCoach.setSpecialties(null);
+        var noSpecProfile = coachProfileService.getCoachProfile("coach@example.com");
+        assertNull(noSpecProfile.getCurrentSubjectId());
+        assertTrue(noSpecProfile.getAvailableSubjects().isEmpty());
     }
     @Test
     @DisplayName("Unknown subject requests cannot bypass manager assignment")
@@ -115,5 +121,11 @@ class CoachProfileServiceTests {
         var error=assertThrows(IllegalArgumentException.class,()->coachProfileService.updateCoachProfile("coach@example.com",UpdateCoachProfileRequest.builder().subjectId(999).build()));
         assertTrue(error.getMessage().contains("quản lý"));
         verify(userRepository,never()).save(any());
+        when(subjectRepository.findAll()).thenReturn(List.of(gymSubject, yogaSubject));
+        assertEquals(2, coachProfileService.getAllSubjects().size());
+        testCoach.setSpecialties(null);
+        var noSpecProfile = coachProfileService.getCoachProfile("coach@example.com");
+        assertNull(noSpecProfile.getCurrentSubjectId());
+        assertTrue(noSpecProfile.getAvailableSubjects().isEmpty());
     }
 }

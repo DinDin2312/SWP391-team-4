@@ -181,22 +181,23 @@ export default function Register() {
           {/* RIGHT COLUMN: Crisp High-Contrast Translucent Frosted Glass Card */}
           <motion.div 
             className="col-span-1 lg:col-span-6 xl:col-span-5 flex justify-center lg:justify-end w-full"
-            initial={{ x: 40, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.7, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
           >
             {/* Luminous High-Contrast Frosted White Card */}
-            <div className="relative w-full max-w-[440px] rounded-2xl bg-white/75 hover:bg-white/80 backdrop-blur-2xl border border-white/90 shadow-[0_20px_50px_rgba(15,23,42,0.18)] p-5 sm:p-6 text-slate-900 transition-all">
+            {/* 3-Stage Metamorphosis Card: Trong suốt (0s) -> Đục mờ sương (1s) -> Trắng tinh hoàn toàn (2s - 4s) */}
+            <div className="relative w-full max-w-[440px] rounded-2xl animate-card-glass-to-white p-5 sm:p-6 text-slate-900">
 
               {/* Header Row: Brand + Language Toggle */}
               <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-200/70">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-blue-600/10 text-blue-600 flex items-center justify-center border border-blue-500/20 shadow-xs">
-                    <Dumbbell className="w-4 h-4" strokeWidth={2.4} />
+                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/30">
+                    <Dumbbell className="w-5 h-5" strokeWidth={2.4} />
                   </div>
                   <div className="leading-tight">
-                    <h2 className="font-black text-sm text-slate-900 tracking-wider">{t("NEXUS")}</h2>
-                    <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">{t("SPORTS CENTER")}</p>
+                    <h2 className="font-black text-sm text-slate-950 tracking-wider">{t("NEXUS")}</h2>
+                    <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">{t("SPORTS CENTER")}</p>
                   </div>
                 </div>
 
@@ -205,9 +206,9 @@ export default function Register() {
                   type="button"
                   onClick={toggleLanguage}
                   title={currentLang === 'en' ? 'Chuyển sang Tiếng Việt' : 'Switch to English'}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80 transition-all cursor-pointer shadow-2xs"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 shadow-sm transition-all cursor-pointer"
                 >
-                  <Globe className="w-3.5 h-3.5 text-blue-600" />
+                  <Globe className="w-4 h-4 text-blue-600" strokeWidth={2.2} />
                   <span>{currentLang.toUpperCase()}</span>
                 </button>
               </div>
@@ -215,12 +216,12 @@ export default function Register() {
               {/* Card Title */}
               <div className="mb-3">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">
                     {t("Create Account")}
                   </h3>
                   <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />
                 </div>
-                <p className="text-xs text-slate-600 font-medium mt-0.5">
+                <p className="text-xs text-slate-700 font-semibold mt-0.5">
                   {t("Start your journey at Nexus Sports Center")}
                 </p>
               </div>
@@ -230,11 +231,11 @@ export default function Register() {
 
                 {/* Full Name Field */}
                 <div>
-                  <label htmlFor="fullName" className="block text-xs font-bold text-slate-800 mb-1">
+                  <label htmlFor="fullName" className="block text-xs font-extrabold text-slate-900 mb-1">
                     {t("Full Name")} <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700 pointer-events-none" strokeWidth={2.2} />
                     <input
                       id="fullName"
                       type="text"
@@ -242,18 +243,18 @@ export default function Register() {
                       value={formData.fullName}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-3.5 py-2 sm:py-2.5 rounded-xl border border-slate-300/80 bg-white/80 hover:bg-white focus:bg-white text-xs sm:text-sm text-slate-900 font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-600 transition-all shadow-2xs"
+                      className="w-full pl-10 pr-3.5 py-2 sm:py-2.5 rounded-xl border border-slate-300 bg-slate-50/70 hover:bg-white focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm text-slate-900 font-semibold placeholder:text-slate-400 placeholder:font-normal transition-all shadow-xs"
                     />
                   </div>
                 </div>
 
                 {/* Email Address Field */}
                 <div>
-                  <label htmlFor="email" className="block text-xs font-bold text-slate-800 mb-1">
+                  <label htmlFor="email" className="block text-xs font-extrabold text-slate-900 mb-1">
                     {t("Email Address")} <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700 pointer-events-none" strokeWidth={2.2} />
                     <input
                       id="email"
                       type="email"
@@ -262,36 +263,36 @@ export default function Register() {
                       onChange={handleInputChange}
                       required
                       autoComplete="email"
-                      className="w-full pl-10 pr-3.5 py-2 sm:py-2.5 rounded-xl border border-slate-300/80 bg-white/80 hover:bg-white focus:bg-white text-xs sm:text-sm text-slate-900 font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-600 transition-all shadow-2xs"
+                      className="w-full pl-10 pr-3.5 py-2 sm:py-2.5 rounded-xl border border-slate-300 bg-slate-50/70 hover:bg-white focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm text-slate-900 font-semibold placeholder:text-slate-400 placeholder:font-normal transition-all shadow-xs"
                     />
                   </div>
                 </div>
 
                 {/* Phone Number Field */}
                 <div>
-                  <label htmlFor="phone" className="block text-xs font-bold text-slate-800 mb-1">
+                  <label htmlFor="phone" className="block text-xs font-extrabold text-slate-900 mb-1">
                     {t("Phone Number")}
                   </label>
                   <div className="relative">
-                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700 pointer-events-none" strokeWidth={2.2} />
                     <input
                       id="phone"
                       type="tel"
                       placeholder="+84 901 234 567"
                       value={formData.phone}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-3.5 py-2 sm:py-2.5 rounded-xl border border-slate-300/80 bg-white/80 hover:bg-white focus:bg-white text-xs sm:text-sm text-slate-900 font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-600 transition-all shadow-2xs"
+                      className="w-full pl-10 pr-3.5 py-2 sm:py-2.5 rounded-xl border border-slate-300 bg-slate-50/70 hover:bg-white focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm text-slate-900 font-semibold placeholder:text-slate-400 placeholder:font-normal transition-all shadow-xs"
                     />
                   </div>
                 </div>
 
                 {/* Password Field */}
                 <div>
-                  <label htmlFor="password" className="block text-xs font-bold text-slate-800 mb-1">
+                  <label htmlFor="password" className="block text-xs font-extrabold text-slate-900 mb-1">
                     {t("Password")} <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700 pointer-events-none" strokeWidth={2.2} />
                     <input
                       id="password"
                       type={showPassword ? "text" : "password"}
@@ -300,13 +301,13 @@ export default function Register() {
                       onChange={handleInputChange}
                       required
                       autoComplete="new-password"
-                      className="w-full pl-10 pr-10 py-2 sm:py-2.5 rounded-xl border border-slate-300/80 bg-white/80 hover:bg-white focus:bg-white text-xs sm:text-sm text-slate-900 font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/25 focus:border-blue-600 transition-all font-mono shadow-2xs"
+                      className="w-full pl-10 pr-10 py-2 sm:py-2.5 rounded-xl border border-slate-300 bg-slate-50/70 hover:bg-white focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm text-slate-900 font-semibold placeholder:text-slate-400 placeholder:font-normal transition-all font-mono shadow-xs"
                     />
                     <button
                       type="button"
                       aria-label={t(showPassword ? 'Hide password' : 'Show password')}
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-950 transition-colors cursor-pointer"
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -326,7 +327,7 @@ export default function Register() {
 
                 {/* Primary Athletic Focus */}
                 <div>
-                  <span className="text-xs font-bold text-slate-800 block mb-1">
+                  <span className="text-xs font-extrabold text-slate-900 block mb-1">
                     {t("Primary Athletic Focus")}
                   </span>
                   <div className="grid grid-cols-3 gap-2">
@@ -342,7 +343,7 @@ export default function Register() {
                         className={`py-1.5 px-2 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all duration-200 border cursor-pointer ${
                           selectedSport === name 
                             ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/30' 
-                            : 'bg-white/70 hover:bg-white border-slate-300/80 text-slate-700 shadow-2xs'
+                            : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-800 shadow-xs'
                         }`}
                       >
                         <SportIcon className={`w-3.5 h-3.5 shrink-0 ${selectedSport === name ? 'text-white' : 'text-blue-600'}`} />
@@ -355,11 +356,11 @@ export default function Register() {
                 {/* Terms Agreement Checkbox */}
                 <div className="flex items-start gap-2.5 pt-0.5 cursor-pointer select-none" onClick={toggleAgreement}>
                   <div className={`w-4 h-4 rounded-md border flex items-center justify-center mt-0.5 transition-colors shrink-0 ${
-                    isAgreed ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white/80 border-slate-300'
+                    isAgreed ? 'bg-blue-600 border-blue-600 text-white shadow-xs' : 'bg-white hover:bg-slate-50 border-slate-300'
                   }`}>
                     {isAgreed && <Check className="w-3 h-3 stroke-[3]" />}
                   </div>
-                  <p className="text-xs text-slate-700 font-medium leading-normal">
+                  <p className="text-xs text-slate-800 font-medium leading-normal">
                     <span>{t("I accept the")} </span>
                     <span className="text-blue-600 font-extrabold hover:underline">{t("Terms of Service")}</span>
                     <span>{t(", safety protocols, and health liability waivers.")}</span>

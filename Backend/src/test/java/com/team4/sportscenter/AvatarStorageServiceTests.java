@@ -41,5 +41,15 @@ class AvatarStorageServiceTests {
         AvatarStorageService storage = new AvatarStorageService(temporaryDirectory.toString());
 
         assertThrows(IllegalArgumentException.class, () -> storage.load("../secret.png"));
+        assertThrows(IllegalArgumentException.class, () -> storage.store(null));
+        assertThrows(IllegalArgumentException.class, () -> storage.store(new MockMultipartFile("avatar", new byte[2 * 1024 * 1024 + 1])));
+        byte[] jpg = new byte[] {(byte) 0xff, (byte) 0xd8, (byte) 0xff, 0x01};
+        String jpgName = storage.store(new MockMultipartFile("avatar", "photo.jpg", "image/jpeg", jpg));
+        assertTrue(jpgName.endsWith(".jpg"));
+        assertEquals("image/jpeg", storage.load(jpgName).mediaType().toString());
+        storage.delete(null);
+        storage.delete("   ");
+        storage.delete(jpgName);
+        assertThrows(IllegalArgumentException.class, () -> storage.load(jpgName));
     }
 }

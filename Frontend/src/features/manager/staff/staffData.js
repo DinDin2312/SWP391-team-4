@@ -36,7 +36,7 @@ export const staffAvatarTone = (user = {}) => {
 export const staffAvatarUrl = (avatarPath) => {
   if (!avatarPath) return '';
   if (/^https?:\/\//i.test(avatarPath)) return avatarPath;
-  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+  const apiBase = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8080/api';
   const path = avatarPath.startsWith('/') ? avatarPath : `/api/avatars/${avatarPath}`;
   return new URL(path, apiBase).href;
 };

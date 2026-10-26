@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -42,15 +43,13 @@ public class AiChatServiceImpl implements AiChatService {
         // Fetch Data for RAG
         List<PackageResponse> packages = memberService.getAllPackages();
         String packagesListString = packages.stream()
-            .map(p -> "ID: " + p.getPackageId() + " | Name: " + p.getPackageName() + " (" + p.getDurationDays() + " days, Price: " + p.getPrice() + " VND)")
+            .map(p -> "[" + p.getPackageId() + "] " + p.getPackageName() + " (" + p.getDurationDays() + " ngày, " + p.getPrice() + " VND)")
             .collect(Collectors.joining("\n"));
 
         List<AvailableClassResponse> classes = memberService.getAvailableClasses();
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         String classesListString = classes.stream()
-            .map(c -> "Class ID: " + c.getClassId() + " | Class: " + c.getClassName() + 
-                      " | Coach: " + c.getCoachName() + " | Next Session: " + (c.getNextSessionTime() != null ? (c.getNextSessionTime().format(timeFormatter) + " to " + c.getNextSessionTime().plusMinutes(c.getDurationMinutes()).format(timeFormatter)) : "N/A") + 
-                      " | Available Slots: " + (c.getMaxSlots() - c.getBookedSlots()))
+            .map(c -> "[" + c.getClassId() + "] " + c.getClassName() + " | HLV: " + c.getCoachName() + " | Lịch: " + (c.getNextSessionTime() != null ? c.getNextSessionTime().format(timeFormatter) : "N/A") + " | Còn: " + (c.getMaxSlots() - c.getBookedSlots()) + " chỗ")
             .collect(Collectors.joining("\n"));
 
         List<UpcomingBookingResponse> myBookings = memberService.getMyUpcomingBookings(email);
@@ -58,7 +57,10 @@ public class AiChatServiceImpl implements AiChatService {
             .map(b -> "- " + b.getClassName() + " from " + b.getStartTime().format(timeFormatter) + " to " + b.getEndTime().format(timeFormatter))
             .collect(Collectors.joining("\n"));
 
-        RestTemplate restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3000);
+        factory.setReadTimeout(10000);
+        RestTemplate restTemplate = new RestTemplate(factory);
 
         String systemPrompt = "You are NEXUS AI, a cool, friendly, and energetic personal trainer & assistant EXCLUSIVELY for NEXUS Sports Lab.\n" +
                 "Your tone must be natural, engaging, and conversational (like a human gym buddy). Do NOT sound like a robotic customer service bot.\n" +
@@ -112,7 +114,7 @@ public class AiChatServiceImpl implements AiChatService {
         requestBody.put("contents", List.of(content));
 
         Map<String, Object> generationConfig = new HashMap<>();
-        generationConfig.put("maxOutputTokens", 500);
+        generationConfig.put("maxOutputTokens", 400);
         generationConfig.put("temperature", 0.7);
         requestBody.put("generationConfig", generationConfig);
 
@@ -121,7 +123,7 @@ public class AiChatServiceImpl implements AiChatService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        String[] models = {"gemini-1.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-3.5-flash-lite", "gemini-3.8-flash-lite"};
+        String[] models = {"gemini-3.5-flash-lite", "gemini-flash-lite-latest"};
         
         for (String model : models) {
             String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;

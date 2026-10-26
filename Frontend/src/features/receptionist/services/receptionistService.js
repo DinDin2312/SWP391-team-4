@@ -1,4 +1,4 @@
-import axiosClient from '../../../services/axiosClient';
+import axiosClient from '../../../services/axiosClient.js';
 
 export const receptionistService = {
   /**
@@ -73,6 +73,22 @@ export const receptionistService = {
 
   checkOutMember: async (checkInId) => {
     return await axiosClient.post(`/receptionist/checkin/${checkInId}/checkout`);
+  },
+
+  getCoachSchedules: async ({ date = '', keyword = '', status = 'ALL' } = {}) => {
+    const params = {};
+    if (date) params.date = date;
+    if (keyword && keyword.trim()) params.keyword = keyword.trim();
+    if (status && status !== 'ALL') params.status = status;
+    return await axiosClient.get('/receptionist/coaches/schedules', { params });
+  },
+
+  checkInCoach: async (payload) => {
+    return await axiosClient.post('/receptionist/coaches/checkin', payload);
+  },
+
+  checkOutCoach: async (checkInId) => {
+    return await axiosClient.post(`/receptionist/coaches/checkin/${checkInId}/checkout`);
   },
 
   getAvailableClassesForMember: async (userId) => {

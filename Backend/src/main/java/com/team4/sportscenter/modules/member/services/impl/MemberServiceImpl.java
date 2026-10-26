@@ -703,4 +703,36 @@ public class MemberServiceImpl implements MemberService {
                 .map(CoachAssessmentServiceImpl::mapAssessmentToResponse)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    @Transactional
+    public TraineeAssessmentResponse createSelfAssessment(String email, com.team4.sportscenter.modules.member.dtos.request.CreateSelfAssessmentRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String note = request.getFeedbackNote();
+        if (note == null || note.trim().isEmpty()) {
+            note = "Chỉ số InBody do hội viên tự đo và cập nhật.";
+        }
+
+        TraineeAssessment assessment = TraineeAssessment.builder()
+                .user(user)
+                .coach(user)
+                .booking(null)
+                .schedule(null)
+                .assessmentTitle("Hội viên tự ghi nhận")
+                .weight(request.getWeight())
+                .height(request.getHeight())
+                .bodyFatPercentage(request.getBodyFatPercentage())
+                .muscleMass(request.getMuscleMass())
+                .performanceRating(null)
+                .attendanceRating(null)
+                .feedbackNote(note)
+                .recommendation(null)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        TraineeAssessment saved = traineeAssessmentRepository.save(assessment);
+        return CoachAssessmentServiceImpl.mapAssessmentToResponse(saved);
+    }
 }

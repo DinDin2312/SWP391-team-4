@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Receipt,
   LifeBuoy,
+  Settings,
 } from 'lucide-react';
 
 const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSelectFeature }) => {
@@ -38,47 +39,39 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
   const navItems = [
     {
       id: 'search-members',
-      label: t('Search & View Members'),
+      label: 'Search & View Members',
       icon: Users,
-      badge: 'Primary',
-      isReady: true,
     },
     {
       id: 'member-checkin',
-      label: t('Member Check-in (Gym & Facility)'),
+      label: 'Check-in',
       icon: UserCheck,
-      badge: 'Live',
-      isReady: true,
     },
     {
       id: 'register-member',
-      label: t('Register New Member'),
+      label: 'Register New Member',
       icon: UserPlus,
-      badge: '',
-      isReady: true,
     },
     {
       id: 'manage-memberships',
-      label: t('Packages & Renewals'),
+      label: 'Packages & Renewals',
       icon: CreditCard,
-      badge: '',
-      isReady: true,
     },
     {
       id: 'manage-invoices',
-      label: t('Invoices & Receipts'),
+      label: 'Invoices & Receipts',
       icon: Receipt,
-      badge: '',
-      isReady: true,
     },
     {
       id: 'support-desk',
-      label: t('Support Desk & Cancellations'),
+      label: 'Support & Cancellations',
       icon: LifeBuoy,
-      badge: 'New',
-      isReady: true,
     },
-
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: Settings,
+    },
   ];
 
   return (
@@ -116,26 +109,16 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
                       onSelectFeature(item.id);
                     }
                   }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer text-left ${
                     isSelected
-                      ? 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold'
-                      : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                      ? 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold shadow-xs'
+                      : 'border border-transparent text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 flex items-center justify-center shrink-0">
                     <Icon className="w-4 h-4 shrink-0" />
-                    <span>{t(item.label)}</span>
                   </div>
-
-                  {item.badge && (
-                    <span
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        item.isReady ? 'bg-[var(--surface)] text-[var(--success-text)]' : 'bg-[var(--surface)] text-[var(--text-muted)]'
-                      }`}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
+                  <span className="text-left leading-tight truncate flex-1 min-w-0">{t(item.label)}</span>
                 </button>
               );
             })}
@@ -173,7 +156,7 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
       {/* ===================== MAIN CONTENT WRAPPER ===================== */}
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         <header className="role-page-topbar role-reception-topbar">
-          <nav className="role-breadcrumb" aria-label={t('Breadcrumb')}><span>{t('Front desk portal')}</span><span aria-hidden="true">/</span><strong>{navItems.find(item => item.id === activeFeature)?.label}</strong></nav>
+          <nav className="role-breadcrumb" aria-label={t('Breadcrumb')}><span>{t('Front desk portal')}</span><span aria-hidden="true">/</span><strong>{t(navItems.find(item => item.id === activeFeature)?.label || '')}</strong></nav>
           <div className="role-header-actions"><LanguageSwitcher /></div>
         </header>
         {children}

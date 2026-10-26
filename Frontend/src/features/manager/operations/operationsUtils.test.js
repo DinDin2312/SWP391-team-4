@@ -7,6 +7,7 @@ import {
   isOngoing,
   operationPayload,
   scheduleMetrics,
+  subjectTone,
   weekRange,
 } from "./operationsUtils.js";
 
@@ -15,12 +16,19 @@ test("weeks start on Monday and cross month, year and leap-day boundaries", () =
     from: "2026-09-28",
     to: "2026-10-04",
   });
+  assert.deepEqual(weekRange(new Date(2026, 9, 3)), {
+    from: "2026-09-28",
+    to: "2026-10-04",
+  });
   assert.deepEqual(weekRange("2027-01-01"), {
     from: "2026-12-28",
     to: "2027-01-03",
   });
   assert.equal(addDays("2024-02-28", 1), "2024-02-29");
+  assert.equal(addDays(new Date(2024, 1, 28), 1), "2024-02-29");
   assert.equal(addDays("2026-12-31", 1), "2027-01-01");
+  assert.equal(subjectTone(1), "violet");
+  assert.equal(subjectTone(null), "blue");
 });
 
 test("occupancy includes API booked seats, excludes cancelled sessions and uses strict low threshold", () => {
@@ -104,7 +112,50 @@ test("empty calendar cell only offers active classes assigned to the selected re
   );
 });
 
-test("schedule payload omits room, coach, presentation status and repeat metadata", () => {
+test("operationPayload normalizes subject, room, class, schedule and series payloads", () => {
+  assert.deepEqual(
+    operationPayload("subject", {
+      subjectId: 1,
+      subjectName: " Yoga ",
+      description: "",
+      durationMinutes: "60",
+      slotStarts: ["07:00"],
+    }),
+    {
+      subjectId: 1,
+      subjectName: "Yoga",
+      description: "",
+      durationMinutes: 60,
+      slotStarts: ["07:00"],
+    },
+  );
+  assert.deepEqual(
+    operationPayload("room", { roomId: 2, roomName: " Room A ", capacity: "30" }),
+    { roomId: 2, roomName: "Room A", capacity: 30 },
+  );
+  assert.deepEqual(
+    operationPayload("class", {
+      classId: 3,
+      className: " Morning Yoga ",
+      subjectId: "1",
+      coachId: "4",
+      roomId: "2",
+      maxSlots: "20",
+      price: "650000",
+      status: "ACTIVE",
+    }),
+    {
+      classId: 3,
+      className: "Morning Yoga",
+      subjectId: 1,
+      coachId: 4,
+      roomId: 2,
+      maxSlots: 20,
+      price: 650000,
+      status: "ACTIVE",
+    },
+  );
+
   const form = {
     classId: "2",
     startTime: "2026-10-04T18:00",

@@ -220,6 +220,66 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.12</version>
+				<configuration>
+					<includes>
+						<include>com/team4/sportscenter/security/**</include>
+						<include>com/team4/sportscenter/common/exception/**</include>
+						<include>com/team4/sportscenter/modules/manager/controllers/ManagerExceptionHandler*</include>
+						<include>com/team4/sportscenter/modules/manager/services/AvatarStorageService*</include>
+						<include>com/team4/sportscenter/modules/manager/services/ResourceImageStorageService*</include>
+						<include>com/team4/sportscenter/modules/manager/services/TeachingSlots*</include>
+						<include>com/team4/sportscenter/modules/manager/services/SchedulePlanner*</include>
+						<include>com/team4/sportscenter/modules/manager/services/CourseSchedulePlanner*</include>
+						<include>com/team4/sportscenter/modules/manager/services/PackageTypeCatalog*</include>
+						<include>com/team4/sportscenter/modules/coach/services/impl/CoachProfileServiceImpl*</include>
+						<include>com/team4/sportscenter/modules/coach/services/impl/CoachNotificationServiceImpl*</include>
+						<include>com/team4/sportscenter/modules/coach/services/impl/CoachAssessmentServiceImpl*</include>
+						<include>com/team4/sportscenter/modules/notification/services/impl/NotificationServiceImpl*</include>
+						<include>com/team4/sportscenter/modules/member/services/impl/BookingCleanupTask*</include>
+						<include>com/team4/sportscenter/modules/payment/services/impl/InvoiceServiceImpl*</include>
+					</includes>
+				</configuration>
+				<executions>
+					<execution>
+						<id>prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>test</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>check</id>
+						<phase>test</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<rule>
+									<element>BUNDLE</element>
+									<limits>
+										<limit>
+											<counter>LINE</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>0.95</minimum>
+										</limit>
+									</limits>
+								</rule>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 </project>

@@ -437,6 +437,10 @@ const MemberAssessmentsModal = ({ isOpen, onClose, initialClassId = null }) => {
                       })
                     : '';
 
+                  const isSelf = item.assessmentTitle?.includes('tự') || 
+                                 item.assessmentTitle?.includes('Self') || 
+                                 item.coachId === item.userId;
+
                   const perfInfo = getPerformanceLabel(item.performanceRating);
                   const attInfo = getAttendanceLabel(item.attendanceRating);
                   const bmiInfo = getBmiStatus(item.weight, item.height);
@@ -453,17 +457,17 @@ const MemberAssessmentsModal = ({ isOpen, onClose, initialClassId = null }) => {
                         <div className="flex flex-col gap-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
-                              <Award className="w-3 h-3" />
-                              {item.className || t('Đánh giá buổi tập')}
+                              {isSelf ? <Scale className="w-3 h-3" /> : <Award className="w-3 h-3" />}
+                              {isSelf ? t('Hội viên tự ghi nhận') : (item.className || t('Đánh giá buổi tập'))}
                             </span>
-                            {item.planTitle && (
+                            {!isSelf && item.planTitle && (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--surface-hover)] text-[var(--text-muted)] border border-[var(--border)]">
                                 {t('Giáo án:')} {item.planTitle}
                               </span>
                             )}
                           </div>
                           <h4 className="text-base sm:text-lg font-bold text-[var(--text)] tracking-tight">
-                            {item.assessmentTitle || t('Đánh giá tiến độ buổi tập')}
+                            {item.assessmentTitle || (isSelf ? t('Tự ghi nhận thể trạng cá nhân') : t('Đánh giá tiến độ buổi tập'))}
                           </h4>
                         </div>
 
@@ -478,83 +482,85 @@ const MemberAssessmentsModal = ({ isOpen, onClose, initialClassId = null }) => {
                       <div className="flex items-center justify-between text-xs py-1">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold flex items-center justify-center text-xs">
-                            {item.coachName ? item.coachName.charAt(0).toUpperCase() : 'H'}
+                            {isSelf ? <Scale className="w-3.5 h-3.5 text-amber-500" /> : (item.coachName ? item.coachName.charAt(0).toUpperCase() : 'H')}
                           </div>
                           <div className="flex flex-col">
                             <span className="text-[var(--text)] font-semibold">
-                              {item.coachName || t('Huấn luyện viên')}
+                              {isSelf ? t('Chính bạn (Tự đo)') : (item.coachName || t('Huấn luyện viên'))}
                             </span>
-                            {item.coachEmail && (
-                              <span className="text-[10px] text-[var(--text-muted)]">
-                                {item.coachEmail}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Ratings Section */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {/* Performance Rating */}
-                        <div className="p-3 rounded-xl bg-[var(--surface-hover)]/40 border border-[var(--border)] flex flex-col gap-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-[var(--text-muted)] flex items-center gap-1">
-                              <Activity className="w-3.5 h-3.5 text-amber-500" />
-                              {t('Thể lực & Kỹ thuật')}
-                            </span>
-                            {perfInfo && (
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${perfInfo.color}`}>
-                                {perfInfo.label}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 pt-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                className={`w-4 h-4 ${
-                                  star <= (item.performanceRating || 5)
-                                    ? 'text-amber-400 fill-amber-400'
-                                    : 'text-[var(--border)]'
-                                }`}
-                              />
-                            ))}
-                            <span className="text-xs font-bold text-[var(--text)] ml-1.5">
-                              {item.performanceRating || 5}/5
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Attendance Rating */}
-                        <div className="p-3 rounded-xl bg-[var(--surface-hover)]/40 border border-[var(--border)] flex flex-col gap-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-[var(--text-muted)] flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                              {t('Chuyên cần & Thái độ')}
-                            </span>
-                            {attInfo && (
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${attInfo.color}`}>
-                                {attInfo.label}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 pt-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                className={`w-4 h-4 ${
-                                  star <= (item.attendanceRating || 5)
-                                    ? 'text-emerald-400 fill-emerald-400'
-                                    : 'text-[var(--border)]'
-                                }`}
-                              />
-                            ))}
-                            <span className="text-xs font-bold text-[var(--text)] ml-1.5">
-                              {item.attendanceRating || 5}/5
+                            <span className="text-[10px] text-[var(--text-muted)]">
+                              {isSelf ? t('Ghi nhận InBody cá nhân') : (item.coachEmail || '')}
                             </span>
                           </div>
                         </div>
                       </div>
+
+                      {/* Ratings Section - only if evaluated by Coach */}
+                      {!isSelf && (item.performanceRating || item.attendanceRating) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {item.performanceRating && (
+                            <div className="p-3 rounded-xl bg-[var(--surface-hover)]/40 border border-[var(--border)] flex flex-col gap-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold text-[var(--text-muted)] flex items-center gap-1">
+                                  <Activity className="w-3.5 h-3.5 text-amber-500" />
+                                  {t('Thể lực & Kỹ thuật')}
+                                </span>
+                                {perfInfo && (
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${perfInfo.color}`}>
+                                    {perfInfo.label}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 pt-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`w-4 h-4 ${
+                                      star <= item.performanceRating
+                                        ? 'text-amber-400 fill-amber-400'
+                                        : 'text-[var(--border)]'
+                                    }`}
+                                  />
+                                ))}
+                                <span className="text-xs font-bold text-[var(--text)] ml-1.5">
+                                  {item.performanceRating}/5
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          {item.attendanceRating && (
+                            <div className="p-3 rounded-xl bg-[var(--surface-hover)]/40 border border-[var(--border)] flex flex-col gap-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold text-[var(--text-muted)] flex items-center gap-1">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                  {t('Chuyên cần & Thái độ')}
+                                </span>
+                                {attInfo && (
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${attInfo.color}`}>
+                                    {attInfo.label}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 pt-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`w-4 h-4 ${
+                                      star <= item.attendanceRating
+                                        ? 'text-emerald-400 fill-emerald-400'
+                                        : 'text-[var(--border)]'
+                                    }`}
+                                  />
+                                ))}
+                                <span className="text-xs font-bold text-[var(--text)] ml-1.5">
+                                  {item.attendanceRating}/5
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Body Metrics Grid (if present) */}
                       {hasMetrics && (
@@ -605,7 +611,7 @@ const MemberAssessmentsModal = ({ isOpen, onClose, initialClassId = null }) => {
                         <div className="p-3.5 sm:p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex flex-col gap-2">
                           <span className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 uppercase tracking-wide">
                             <MessageSquare className="w-3.5 h-3.5 text-amber-500" />
-                            {t('Nhận xét chi tiết từ Huấn luyện viên')}
+                            {isSelf ? t('Ghi chú & Mục tiêu cá nhân') : t('Nhận xét chi tiết từ Huấn luyện viên')}
                           </span>
                           <p className="text-xs sm:text-sm text-[var(--text)] leading-relaxed whitespace-pre-wrap pl-1 italic">
                             "{item.feedbackNote}"
@@ -614,7 +620,7 @@ const MemberAssessmentsModal = ({ isOpen, onClose, initialClassId = null }) => {
                       )}
 
                       {/* Coach Recommendation */}
-                      {item.recommendation && (
+                      {!isSelf && item.recommendation && (
                         <div className="p-3.5 sm:p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex flex-col gap-2">
                           <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 uppercase tracking-wide">
                             <Sparkles className="w-3.5 h-3.5 text-emerald-500" />

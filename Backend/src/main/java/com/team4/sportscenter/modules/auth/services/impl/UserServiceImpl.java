@@ -214,6 +214,7 @@ public class UserServiceImpl implements UserService {
                         .role(memberRole)
                         .status("ACTIVE")
                         .loyaltyPoints(0)
+                        .forcePasswordChange(true)
                         .build();
                 return userRepository.save(newUser);
             });
@@ -230,5 +231,40 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             throw new RuntimeException("Google authentication error: " + e.getMessage());
         }
+    }
+@Override
+    public void changePassword(String email, String currentPassword, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin tài khoản người dùng!"));
+
+        boolean isInitialPasswordSetup = Boolean.TRUE.equals(user.getForcePasswordChange());
+
+        if (!isInitialPasswordSetup) {
+            if (currentPassword == null || currentPassword.isBlank()) {
+                throw new IllegalArgumentException("Vui lòng nhập mật khẩu hiện tại!");
+            }
+            if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+                throw new IllegalArgumentException("Mật khẩu hiện tại không chính xác!");
+            }
+        }
+
+        if (newPassword == null || newPassword.trim().length() < 8) {
+            throw new IllegalArgumentException("Mật khẩu mới phải có tối thiểu 8 ký tự!");
+        }
+
+        if (currentPassword != null && !currentPassword.isBlank() && currentPassword.equals(newPassword)) {
+            throw new IllegalArgumentException("Mật khẩu mới không được trùng với mật khẩu hiện tại!");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setForcePasswordChange(false);
+        userRepository.save(user);
+
+        notificationService.createNotification(
+            email,
+            "Đổi mật khẩu thành công",
+            "Mật khẩu tài khoản NEXUS của bạn đã được cập nhật thành công.",
+            "SECURITY"
+        );
     }
 }

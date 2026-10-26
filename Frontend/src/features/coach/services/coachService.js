@@ -1,4 +1,4 @@
-import axiosClient from '../../../services/axiosClient';
+import axiosClient from '../../../services/axiosClient.js';
 
 export const coachService = {
   getProfile: async () => {

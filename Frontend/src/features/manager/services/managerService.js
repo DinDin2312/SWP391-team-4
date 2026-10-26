@@ -1,4 +1,4 @@
-import axiosClient from '../../../services/axiosClient';
+import axiosClient from '../../../services/axiosClient.js';
 
 function saveOperationResource(resource,id,payload,photo={}) {
   const path=`/manager/${resource}${id?`/${id}`:''}`;
