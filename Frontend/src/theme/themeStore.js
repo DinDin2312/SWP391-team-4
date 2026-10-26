@@ -33,10 +33,15 @@ applyThemeClass(currentTheme);
 
 const listeners = new Set();
 
-export const getTheme = () => currentTheme;
+export const getTheme = () => {
+  if (typeof document !== 'undefined' && document.documentElement?.classList) {
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  }
+  return currentTheme;
+};
 
 export function setTheme(newTheme) {
-  if (!['light', 'dark'].includes(newTheme) || newTheme === currentTheme) return;
+  if (!['light', 'dark'].includes(newTheme)) return;
   currentTheme = newTheme;
   applyThemeClass(currentTheme);
   try {
@@ -52,12 +57,27 @@ export function subscribeTheme(listener) {
   return () => listeners.delete(listener);
 }
 
+let isTransitioning = false;
+
 /**
  * Toggle theme with circular ripple expansion originating precisely from buttonElement's geometric center.
  * @param {HTMLElement|null} buttonElement
  */
 export function toggleTheme(buttonElement = null) {
-  const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  // Prevent rapid double-click collisions from canceling/reversing the transition
+  if (isTransitioning) return;
+  isTransitioning = true;
+  const unlock = () => {
+    isTransitioning = false;
+  };
+  setTimeout(unlock, 420);
+
+  // Always determine next theme from live DOM class to guarantee single-click reliability
+  const isCurrentlyDark = (typeof document !== 'undefined' && document.documentElement?.classList)
+    ? document.documentElement.classList.contains('dark')
+    : currentTheme === 'dark';
+
+  const nextTheme = isCurrentlyDark ? 'light' : 'dark';
 
   // Determine origin center coordinates (x, y)
   let x = window.innerWidth - 48;
@@ -84,6 +104,7 @@ export function toggleTheme(buttonElement = null) {
 
     const cleanup = () => {
       root.classList.remove('theme-transitioning');
+      unlock();
     };
 
     let transition;
@@ -141,6 +162,7 @@ export function toggleTheme(buttonElement = null) {
           if (ripple.parentNode) {
             ripple.parentNode.removeChild(ripple);
           }
+          unlock();
         }, 220);
       }, 180);
     });
@@ -149,4 +171,5 @@ export function toggleTheme(buttonElement = null) {
 
   // Pure fallback
   setTheme(nextTheme);
+  unlock();
 }

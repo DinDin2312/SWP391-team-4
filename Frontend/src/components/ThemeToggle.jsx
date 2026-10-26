@@ -10,6 +10,7 @@ export default function ThemeToggle({ className = '', floating = false }) {
 
   const handleClick = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setPressed(true);
     setTimeout(() => setPressed(false), 180);
     toggleTheme(buttonRef.current);
@@ -29,7 +30,7 @@ export default function ThemeToggle({ className = '', floating = false }) {
         pressed ? 'scale-95' : ''
       } ${floating ? 'fixed right-24 top-4 z-40' : ''} ${className}`}
     >
-      <div className="relative w-5 h-5 flex items-center justify-center overflow-hidden">
+      <div className="relative w-5 h-5 flex items-center justify-center overflow-hidden pointer-events-none">
         {isDark ? (
           <Sun className="w-4 h-4 text-amber-400 shrink-0 transform transition-transform duration-200 rotate-0 scale-100" />
         ) : (

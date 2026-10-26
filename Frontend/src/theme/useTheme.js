@@ -5,6 +5,7 @@ export function useTheme() {
   const [theme, setLocalTheme] = useState(getTheme);
 
   useEffect(() => {
+    setLocalTheme(getTheme());
     return subscribeTheme(setLocalTheme);
   }, []);
 
