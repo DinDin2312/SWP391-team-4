@@ -27,6 +27,7 @@ import {
 import receptionistService from '../services/receptionistService';
 import { AuthContext } from '../../../context/AuthContext';
 import MemberDetailModal from './MemberDetailModal';
+import CoachCheckInTab from './CoachCheckInTab';
 
 const getTodayDateString = () => {
   const now = new Date();
@@ -39,6 +40,7 @@ const getTodayDateString = () => {
 const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
   useLanguage();
   const { userInfo } = useContext(AuthContext);
+  const [checkInSubTab, setCheckInSubTab] = useState('member');
 
   // Member lookup state
   const [memberKeyword, setMemberKeyword] = useState('');
@@ -455,6 +457,38 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
         </button>
       </div>
 
+      {/* Sub Navigation Switch: Member Check-in vs Coach Check-in */}
+      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs w-fit">
+        <button
+          type="button"
+          onClick={() => setCheckInSubTab('member')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            checkInSubTab === 'member'
+              ? 'bg-[var(--primary)] text-[color:var(--on-primary)] shadow-sm'
+              : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+          }`}
+        >
+          <UserCheck className="w-4 h-4" />
+          <span>{t('Member Check-in (Gym & Facility)')}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setCheckInSubTab('coach')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            checkInSubTab === 'coach'
+              ? 'bg-[var(--primary)] text-[color:var(--on-primary)] shadow-sm'
+              : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+          }`}
+        >
+          <Dumbbell className="w-4 h-4" />
+          <span>{t('Coach Attendance & Check-in')}</span>
+        </button>
+      </div>
+
+      {checkInSubTab === 'coach' ? (
+        <CoachCheckInTab />
+      ) : (
+        <>
       {/* ===================== FEEDBACK ALERT ===================== */}
       {feedback && (
         <div
@@ -1817,6 +1851,9 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
           </div>
         </div>
       </div>
+
+        </>
+      )}
 
       {/* Member Detail Modal (with blurred backdrop & history state support) */}
       {detailModalUserId && (

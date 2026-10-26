@@ -13,7 +13,10 @@
     "test:images": "node --test src/components/resource-images/resourceImages.test.js",
     "test:benefits": "node --test src/features/member/packageBookingOptions.test.js",
     "test:member": "node --test src/features/member/memberUtils.test.js",
-    "test": "npm run test:manager && npm run test:i18n && npm run test:images && npm run test:benefits && npm run test:member"
+    "test:contracts": "node --test src/services/apiContracts.test.js",
+    "test:consistency": "node --test src/utils/crossModuleConsistency.test.js",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=95 --test-coverage-exclude=\"**/*.test.js\" src/features/manager/staff/staffData.test.js src/features/manager/managerUtils.test.js src/features/manager/operations/operationsUtils.test.js src/features/manager/operations/operationsState.test.js src/features/manager/operations/operationsRendering.test.js src/features/manager/components/overviewUtils.test.js src/features/manager/packages/packagesState.test.js src/features/manager/packages/packagesRendering.test.js src/features/manager/components/overviewRendering.test.js src/features/manager/reports/reportsRendering.test.js src/features/manager/transactions/transactionsRendering.test.js src/features/manager/audit/auditUtils.test.js src/features/manager/audit/auditRendering.test.js src/i18n/languageStore.test.js src/i18n/adminLanguage.test.js src/components/resource-images/resourceImages.test.js src/features/member/packageBookingOptions.test.js src/features/member/memberUtils.test.js src/services/apiContracts.test.js src/utils/crossModuleConsistency.test.js",
+    "test": "npm run test:coverage"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",

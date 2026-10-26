@@ -1,4 +1,4 @@
-import { addDays } from './operationsUtils';
+import { addDays } from './operationsUtils.js';
 
 export function courseWeeks(plan,excludedDates=[],fromDate) {
   const entries=(plan.requestedSessions || plan.sessions).map(session=>({...session,

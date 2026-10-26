@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Receipt,
   LifeBuoy,
+  Settings,
 } from 'lucide-react';
 
 const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSelectFeature }) => {
@@ -40,45 +41,37 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
       id: 'search-members',
       label: t('Search & View Members'),
       icon: Users,
-      badge: 'Primary',
-      isReady: true,
     },
     {
       id: 'member-checkin',
-      label: t('Member Check-in (Gym & Facility)'),
+      label: t('Check-in'),
       icon: UserCheck,
-      badge: 'Live',
-      isReady: true,
     },
     {
       id: 'register-member',
       label: t('Register New Member'),
       icon: UserPlus,
-      badge: '',
-      isReady: true,
     },
     {
       id: 'manage-memberships',
       label: t('Packages & Renewals'),
       icon: CreditCard,
-      badge: '',
-      isReady: true,
     },
     {
       id: 'manage-invoices',
       label: t('Invoices & Receipts'),
       icon: Receipt,
-      badge: '',
-      isReady: true,
     },
     {
       id: 'support-desk',
-      label: t('Support Desk & Cancellations'),
+      label: t('Support & Cancellations'),
       icon: LifeBuoy,
-      badge: 'New',
-      isReady: true,
     },
-
+    {
+      id: 'settings',
+      label: t('Settings'),
+      icon: Settings,
+    },
   ];
 
   return (
@@ -116,26 +109,16 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
                       onSelectFeature(item.id);
                     }
                   }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer text-left ${
                     isSelected
-                      ? 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold'
-                      : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                      ? 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold shadow-xs'
+                      : 'border border-transparent text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 flex items-center justify-center shrink-0">
                     <Icon className="w-4 h-4 shrink-0" />
-                    <span>{t(item.label)}</span>
                   </div>
-
-                  {item.badge && (
-                    <span
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        item.isReady ? 'bg-[var(--surface)] text-[var(--success-text)]' : 'bg-[var(--surface)] text-[var(--text-muted)]'
-                      }`}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
+                  <span className="text-left leading-tight truncate flex-1 min-w-0">{t(item.label)}</span>
                 </button>
               );
             })}

@@ -39,6 +39,7 @@ public class UserController {
         else if (points >= 1500) memberTier = "GOLD";
         else if (points >= 500) memberTier = "SILVER";
         profile.put("memberTier", memberTier);
+        profile.put("hasSetPassword", !Boolean.TRUE.equals(user.getForcePasswordChange()));
         
         return ResponseEntity.ok(profile);
     }
@@ -91,6 +92,16 @@ public class UserController {
         userService.verifyAndChangeEmail(currentEmail, newEmail, otp);
         Map<String, String> response = new HashMap<>();
         response.put("message", "Email updated successfully");
+        return ResponseEntity.ok(response);
+    }
+@PutMapping("/change-password")
+    public ResponseEntity<?> changePassword(Authentication authentication, @RequestBody Map<String, String> payload) {
+        String email = authentication.getName();
+        String currentPassword = payload.get("currentPassword");
+        String newPassword = payload.get("newPassword");
+        userService.changePassword(email, currentPassword, newPassword);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Mật khẩu đã được thay đổi thành công!");
         return ResponseEntity.ok(response);
     }
 }

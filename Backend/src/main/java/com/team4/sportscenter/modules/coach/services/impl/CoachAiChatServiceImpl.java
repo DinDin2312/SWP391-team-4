@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -48,13 +49,13 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
         // 1.1 Thư viện bài tập trong hệ thống
         List<ExerciseResponse> exercises = coachWorkoutService.getAllExercises();
         String exercisesListString = exercises.stream()
-            .map(e -> "ID: " + e.getExerciseId() + " | Tên: " + e.getExerciseName() + " | Nhóm cơ: " + e.getMuscleGroup())
-            .collect(Collectors.joining("\n"));
+            .map(e -> "[" + e.getExerciseId() + "] " + e.getExerciseName() + " (" + e.getMuscleGroup() + ")")
+            .collect(Collectors.joining(", "));
 
         // 1.2 Danh sách lớp học Coach đang phụ trách
         List<CoachClassResponse> classes = coachNotificationService.getCoachClasses(coachEmail);
         String classesListString = classes.isEmpty() ? "Không có lớp học nào." : classes.stream()
-            .map(c -> "Class ID: " + c.getClassId() + " | Tên lớp: " + c.getClassName() + " | Phòng: " + c.getRoomName() + " | Đã ghi danh: " + (c.getEnrolledCount() != null ? c.getEnrolledCount() : 0) + "/" + c.getMaxSlots())
+            .map(c -> "[" + c.getClassId() + "] " + c.getClassName() + " (" + c.getRoomName() + ", Sĩ số: " + (c.getEnrolledCount() != null ? c.getEnrolledCount() : 0) + "/" + c.getMaxSlots() + ")")
             .collect(Collectors.joining("\n"));
 
         // 1.3 Lịch sử đánh giá / nhận xét của Coach cho học viên
@@ -90,8 +91,8 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
                 List<TraineeAssessmentResponse> studentAssessments = assessmentsByStudent.get(s.getUserId());
                 if (studentAssessments != null && !studentAssessments.isEmpty()) {
                     studentsInfoBuilder.append("   [LỊCH SỬ NHẬN XÉT & THỂ TRẠNG GẦN NHẤT CỦA HỌC VIÊN NÀY]:\n");
-                    // Lấy tối đa 2 nhận xét mới nhất
-                    int limit = Math.min(studentAssessments.size(), 2);
+                    // Lấy 1 nhận xét mới nhất để tối ưu token & phản hồi cực nhanh
+                    int limit = Math.min(studentAssessments.size(), 1);
                     for (int i = 0; i < limit; i++) {
                         TraineeAssessmentResponse a = studentAssessments.get(i);
                         studentsInfoBuilder.append("   - Ngày: ").append(a.getCreatedAt() != null ? a.getCreatedAt().format(dtf) : "N/A")
@@ -148,7 +149,10 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
                 "Coach's message: ";
 
         // ==================== 3. CALL GEMINI API ====================
-        RestTemplate restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3000);
+        factory.setReadTimeout(12000);
+        RestTemplate restTemplate = new RestTemplate(factory);
 
         Map<String, Object> requestBody = new HashMap<>();
         Map<String, Object> part = new HashMap<>();
@@ -160,7 +164,7 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
         requestBody.put("contents", List.of(content));
 
         Map<String, Object> generationConfig = new HashMap<>();
-        generationConfig.put("maxOutputTokens", 1200);
+        generationConfig.put("maxOutputTokens", 800);
         generationConfig.put("temperature", 0.7);
         requestBody.put("generationConfig", generationConfig);
 
@@ -169,7 +173,7 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        String[] models = {"gemini-1.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-3.5-flash-lite", "gemini-3.8-flash-lite"};
+        String[] models = {"gemini-3.5-flash-lite", "gemini-flash-lite-latest"};
 
         for (String model : models) {
             String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;

@@ -183,9 +183,9 @@ function LoginPage() {
           {/* RIGHT COLUMN: Metamorphosis Glass to Pure White Card */}
           <motion.div 
             className="col-span-1 lg:col-span-5 flex justify-center lg:justify-end"
-            initial={{ x: 40, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
           >
             {/* 3-Stage Metamorphosis Card: Trong suốt (0s) -> Đục mờ sương (1s) -> Trắng tinh hoàn toàn (2s) */}
             <div className="relative w-full max-w-[420px] rounded-2xl animate-card-glass-to-white p-6 sm:p-7 text-slate-900">

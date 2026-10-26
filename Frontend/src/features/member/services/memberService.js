@@ -1,4 +1,4 @@
-import axiosClient from '../../../services/axiosClient';
+import axiosClient from '../../../services/axiosClient.js';
 
 export const memberService = {
   getMyMembership: async () => {
@@ -63,6 +63,10 @@ export const memberService = {
 
   getWorkoutsByClass: async (classId) => {
     return await axiosClient.get(`/v1/member/classes/${classId}/workouts`);
+  },
+
+  createSelfAssessment: async (payload) => {
+    return await axiosClient.post('/v1/member/assessments/self', payload);
   },
 
   getAssessments: async () => {

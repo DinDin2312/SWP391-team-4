@@ -132,6 +132,36 @@ public class ReceptionistController {
         }
     }
 
+    @GetMapping("/coaches/schedules")
+    public ResponseEntity<?> getCoachSchedules(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false, defaultValue = "ALL") String status) {
+        try {
+            return ResponseEntity.ok(memberService.getTodayCoachSchedules(date, keyword, status));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/coaches/checkin")
+    public ResponseEntity<?> checkInCoach(@RequestBody com.team4.sportscenter.modules.receptionist.dtos.request.CoachCheckInRequest request) {
+        try {
+            return ResponseEntity.ok(memberService.checkInCoach(request));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/coaches/checkin/{checkInId}/checkout")
+    public ResponseEntity<?> checkOutCoach(@PathVariable Long checkInId) {
+        try {
+            return ResponseEntity.ok(memberService.checkOutCoach(checkInId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @GetMapping("/classes/available")
     public ResponseEntity<?> getAvailableClassesForMember(@RequestParam Integer userId) {
         try {

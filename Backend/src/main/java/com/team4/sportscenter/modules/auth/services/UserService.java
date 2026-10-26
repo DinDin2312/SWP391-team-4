@@ -12,5 +12,6 @@ public interface UserService {
     void resetPassword(String email, String otp, String newPassword);
     void sendEmailUpdateOtp(String currentEmail, String newEmail);
     void verifyAndChangeEmail(String currentEmail, String newEmail, String otp);
+    void changePassword(String email, String currentPassword, String newPassword);
     com.team4.sportscenter.modules.auth.dtos.response.LoginResponse loginWithGoogle(com.team4.sportscenter.modules.auth.dtos.request.GoogleLoginRequest request);
 }

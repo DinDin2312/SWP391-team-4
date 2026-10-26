@@ -61,6 +61,13 @@ public class MemberController {
         return ResponseEntity.ok(memberService.getMyWorkouts(authentication.getName()));
     }
 
+
+    @PostMapping("/assessments/self")
+    public ResponseEntity<com.team4.sportscenter.modules.coach.dtos.response.TraineeAssessmentResponse> createSelfAssessment(
+            Authentication authentication,
+            @jakarta.validation.Valid @RequestBody com.team4.sportscenter.modules.member.dtos.request.CreateSelfAssessmentRequest request) {
+        return ResponseEntity.ok(memberService.createSelfAssessment(authentication.getName(), request));
+    }
     @GetMapping("/assessments")
     public ResponseEntity<List<com.team4.sportscenter.modules.coach.dtos.response.TraineeAssessmentResponse>> getMyAssessments(
             Authentication authentication,

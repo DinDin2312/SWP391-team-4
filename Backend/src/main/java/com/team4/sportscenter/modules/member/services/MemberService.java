@@ -26,4 +26,5 @@ public interface MemberService {
     List<com.team4.sportscenter.modules.member.dtos.response.MemberWorkoutPlanResponse> getMyWorkouts(String email);
     List<com.team4.sportscenter.modules.coach.dtos.response.TraineeAssessmentResponse> getMyAssessments(String email, Integer classId);
     List<com.team4.sportscenter.modules.coach.dtos.response.TraineeAssessmentResponse> getAssessmentsByClass(String email, Integer classId);
+    com.team4.sportscenter.modules.coach.dtos.response.TraineeAssessmentResponse createSelfAssessment(String email, com.team4.sportscenter.modules.member.dtos.request.CreateSelfAssessmentRequest request);
 }

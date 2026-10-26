@@ -2,6 +2,8 @@ import { locale } from '../../../i18n/languageStore.js';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import CancelClassPolicyModal from '../components/CancelClassPolicyModal';
+import MemberAssessmentsModal from '../components/MemberAssessmentsModal';
+import SelfAssessmentModal from '../components/SelfAssessmentModal';
 import { formatDate } from '../../../utils/displayFormat';
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -21,7 +23,7 @@ import {
   Clock,
   MapPin,
   User, TrendingUp,
-  X,
+  X, Scale, Sparkles, Star, Award, MessageSquare, PlusCircle,
 } from 'lucide-react';
 
 const CustomerDashboard = () => {
@@ -34,6 +36,10 @@ const CustomerDashboard = () => {
   const [qrModal, setQrModal] = useState({ isOpen: false, session: null });
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [latestAssessment, setLatestAssessment] = useState(null);
+  const [loadingAssessment, setLoadingAssessment] = useState(true);
+  const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
+  const [selfModalOpen, setSelfModalOpen] = useState(false);
 
 // Status for Membership Card
   const [membership, setMembership] = useState(null);
@@ -50,12 +56,13 @@ const CustomerDashboard = () => {
 
   const fetchDashboardData = React.useCallback(async () => {
     try {
-      const [membershipData, bookingsData, checkInsData, recentData, profileData] = await Promise.all([
+      const [membershipData, bookingsData, checkInsData, recentData, profileData, assessmentsData] = await Promise.all([
         memberService.getMyMembership(),
         memberService.getUpcomingBookings(),
         memberService.getTotalCheckIns(),
         memberService.getRecentActivities(),
-        memberService.getUserProfile()
+        memberService.getUserProfile(),
+        memberService.getAssessments().catch(() => [])
       ]);
 
       setMembership(membershipData || null);
@@ -66,11 +73,14 @@ const CustomerDashboard = () => {
         setMemberTier(profileData.memberTier || 'MEMBER');
       }
       setRecentActivities(Array.isArray(recentData) ? recentData : []);
+      const aList = Array.isArray(assessmentsData) ? assessmentsData : (assessmentsData?.data || []);
+      setLatestAssessment(aList.length > 0 ? aList[0] : null);
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {
       setLoadingMembership(false);
       setLoadingBookings(false);
+      setLoadingAssessment(false);
     }
   }, []);
 
@@ -136,6 +146,26 @@ const CustomerDashboard = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const getBmiData = (weight, height) => {
+    if (!weight || !height || height <= 0) return null;
+    const hMeters = Number(height) / 100;
+    const bmi = (Number(weight) / (hMeters * hMeters)).toFixed(1);
+    let status = t('Normal Weight');
+    let badgeColor = 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+
+    if (bmi < 18.5) {
+      status = t('Underweight');
+      badgeColor = 'text-blue-500 bg-blue-500/10 border-blue-500/20';
+    } else if (bmi >= 23 && bmi < 25) {
+      status = t('Overweight');
+      badgeColor = 'text-amber-500 bg-amber-500/10 border-amber-500/20';
+    } else if (bmi >= 25) {
+      status = t('Needs Fat Loss');
+      badgeColor = 'text-red-500 bg-red-500/10 border-red-500/20';
+    }
+    return { bmi, status, badgeColor };
   };
   return (
     <div className="space-y-6">
@@ -268,6 +298,244 @@ const CustomerDashboard = () => {
               </div>
             </div>
           </div>
+
+        {/* ================= ROW 1.5: INBODY & BODY METRICS (CHỈ SỐ THỂ TRẠNG) ================= */}
+        <div className="p-6 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm">
+          {loadingAssessment ? (
+            <div className="py-8 text-center text-xs text-[var(--text-muted)] animate-pulse">
+              {t("Loading body metrics...")}
+            </div>
+          ) : latestAssessment ? (
+            <div className="flex flex-col gap-5">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--border)]">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0">
+                    <Scale className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">
+                        {t("Latest InBody & Body Composition")}
+                      </h2>
+                      <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                        <Sparkles className="w-3 h-3" />
+                        {t("Latest Update")}
+                      </span>
+                    </div>
+                    {(() => {
+                      const isSelf = latestAssessment.assessmentTitle?.includes("tự") || 
+                                     latestAssessment.assessmentTitle?.includes("Self") || 
+                                     latestAssessment.coachId === latestAssessment.userId;
+                      return (
+                        <p className="text-xs text-[var(--text-muted)] mt-0.5 flex flex-wrap items-center gap-x-2">
+                          <span>{t("Measured on:")} <strong className="text-[var(--text)]">{new Date(latestAssessment.createdAt).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' })}</strong></span>
+                          <span>•</span>
+                          {isSelf ? (
+                            <span>{t("Recorded by:")} <strong className="text-amber-500">{t("Self-Recorded")}</strong></span>
+                          ) : (
+                            <span>{t("Coach:")} <strong className="text-[var(--text)]">{latestAssessment.coachName || t('Coach')}</strong></span>
+                          )}
+                          {!isSelf && latestAssessment.className && (
+                            <>
+                              <span>•</span>
+                              <span>{t("Class:")} <strong className="text-[var(--text)]">{latestAssessment.className}</strong></span>
+                            </>
+                          )}
+                        </p>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setSelfModalOpen(true)}
+                    className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>{t("Update Metrics")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssessmentModalOpen(true)}
+                    className="px-3.5 py-1.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] hover:border-amber-500/40 hover:text-amber-500 text-xs font-semibold text-[var(--text)] transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Award className="w-3.5 h-3.5 text-amber-500" />
+                    <span>{t("View All Assessments")}</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {/* Weight */}
+                <div className="p-3.5 rounded-xl bg-[var(--surface-hover)]/40 border border-[var(--border)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--text-muted)]">
+                    <span>{t("Weight")}</span>
+                    <Scale className="w-3.5 h-3.5 text-[var(--primary)]" />
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-[var(--text)]">{latestAssessment.weight || '--'}</span>
+                    <span className="text-xs font-medium text-[var(--text-muted)]">kg</span>
+                  </div>
+                </div>
+
+                {/* Height */}
+                <div className="p-3.5 rounded-xl bg-[var(--surface-hover)]/40 border border-[var(--border)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--text-muted)]">
+                    <span>{t("Height")}</span>
+                    <Activity className="w-3.5 h-3.5 text-blue-500" />
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-[var(--text)]">{latestAssessment.height || '--'}</span>
+                    <span className="text-xs font-medium text-[var(--text-muted)]">cm</span>
+                  </div>
+                </div>
+
+                {/* Body Fat */}
+                <div className="p-3.5 rounded-xl bg-[var(--surface-hover)]/40 border border-[var(--border)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--text-muted)]">
+                    <span>{t("Body Fat (Fat %)")}</span>
+                    <Flame className="w-3.5 h-3.5 text-amber-500" />
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-amber-500">{latestAssessment.bodyFatPercentage ?? '--'}</span>
+                    <span className="text-xs font-medium text-[var(--text-muted)]">%</span>
+                  </div>
+                </div>
+
+                {/* Muscle Mass */}
+                <div className="p-3.5 rounded-xl bg-[var(--surface-hover)]/40 border border-[var(--border)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--text-muted)]">
+                    <span>{t("Muscle Mass")}</span>
+                    <Dumbbell className="w-3.5 h-3.5 text-emerald-500" />
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-emerald-500">{latestAssessment.muscleMass ?? '--'}</span>
+                    <span className="text-xs font-medium text-[var(--text-muted)]">kg</span>
+                  </div>
+                </div>
+
+                {/* BMI */}
+                {(() => {
+                  const bmiData = getBmiData(latestAssessment.weight, latestAssessment.height);
+                  return (
+                    <div className="p-3.5 rounded-xl bg-[var(--surface-hover)]/40 border border-[var(--border)] flex flex-col justify-between col-span-2 sm:col-span-1">
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--text-muted)]">
+                        <span>{t("BMI Index")}</span>
+                        <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                      </div>
+                      <div className="mt-2 flex items-baseline justify-between gap-1">
+                        <span className="text-2xl font-black text-[var(--text)]">{bmiData ? bmiData.bmi : '--'}</span>
+                        {bmiData && (
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border truncate ${bmiData.badgeColor}`}>
+                            {bmiData.status}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Assessment Note & Feedback Box */}
+              {(() => {
+                const isSelf = latestAssessment.assessmentTitle?.includes("tự") || 
+                               latestAssessment.assessmentTitle?.includes("Self") || 
+                               latestAssessment.coachId === latestAssessment.userId;
+
+                if (!latestAssessment.feedbackNote && !latestAssessment.recommendation) return null;
+
+                return (
+                  <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 text-amber-500" />
+                        {isSelf ? t("Personal Notes & Targets") : t("Coach Feedback & Recommendations")}
+                      </span>
+                      {!isSelf && latestAssessment.performanceRating && (
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`w-3.5 h-3.5 ${
+                                star <= latestAssessment.performanceRating
+                                  ? 'text-amber-400 fill-amber-400'
+                                  : 'text-[var(--border)]'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {latestAssessment.feedbackNote && (
+                      <p className="text-xs sm:text-sm text-[var(--text)] leading-relaxed italic pl-1 border-l-2 border-amber-500/40">
+                        "{latestAssessment.feedbackNote}"
+                      </p>
+                    )}
+                    {!isSelf && latestAssessment.recommendation && (
+                      <div className="text-xs text-[var(--text-muted)] flex items-start gap-1.5 pt-1">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                        <span><strong className="text-[var(--text)] font-semibold">{t("Next Session Goal:")}</strong> {latestAssessment.recommendation}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          ) : (
+            /* Empty State for Member with no measurements yet */
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-1">
+              <div className="flex items-center gap-3 text-center sm:text-left">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0">
+                  <Scale className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-[var(--text)]">{t("Track Body Metrics & InBody")}</h4>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5 max-w-xl">
+                    {upcomingBookings.length > 0 ? (
+                      t("You have scheduled classes. The assigned coach will measure your InBody and update your assessment after your workout!")
+                    ) : (
+                      t("No body metrics recorded yet. Join a class or contact your trainer for InBody measurements and a custom workout plan!")
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSelfModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:opacity-95 text-xs font-bold transition-all shrink-0 cursor-pointer shadow-sm flex items-center gap-1.5"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>{t("Self-Log InBody")}</span>
+                </button>
+                {upcomingBookings.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/member/schedule')}
+                    className="px-4 py-2 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--border)] text-xs font-bold transition-all shrink-0 cursor-pointer shadow-sm flex items-center gap-1.5"
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>{t("View Class Schedule")}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/member/book-class')}
+                    className="px-4 py-2 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--border)] text-xs font-bold transition-all shrink-0 cursor-pointer shadow-sm flex items-center gap-1.5"
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>{t("Book Class for Measurement")}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* ================= ROW 2: SCHEDULE (2/3) + PASS & ACTIONS (1/3) ================= */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -440,7 +708,7 @@ const CustomerDashboard = () => {
                 {[
                   { title: t("Book PT Session"), subtitle: t("Consult biomechanics coaches"), icon: User, onClick: () => navigate('/member/book-class') },
                   { title: t("Reserve Smart Court"), subtitle: t("Tennis, Basketball & Padel"), icon: Search, onClick: () => navigate('/member/book-class') },
-                  { title: t("Biometric Telemetry"), subtitle: t("VO2 Max & recovery index"), icon: Activity, onClick: () => navigate('/member/attendance') },
+                  { title: t("Biometric Telemetry"), subtitle: t("Chỉ số thể hình & đánh giá InBody"), icon: Scale, onClick: () => setAssessmentModalOpen(true) },
                   { title: t("Locker & Facility Access"), subtitle: t("Manage digital locker keys"), icon: Dumbbell, onClick: () => navigate('/member/memberships') },
                 ].map((action, idx) => {
                   const Icon = action.icon;
@@ -585,6 +853,20 @@ const CustomerDashboard = () => {
           </div>
         </div>
       
+      {/* Modal tự cập nhật chỉ số InBody cá nhân */}
+      <SelfAssessmentModal
+        isOpen={selfModalOpen}
+        onClose={() => setSelfModalOpen(false)}
+        onSuccess={() => fetchDashboardData()}
+      />
+
+      {/* Modal chi tiết đánh giá InBody */}
+      <MemberAssessmentsModal
+        isOpen={assessmentModalOpen}
+        onClose={() => setAssessmentModalOpen(false)}
+        initialClassId="ALL"
+      />
+
       <CancelClassPolicyModal
         isOpen={cancelModal.isOpen}
         classId={cancelModal.classId}
