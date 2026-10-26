@@ -58,12 +58,13 @@ public class AiChatServiceImpl implements AiChatService {
             .collect(Collectors.joining("\n"));
 
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(3000);
-        factory.setReadTimeout(10000);
+        factory.setConnectTimeout(2500);
+        factory.setReadTimeout(5000);
         RestTemplate restTemplate = new RestTemplate(factory);
 
         String systemPrompt = "You are NEXUS AI, a cool, friendly, and energetic personal trainer & assistant EXCLUSIVELY for NEXUS Sports Lab.\n" +
                 "Your tone must be natural, engaging, and conversational (like a human gym buddy). Do NOT sound like a robotic customer service bot.\n" +
+                "Keep responses concise, lively, and directly to the point (2 to 4 sentences unless the user explicitly asks for a detailed plan/routine).\n" +
                 "Use short, modern phrasing, and sprinkle a few emojis naturally. Always answer in the exact same language the user speaks (e.g. Vietnamese or English).\n\n" +
                 "=== STRICT SCOPE & TOKEN-SAVING POLICY (ANTI-ABUSE GUARDRAIL) ===\n" +
                 "1. ALLOWED TOPICS ONLY:\n" +
@@ -97,10 +98,8 @@ public class AiChatServiceImpl implements AiChatService {
                 "3. To navigate the user to the Class Booking page: Append [ACTION:NAVIGATE:/member/book-class]\n" +
                 "4. To navigate the user to the Packages page: Append [ACTION:NAVIGATE:/member/package-store]\n" +
                 "5. To navigate the user to their Cart / Checkout: Append [ACTION:NAVIGATE:/member/cart]\n" +
-                "6. To Auto-Add / Select a Package: If the user asks to buy, choose, or select a package, append ONLY [ACTION:ADD_CART:package_id] (replace package_id with the actual numeric ID). Do NOT append [ACTION:NAVIGATE:/member/cart] because the UI will automatically highlight the selected package card on the Package Store screen.\n" +
-                "7. To Auto-Book / Select a Class: If the user asks to book, choose, or register for a specific class, carefully check if the class's time block (Start to End) OVERLAPS with any time blocks in their CURRENT BOOKED SCHEDULE. If there is ANY overlap, you MUST refuse, apologize, and explain exactly which class it overlaps with. If it doesn't overlap, append ONLY [ACTION:BOOK_CLASS:class_id] (replace class_id with the actual numeric ID). Do NOT append [ACTION:NAVIGATE:/member/schedule] so the UI can highlight the selected class card on screen.\n" +
-                "8. To Highlight/Recommend a specific Package on screen (when you suggest or point out a best-fit package): Append [ACTION:HIGHLIGHT_PACKAGE:package_id] (replace package_id with the actual numeric ID).\n" +
-                "9. To Highlight/Recommend a specific Class on screen (when you suggest or point out a specific class): Append [ACTION:HIGHLIGHT_CLASS:class_id] (replace class_id with the actual numeric ID).\n" +
+                "6. To Auto-Add / Select a Package: If the user asks to buy, choose, or select a package, append ONLY [ACTION:ADD_CART:package_id] (replace package_id with the actual numeric ID). Do NOT append [ACTION:NAVIGATE:/member/cart] because the UI will automatically light up the Shopping Cart icon when the item is added.\n" +
+                "7. To Auto-Book / Select a Class: If the user asks to book, choose, or register for a specific class, carefully check if the class's time block (Start to End) OVERLAPS with any time blocks in their CURRENT BOOKED SCHEDULE. If there is ANY overlap, you MUST refuse, apologize, and explain exactly which class it overlaps with. If it doesn't overlap, append ONLY [ACTION:BOOK_CLASS:class_id] (replace class_id with the actual numeric ID). Do NOT append [ACTION:NAVIGATE:/member/schedule] because the UI will automatically light up the Shopping Cart icon when the class is added.\n" +
                 "Never expose these raw commands in your conversational text. Just append the exact bracket format at the very end of your message.\n\n" +
                 "User's message: ";
 
@@ -114,7 +113,7 @@ public class AiChatServiceImpl implements AiChatService {
         requestBody.put("contents", List.of(content));
 
         Map<String, Object> generationConfig = new HashMap<>();
-        generationConfig.put("maxOutputTokens", 400);
+        generationConfig.put("maxOutputTokens", 300);
         generationConfig.put("temperature", 0.7);
         requestBody.put("generationConfig", generationConfig);
 
@@ -123,7 +122,7 @@ public class AiChatServiceImpl implements AiChatService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        String[] models = {"gemini-3.5-flash-lite", "gemini-flash-lite-latest"};
+        String[] models = {"gemini-3-flash-preview", "gemini-3.8-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"};
         
         for (String model : models) {
             String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;

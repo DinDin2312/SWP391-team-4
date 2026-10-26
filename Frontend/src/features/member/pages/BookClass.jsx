@@ -3,9 +3,8 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import axios from 'axios';
-import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar, Sparkles, ShoppingCart, Clock, ArrowRight, Loader2 } from 'lucide-react';
+import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar, ShoppingCart, Clock, ArrowRight, Loader2 } from 'lucide-react';
 
 const BookClass = () => {
   useLanguage();
@@ -16,65 +15,15 @@ const BookClass = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [toast, setToast] = useState({ visible: false, type: 'success', title: '', message: '' });
-  const [aiHighlightedClassId, setAiHighlightedClassId] = useState(null);
-
-  const triggerClassHighlight = (id, courseList = courses) => {
-    if (!id) return;
-    const targetCourse = (courseList || []).find(c => Number(c.classId) === Number(id));
-    if (targetCourse && targetCourse.nextSessionTime) {
-      setSelectedDate(new Date(targetCourse.nextSessionTime).toDateString());
-    }
-    setSearchTerm('');
-    setAiHighlightedClassId(null);
-    requestAnimationFrame(() => {
-      setAiHighlightedClassId(Number(id));
-    });
-    setTimeout(() => {
-      const el = document.getElementById(`ai-class-${id}`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 280);
-    setTimeout(() => {
-      setAiHighlightedClassId(prev => (Number(prev) === Number(id) ? null : prev));
-    }, 10000);
-  };
 
   useEffect(() => {
     fetchCourses(true);
+    const onCartUpdated = () => {
+      void fetchCourses(false);
+    };
+    window.addEventListener('cartUpdated', onCartUpdated);
+    return () => window.removeEventListener('cartUpdated', onCartUpdated);
   }, []);
-
-  useEffect(() => {
-    const checkPendingHighlight = () => {
-      try {
-        const raw = sessionStorage.getItem('nexus_ai_highlight');
-        if (!raw) return;
-        const data = JSON.parse(raw);
-        if (data.type === 'CLASS' && Date.now() - data.timestamp < 15000) {
-          sessionStorage.removeItem('nexus_ai_highlight');
-          triggerClassHighlight(data.id, courses);
-        }
-      } catch { /* ignore */ }
-    };
-
-    if (!loading && courses.length > 0) {
-      checkPendingHighlight();
-    }
-
-    const handleAiHighlight = (e) => {
-      const detail = e.detail;
-      if (detail && detail.type === 'CLASS') {
-        sessionStorage.removeItem('nexus_ai_highlight');
-        if (detail.action === 'BOOK_CLASS') {
-          void fetchCourses(false);
-        }
-        triggerClassHighlight(detail.id, courses);
-      }
-    };
-
-    window.addEventListener('nexusAiHighlight', handleAiHighlight);
-    return () => window.removeEventListener('nexusAiHighlight', handleAiHighlight);
-  }, [loading, courses]);
 
   const sortCoursesStably = (list) => {
     if (!Array.isArray(list)) return [];
@@ -235,64 +184,14 @@ const BookClass = () => {
               const isBooked = course.isBookedByMe;
               const isPending = !!course.isPendingPayment;
               const isFull = spotsLeft <= 0;
-              const isAiSelected = Number(aiHighlightedClassId) === Number(course.classId);
               const isThisBooking = Number(booking) === Number(course.classId);
 
               return (
                 <div
                   key={course.classId || idx}
                   id={`ai-class-${course.classId}`}
-                  className={`relative transition-all duration-300 rounded-xl p-5 flex flex-col sm:flex-row gap-6 group ${
-                    isAiSelected
-                      ? 'overflow-visible shadow-2xl scale-[1.015]'
-                      : 'overflow-hidden bg-surface-container-low border border-surface-container-highest hover:border-primary/50 shadow-[var(--shadow)]'
-                  }`}
+                  className="relative transition-all duration-300 rounded-xl p-5 flex flex-col sm:flex-row gap-6 group overflow-hidden bg-surface-container-low border border-surface-container-highest hover:border-primary/50 shadow-[var(--shadow)]"
                 >
-                  {isAiSelected && (
-                    <>
-                      {/* Aceternity UI: Background Gradient - Ambient outer blur */}
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{
-                          opacity: [0.6, 0.9, 0.6],
-                          backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-                          scale: [1, 1.012, 1],
-                        }}
-                        transition={{
-                          backgroundPosition: { duration: 6, repeat: Infinity, ease: "easeInOut" },
-                          opacity: { duration: 3.5, repeat: Infinity, ease: "easeInOut" },
-                          scale: { duration: 3.5, repeat: Infinity, ease: "easeInOut" },
-                        }}
-                        style={{ backgroundSize: "300% 300%" }}
-                        className="absolute -inset-[4px] rounded-xl z-0 pointer-events-none blur-lg bg-[radial-gradient(circle_farthest-side_at_0_100%,#00f2fe,transparent),radial-gradient(circle_farthest-side_at_100%_0,#7b61ff,transparent),radial-gradient(circle_farthest-side_at_100%_100%,#ffc414,transparent),radial-gradient(circle_farthest-side_at_0_0,#1ca0fb,#141316)]"
-                      />
-                      {/* Aceternity UI: Background Gradient - Sharp 2px glowing border */}
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{
-                          opacity: 1,
-                          backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-                        }}
-                        transition={{
-                          backgroundPosition: { duration: 6, repeat: Infinity, ease: "easeInOut" },
-                          opacity: { duration: 0.3 }
-                        }}
-                        style={{ backgroundSize: "300% 300%" }}
-                        className="absolute -inset-[2px] rounded-xl z-0 pointer-events-none bg-[radial-gradient(circle_farthest-side_at_0_100%,#00f2fe,transparent),radial-gradient(circle_farthest-side_at_100%_0,#7b61ff,transparent),radial-gradient(circle_farthest-side_at_100%_100%,#ffc414,transparent),radial-gradient(circle_farthest-side_at_0_0,#1ca0fb,#141316)]"
-                      />
-                      {/* Solid card surface plate */}
-                      <div className="absolute inset-0 rounded-xl bg-[var(--surface)] z-[1] pointer-events-none" />
-                      {/* AI Selected Pill Badge */}
-                      <motion.div
-                        initial={{ y: -8, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        className="absolute -top-3.5 right-4 z-30 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-md shadow-indigo-500/30 border border-white/40 pointer-events-none"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                        <span>{t("AI Selected")}</span>
-                      </motion.div>
-                    </>
-                  )}
                   <div className="relative z-10 flex flex-col shrink-0 sm:w-24 text-left">
                     <span className="text-xs font-bold text-on-surface-variant tracking-wider uppercase mb-1">{t("First Session")}</span>
                     <span className="text-2xl font-extrabold text-on-surface">{timeStr}</span>
