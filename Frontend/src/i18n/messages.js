@@ -3487,3 +3487,15 @@ for (const [en, vi] of receptionistModuleTranslations) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }
+
+const themeModeTranslations = [
+  ["Switch to Dark Mode", "Chuyển sang chế độ tối"],
+  ["Switch to Light Mode", "Chuyển sang chế độ sáng"],
+  ["Dark mode", "Chế độ tối"],
+  ["Light mode", "Chế độ sáng"]
+];
+
+for (const [en, vi] of themeModeTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}

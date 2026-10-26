@@ -1,6 +1,7 @@
 import { t, useLanguage } from '../i18n/useLanguage';
 import AutoSidebar from '../components/AutoSidebar';
 import LanguageSwitcher from '../i18n/LanguageSwitcher';
+import ThemeToggle from '../components/ThemeToggle';
 import React, { useContext, useState, Suspense } from 'react';
 import { useOutlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -177,6 +178,7 @@ const CoachLayout = () => {
               <LogOut className="w-3.5 h-3.5" />
               <span>{t("Logout")}</span>
             </button>
+            <ThemeToggle />
             <LanguageSwitcher />
           </div>
         </header>

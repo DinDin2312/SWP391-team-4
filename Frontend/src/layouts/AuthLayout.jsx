@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import ThemeToggle from '../components/ThemeToggle';
 
 // 5 High-Definition (1080p Full HD) sports & fitness videos matching the Sports Center facilities:
 const VIDEO_THEMES = [
@@ -127,6 +128,9 @@ export default function AuthLayout() {
       </div>
 
       {/* AUTH PAGES OUTLET */}
+      <div className="absolute top-5 right-5 z-50 flex items-center gap-2">
+        <ThemeToggle />
+      </div>
       <div className="relative z-10 w-full min-h-screen">
         <Outlet />
       </div>

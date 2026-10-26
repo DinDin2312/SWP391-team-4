@@ -1,6 +1,7 @@
 import { t, useLanguage } from '../i18n/useLanguage';
 import AutoSidebar from '../components/AutoSidebar';
 import LanguageSwitcher from '../i18n/LanguageSwitcher';
+import ThemeToggle from '../components/ThemeToggle';
 
 import React, { useContext, useState, useEffect, Suspense } from 'react';
 import { useNavigate, useLocation, useOutlet } from 'react-router-dom';
@@ -226,6 +227,7 @@ const MemberLayout = () => {
             </button>
 
             <button onClick={handleLogout} className="px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-[var(--text)] hover:text-[var(--text)] text-xs font-medium transition-colors">{t("Logout")}</button>
+            <ThemeToggle />
             <LanguageSwitcher />
           </div>
         </header>
