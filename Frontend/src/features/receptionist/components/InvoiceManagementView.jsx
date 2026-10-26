@@ -121,7 +121,7 @@ export default function InvoiceManagementView() {
   };
 
   return (
-    <div className="flex-1 p-4 sm:p-6 space-y-5 max-w-7xl mx-auto w-full">
+    <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-5 max-w-7xl mx-auto w-full">
       {/* Front Desk Header - Clean & Focused */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)]">
         <div>
@@ -233,7 +233,7 @@ export default function InvoiceManagementView() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1040px] border-collapse text-left text-xs sm:text-sm">
+            <table className="w-full border-collapse text-left text-xs sm:text-sm">
               <thead>
                 <tr className="bg-[var(--surface-hover)] border-b border-[var(--border)] text-[var(--text-muted)] font-semibold">
                   <th className="py-3 px-2 w-10 text-center">#</th>
@@ -297,10 +297,10 @@ export default function InvoiceManagementView() {
                         )}
                       </td>
                       <td className="py-3 px-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold ${
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold border border-[var(--border)] ${
                           isCash
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                            : 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
+                            ? 'bg-[var(--success-soft)] text-[var(--success-text)]'
+                            : 'bg-[var(--primary-soft)] text-[var(--primary)]'
                         }`}>
                           {isCash ? <Banknote className="w-3.5 h-3.5 shrink-0" /> : <CreditCard className="w-3.5 h-3.5 shrink-0" />}
                           <span>{isCash ? t('Cash') : t('Bank Transfer')}</span>
@@ -318,7 +318,7 @@ export default function InvoiceManagementView() {
                         </div>
                       </td>
                       <td className="py-3 px-3 text-center whitespace-nowrap">
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--success-soft)] text-[var(--success-text)] border border-[var(--border)]">
                           {inv.status === 'PAID' ? t('PAID') : (inv.status || t('COMPLETED'))}
                         </span>
                       </td>
