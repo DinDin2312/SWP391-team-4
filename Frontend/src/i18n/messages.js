@@ -3051,23 +3051,42 @@ const supportTranslations = [
   ["If you want to choose a different compensation option, you can withdraw this ticket to submit a new one.","Nếu bạn đổi ý muốn thay đổi phương án bồi hoàn, bạn có thể rút đơn này để gửi lại đơn mới."],
   ["Template: Close as Duplicate","Mẫu: Đóng do trùng lặp"],
   ["Transfer Class","Chuyển lớp"],
-  ["Chuyển lớp học","Class Transfer"],
-  ["Đổi sang lớp học tương đương đồng giá và chưa khai giảng","Switch to an equivalent class of the same price before course start"],
-  ["Đang kiểm tra lớp học & lịch đối chiếu...","Checking classes and schedules..."],
-  ["Chuyển lớp học thành công!","Class Transferred Successfully!"],
-  ["Xem lịch tập mới","View New Schedule"],
-  ["Lớp học hiện tại của bạn","Your Current Class"],
-  ["Chưa bắt đầu · Đủ điều kiện chuyển","Not Started · Eligible for Transfer"],
-  ["Chọn lớp học tương đương để chuyển sang","Select an Equivalent Class to Transfer To"],
-  ["Danh sách các lớp đồng giá","List of equivalent-priced classes"],
-  ["chưa khai giảng và không trùng lịch học","not yet started and without schedule conflicts"],
-  ["lớp khả dụng","classes available"],
-  ["Không trùng lịch · Còn","No conflict · Remaining"],
-  ["Đã hết chỗ trống","Fully Booked"],
-  ["Trùng lịch với lớp khác","Conflict with another class"],
-  ["Sẽ chuyển sang:","Will transfer to:"],
-  ["Vui lòng chọn 1 lớp học tương đương để tiếp tục","Please select an equivalent class to continue"],
-  ["Xác nhận chuyển lớp","Confirm Class Transfer"],
+  ["Course has already started or has past sessions. Class transfer is only allowed before course start. If you need retention, please submit a support request.","Khóa học đã bắt đầu hoặc đã có buổi học diễn ra. Chỉ được chuyển lớp trước ngày khai giảng. Nếu cần bảo lưu, vui lòng gửi phiếu hỗ trợ."],
+  ["You are not enrolled in this class.","Bạn chưa đăng ký lớp học này."],
+  ["Class Transfer","Chuyển lớp học"],
+  ["Switch to an equivalent class of the same price before course start","Đổi sang lớp học tương đương đồng giá và chưa khai giảng"],
+  ["Checking classes and schedules...","Đang kiểm tra lớp học & lịch đối chiếu..."],
+  ["Failed to load class transfer preview.","Không thể tải thông tin xem trước chuyển lớp."],
+  ["Failed to transfer class.","Chuyển lớp thất bại."],
+  ["Class Transferred Successfully!","Chuyển lớp học thành công!"],
+  ["You have successfully transferred from class","Bạn đã chuyển thành công từ lớp"],
+  ["to class","sang lớp"],
+  ["New Class:","Lớp học mới:"],
+  ["Total Sessions:","Tổng số buổi:"],
+  ["Audit Request ID:","Mã phiếu đối soát:"],
+  ["Adjusted Fee:","Học phí điều chỉnh:"],
+  ["Same price","Đồng giá"],
+  ["0 VND difference","0 ₫ chênh lệch"],
+  ["View New Schedule","Xem lịch tập mới"],
+  ["Your Current Class","Lớp học hiện tại của bạn"],
+  ["Not Started · Eligible for Transfer","Chưa bắt đầu · Đủ điều kiện chuyển"],
+  ["Already Started","Đã khai giảng"],
+  ["Subject:","Bộ môn:"],
+  ["Custom schedule","Theo lịch"],
+  ["Select an Equivalent Class to Transfer To","Chọn lớp học tương đương để chuyển sang"],
+  ["List of equivalent-priced classes","Danh sách các lớp đồng giá"],
+  ["not yet started and without schedule conflicts","chưa khai giảng và không trùng lịch học"],
+  ["classes available","lớp khả dụng"],
+  ["No other equivalent-priced classes are currently available before start.","Hiện tại không có lớp học nào khác cùng mức giá chưa khai giảng."],
+  ["Please check back later or contact Reception if you wish to retain or cancel your class.","Vui lòng thử lại sau hoặc liên hệ Lễ tân nếu bạn muốn bảo lưu/hủy lớp."],
+  ["Slots:","Chỗ:"],
+  ["No conflict · Remaining","Không trùng lịch · Còn"],
+  ["Conflict with another class","Trùng lịch với lớp khác"],
+  ["Conflicts with '{0}' ({1})","Trùng với lớp '{0}' ({1})"],
+  ["Fully Booked","Đã hết chỗ trống"],
+  ["Will transfer to:","Sẽ chuyển sang:"],
+  ["Please select an equivalent class to continue","Vui lòng chọn 1 lớp học tương đương để tiếp tục"],
+  ["Confirm Class Transfer","Xác nhận chuyển lớp"],
   ["Classes & Schedule","Lịch & Lớp học"],
   ["Coach & Workouts","Huấn luyện viên"],
   ["Packages & Billing","Gói & Thanh toán"],
@@ -3251,8 +3270,8 @@ const supportTranslations = [
   ["Xác nhận Có Mặt", "Xác nhận Có Mặt"]
 ];
 for (const [en, vi] of supportTranslations) {
-  if (!translations[en]) translations[en] = [en, vi];
-  if (!translations[vi]) translations[vi] = [en, vi];
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
 }
 
 // Member Settings & Digital Pass Translations
@@ -3484,6 +3503,18 @@ const receptionistModuleTranslations = [
 ];
 
 for (const [en, vi] of receptionistModuleTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const themeModeTranslations = [
+  ["Switch to Dark Mode", "Chuyển sang chế độ tối"],
+  ["Switch to Light Mode", "Chuyển sang chế độ sáng"],
+  ["Dark mode", "Chế độ tối"],
+  ["Light mode", "Chế độ sáng"]
+];
+
+for (const [en, vi] of themeModeTranslations) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }

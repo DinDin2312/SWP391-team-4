@@ -291,13 +291,71 @@ WHERE bb.membership_benefit_id = ?
   - Nếu buổi học được hủy (`status = 'CANCELLED'`) khi học viên **chưa tham gia (`attendance_status != 'PRESENT'`)**, buổi đó **không còn bị đếm** $\rightarrow$ Hệ thống tự động hoàn trả lại hạn mức buổi vào gói tập cho hội viên.
   - Nếu học viên **đã điểm danh có mặt (`PRESENT`)**, buổi học đó luôn được tính là đã sử dụng dù trạng thái booking có thay đổi.
 
-### 6.3. Quy tắc Hủy Lớp học của Hội viên (`cancelClass`)
-- Khi hội viên nhấn Hủy khóa học (`POST /api/v1/member/cancel-class/{classId}`):
-  - Nếu tất cả các buổi học của lớp đều đã diễn ra trong quá khứ (`startTime <= NOW()`) $\rightarrow$ Từ chối hủy (`"Cannot cancel: All sessions for this class are already in the past."`).
-  - Hệ thống chỉ chuyển sang `status = 'CANCELLED'` đối với các buổi học **chưa điểm danh `PRESENT`** và **(còn ở tương lai `startTime > NOW()` hoặc đang `PENDING`)**.
-  - Các buổi học đã diễn ra trong quá khứ hoặc đã được Coach điểm danh `PRESENT` được giữ nguyên lịch sử.
+### 6.3. Chính sách Chuyển Lớp học (Class Transfer Policy)
+- **Mã nguồn**: `SupportRequestServiceImpl.getTransferClassPreview`, `transferClassDirectly`.
+- **Trường hợp 1 – Lớp chưa khai giảng (`hasStarted == false`): Tự chuyển trực tiếp 1-click**:
+  - Hội viên được phép tự đổi sang lớp khác ngay trên giao diện mà **không cần tạo đơn hỗ trợ**.
+  - **Điều kiện ràng buộc**:
+    1. Học phí lớp mục tiêu phải **bằng đúng** học phí lớp hiện tại (`targetPrice == currentPrice`).
+    2. Lớp mục tiêu đang `ACTIVE`, chưa khai giảng (`firstSessionTime > NOW()`), và còn chỗ trống (`maxSlots`).
+    3. Hội viên không bị trùng lịch cá nhân với các buổi học của lớp mới.
+  - **Cơ chế xử lý**: Khóa đồng thời (`lockOperations()`), đánh dấu `CANCELLED` toàn bộ booking của lớp cũ, đồng thời tạo các booking `CONFIRMED` mới ở lớp mục tiêu.
+- **Trường hợp 2 – Lớp đã khai giảng hoặc đã có buổi học diễn ra (`hasStarted == true`): Chặn chuyển trực tiếp**:
+  - Hệ thống **chặn tuyệt đối** hành vi tự chuyển lớp (`"Không thể chuyển lớp: Khóa học hiện tại đã bắt đầu hoặc đã có buổi học diễn ra."`).
+  - **Lý do nghiệp vụ**: Các lớp khác nhau về tiến độ giáo trình, số buổi đã học và Huấn luyện viên phụ trách.
+  - **Luồng xử lý**: Hội viên bắt buộc phải vào luồng **Hủy lớp** (Mục 6.4) để được bồi hoàn số buổi còn lại thành Voucher tín dụng `CRED-`, sau đó dùng voucher đó để đăng ký lớp học mới trong Giỏ hàng.
 
-### 6.4. Gia hạn Khóa học & Bán Gói tập tại Quầy Lễ tân (`ReceptionistMemberServiceImpl`)
+### 6.4. Chính sách Hủy Lớp, Bảo lưu Học phí & Phân loại Quyền lợi (Class Cancellation & Retention)
+- **Mã nguồn**: `SupportRequestServiceImpl.getCancelClassPreview`, `cancelClassDirectly`, `respondToRequest`.
+- **Trường hợp A – Hủy lớp trước ngày khai giảng (`hasStarted == false`): Tự động Phê duyệt (Auto-Approved)**:
+  - Khi hội viên hủy lớp chưa bắt đầu:
+    - Hệ thống tự động tính toán **100% học phí** lớp học.
+    - Học viên chọn loại hình bồi hoàn yêu thích (`preferredResolution`):
+      1. **Voucher Tín dụng Lớp học (`ISSUE_CREDIT`)**: Cấp mã voucher tín dụng `CRED-xxx` trị giá 100% học phí (hạn 60 ngày), dùng áp giảm trừ trong Giỏ hàng.
+      2. **Thẻ tập Gym Pass (`GYMPASS-xxx`)**: Cấp mã thẻ tập Gym Pass 01 tháng (giá trị tương đương hoặc nhỏ hơn các gói gym có trong Package Store).
+    - Hệ thống tự động sinh một đơn `SupportRequest` lưu vết kiểm toán (Audit Trail) với trạng thái **`APPROVED` ngay lập tức** (Auto-Approved), sinh mã voucher tương ứng và thông báo cho học viên mà không cần chờ Lễ tân duyệt thủ công.
+- **Trường hợp B – Hủy lớp khi đang học dở dang (`hasStarted == true`): Xét duyệt Bồi hoàn qua Lễ tân**:
+  - Học viên bắt buộc gửi đơn yêu cầu hỗ trợ (`POST /api/v1/member/support/requests`) kèm lý do (chấn thương, bận việc, chuyển chỗ ở, v.v.).
+  - Đơn được chuyển về cổng tiếp nhận của Lễ tân (`SupportDeskView`).
+  - **Công thức tính tiền bồi hoàn (Prorated Credit Calculation)**:
+    $\text{Credit Bồi hoàn} = \text{Học phí lớp} \times \frac{\text{Số buổi còn lại}}{\text{Tổng số buổi}} \quad (\text{Làm tròn đến hàng nghìn VNĐ})$
+    *Ví dụ*: Lớp Spinning RPM (10 buổi, học phí 650.000 đ), học viên đã học 1 buổi (còn 9 buổi):
+    $\text{Tiền bồi hoàn} = 650.000 \times \frac{9}{10} = \mathbf{585.000}\text{ đ}$
+  - Khi Lễ tân duyệt đơn:
+    1. Sinh mã tín dụng `CRED-xxx` trị giá đúng số tiền bồi hoàn đã tính (585.000 đ), hạn dùng 60 ngày.
+    2. Đánh dấu `CANCELLED` toàn bộ các buổi học tương lai chưa điểm danh của lớp.
+    3. Gửi thông báo và phản hồi chính thức vào hòm thư tài khoản của hội viên.
+
+### 6.5. Chính sách Quản lý Dòng tiền & Thẩm quyền Duyệt Hoàn Tiền Mặt (Center Manager Cash Refund Escalation)
+- **Nguyên tắc cốt tử: "Bảo vệ tối đa dòng tiền trung tâm (Cash Retention)"**:
+  - Dòng tiền đã nạp vào trung tâm phải được ưu tiên tuyệt đối giữ lại qua hình thức Store Credit hoặc Gym Pass.
+  - **Phân định thẩm quyền**: Nhân viên Lễ tân **TUYỆT ĐỐI KHÔNG CÓ QUYỀN** duyệt hoàn tiền mặt hoặc chuyển khoản ngân hàng.
+- **Quy trình Chuyển cấp Quản lý (`ESCALATE` to Center Manager)**:
+  - Nếu học viên kiên quyết từ chối voucher và yêu cầu lấy lại tiền mặt/chuyển khoản $\rightarrow$ Lễ tân chọn hành động **`ESCALATE`** (Chuyển Quản lý giải quyết).
+  - Trạng thái đơn chuyển sang `ESCALATED`. Lễ tân không thể can thiệp hay sửa đổi đơn này nữa.
+  - Quản lý trung tâm (`Center Manager`) trực tiếp thẩm định các lý do bất khả kháng đặc biệt (bệnh lý nặng có giấy chứng nhận của bệnh viện, định cư xa, sự cố lỗi dịch vụ từ phía trung tâm).
+  - Quản lý có toàn quyền:
+    - Bác bỏ yêu cầu hoàn tiền nếu không thỏa mãn chính sách, giải thích và định hướng hội viên chuyển sang nhận Voucher/Gym Pass.
+    - Hoặc phê duyệt lệnh hoàn tiền mặt (`CASH_REFUND`) chuyển bộ phận Kế toán xuất quỹ/chuyển khoản hoàn trả học viên.
+
+### 6.6. Cơ chế Kép của Thẻ Gym Pass (`GYMPASS-xxx`)
+Thẻ tập Gym Pass (`GYMPASS-`) được thiết kế với cơ chế sử dụng 2-trong-1 linh hoạt:
+1. **Sử dụng tại Cửa ra vào phòng Gym (Turnstile Door Check-in)**:
+   - Học viên có thể đưa mã `GYMPASS-xxx` hoặc nhập pass tại cửa/quầy Lễ tân để check-in mở cổng vào tập Gym tự do không giới hạn số lượt trong thời hạn của thẻ (30 ngày).
+2. **Sử dụng như Voucher giảm giá trong Giỏ hàng (Store Credit)**:
+   - Nếu học viên không có nhu cầu đến phòng gym tập tự do, học viên hoàn toàn có thể sử dụng mã `GYMPASS-xxx` như một Voucher tín dụng trong Giỏ hàng để khấu trừ tiền khi đăng ký lớp học mới hoặc mua gói tập khác.
+
+### 6.7. Khấu trừ Voucher Tín dụng trong Giỏ hàng (`PaymentCart` & `PaymentService`)
+- **Hiển thị Voucher khả dụng**: Khi hội viên mở Giỏ hàng (`/member/cart`), hệ thống tự động gọi `GET /api/v1/member/support/credits` để tải danh sách các thẻ tín dụng (`CRED-` và `GYMPASS-`) đang `ACTIVE` và còn số dư (`remainingAmount > 0`).
+- **Khấu trừ tự động**:
+  - Hội viên chọn mã voucher áp dụng tại dropdown *"Apply Course Credit Voucher"*.
+  - Bảng Tóm tắt đơn hàng (Order Summary) hiển thị rõ dòng khấu trừ:
+    $\text{Tổng thanh toán} = \max\left(0, \text{Tiền sau chiết khấu hạng} - \text{Số dư Voucher}\right)$
+- **Xử lý Checkout (`PaymentServiceImpl.checkout`)**:
+  - **Trường hợp Voucher $\ge$ Tổng tiền giỏ hàng**: Tổng tiền thanh toán về **`0 đ`**. Hệ thống lập tức hoàn tất đơn hàng, xác nhận các lớp học/gói tập thành công với mã giao dịch `CREDIT-<creditCode>` mà **không cần chuyển hướng qua cổng VNPay/MoMo**.
+  - **Trường hợp Voucher < Tổng tiền giỏ hàng**: Voucher được trừ hết số dư (`remainingAmount = 0`, `status = USED`). Số tiền chênh lệch còn lại được chuyển sang cổng VNPay hoặc MoMo để học viên thanh toán bình thường.
+
+### 6.8. Gia hạn Khóa học & Bán Gói tập tại Quầy Lễ tân (`ReceptionistMemberServiceImpl`)
 1. **Gợi ý & Xác nhận Gia hạn Lớp học tại Quầy (`suggestNextClassRenewal`, `confirmClassRenewal`)**:
    - Từ một `bookingId` hiện tại của hội viên, hệ thống tìm các buổi học tương lai của các lớp cùng tên (`findUpcomingSchedulesByClassName`) bắt đầu sau thời điểm kết thúc khóa cũ, ưu tiên khớp đúng khung giờ học trong ngày và còn chỗ trống (`booked < maxSlots`).
    - Khi Lễ tân xác nhận (`POST /api/receptionist/classes/confirm-renewal`), hệ thống khóa đồng thời (`lockOperations()`), kiểm tra chống đặt trùng và sĩ số, sau đó tạo `Booking` mới với `status = 'CONFIRMED'`, `attendance_status = 'NOT_YET'`.

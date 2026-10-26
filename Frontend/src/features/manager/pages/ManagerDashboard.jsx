@@ -1,5 +1,6 @@
 import { locale } from '../../../i18n/languageStore.js';
 import LanguageSwitcher from '../../../i18n/LanguageSwitcher';
+import ThemeToggle from '../../../components/ThemeToggle';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import OperationalOverview from '../components/OperationalOverview';
 import PackagesPage from '../packages/PackagesPage';
@@ -186,6 +187,7 @@ function ManagerDashboard() {
           <button className="manager-menu-button" onClick={() => setMobileNav(true)} aria-label={t("Open menu")} title={t("Open menu")}><Menu size={20} /></button>
           <nav className="manager-breadcrumb" aria-label={t("Breadcrumb")}><span>{t("Nexus Center")}</span><i aria-hidden="true">/</i><strong>{t(currentPage.title)}</strong></nav>
           <span className="overview-updated" role="status">{t(updatedAt ? t(`Updated ${new Intl.DateTimeFormat(locale(), { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', hour12: false }).format(updatedAt)}`) : t('Loading…'))}</span>
+          <ThemeToggle />
           <LanguageSwitcher />
           <button className={`manager-icon-button ${loading ? 'is-refreshing' : ''}`} onClick={refreshAll} title={t("Refresh")} aria-label={t("Refresh data")} aria-busy={loading} disabled={initialLoading}><RefreshCw size={18} /></button>
         </header>

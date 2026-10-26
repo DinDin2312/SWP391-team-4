@@ -188,23 +188,51 @@ sequenceDiagram
 
 ---
 
-### 5.3. Luồng 3: Hủy Lớp, Xử Lý Ngoại Lệ & Cấp Tín Dụng Hoàn Trả
+### 5.3. Luồng 3: Chuyển Lớp, Hủy Lớp, Bảo Lưu Học Phí & Quản Trị Dòng Tiền
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor M as Hội Viên
     actor R as Lễ Tân
-    participant S as Support Desk & Credit Engine
+    actor CM as Quản Lý (Manager)
+    participant S as Support & Payment Engine
 
-    M->>S: Bấm hủy lớp trước giờ học 5 tiếng (Khung 2h - 12h)
-    S-->>M: Cảnh báo hủy muộn -> Tự động tạo Support Request lý do bận đột xuất
-    R->>S: Mở màn hình Support Desk xem phiếu khiếu nại
-    R->>S: Bấm [Chấp thuận & Cấp Tín Dụng (Credit)]
-    S->>S: Hủy Booking trong lớp + Tạo mã USER_CREDITS tương ứng giá trị buổi học
-    S-->>M: Thông báo mã Credit đã được nạp vào ví tài khoản
-    M->>S: Dùng mã Credit để thanh toán mua gói tập / lớp học mới
+    alt 1. Chuyển Lớp Trực Tiếp (Lớp chưa bắt đầu, đồng giá)
+        M->>S: Chọn lớp đồng giá chưa khai giảng -> Bấm chuyển trực tiếp
+        S->>S: Hủy booking lớp cũ + Tạo booking lớp mới (1-Click, không cần đơn)
+        S-->>M: Thông báo chuyển lớp thành công!
+    else 2. Chuyển Lớp Khi Đã Bắt Đầu Học
+        M->>S: Yêu cầu chuyển lớp đang học dở dang
+        S-->>M: Chặn chuyển trực tiếp -> Điều hướng sang luồng Hủy lớp nhận Voucher
+    else 3. Hủy Lớp Chưa Khai Giảng (Auto-Approved 100%)
+        M->>S: Bấm hủy lớp chưa khai giảng (Chọn Voucher hoặc Gym Pass)
+        S->>S: Tự động phê duyệt đơn (Auto-Approved) + Cấp mã CRED- hoặc GYMPASS- 100%
+        S-->>M: Trả mã Voucher/Gym Pass tức thì có hạn 60 ngày
+    else 4. Hủy Lớp Đang Học Dở Dang (Xét duyệt bồi hoàn số buổi còn lại)
+        M->>S: Gửi đơn yêu cầu hủy/bảo lưu số buổi còn lại
+        R->>S: Xem xét số buổi đã học / còn lại (Hệ thống đề xuất Prorated Credit)
+        R->>S: Bấm [Phê Duyệt] cấp mã tín dụng CRED-
+        S->>S: Hủy các buổi tương lai + Tạo mã USER_CREDITS (VD: 9/10 buổi = 585.000 đ)
+        S-->>M: Thông báo mã tín dụng bồi hoàn nạp vào ví tài khoản
+    else 5. Đòi Hoàn Tiền Mặt (Chính sách giữ dòng tiền trung tâm)
+        M->>S: Kiên quyết yêu cầu rút tiền mặt / chuyển khoản ngân hàng
+        Note over R: Lễ tân TUYỆT ĐỐI KHÔNG có quyền nhả tiền mặt
+        R->>S: Bấm [Chuyển Quản lý / Escalate]
+        CM->>S: Quản lý thẩm định lý do bất khả kháng (y tế, bất khả kháng)
+        alt Quản lý thuyết phục thành công
+            CM->>S: Chuyển sang cấp Voucher tín dụng / Gym Pass (Giữ dòng tiền)
+        else Ngoại lệ đặc biệt được chấp thuận
+            CM->>S: Phê duyệt lệnh hoàn tiền chi trả (CASH_REFUND)
+        end
+    end
 ```
+
+#### Nguyên tắc vận hành cốt lõi:
+1. **Chuyển lớp linh hoạt trước giờ G**: Học viên tự chuyển 1-click trước khi lớp bắt đầu. Khi lớp đã học $\ge 1$ buổi, chặn tự chuyển để tránh lệch tiến độ chuyên môn $\rightarrow$ phải qua luồng bảo lưu lấy voucher đăng ký lớp mới.
+2. **Cơ chế Kép của Thẻ Gym Pass (`GYMPASS-`)**: Vừa dùng để nhập pass tại cửa ra vào tập Gym tự do, vừa có thể sử dụng như một Voucher giảm trừ trong Giỏ hàng khi mua gói tập/lớp học khác.
+3. **Prorated Credit Engine**: Tính tiền bồi hoàn chính xác theo số buổi thực tế chưa học ($Price \times Remaining / Total$), làm tròn đến hàng nghìn đồng.
+4. **Bảo toàn dòng tiền (Cash Retention Defense)**: Tiền đã vào trung tâm được ưu tiên giữ lại bằng Store Credit hoặc Gym Pass. Cửa xuất tiền mặt chỉ mở duy nhất qua thẩm quyền Quản lý.
 
 ---
 

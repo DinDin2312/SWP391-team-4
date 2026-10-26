@@ -1,5 +1,5 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CheckCircle2, XCircle, Loader2, ArrowRight } from 'lucide-react';
@@ -10,23 +10,28 @@ const PaymentResult = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState('processing');
   const [message, setMessage] = useState('Processing your payment result...');
+  const hasProcessedRef = useRef(false);
 
   useEffect(() => {
+    if (hasProcessedRef.current) return;
+
+    const queryString = searchParams.toString();
+    if (!queryString) {
+      setStatus('error');
+      setMessage('No payment data found in URL.');
+      return;
+    }
+
+    hasProcessedRef.current = true;
     const processPayment = async () => {
       try {
         const token = localStorage.getItem('token');
-        const queryString = searchParams.toString();
-
-        // Gửi kết quả về backend để validate
-        let endpoint = 'vnpay-callback';
-        if (searchParams.has('partnerCode')) {
-            endpoint = 'momo-callback';
-        }
+        let endpoint = searchParams.has('partnerCode') ? 'momo-callback' : 'vnpay-callback';
         const response = await axios.get(`http://localhost:8080/api/v1/payment/${endpoint}?${queryString}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        setStatus(response.data.status==='PAID'?'success':'error');
+        setStatus(response.data.status === 'PAID' ? 'success' : 'error');
         window.dispatchEvent(new Event('notificationUpdated'));
         setMessage(response.data.message || 'Payment Successful! Your courses are now confirmed.');
       } catch (error) {
@@ -35,12 +40,7 @@ const PaymentResult = () => {
       }
     };
 
-    if (searchParams.toString()) {
-      processPayment();
-    } else {
-      setStatus('error');
-      setMessage('No payment data found in URL.');
-    }
+    processPayment();
   }, [searchParams]);
 
   return (

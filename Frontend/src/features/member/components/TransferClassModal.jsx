@@ -65,6 +65,26 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
 
   const selectedTargetClass = preview?.equivalentClasses?.find(c => c.classId === selectedTargetId);
 
+  const formatSchedule = (pattern) => {
+    if (!pattern) return t('Custom schedule');
+    return pattern
+      .split(',')
+      .map(p => t(p.trim()))
+      .join(', ');
+  };
+
+  const getConflictLabel = (item) => {
+    if (!item.hasConflict) return null;
+    if (item.conflictDetail) {
+      const match = item.conflictDetail.match(/Trùng với lớp '(.+?)' \((.+?)\)/);
+      if (match) {
+        return t("Conflicts with '{0}' ({1})", [match[1], match[2]]);
+      }
+      return t(item.conflictDetail);
+    }
+    return t('Conflict with another class');
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
       <div className="relative w-full max-w-3xl max-h-[90vh] bg-surface rounded-2xl border border-border shadow-2xl flex flex-col overflow-hidden text-on-surface">
@@ -77,10 +97,10 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
             </div>
             <div>
               <h3 className="text-lg font-bold text-on-surface">
-                {t('Chuyển lớp học')}
+                {t('Class Transfer')}
               </h3>
               <p className="text-xs text-on-surface-variant">
-                {t('Đổi sang lớp học tương đương đồng giá và chưa khai giảng')}
+                {t('Switch to an equivalent class of the same price before course start')}
               </p>
             </div>
           </div>
@@ -97,7 +117,7 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
           {loading && (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-on-surface-variant">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <span className="text-sm font-medium">{t('Đang kiểm tra lớp học & lịch đối chiếu...')}</span>
+              <span className="text-sm font-medium">{t('Checking classes and schedules...')}</span>
             </div>
           )}
 
@@ -115,33 +135,33 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                 <CheckCircle2 className="w-10 h-10" />
               </div>
               <h4 className="text-xl font-bold text-on-surface">
-                {t('Chuyển lớp học thành công!')}
+                {t('Class Transferred Successfully!')}
               </h4>
               <p className="text-sm text-on-surface-variant max-w-md">
-                {t('Bạn đã chuyển thành công từ lớp')}{' '}
+                {t('You have successfully transferred from class')}{' '}
                 <strong className="text-on-surface">{successResult.fromClassName}</strong>{' '}
-                {t('sang lớp')}{' '}
+                {t('to class')}{' '}
                 <strong className="text-primary">{successResult.toClassName}</strong>.
               </p>
 
               <div className="w-full max-w-md p-4 rounded-xl bg-surface-container border border-border text-left space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-on-surface-variant">{t('Lớp học mới:')}</span>
+                  <span className="text-on-surface-variant">{t('New Class:')}</span>
                   <span className="font-semibold text-on-surface">{successResult.toClassName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-on-surface-variant">{t('Tổng số buổi:')}</span>
-                  <span className="font-semibold text-on-surface">{successResult.totalSessions} {t('buổi')}</span>
+                  <span className="text-on-surface-variant">{t('Total Sessions:')}</span>
+                  <span className="font-semibold text-on-surface">{successResult.totalSessions} {t('sessions')}</span>
                 </div>
                 {successResult.requestId && (
                   <div className="flex justify-between">
-                    <span className="text-on-surface-variant">{t('Mã phiếu đối soát:')}</span>
+                    <span className="text-on-surface-variant">{t('Audit Request ID:')}</span>
                     <span className="font-semibold text-primary">#{successResult.requestId}</span>
                   </div>
                 )}
                 <div className="flex justify-between pt-2 border-t border-border">
-                  <span className="text-on-surface-variant">{t('Học phí điều chỉnh:')}</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">0 ₫ ({t('Đồng giá')})</span>
+                  <span className="text-on-surface-variant">{t('Adjusted Fee:')}</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">0 ₫ ({t('Same price')})</span>
                 </div>
               </div>
 
@@ -151,7 +171,7 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                   onClick={onClose}
                   className="px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:opacity-90 shadow-md transition-all"
                 >
-                  {t('Xem lịch tập mới')}
+                  {t('View New Schedule')}
                 </button>
               </div>
             </div>
@@ -164,17 +184,17 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
               <div className="p-4 rounded-xl bg-surface-container border border-border">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
-                    {t('Lớp học hiện tại của bạn')}
+                    {t('Your Current Class')}
                   </span>
                   {preview.canTransfer ? (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      {t('Chưa bắt đầu · Đủ điều kiện chuyển')}
+                      {t('Not Started · Eligible for Transfer')}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                       <AlertTriangle className="w-3.5 h-3.5" />
-                      {t('Đã khai giảng')}
+                      {t('Already Started')}
                     </span>
                   )}
                 </div>
@@ -185,13 +205,13 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                       {preview.className}
                     </h4>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-on-surface-variant mt-1">
-                      {preview.subjectName && <span>{t('Bộ môn:')} <strong>{preview.subjectName}</strong></span>}
+                      {preview.subjectName && <span>{t('Subject:')} <strong>{preview.subjectName}</strong></span>}
                       {preview.coachName && <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" />{preview.coachName}</span>}
                       {preview.roomName && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{preview.roomName}</span>}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="text-xs text-on-surface-variant block">{t('Học phí:')}</span>
+                    <span className="text-xs text-on-surface-variant block">{t('Course Fee:')}</span>
                     <span className="text-base font-extrabold text-primary">{formatMoney(preview.classPrice)}</span>
                   </div>
                 </div>
@@ -199,18 +219,18 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                 <div className="mt-3 pt-3 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-on-surface-variant">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <span>{t('Khai giảng:')} {formatDateTime(preview.firstSessionTime)}</span>
+                    <span>{t('Starts:')} {formatDateTime(preview.firstSessionTime)}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <span>{t('Lịch học:')} {preview.schedulePattern || 'Theo lịch'} ({preview.totalSessions} {t('buổi')})</span>
+                    <span>{t('Schedule:')} {formatSchedule(preview.schedulePattern)} ({preview.totalSessions} {t('sessions')})</span>
                   </div>
                 </div>
 
                 {!preview.canTransfer && (
                   <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>{preview.message}</span>
+                    <span>{t(preview.message)}</span>
                   </div>
                 )}
               </div>
@@ -221,23 +241,23 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-on-surface">
-                        {t('Chọn lớp học tương đương để chuyển sang')}
+                        {t('Select an Equivalent Class to Transfer To')}
                       </h4>
                       <p className="text-xs text-on-surface-variant">
-                        {t('Danh sách các lớp đồng giá')} ({formatMoney(preview.classPrice)}) {t('chưa khai giảng và không trùng lịch học')}
+                        {t('List of equivalent-priced classes')} ({formatMoney(preview.classPrice)}) {t('not yet started and without schedule conflicts')}
                       </p>
                     </div>
                     <span className="px-2 py-0.5 rounded text-xs font-semibold bg-surface-container-high text-on-surface-variant">
-                      {preview.equivalentClasses?.length || 0} {t('lớp khả dụng')}
+                      {preview.equivalentClasses?.length || 0} {t('classes available')}
                     </span>
                   </div>
 
                   {(!preview.equivalentClasses || preview.equivalentClasses.length === 0) ? (
                     <div className="text-center py-10 px-4 rounded-xl border border-dashed border-border bg-surface-container/30 text-on-surface-variant text-sm">
                       <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="font-medium">{t('Hiện tại không có lớp học nào khác cùng mức giá chưa khai giảng.')}</p>
+                      <p className="font-medium">{t('No other equivalent-priced classes are currently available before start.')}</p>
                       <p className="text-xs mt-1 text-on-surface-variant/80">
-                        {t('Vui lòng thử lại sau hoặc liên hệ Lễ tân nếu bạn muốn bảo lưu/hủy lớp.')}
+                        {t('Please check back later or contact Reception if you wish to retain or cancel your class.')}
                       </p>
                     </div>
                   ) : (
@@ -288,10 +308,10 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                                   )}
                                   <span className="flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
-                                    {item.schedulePattern || 'Theo lịch'} ({item.totalSessions} {t('buổi')})
+                                    {formatSchedule(item.schedulePattern)} ({item.totalSessions} {t('sessions')})
                                   </span>
                                   <span>
-                                    {t('Chỗ:')} <strong>{item.bookedSlots}/{item.maxSlots}</strong>
+                                    {t('Slots:')} <strong>{item.bookedSlots}/{item.maxSlots}</strong>
                                   </span>
                                 </div>
 
@@ -300,21 +320,21 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                                   {canSelect && (
                                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                                       <Check className="w-3.5 h-3.5" />
-                                      {t('Không trùng lịch · Còn')} {item.maxSlots - item.bookedSlots} {t('chỗ')}
+                                      {t('No conflict · Remaining')} {item.maxSlots - item.bookedSlots} {t('slots')}
                                     </span>
                                   )}
 
                                   {item.hasConflict && (
                                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
                                       <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                                      {item.conflictDetail || t('Trùng lịch với lớp khác')}
+                                      {getConflictLabel(item)}
                                     </span>
                                   )}
 
                                   {item.isFull && (
                                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 dark:text-red-400">
                                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                                      {t('Đã hết chỗ trống')}
+                                      {t('Fully Booked')}
                                     </span>
                                   )}
                                 </div>
@@ -352,11 +372,11 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
             <div className="text-xs text-on-surface-variant text-center sm:text-left">
               {selectedTargetClass ? (
                 <span>
-                  {t('Sẽ chuyển sang:')} <strong className="text-primary">{selectedTargetClass.className}</strong>
-                  <span className="ml-2 font-semibold text-emerald-600 dark:text-emerald-400">(0 ₫ chênh lệch)</span>
+                  {t('Will transfer to:')} <strong className="text-primary">{selectedTargetClass.className}</strong>
+                  <span className="ml-2 font-semibold text-emerald-600 dark:text-emerald-400">({t('0 VND difference')})</span>
                 </span>
               ) : (
-                <span>{t('Vui lòng chọn 1 lớp học tương đương để tiếp tục')}</span>
+                <span>{t('Please select an equivalent class to continue')}</span>
               )}
             </div>
 
@@ -378,11 +398,11 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                 {submitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>{t('Đang xử lý...')}</span>
+                    <span>{t('Processing...')}</span>
                   </>
                 ) : (
                   <>
-                    <span>{t('Xác nhận chuyển lớp')}</span>
+                    <span>{t('Confirm Class Transfer')}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}

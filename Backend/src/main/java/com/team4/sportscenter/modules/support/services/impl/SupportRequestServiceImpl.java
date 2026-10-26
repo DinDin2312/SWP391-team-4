@@ -81,25 +81,24 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         GymClass gymClass = coachClassRepository.findById(classId)
                 .orElseThrow(() -> new IllegalArgumentException("Class not found: " + classId));
 
-        List<Booking> classBookings = bookingRepository.findAllBookingsByEmail(memberEmail).stream()
+        List<Booking> allClassBookings = bookingRepository.findAllBookingsByEmail(memberEmail).stream()
                 .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
-                        && Objects.equals(b.getSchedule().getGymClass().getClassId(), classId)
-                        && !"CANCELLED".equals(b.getStatus()))
+                        && Objects.equals(b.getSchedule().getGymClass().getClassId(), classId))
                 .sorted(Comparator.comparing(b -> b.getSchedule().getStartTime()))
                 .toList();
 
-        if (classBookings.isEmpty()) {
-            throw new IllegalArgumentException("No active bookings found for class: " + classId);
+        if (allClassBookings.isEmpty()) {
+            throw new IllegalArgumentException("No bookings found for class: " + classId);
         }
 
         LocalDateTime now = LocalDateTime.now();
-        int totalSessions = classBookings.size();
-        LocalDateTime firstSessionTime = classBookings.get(0).getSchedule().getStartTime();
+        int totalSessions = allClassBookings.size();
+        LocalDateTime firstSessionTime = allClassBookings.get(0).getSchedule().getStartTime();
         boolean hasStarted = firstSessionTime.isBefore(now)
-                || classBookings.stream().anyMatch(b -> "PRESENT".equalsIgnoreCase(b.getAttendanceStatus())
+                || allClassBookings.stream().anyMatch(b -> "PRESENT".equalsIgnoreCase(b.getAttendanceStatus())
                 || (b.getSchedule() != null && b.getSchedule().getStartTime().isBefore(now)));
 
-        int attendedSessions = (int) classBookings.stream()
+        int attendedSessions = (int) allClassBookings.stream()
                 .filter(b -> "PRESENT".equalsIgnoreCase(b.getAttendanceStatus())
                         || (b.getSchedule() != null && b.getSchedule().getStartTime().isBefore(now)))
                 .count();
@@ -120,6 +119,8 @@ public class SupportRequestServiceImpl implements SupportRequestService {
             estimatedCreditAmount = BigDecimal.ZERO;
         }
 
+        boolean hasActiveBookings = allClassBookings.stream().anyMatch(b -> !"CANCELLED".equals(b.getStatus()));
+
         String message;
         if (!hasStarted) {
             message = "Khóa học chưa khai giảng. Bạn có thể hủy trực tiếp và nhận Credit bảo lưu 100% học phí có hạn 60 ngày.";
@@ -136,7 +137,7 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                 .remainingSessions(remainingSessions)
                 .firstSessionTime(firstSessionTime)
                 .hasStarted(hasStarted)
-                .canDirectCancelWithCredit(!hasStarted)
+                .canDirectCancelWithCredit(!hasStarted && hasActiveBookings)
                 .estimatedCreditAmount(estimatedCreditAmount)
                 .message(message)
                 .build();
@@ -816,24 +817,7 @@ public class SupportRequestServiceImpl implements SupportRequestService {
             }
         }
 
-        // 3. ALWAYS cancel future un-attended bookings for this class whenever cancellation/compensation is approved
-        if (isApproved && request.getGymClass() != null 
-                && (request.getCategory() == SupportCategory.CLASS_CANCELLATION 
-                    || request.getCategory() == SupportCategory.REFUND_REQUEST
-                    || isCompensating)) {
-            Integer classId = request.getGymClass().getClassId();
-            List<Booking> bookings = bookingRepository.findAllBookingsByEmail(request.getUser().getEmail()).stream()
-                    .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
-                            && Objects.equals(b.getSchedule().getGymClass().getClassId(), classId)
-                            && !"CANCELLED".equals(b.getStatus())
-                            && !"PRESENT".equalsIgnoreCase(b.getAttendanceStatus()))
-                    .toList();
-            for (Booking b : bookings) {
-                b.setStatus("CANCELLED");
-                bookingRepository.save(b);
-            }
-        }
-
+        // 3. Calculate and issue credit/compensation BEFORE cancelling bookings
         if (isApproved && wantsCredit) {
             BigDecimal creditAmount = dto.getCreditAmount();
             if (creditAmount == null || creditAmount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -879,7 +863,25 @@ public class SupportRequestServiceImpl implements SupportRequestService {
             }
         }
 
-        if (generatedCreditCode != null && (request.getResponseNote() == null || request.getResponseNote().contains("tiếp nhận và xử lý") || isGymPass)) {
+        // 4. ALWAYS cancel future un-attended bookings for this class whenever cancellation/compensation is approved
+        if (isApproved && request.getGymClass() != null 
+                && (request.getCategory() == SupportCategory.CLASS_CANCELLATION 
+                    || request.getCategory() == SupportCategory.REFUND_REQUEST
+                    || isCompensating)) {
+            Integer classId = request.getGymClass().getClassId();
+            List<Booking> bookings = bookingRepository.findAllBookingsByEmail(request.getUser().getEmail()).stream()
+                    .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
+                            && Objects.equals(b.getSchedule().getGymClass().getClassId(), classId)
+                            && !"CANCELLED".equals(b.getStatus())
+                            && !"PRESENT".equalsIgnoreCase(b.getAttendanceStatus()))
+                    .toList();
+            for (Booking b : bookings) {
+                b.setStatus("CANCELLED");
+                bookingRepository.save(b);
+            }
+        }
+
+        if (generatedCreditCode != null && (request.getResponseNote() == null || request.getResponseNote().contains("tiếp nhận và xử lý") || request.getResponseNote().contains("trị giá 0") || isGymPass)) {
             String rolePrefix = isManagerStaff ? "Quản lý trung tâm" : "Lễ tân";
             String className = request.getGymClass() != null ? (" " + request.getGymClass().getClassName()) : "";
             if (isGymPass) {

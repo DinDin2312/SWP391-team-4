@@ -1,6 +1,7 @@
 import { t, useLanguage } from '../i18n/useLanguage';
 import AutoSidebar from '../components/AutoSidebar';
 import LanguageSwitcher from '../i18n/LanguageSwitcher';
+import ThemeToggle from '../components/ThemeToggle';
 import React, { useContext, useState, Suspense } from 'react';
 import { useOutlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -168,7 +169,7 @@ const CoachLayout = () => {
             </button>
             <button
               onClick={() => setIsNotifModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-[var(--text)] font-bold text-xs shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer"
             >
               <Bell className="w-3.5 h-3.5" />
               <span>{t("Send Notification")}</span>
@@ -177,6 +178,7 @@ const CoachLayout = () => {
               <LogOut className="w-3.5 h-3.5" />
               <span>{t("Logout")}</span>
             </button>
+            <ThemeToggle />
             <LanguageSwitcher />
           </div>
         </header>

@@ -236,16 +236,16 @@ export default function InvoiceManagementView() {
             <table className="w-full border-collapse text-left text-xs sm:text-sm">
               <thead>
                 <tr className="bg-[var(--surface-hover)] border-b border-[var(--border)] text-[var(--text-muted)] font-semibold">
-                  <th className="py-3 px-4 w-12 text-center">#</th>
-                  <th className="py-3 px-4">{t('Invoice No.')}</th>
-                  <th className="py-3 px-4">{t('Date & Time')}</th>
-                  <th className="py-3 px-4">{t('Customer')}</th>
-                  <th className="py-3 px-4">{t('Service')}</th>
-                  <th className="py-3 px-4">{t('Payment Method')}</th>
-                  <th className="py-3 px-4 text-right">{t('Amount')}</th>
-                  <th className="py-3 px-4">{t('Cashier')}</th>
-                  <th className="py-3 px-4 text-center">{t('Status')}</th>
-                  <th className="py-3 px-4 text-center">{t('Action')}</th>
+                  <th className="py-3 px-2 w-10 text-center">#</th>
+                  <th className="py-3 px-3 whitespace-nowrap">{t('Invoice No.')}</th>
+                  <th className="py-3 px-3 whitespace-nowrap">{t('Date & Time')}</th>
+                  <th className="py-3 px-3">{t('Customer')}</th>
+                  <th className="py-3 px-3">{t('Service')}</th>
+                  <th className="py-3 px-3 whitespace-nowrap">{t('Payment Method')}</th>
+                  <th className="py-3 px-3 text-right whitespace-nowrap">{t('Amount')}</th>
+                  <th className="py-3 px-3 whitespace-nowrap">{t('Cashier')}</th>
+                  <th className="py-3 px-3 text-center whitespace-nowrap">{t('Status')}</th>
+                  <th className="py-3 px-4 text-center whitespace-nowrap min-w-[130px]">{t('Action')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)] text-[var(--text)]">
@@ -258,18 +258,18 @@ export default function InvoiceManagementView() {
                       key={inv.invoiceId}
                       className="hover:bg-[var(--surface-hover)]/70 transition-colors"
                     >
-                      <td className="py-3 px-4 text-center font-mono text-[var(--text-muted)] text-xs">
+                      <td className="py-3 px-2 text-center font-mono text-[var(--text-muted)] text-xs">
                         {idx + 1}
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-3 whitespace-nowrap">
                         <span className="font-mono font-bold text-[var(--primary)]">
                           {inv.invoiceCode || `#INV-${inv.invoiceId}`}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-[var(--text-muted)] text-xs whitespace-nowrap">
+                      <td className="py-3 px-3 text-[var(--text-muted)] text-xs whitespace-nowrap">
                         {formatDateTime(inv.createdAt)}
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-3">
                         <div className="font-semibold text-[var(--text)]">
                           {inv.memberName || t('Walk-in Guest')}
                         </div>
@@ -279,7 +279,7 @@ export default function InvoiceManagementView() {
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-4 max-w-[220px]">
+                      <td className="py-3 px-3 max-w-[200px]">
                         <div className="font-medium truncate text-[var(--text)]" title={inv.items?.map(i => i.itemName).join(', ')}>
                           {inv.items && inv.items.length > 0
                             ? inv.items.map(it => it.itemName).join(', ')
@@ -296,41 +296,41 @@ export default function InvoiceManagementView() {
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold ${
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold border border-[var(--border)] ${
                           isCash
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-blue-50 text-blue-700 border border-blue-200'
+                            ? 'bg-[var(--success-soft)] text-[var(--success-text)]'
+                            : 'bg-[var(--primary-soft)] text-[var(--primary)]'
                         }`}>
-                          {isCash ? <Banknote className="w-3.5 h-3.5" /> : <CreditCard className="w-3.5 h-3.5" />}
+                          {isCash ? <Banknote className="w-3.5 h-3.5 shrink-0" /> : <CreditCard className="w-3.5 h-3.5 shrink-0" />}
                           <span>{isCash ? t('Cash') : t('Bank Transfer')}</span>
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                      <td className="py-3 px-3 text-right whitespace-nowrap">
                         <span className="font-black text-sm text-[var(--text)]">
                           {formatMoney(inv.totalAmount)}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-xs text-[var(--text-muted)] whitespace-nowrap">
+                      <td className="py-3 px-3 text-xs text-[var(--text-muted)] whitespace-nowrap">
                         <div className="flex items-center gap-1">
-                          <User className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                          <User className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
                           <span className="truncate max-w-[120px]">{inv.cashierName || t('Front Desk')}</span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-center whitespace-nowrap">
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      <td className="py-3 px-3 text-center whitespace-nowrap">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--success-soft)] text-[var(--success-text)] border border-[var(--border)]">
                           {inv.status === 'PAID' ? t('PAID') : (inv.status || t('COMPLETED'))}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                      <td className="py-3 px-4 text-center whitespace-nowrap min-w-[130px]">
                         <button
                           onClick={() => handleOpenReceipt(inv)}
                           type="button"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[var(--surface-hover)] text-[var(--primary)] border border-[var(--border)] hover:bg-[var(--primary-soft)] transition-colors shadow-sm"
+                          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[var(--surface-hover)] text-[var(--primary)] border border-[var(--border)] hover:bg-[var(--primary-soft)] transition-colors shadow-sm whitespace-nowrap shrink-0"
                           title={t('Print Receipt')}
                         >
-                          <Printer className="w-3.5 h-3.5" />
-                          <span>{t('Print Receipt')}</span>
+                          <Printer className="w-3.5 h-3.5 shrink-0" />
+                          <span className="whitespace-nowrap">{t('Print Receipt')}</span>
                         </button>
                       </td>
                     </tr>
