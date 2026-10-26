@@ -30,19 +30,30 @@ const PaymentCart = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const [cartRes, profileRes] = await Promise.all([
-        axios.get('http://localhost:8080/api/v1/payment/cart', { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get('http://localhost:8080/api/v1/user/profile', { headers: { Authorization: `Bearer ${token}` } })
+      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+      const [cartRes, profileRes, creditsRes] = await Promise.allSettled([
+        axios.get('http://localhost:8080/api/v1/payment/cart', { headers: authHeader }),
+        axios.get('http://localhost:8080/api/v1/user/profile', { headers: authHeader }),
+        axios.get('http://localhost:8080/api/v1/member/support/credits', { headers: authHeader })
       ]);
-      const response = cartRes;
-      if (profileRes.data) {
-        const tier = profileRes.data.memberTier;
+
+      if (cartRes.status === 'fulfilled' && cartRes.value?.data) {
+        setItems(cartRes.value.data.items || []);
+        setTotalPrice(cartRes.value.data.totalPrice || 0);
+      }
+
+      if (profileRes.status === 'fulfilled' && profileRes.value?.data) {
+        const tier = profileRes.value.data.memberTier;
         if (tier === 'PLATINUM') setDiscountPercent(15);
         else if (tier === 'GOLD') setDiscountPercent(10);
         else if (tier === 'SILVER') setDiscountPercent(5);
       }
-      setItems(response.data.items || []);
-      setTotalPrice(response.data.totalPrice || 0);
+
+      if (creditsRes.status === 'fulfilled' && Array.isArray(creditsRes.value?.data)) {
+        const active = creditsRes.value.data.filter(c => c.status === 'ACTIVE' && Number(c.remainingAmount) > 0);
+        setAvailableCredits(active);
+      }
+
       setError('');
     } catch (err) {
       console.error(err);
@@ -276,6 +287,12 @@ const PaymentCart = () => {
                   <span>{t("Discount")}</span>
                   <span className="font-semibold">- {(totalPrice * discountPercent / 100).toLocaleString()}{' '}{t("VND")}</span>
                 </div>
+                {selectedCredit && (
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span>{t("Voucher Credit")} ({selectedCredit.creditCode})</span>
+                    <span>- {formatMoney(Math.min(totalPrice * (100 - discountPercent) / 100, selectedCredit.remainingAmount))}</span>
+                  </div>
+                )}
               </div>
 
               <div className="h-px w-full bg-[var(--surface)]"></div>

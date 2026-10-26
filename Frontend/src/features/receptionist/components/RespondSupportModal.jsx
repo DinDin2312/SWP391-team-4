@@ -158,7 +158,10 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
   const getNoteTemplate = (type, amt = creditAmount) => {
     const rolePrefix = isManager ? 'Quản lý trung tâm' : 'Lễ tân';
     const clsName = request?.className ? ` lớp "${request.className}"` : '';
-    const roundedAmt = Math.round(Number(amt || 0) / 1000) * 1000;
+    const rawAmt = Number(amt ?? 0);
+    const suggested = Math.round(Number(request?.calculatedCreditAmount ?? request?.proratedCredit ?? request?.classPrice ?? 0) / 1000) * 1000;
+    const effectiveAmt = rawAmt > 0 ? rawAmt : suggested;
+    const roundedAmt = Math.round(Number(effectiveAmt || 0) / 1000) * 1000;
     const formattedAmt = formatMoney(roundedAmt);
 
     switch (type) {
@@ -211,7 +214,12 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
 
   const handleSelectResolution = (type) => {
     setResolutionType(type);
-    setResponseNote(getNoteTemplate(type, creditAmount));
+    const suggested = Math.round(Number(request?.calculatedCreditAmount ?? request?.proratedCredit ?? request?.classPrice ?? 0) / 1000) * 1000;
+    const effectiveAmt = (creditAmount > 0) ? creditAmount : suggested;
+    if (creditAmount <= 0 && effectiveAmt > 0) {
+      setCreditAmount(effectiveAmt);
+    }
+    setResponseNote(getNoteTemplate(type, effectiveAmt));
   };
 
   const handleAmountChange = (newVal) => {
@@ -281,7 +289,11 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
 
       if (resolutionType === 'ISSUE_CREDIT' || resolutionType === 'CASH_REFUND' || resolutionType === 'GYM_PASS') {
         status = 'APPROVED';
-        finalCreditAmount = Number.parseFloat(creditAmount) || 0;
+        let parsed = Number.parseFloat(creditAmount) || 0;
+        if (parsed <= 0) {
+          parsed = Math.round(Number(request?.calculatedCreditAmount ?? request?.proratedCredit ?? request?.classPrice ?? 0) / 1000) * 1000;
+        }
+        finalCreditAmount = parsed;
       } else if (resolutionType === 'APPROVE_GENERAL') {
         status = 'APPROVED';
         finalCreditAmount = null;
