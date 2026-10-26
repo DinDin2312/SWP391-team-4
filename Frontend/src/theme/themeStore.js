@@ -65,37 +65,59 @@ export function toggleTheme(buttonElement = null) {
 
   if (buttonElement && typeof buttonElement.getBoundingClientRect === 'function') {
     const rect = buttonElement.getBoundingClientRect();
-    x = rect.left + rect.width / 2;
-    y = rect.top + rect.height / 2;
+    x = Math.round(rect.left + rect.width / 2);
+    y = Math.round(rect.top + rect.height / 2);
   }
 
   // Calculate maximum distance to the furthest screen corner
-  const maxRadius = Math.hypot(
-    Math.max(x, window.innerWidth - x),
-    Math.max(y, window.innerHeight - y)
+  const maxRadius = Math.ceil(
+    Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    )
   );
 
   // Modern browser support: View Transitions API
   if (typeof document !== 'undefined' && 'startViewTransition' in document) {
-    const transition = document.startViewTransition(() => {
-      setTheme(nextTheme);
-    });
+    const root = document.documentElement;
+    root.classList.add('theme-transitioning');
 
-    transition.ready.then(() => {
-      document.documentElement.animate(
-        {
-          clipPath: [
-            `circle(0px at ${x}px ${y}px)`,
-            `circle(${maxRadius}px at ${x}px ${y}px)`
-          ],
-        },
-        {
-          duration: 480,
-          easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
-          pseudoElement: '::view-transition-new(root)',
-        }
-      );
-    });
+    const cleanup = () => {
+      root.classList.remove('theme-transitioning');
+    };
+
+    let transition;
+    try {
+      transition = document.startViewTransition(() => {
+        setTheme(nextTheme);
+      });
+    } catch {
+      cleanup();
+      setTheme(nextTheme);
+      return;
+    }
+
+    transition.ready
+      .then(() => {
+        const anim = root.animate(
+          {
+            clipPath: [
+              `circle(0px at ${x}px ${y}px)`,
+              `circle(${maxRadius}px at ${x}px ${y}px)`
+            ],
+          },
+          {
+            duration: 480,
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+            pseudoElement: '::view-transition-new(root)',
+          }
+        );
+        anim.onfinish = cleanup;
+        anim.oncancel = cleanup;
+      })
+      .catch(cleanup);
+
+    transition.finished.then(cleanup).catch(cleanup);
     return;
   }
 

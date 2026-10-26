@@ -569,7 +569,7 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
                 color: 'var(--text)',
                 fontSize: '0.875rem',
                 outline: 'none',
-                transition: 'border-color 0.2s',
+
               }}
               onFocus={(e) => (e.target.style.borderColor = 'var(--border)')}
               onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
@@ -792,7 +792,7 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
                       key={member.userId}
                       style={{
                         borderBottom: '1px solid var(--border)',
-                        transition: 'background-color 0.15s ease',
+
                         cursor: 'pointer',
                       }}
                       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--surface)')}
@@ -940,7 +940,7 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
                                 fontSize: '0.78rem',
                                 fontWeight: 700,
                                 cursor: 'pointer',
-                                transition: 'all 0.2s',
+
                               }}
                             >
                               <UserCheck style={{ width: '14px', height: '14px' }} />
@@ -964,7 +964,7 @@ const MemberManagementView = ({ onQuickCheckIn }) => {
                               fontSize: '0.8rem',
                               fontWeight: 600,
                               cursor: 'pointer',
-                              transition: 'all 0.2s',
+
                             }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.backgroundColor = 'var(--surface)';

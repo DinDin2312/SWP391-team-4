@@ -155,7 +155,7 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
       </AutoSidebar>
 
       {/* ===================== MAIN CONTENT WRAPPER ===================== */}
-      <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
         <header className="role-page-topbar role-reception-topbar">
           <nav className="role-breadcrumb" aria-label={t('Breadcrumb')}><span>{t('Front desk portal')}</span><span aria-hidden="true">/</span><strong>{t(navItems.find(item => item.id === activeFeature)?.label || '')}</strong></nav>
           <div className="role-header-actions flex items-center gap-2"><ThemeToggle /><LanguageSwitcher /></div>

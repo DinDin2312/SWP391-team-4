@@ -118,30 +118,18 @@ html.dark,
    Micro-interactions & View Transitions for Theme Toggle
    ========================================================================== */
 
-/* 1. Tactile Spring-Bounce Button Keyframes */
-@keyframes theme-button-spring {
-  0% {
-    transform: scale(1);
-  }
-  25% {
-    transform: scale(0.76) rotate(-14deg);
-  }
-  55% {
-    transform: scale(1.24) rotate(10deg);
-  }
-  78% {
-    transform: scale(0.92) rotate(-4deg);
-  }
-  100% {
-    transform: scale(1) rotate(0deg);
-  }
-}
-
-.theme-toggle-spring {
-  animation: theme-button-spring 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+/* 1. Tactile Micro-Interactions for Theme Toggle */
+.theme-toggle-active {
+  transform: scale(0.92);
+  transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 2. Web View Transitions Circular Clip-Path Rules */
+::view-transition-group(root) {
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
@@ -156,7 +144,22 @@ html.dark,
   z-index: 999999;
 }
 
-/* 3. Fallback Dynamic Ripple Overlay (when View Transitions API is unsupported) */
+/* 3. Freeze child transitions during theme switch so Snapshot 2 captures
+   the final computed styles instantly with 0ms lag, ensuring cards, tables,
+   and badges change color synchronously with the circular wave! */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition: none !important;
+  animation-duration: 0s !important;
+}
+
+html.theme-transitioning ::view-transition-group(root) {
+  animation-duration: 0.5s !important;
+}
+
+/* 4. Fallback Dynamic Ripple Overlay (when View Transitions API is unsupported) */
 .theme-transition-fallback-ripple {
   position: fixed;
   border-radius: 50%;
