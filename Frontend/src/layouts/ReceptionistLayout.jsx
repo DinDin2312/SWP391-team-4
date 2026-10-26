@@ -39,37 +39,37 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
   const navItems = [
     {
       id: 'search-members',
-      label: t('Search & View Members'),
+      label: 'Search & View Members',
       icon: Users,
     },
     {
       id: 'member-checkin',
-      label: t('Check-in'),
+      label: 'Check-in',
       icon: UserCheck,
     },
     {
       id: 'register-member',
-      label: t('Register New Member'),
+      label: 'Register New Member',
       icon: UserPlus,
     },
     {
       id: 'manage-memberships',
-      label: t('Packages & Renewals'),
+      label: 'Packages & Renewals',
       icon: CreditCard,
     },
     {
       id: 'manage-invoices',
-      label: t('Invoices & Receipts'),
+      label: 'Invoices & Receipts',
       icon: Receipt,
     },
     {
       id: 'support-desk',
-      label: t('Support & Cancellations'),
+      label: 'Support & Cancellations',
       icon: LifeBuoy,
     },
     {
       id: 'settings',
-      label: t('Settings'),
+      label: 'Settings',
       icon: Settings,
     },
   ];
@@ -156,7 +156,7 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
       {/* ===================== MAIN CONTENT WRAPPER ===================== */}
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         <header className="role-page-topbar role-reception-topbar">
-          <nav className="role-breadcrumb" aria-label={t('Breadcrumb')}><span>{t('Front desk portal')}</span><span aria-hidden="true">/</span><strong>{navItems.find(item => item.id === activeFeature)?.label}</strong></nav>
+          <nav className="role-breadcrumb" aria-label={t('Breadcrumb')}><span>{t('Front desk portal')}</span><span aria-hidden="true">/</span><strong>{t(navItems.find(item => item.id === activeFeature)?.label || '')}</strong></nav>
           <div className="role-header-actions"><LanguageSwitcher /></div>
         </header>
         {children}

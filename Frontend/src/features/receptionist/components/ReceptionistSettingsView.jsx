@@ -63,7 +63,7 @@ const ReceptionistSettingsView = () => {
       console.error('Error fetching receptionist profile:', err);
       setProfileFeedback({
         type: 'error',
-        message: err.response?.data?.message || t('Không thể tải thông tin hồ sơ lễ tân.'),
+        message: err.response?.data?.message || t('Unable to load receptionist profile.'),
       });
     } finally {
       setProfileLoading(false);
@@ -80,7 +80,7 @@ const ReceptionistSettingsView = () => {
     setProfileFeedback(null);
 
     if (!profileData.fullName.trim()) {
-      setProfileFeedback({ type: 'error', message: t('Vui lòng nhập họ và tên.') });
+      setProfileFeedback({ type: 'error', message: t('Please enter your full name.') });
       return;
     }
 
@@ -94,7 +94,7 @@ const ReceptionistSettingsView = () => {
 
       setProfileFeedback({
         type: 'success',
-        message: res?.message || t('Cập nhật thông tin thành công!'),
+        message: res?.message || t('Profile updated successfully!'),
       });
 
       // Update auth context if method exists
@@ -113,7 +113,7 @@ const ReceptionistSettingsView = () => {
       console.error('Error updating profile:', err);
       setProfileFeedback({
         type: 'error',
-        message: err.response?.data?.message || t('Có lỗi xảy ra khi lưu thông tin.'),
+        message: err.response?.data?.message || t('Error saving profile.'),
       });
     } finally {
       setSavingProfile(false);
@@ -126,15 +126,15 @@ const ReceptionistSettingsView = () => {
     setPasswordFeedback(null);
 
     if (!currentPassword) {
-      setPasswordFeedback({ type: 'error', message: t('Vui lòng nhập mật khẩu hiện tại.') });
+      setPasswordFeedback({ type: 'error', message: t('Please enter current password.') });
       return;
     }
     if (!newPassword || newPassword.length < 6) {
-      setPasswordFeedback({ type: 'error', message: t('Mật khẩu mới phải có ít nhất 6 ký tự.') });
+      setPasswordFeedback({ type: 'error', message: t('New password must be at least 6 characters.') });
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordFeedback({ type: 'error', message: t('Mật khẩu xác nhận không khớp.') });
+      setPasswordFeedback({ type: 'error', message: t('Confirm password does not match.') });
       return;
     }
 
@@ -147,7 +147,7 @@ const ReceptionistSettingsView = () => {
 
       setPasswordFeedback({
         type: 'success',
-        message: res?.message || t('Đổi mật khẩu thành công!'),
+        message: res?.message || t('Password changed successfully!'),
       });
 
       setCurrentPassword('');
@@ -161,7 +161,7 @@ const ReceptionistSettingsView = () => {
       console.error('Error changing password:', err);
       setPasswordFeedback({
         type: 'error',
-        message: err.response?.data?.message || t('Mật khẩu hiện tại không chính xác hoặc có lỗi xảy ra.'),
+        message: err.response?.data?.message || t('Incorrect current password or an error occurred.'),
       });
     } finally {
       setChangingPassword(false);
@@ -206,22 +206,22 @@ const ReceptionistSettingsView = () => {
           className="px-3.5 py-2 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-xs font-semibold text-[var(--text)] hover:bg-[var(--border)] transition-all flex items-center gap-2 cursor-pointer self-start sm:self-center"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${profileLoading ? 'animate-spin text-[var(--primary)]' : ''}`} />
-          <span>{t('Làm mới')}</span>
+          <span>{t('Refresh')}</span>
         </button>
       </div>
 
       {profileLoading ? (
         <div className="py-20 text-center flex flex-col items-center gap-3 text-xs text-[var(--text-muted)]">
           <div className="w-8 h-8 border-3 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
-          <span>{t('Đang tải thông tin cài đặt...')}</span>
+          <span>{t('Loading settings...')}</span>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          {/* ===================== CARD 1: THÔNG TIN CÁ NHÂN ===================== */}
+          {/* ===================== CARD 1: PERSONAL INFORMATION ===================== */}
           <div className="p-6 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs flex flex-col gap-5">
             <div className="flex items-center gap-2 pb-3 border-b border-[var(--border)]">
               <User className="w-5 h-5 text-[var(--primary)]" />
-              <h3 className="text-sm font-bold text-[var(--text)]">{t('Thông tin cá nhân')}</h3>
+              <h3 className="text-sm font-bold text-[var(--text)]">{t('Personal Information')}</h3>
             </div>
 
             {profileFeedback && (
@@ -244,7 +244,7 @@ const ReceptionistSettingsView = () => {
             <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
               {/* Full Name */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[var(--text-muted)]">{t('Họ và tên')} *</label>
+                <label className="text-xs font-bold text-[var(--text-muted)]">{t('Full Name')} *</label>
                 <div className="relative">
                   <User className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
@@ -252,7 +252,7 @@ const ReceptionistSettingsView = () => {
                     value={profileData.fullName}
                     onChange={(e) => setProfileData({ ...profileData, fullName: e.target.value })}
                     required
-                    placeholder={t('Nhập họ và tên')}
+                    placeholder={t('Please enter your full name.')}
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-xs text-[var(--text)] font-semibold placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition-all"
                   />
                 </div>
@@ -261,8 +261,8 @@ const ReceptionistSettingsView = () => {
               {/* Email (Read-only) */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-[var(--text-muted)]">{t('Email đăng nhập')}</label>
-                  <span className="text-[10px] text-[var(--text-muted)]">{t('(Chỉ xem - bảo mật)')}</span>
+                  <label className="text-xs font-bold text-[var(--text-muted)]">{t('Login Email')}</label>
+                  <span className="text-[10px] text-[var(--text-muted)]">{t('(Read-only - Secured)')}</span>
                 </div>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -277,14 +277,14 @@ const ReceptionistSettingsView = () => {
 
               {/* Phone */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[var(--text-muted)]">{t('Số điện thoại')}</label>
+                <label className="text-xs font-bold text-[var(--text-muted)]">{t('Phone Number')}</label>
                 <div className="relative">
                   <Phone className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="tel"
                     value={profileData.phone}
                     onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                    placeholder={t('0901 234 567')}
+                    placeholder="0901 234 567"
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-xs text-[var(--text)] font-semibold placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition-all"
                   />
                 </div>
@@ -292,14 +292,14 @@ const ReceptionistSettingsView = () => {
 
               {/* Bio / Ghi chú ca trực */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[var(--text-muted)]">{t('Ghi chú ca trực / Giới thiệu')}</label>
+                <label className="text-xs font-bold text-[var(--text-muted)]">{t('Duty Shift Notes / Bio')}</label>
                 <div className="relative">
                   <FileText className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-3" />
                   <textarea
                     rows={3}
                     value={profileData.bio}
                     onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-                    placeholder={t('Ví dụ: Trực ca sáng quầy lễ tân A...')}
+                    placeholder={t('Example: Morning front desk shift at counter A...')}
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition-all resize-none"
                   />
                 </div>
@@ -316,16 +316,16 @@ const ReceptionistSettingsView = () => {
                 ) : (
                   <Save className="w-4 h-4" />
                 )}
-                <span>{savingProfile ? t('Đang lưu...') : t('Lưu thay đổi')}</span>
+                <span>{savingProfile ? t('Saving...') : t('Save Changes')}</span>
               </button>
             </form>
           </div>
 
-          {/* ===================== CARD 2: BẢO MẬT & ĐỔI MẬT KHẨU ===================== */}
+          {/* ===================== CARD 2: SECURITY & PASSWORD ===================== */}
           <div className="p-6 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs flex flex-col gap-5">
             <div className="flex items-center gap-2 pb-3 border-b border-[var(--border)]">
               <Lock className="w-5 h-5 text-[var(--primary)]" />
-              <h3 className="text-sm font-bold text-[var(--text)]">{t('Bảo mật & Đổi mật khẩu')}</h3>
+              <h3 className="text-sm font-bold text-[var(--text)]">{t('Security & Password')}</h3>
             </div>
 
             {passwordFeedback && (
@@ -348,7 +348,7 @@ const ReceptionistSettingsView = () => {
             <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
               {/* Current Password */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[var(--text-muted)]">{t('Mật khẩu hiện tại')} *</label>
+                <label className="text-xs font-bold text-[var(--text-muted)]">{t('Current Password')} *</label>
                 <div className="relative">
                   <KeyRound className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
@@ -356,7 +356,7 @@ const ReceptionistSettingsView = () => {
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     required
-                    placeholder={t('Nhập mật khẩu đang dùng')}
+                    placeholder={t('Enter current password')}
                     className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition-all"
                   />
                   <button
@@ -371,7 +371,7 @@ const ReceptionistSettingsView = () => {
 
               {/* New Password */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[var(--text-muted)]">{t('Mật khẩu mới')} *</label>
+                <label className="text-xs font-bold text-[var(--text-muted)]">{t('New Password')} *</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
@@ -379,7 +379,7 @@ const ReceptionistSettingsView = () => {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
-                    placeholder={t('Tối thiểu 6 ký tự')}
+                    placeholder={t('Minimum 6 characters')}
                     className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition-all"
                   />
                   <button
@@ -394,7 +394,7 @@ const ReceptionistSettingsView = () => {
 
               {/* Confirm Password */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[var(--text-muted)]">{t('Xác nhận mật khẩu mới')} *</label>
+                <label className="text-xs font-bold text-[var(--text-muted)]">{t('Confirm New Password')} *</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
@@ -402,7 +402,7 @@ const ReceptionistSettingsView = () => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    placeholder={t('Nhập lại mật khẩu mới')}
+                    placeholder={t('Re-enter new password')}
                     className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition-all"
                   />
                   <button
@@ -418,7 +418,7 @@ const ReceptionistSettingsView = () => {
               {/* Security Hint */}
               <div className="p-3 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-[11px] text-[var(--text-muted)] flex items-start gap-2">
                 <Sparkles className="w-4 h-4 text-[var(--primary)] shrink-0 mt-0.5" />
-                <span>{t('Nên sử dụng mật khẩu mạnh bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt để đảm bảo an toàn quầy lễ tân.')}</span>
+                <span>{t('It is recommended to use a strong password with uppercase, lowercase, numbers, and special characters to protect front desk security.')}</span>
               </div>
 
               {/* Change Password Button */}
@@ -432,7 +432,7 @@ const ReceptionistSettingsView = () => {
                 ) : (
                   <KeyRound className="w-4 h-4" />
                 )}
-                <span>{changingPassword ? t('Đang cập nhật...') : t('Cập nhật mật khẩu')}</span>
+                <span>{changingPassword ? t('Updating...') : t('Update Password')}</span>
               </button>
             </form>
           </div>

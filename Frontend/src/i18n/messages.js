@@ -3413,3 +3413,77 @@ for (const [en, vi] of memberSettingsTranslations) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }
+
+const receptionistModuleTranslations = [
+  // Settings view
+  ["Personal Information", "Thông tin cá nhân"],
+  ["Full Name", "Họ và tên"],
+  ["Please enter your full name.", "Vui lòng nhập họ và tên."],
+  ["Login Email", "Email đăng nhập"],
+  ["(Read-only - Secured)", "(Chỉ xem - bảo mật)"],
+  ["Phone Number", "Số điện thoại"],
+  ["Duty Shift Notes / Bio", "Ghi chú ca trực / Giới thiệu"],
+  ["Example: Morning front desk shift at counter A...", "Ví dụ: Trực ca sáng quầy lễ tân A..."],
+  ["Save Changes", "Lưu thay đổi"],
+  ["Saving...", "Đang lưu..."],
+  ["Security & Password", "Bảo mật & Đổi mật khẩu"],
+  ["Current Password", "Mật khẩu hiện tại"],
+  ["Enter current password", "Nhập mật khẩu đang dùng"],
+  ["New Password", "Mật khẩu mới"],
+  ["Minimum 6 characters", "Tối thiểu 6 ký tự"],
+  ["Confirm New Password", "Xác nhận mật khẩu mới"],
+  ["Re-enter new password", "Nhập lại mật khẩu mới"],
+  ["Please enter current password.", "Vui lòng nhập mật khẩu hiện tại."],
+  ["New password must be at least 6 characters.", "Mật khẩu mới phải có ít nhất 6 ký tự."],
+  ["Confirm password does not match.", "Mật khẩu xác nhận không khớp."],
+  ["It is recommended to use a strong password with uppercase, lowercase, numbers, and special characters to protect front desk security.", "Nên sử dụng mật khẩu mạnh bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt để đảm bảo an toàn quầy lễ tân."],
+  ["Update Password", "Cập nhật mật khẩu"],
+  ["Updating...", "Đang cập nhật..."],
+  ["Front Desk Staff", "Nhân viên Lễ tân"],
+  ["Profile updated successfully!", "Cập nhật thông tin thành công!"],
+  ["Password changed successfully!", "Đổi mật khẩu thành công!"],
+  ["Unable to load receptionist profile.", "Không thể tải thông tin hồ sơ lễ tân."],
+  ["Error saving profile.", "Có lỗi xảy ra khi lưu thông tin."],
+  ["Incorrect current password or an error occurred.", "Mật khẩu hiện tại không chính xác hoặc có lỗi xảy ra."],
+  ["Loading settings...", "Đang tải thông tin cài đặt..."],
+
+  // Coach Check-in view
+  ["Total Daily Sessions", "Tổng ca dạy trong ngày"],
+  ["Coach Present", "HLV Đã Có Mặt"],
+  ["Awaiting Check-in", "Chờ Check-in (Chưa đến)"],
+  ["Session Completed", "Đã Hoàn Thành Ca"],
+  ["All", "Tất cả"],
+  ["Pending", "Chưa đến"],
+  ["Present", "Đã có mặt"],
+  ["Done", "Đã xong"],
+  ["Search coach, phone, class...", "Tìm HLV, SĐT, tên lớp..."],
+  ["Loading coach teaching schedules...", "Đang tải danh sách ca dạy của Huấn luyện viên..."],
+  ["No teaching sessions found", "Không có ca dạy nào phù hợp"],
+  ["No coach sessions found for selected date or filter.", "Không tìm thấy ca dạy nào của Huấn luyện viên trong ngày hoặc theo bộ lọc hiện tại."],
+  ["Session ended", "Đã kết thúc ca"],
+  ["Teaching time:", "Khung giờ dạy:"],
+  ["Room:", "Phòng học:"],
+  ["Confirmed present at:", "Đã có mặt lúc:"],
+  ["Checked out at:", "Check-out lúc:"],
+  ["Confirm Coach Present", "Xác nhận HLV Có Mặt"],
+  ["In session", "Đang trong ca dạy"],
+  ["Complete session & Check-out", "Hoàn thành ca dạy & Check-out"],
+  ["Session finished", "Ca dạy đã hoàn thành"],
+  ["Confirm Coach Check-in", "Xác nhận Check-in Huấn luyện viên"],
+  ["Record coach attendance before class session", "Ghi nhận giờ có mặt của HLV trước ca dạy"],
+  ["Coach:", "Huấn luyện viên:"],
+  ["Class:", "Lớp học:"],
+  ["Time:", "Khung giờ:"],
+  ["Receptionist note (Optional):", "Ghi chú của Lễ tân (Tùy chọn):"],
+  ["Example: Handed over room key, microphone...", "Ví dụ: Đã bàn giao chìa khóa phòng, mic trợ giảng..."],
+  ["Confirm Present", "Xác nhận Có Mặt"],
+  ["Checking in...", "Đang xử lý..."],
+  ["Coach check-in successful!", "Check-in Huấn luyện viên thành công!"],
+  ["Error during coach check-in!", "Có lỗi xảy ra khi Check-in HLV!"],
+  ["Error checking out coach!", "Lỗi khi Check-out HLV!"]
+];
+
+for (const [en, vi] of receptionistModuleTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
