@@ -73,7 +73,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
-  color-scheme: light;
+  color-scheme: inherit;
   font: inherit;
 }
 .ops-page button:disabled,

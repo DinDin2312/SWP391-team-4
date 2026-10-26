@@ -2,7 +2,7 @@
 .role-shell { min-height: 100vh; color: var(--text); background: var(--bg); font-family: 'Inter', system-ui, sans-serif; }
 .role-shell > main { min-width: 0; width: 100%; }
 .role-shell > aside { background: var(--surface); }
-.role-shell input, .role-shell select, .role-shell textarea { color-scheme: light; }
+.role-shell input, .role-shell select, .role-shell textarea { color-scheme: inherit; }
 .role-shell table tbody tr:hover { background: var(--surface-hover); }
 .role-shell button, .role-shell a { transition: color .15s, background-color .15s, border-color .15s; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
