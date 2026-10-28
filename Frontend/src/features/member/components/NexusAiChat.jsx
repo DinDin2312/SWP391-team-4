@@ -30,7 +30,7 @@ const NexusAiChat = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isOpen]);
 
   // Khởi tạo và đồng bộ Web Speech API theo ngôn ngữ hiện tại
   useEffect(() => {
@@ -77,31 +77,45 @@ const NexusAiChat = ({ isOpen, onClose }) => {
 
   // Infinite marquee conveyor loop for suggestion chips
   useEffect(() => {
+    if (!isOpen) return;
+
     let animId;
-    const track = chipsScrollRef.current;
-    if (!track) return;
+    let cancelled = false;
 
-    if (track.scrollLeft === 0) {
-      track.scrollLeft = 1;
-    }
-
-    const step = () => {
-      if (!isChipsHovered && !isLoading && track && !isDraggingChips.current) {
-        track.scrollLeft += 0.55;
-        const setWidth = track.scrollWidth / 3;
-        if (setWidth > 0 && track.scrollLeft >= setWidth * 2) {
-          track.scrollLeft -= setWidth;
-        }
+    const startAnimation = () => {
+      if (cancelled) return;
+      const track = chipsScrollRef.current;
+      if (!track) {
+        animId = requestAnimationFrame(startAnimation);
+        return;
       }
+
+      if (track.scrollLeft === 0) {
+        track.scrollLeft = 1;
+      }
+
+      const step = () => {
+        if (cancelled) return;
+        if (!isChipsHovered && !isLoading && chipsScrollRef.current && !isDraggingChips.current) {
+          chipsScrollRef.current.scrollLeft += 0.55;
+          const setWidth = chipsScrollRef.current.scrollWidth / 3;
+          if (setWidth > 0 && chipsScrollRef.current.scrollLeft >= setWidth * 2) {
+            chipsScrollRef.current.scrollLeft -= setWidth;
+          }
+        }
+        animId = requestAnimationFrame(step);
+      };
+
       animId = requestAnimationFrame(step);
     };
 
-    animId = requestAnimationFrame(step);
+    animId = requestAnimationFrame(startAnimation);
 
     return () => {
+      cancelled = true;
       if (animId) cancelAnimationFrame(animId);
     };
-  }, [isChipsHovered, isLoading]);
+  }, [isOpen, isChipsHovered, isLoading]);
 
   const handleChipsWheel = (e) => {
     const track = chipsScrollRef.current;
