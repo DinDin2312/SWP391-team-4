@@ -91,7 +91,15 @@ public class PaymentServiceImpl implements PaymentService {
                 .map(CartItemDto::getPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        List<Map<String, Object>> pendingInvoices = jdbc.queryForList("SELECT i.invoice_id, p.payment_method FROM INVOICES i JOIN USERS u ON u.user_id = i.user_id LEFT JOIN PAYMENTS p ON p.invoice_id = i.invoice_id WHERE u.email = ? AND i.status = 'PENDING' AND i.created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE) ORDER BY i.created_at DESC", email);
+        boolean hasPending = !pendingInvoices.isEmpty();
+        Integer pendingId = hasPending ? ((Number) pendingInvoices.get(0).get("invoice_id")).intValue() : null;
+        String pendingMethod = hasPending ? (String) pendingInvoices.get(0).get("payment_method") : null;
+
         return CartResponse.builder()
+                .hasPendingCheckout(hasPending)
+                .pendingInvoiceId(pendingId)
+                .pendingPaymentMethod(pendingMethod)
                 .items(items)
                 .totalPrice(totalPrice)
                 .build();
@@ -100,13 +108,50 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public String checkout(String email, String ipAddress, String paymentMethod) {
-        return checkout(email, ipAddress, paymentMethod, null);
+        return checkout(email, ipAddress, paymentMethod, null, false);
+    }
+
+    private void cancelPendingInvoicesForUser(Integer userId) {
+        if (userId == null || userId == 0) return;
+        List<Integer> pendingInvoiceIds = jdbc.queryForList(
+            "SELECT invoice_id FROM INVOICES WHERE user_id=? AND status='PENDING'",
+            Integer.class, userId
+        );
+        for (Integer invId : pendingInvoiceIds) {
+            jdbc.update("UPDATE INVOICES SET status='CANCELLED' WHERE invoice_id=?", invId);
+            jdbc.update("UPDATE PAYMENTS SET status='CANCELLED' WHERE invoice_id=? AND status='PENDING'", invId);
+            userCreditRepository.findByUsedInvoiceId(invId).ifPresent(credit -> {
+                credit.setUsedInvoiceId(null);
+                userCreditRepository.save(credit);
+            });
+            List<UserMembership> memberships = userMembershipRepository.findByCheckoutInvoiceId(invId);
+            for (UserMembership m : memberships) {
+                m.setCheckoutInvoiceId(null);
+                userMembershipRepository.save(m);
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void cancelPendingCheckout(String email) {
+        bookingRepository.lockOperations();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        cancelPendingInvoicesForUser(user.getUserId());
     }
 
     @Override
     @Transactional
     public String checkout(String email, String ipAddress, String paymentMethod, String creditCode) {
+        return checkout(email, ipAddress, paymentMethod, creditCode, false);
+    }
+
+    @Override
+    @Transactional
+    public String checkout(String email, String ipAddress, String paymentMethod, String creditCode, boolean cancelPending) {
         bookingRepository.lockOperations();
+        if (cancelPending) userRepository.findByEmail(email).ifPresent(u -> cancelPendingInvoicesForUser(u.getUserId()));
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
                 
@@ -162,17 +207,17 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         BigDecimal creditDiscount = BigDecimal.ZERO;
         if (creditCode != null && !creditCode.trim().isEmpty()) {
             appliedCredit = userCreditRepository.findByCreditCode(creditCode.trim().toUpperCase())
-                    .orElseThrow(() -> new IllegalArgumentException("Mã tín dụng không hợp lệ / Invalid credit code: " + creditCode));
+                    .orElseThrow(() -> new IllegalArgumentException("MĂ£ tĂ­n dá»¥ng khĂ´ng há»£p lá»‡ / Invalid credit code: " + creditCode));
             if (!appliedCredit.getUser().getUserId().equals(user.getUserId())) {
-                throw new IllegalArgumentException("Mã tín dụng không thuộc về bạn / Credit code does not belong to your account");
+                throw new IllegalArgumentException("MĂ£ tĂ­n dá»¥ng khĂ´ng thuá»™c vá» báº¡n / Credit code does not belong to your account");
             }
             if (appliedCredit.getStatus() != com.team4.sportscenter.modules.support.enums.CreditStatus.ACTIVE) {
-                throw new IllegalArgumentException("Mã tín dụng đã hết hạn hoặc đã được sử dụng / Credit is no longer active");
+                throw new IllegalArgumentException("MĂ£ tĂ­n dá»¥ng Ä‘Ă£ háº¿t háº¡n hoáº·c Ä‘Ă£ Ä‘Æ°á»£c sá»­ dá»¥ng / Credit is no longer active");
             }
             if (appliedCredit.getExpiryDate().isBefore(java.time.LocalDate.now())) {
                 appliedCredit.setStatus(com.team4.sportscenter.modules.support.enums.CreditStatus.EXPIRED);
                 userCreditRepository.save(appliedCredit);
-                throw new IllegalArgumentException("Mã tín dụng đã quá hạn sử dụng / Credit code has expired");
+                throw new IllegalArgumentException("MĂ£ tĂ­n dá»¥ng Ä‘Ă£ quĂ¡ háº¡n sá»­ dá»¥ng / Credit code has expired");
             }
             creditDiscount = appliedCredit.getRemainingAmount();
             if (creditDiscount.compareTo(totalAmount) >= 0) {
@@ -361,7 +406,9 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     @Override
     @Transactional
     public void removeFromCart(String email, Integer classId) {
-        bookingRepository.lockOperations();assertCartMutable(email);
+        bookingRepository.lockOperations();
+        userRepository.findByEmail(email).ifPresent(u -> cancelPendingInvoicesForUser(u.getUserId()));
+        assertCartMutable(email);
         List<Booking> pendingBookings = bookingRepository.findAllBookingsByEmail(email)
                 .stream()
                 .filter(b -> "PENDING".equals(b.getStatus()) && b.getSchedule().getGymClass().getClassId().equals(classId))
@@ -378,7 +425,9 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     @Override
     @Transactional
     public void removePackageFromCart(String email, Integer packageId) {
-        bookingRepository.lockOperations();assertCartMutable(email);
+        bookingRepository.lockOperations();
+        userRepository.findByEmail(email).ifPresent(u -> cancelPendingInvoicesForUser(u.getUserId()));
+        assertCartMutable(email);
         List<com.team4.sportscenter.modules.member.entities.UserMembership> memberships = userMembershipRepository.findByEmailAndStatus(email, "PENDING").stream().filter(m -> m.getAPackage().getPackageId().equals(packageId)).toList();
         if (!memberships.isEmpty()) {
             for(var m:memberships){if(m.getCheckoutInvoiceId()!=null){m.setStatus("CANCELLED");userMembershipRepository.save(m);}else userMembershipRepository.delete(m);}
@@ -388,7 +437,9 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     @Override
     @Transactional
     public void clearCart(String email) {
-        bookingRepository.lockOperations();assertCartMutable(email);
+        bookingRepository.lockOperations();
+        userRepository.findByEmail(email).ifPresent(u -> cancelPendingInvoicesForUser(u.getUserId()));
+        assertCartMutable(email);
         List<Booking> pendingBookings = bookingRepository.findAllBookingsByEmail(email)
                 .stream().filter(b -> "PENDING".equals(b.getStatus())).toList();
         if (!pendingBookings.isEmpty()) {
@@ -470,24 +521,24 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         List<String> paidItems = new ArrayList<>();
         if (!purchased.isEmpty()) {
             for (var m : purchased) {
-                String pkgName = m.getAPackage() != null ? m.getAPackage().getPackageName() : "Gói hội viên";
+                String pkgName = m.getAPackage() != null ? m.getAPackage().getPackageName() : "GĂ³i há»™i viĂªn";
                 int duration = m.purchasedDuration() > 0 ? m.purchasedDuration() : 30;
-                paidItems.add("Gói tập: " + pkgName + " (" + duration + " ngày)");
+                paidItems.add("GĂ³i táº­p: " + pkgName + " (" + duration + " ngĂ y)");
             }
         }
         if (!booked.isEmpty()) {
             String className = (booked.get(0).getSchedule() != null && booked.get(0).getSchedule().getGymClass() != null)
-                ? booked.get(0).getSchedule().getGymClass().getClassName() : "Khóa học";
-            paidItems.add("Khóa học: " + className + " (" + booked.size() + " buổi)");
+                ? booked.get(0).getSchedule().getGymClass().getClassName() : "KhĂ³a há»c";
+            paidItems.add("KhĂ³a há»c: " + className + " (" + booked.size() + " buá»•i)");
         }
-        String itemsSummary = paidItems.isEmpty() ? "Dịch vụ phòng tập" : String.join(", ", paidItems);
+        String itemsSummary = paidItems.isEmpty() ? "Dá»‹ch vá»¥ phĂ²ng táº­p" : String.join(", ", paidItems);
         String formattedAmount = invoice.getTotalAmount() != null
-                ? String.format("%,d đ", invoice.getTotalAmount().longValue())
-                : "0 đ";
+                ? String.format("%,d Ä‘", invoice.getTotalAmount().longValue())
+                : "0 Ä‘";
         String method = (payment != null && payment.getPaymentMethod() != null) ? payment.getPaymentMethod() : "ONLINE";
 
         String invoiceMsg = String.format(
-            "Hóa đơn #%d đã thanh toán thành công.\n• Dịch vụ: %s\n• Số tiền: %s (%s)\nCảm ơn bạn đã lựa chọn Sports Center!",
+            "HĂ³a Ä‘Æ¡n #%d Ä‘Ă£ thanh toĂ¡n thĂ nh cĂ´ng.\nâ€¢ Dá»‹ch vá»¥: %s\nâ€¢ Sá»‘ tiá»n: %s (%s)\nCáº£m Æ¡n báº¡n Ä‘Ă£ lá»±a chá»n Sports Center!",
             invoice.getInvoiceId(),
             itemsSummary,
             formattedAmount,
@@ -496,31 +547,31 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
 
         notificationService.createNotification(
             invoice.getUser().getEmail(),
-            "Thanh toán thành công / Payment Successful #" + invoice.getInvoiceId(),
+            "Thanh toĂ¡n thĂ nh cĂ´ng / Payment Successful #" + invoice.getInvoiceId(),
             invoiceMsg,
             "PAYMENT"
         );
         if (!purchased.isEmpty()) {
             for (var m : purchased) {
-                String pkgName = m.getAPackage() != null ? m.getAPackage().getPackageName() : "Gói hội viên";
+                String pkgName = m.getAPackage() != null ? m.getAPackage().getPackageName() : "GĂ³i há»™i viĂªn";
                 int duration = m.purchasedDuration() > 0 ? m.purchasedDuration() : 30;
                 notificationService.createNotification(
                     invoice.getUser().getEmail(),
-                    "Đăng ký gói hội viên thành công / Package Activated",
-                    "Gói hội viên '" + pkgName + "' (" + duration + " ngày) của bạn đã được kích hoạt thành công. "
-                        + "Thời hạn sử dụng từ " + m.getStartDate() + " đến " + m.getEndDate() + ". "
-                        + "Vui lòng kiểm tra quyền lợi trong mục Package Benefits.",
+                    "ÄÄƒng kĂ½ gĂ³i há»™i viĂªn thĂ nh cĂ´ng / Package Activated",
+                    "GĂ³i há»™i viĂªn '" + pkgName + "' (" + duration + " ngĂ y) cá»§a báº¡n Ä‘Ă£ Ä‘Æ°á»£c kĂ­ch hoáº¡t thĂ nh cĂ´ng. "
+                        + "Thá»i háº¡n sá»­ dá»¥ng tá»« " + m.getStartDate() + " Ä‘áº¿n " + m.getEndDate() + ". "
+                        + "Vui lĂ²ng kiá»ƒm tra quyá»n lá»£i trong má»¥c Package Benefits.",
                     "PAYMENT"
                 );
             }
         }
         if (!booked.isEmpty()) {
             String className = booked.get(0).getSchedule() != null && booked.get(0).getSchedule().getGymClass() != null
-                ? booked.get(0).getSchedule().getGymClass().getClassName() : "khóa học";
+                ? booked.get(0).getSchedule().getGymClass().getClassName() : "khĂ³a há»c";
             notificationService.createNotification(
                 invoice.getUser().getEmail(),
-                "Đăng ký lớp học thành công / Class Enrolled",
-                "Bạn đã thanh toán và đăng ký thành công khóa học: " + className + " (" + booked.size() + " buổi). Vui lòng kiểm tra lịch học trong My Schedule.",
+                "ÄÄƒng kĂ½ lá»›p há»c thĂ nh cĂ´ng / Class Enrolled",
+                "Báº¡n Ä‘Ă£ thanh toĂ¡n vĂ  Ä‘Äƒng kĂ½ thĂ nh cĂ´ng khĂ³a há»c: " + className + " (" + booked.size() + " buá»•i). Vui lĂ²ng kiá»ƒm tra lá»‹ch há»c trong My Schedule.",
                 "BOOKING"
             );
         }

@@ -162,12 +162,12 @@ INSERT INTO BOOKINGS (booking_id, user_id, schedule_id, status, attendance_statu
 
 -- Bài tập Mẫu
 INSERT INTO EXERCISES VALUES
-                          (1, 'Hít đất (Push up)', 'Ngực', 'https://youtube.com/ex1'),
-                          (2, 'Gập bụng (Crunch)', 'Bụng', 'https://youtube.com/ex2'),
-                          (3, 'Kéo xà đơn (Pull up)', 'Lưng', 'https://youtube.com/ex3'),
-                          (4, 'Squat (Đứng lên ngồi xuống)', 'Đùi', 'https://youtube.com/ex4'),
-                          (5, 'Đẩy tạ đôi (Dumbbell Press)', 'Ngực', 'https://youtube.com/ex5'),
-                          (6, 'Chạy bộ máy (Treadmill)', 'Cardio', 'https://youtube.com/ex6');
+                          (1, 'Hít đất (Push up)', 'Ngực', 'https://www.youtube.com/watch?v=IODxDxX7oi4'),
+                          (2, 'Gập bụng (Crunch)', 'Bụng', 'https://www.youtube.com/watch?v=Xyd_fa5zoEU'),
+                          (3, 'Kéo xà đơn (Pull up)', 'Lưng', 'https://www.youtube.com/watch?v=eGo4IYlbE5g'),
+                          (4, 'Squat (Đứng lên ngồi xuống)', 'Đùi', 'https://www.youtube.com/watch?v=gcNh17Ckjgg'),
+                          (5, 'Đẩy tạ đôi (Dumbbell Press)', 'Ngực', 'https://www.youtube.com/watch?v=VmB1G1K7v94'),
+                          (6, 'Chạy bộ máy (Treadmill)', 'Cardio', 'https://www.youtube.com/watch?v=aKfJJ1TuyE4');
 
 -- Kế hoạch AI sinh ra cho Khách hàng
 INSERT INTO AI_WORKOUT_PLANS VALUES

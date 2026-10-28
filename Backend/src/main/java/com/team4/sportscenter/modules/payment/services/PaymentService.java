@@ -7,6 +7,8 @@ public interface PaymentService {
     CartResponse getCartItems(String email);
     String checkout(String email, String ipAddress, String paymentMethod);
     String checkout(String email, String ipAddress, String paymentMethod, String creditCode);
+    String checkout(String email, String ipAddress, String paymentMethod, String creditCode, boolean cancelPending);
+    void cancelPendingCheckout(String email);
     void removeFromCart(String email, Integer classId);
     void removePackageFromCart(String email, Integer packageId);
     void clearCart(String email);

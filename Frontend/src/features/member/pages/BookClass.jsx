@@ -4,7 +4,8 @@ import { formatMoney } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar, ShoppingCart, Clock, ArrowRight, Loader2 } from 'lucide-react';
+import { Search, MapPin, User, CheckCircle2, AlertCircle, Info, Fingerprint, ShieldCheck, Repeat, Calendar, ShoppingCart, ShoppingBag, Trash2, Clock, ArrowRight, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const BookClass = () => {
   useLanguage();
@@ -15,14 +16,30 @@ const BookClass = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [toast, setToast] = useState({ visible: false, type: 'success', title: '', message: '' });
+  const [cartCount, setCartCount] = useState(0);
+  const [cartTotal, setCartTotal] = useState(0);
+  const [isCartHighlighted, setIsCartHighlighted] = useState(false);
 
   useEffect(() => {
     fetchCourses(true);
+    fetchCart();
+
     const onCartUpdated = () => {
       void fetchCourses(false);
+      void fetchCart();
     };
     window.addEventListener('cartUpdated', onCartUpdated);
-    return () => window.removeEventListener('cartUpdated', onCartUpdated);
+
+    const handleAiCartHighlight = () => {
+      setIsCartHighlighted(true);
+      setTimeout(() => setIsCartHighlighted(false), 2400);
+    };
+    window.addEventListener('aiCartHighlight', handleAiCartHighlight);
+
+    return () => {
+      window.removeEventListener('cartUpdated', onCartUpdated);
+      window.removeEventListener('aiCartHighlight', handleAiCartHighlight);
+    };
   }, []);
 
   const sortCoursesStably = (list) => {
@@ -59,6 +76,42 @@ const BookClass = () => {
     }
   };
 
+  const fetchCart = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const res = await axios.get('http://localhost:8080/api/v1/payment/cart', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data && res.data.items) {
+        setCartCount(res.data.items.length);
+        setCartTotal(res.data.totalPrice || 0);
+      } else {
+        setCartCount(0);
+        setCartTotal(0);
+      }
+    } catch (e) {
+      console.error('Error fetching cart:', e);
+    }
+  };
+
+  const clearCart = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete('http://localhost:8080/api/v1/payment/cart/clear', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCartCount(0);
+      setCartTotal(0);
+      void fetchCourses(false);
+      window.dispatchEvent(new Event('cartUpdated'));
+      setToast({ visible: true, type: 'success', title: t('Success'), message: t('Cart cleared successfully') });
+      setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 4000);
+    } catch (e) {
+      console.error('Error clearing cart:', e);
+    }
+  };
+
   const handleBook = async (classId) => {
     if(booking!==null)return;
     setBooking(classId);
@@ -78,6 +131,7 @@ const BookClass = () => {
       setToast({ visible: true, type: 'success', title: t('Course Enrolled'), message: t('Course added to cart. Complete payment to confirm your place.') });
       setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 4000);
       window.dispatchEvent(new Event('cartUpdated')); // Cập nhật badge giỏ hàng ngay lập tức
+      void fetchCart();
       void fetchCourses(false); // Đồng bộ ngầm
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.response?.data || error.message || "Failed to enroll. Please try again."; setToast({ visible: true, type: 'error', title: t('Enrollment Failed'), message: typeof errorMsg === 'string' ? errorMsg : 'Please try again.' }); setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 5000);
@@ -109,7 +163,7 @@ const BookClass = () => {
   }));
 
   return (
-    <div className="flex flex-col w-full pb-10">
+    <div className={`flex flex-col w-full ${cartCount > 0 ? 'pb-36' : 'pb-10'} transition-all duration-300`}>
       <div className={`fixed bottom-6 left-6 z-50 transform transition-all duration-300 ease-out flex items-center gap-3 px-5 py-4 rounded-xl bg-surface-container-high text-on-surface shadow-[var(--shadow)] border border-surface-container-highest ${toast.visible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${toast.type === 'error' ? 'bg-[var(--danger-soft)] text-[var(--danger-text)]' : 'bg-primary/20 text-primary'}`}>
             {toast.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
@@ -349,6 +403,63 @@ const BookClass = () => {
         </div>
 
       </div>
+
+      {/* Sticky Bottom Cart & Checkout Bar with Smooth Slide-Up Motion */}
+      <AnimatePresence>
+        {cartCount > 0 && (
+          <motion.div
+            initial={{ y: 150 }}
+            animate={{ y: 0 }}
+            exit={{ y: 150 }}
+            transition={{ type: "spring", stiffness: 320, damping: 30 }}
+            className="fixed bottom-4 left-4 right-4 lg:left-80 lg:right-8 z-40"
+          >
+            <div className={`p-4 sm:p-6 rounded-2xl bg-surface-container-high/90 backdrop-blur-xl border flex flex-col sm:flex-row items-center justify-between gap-4 transition-[border-color,box-shadow] duration-300 shadow-2xl shadow-black/30 ${
+              isCartHighlighted
+                ? 'border-cyan-400 ring-2 ring-cyan-400/70 shadow-[0_0_28px_rgba(59,130,246,0.75)]'
+                : 'border-surface-container-highest/50'
+            }`}>
+              <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
+                <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-primary-container text-on-primary-container shrink-0">
+                  <ShoppingBag className="w-6 h-6" />
+                  <span className="absolute -top-2 -right-2 z-20 min-w-[22px] h-[22px] px-1 rounded-full bg-[var(--success-hover)] text-white text-[11px] font-black flex items-center justify-center border-2 border-[var(--surface-hover)] shadow-md">
+                    {cartCount}
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] text-on-surface font-semibold">{t("Active Cart Allocation:")}</span>
+                    <span className="text-[11px] text-tertiary font-bold uppercase">{cartCount}{' '}{t("items selected")}</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-[12px] text-on-surface-variant">{t("Subtotal:")}</span>
+                    <span className="text-xl font-bold text-on-surface">{formatMoney(cartTotal)}</span>
+                    <span className="text-[12px] text-primary font-bold">{t("VND")}</span>
+                    <span className="text-[11px] text-on-surface-variant hidden md:inline ml-1">{t("(VAT & service fee included)")}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <button
+                  onClick={clearCart}
+                  className="hidden md:flex items-center gap-1 px-4 py-3 rounded-xl bg-surface-container text-on-surface-variant hover:text-on-surface text-[13px] font-semibold transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{t("Clear")}</span>
+                </button>
+                <button
+                  onClick={() => navigate('/member/cart')}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-primary-container hover:bg-inverse-primary text-on-primary-container hover:text-surface text-[14px] font-bold transition-all shadow-[var(--shadow)] shadow-primary-container/20 active:scale-95"
+                >
+                  <span>{t("Proceed to Checkout")}</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

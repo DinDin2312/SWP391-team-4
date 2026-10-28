@@ -54,8 +54,8 @@ function LoginPage() {
         setLoading(true);
         const data = await authService.googleLogin(tokenResponse.access_token);
 
-        const { token, role, email: userEmail, fullName } = data;
-        login({ token, role, email: userEmail, fullName });
+        const { token, role, email: userEmail, fullName, avatarUrl } = data;
+        login({ token, role, email: userEmail, fullName, avatarUrl });
         const route = ROLE_ROUTES[role] || '/customer/dashboard';
         navigate(route);
       } catch (err) {

@@ -13,6 +13,7 @@ Frontend/public/videos/*-1080.mp4
 # ============================
 Backend/target/
 Backend/uploads/
+uploads/
 Backend/.mvn/
 Backend/*.log
 

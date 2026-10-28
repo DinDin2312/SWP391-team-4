@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { AuthContext } from '../../../context/AuthContext';
 import managerService from '../services/managerService';
+import axiosClient from '../../../services/axiosClient';
 import { isoDate, initialForm, apiError } from '../managerUtils';
 import StaffPage from '../staff/StaffPage';
 import OperationsPage, { OperationsSkeleton } from '../operations/OperationsPage';
@@ -153,6 +154,33 @@ function ManagerDashboard() {
     setMobileNav(false);
   };
 
+  
+  const handleAdminAvatarUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const validationError = validateAvatarFile(file);
+    if (validationError) {
+      setNotice(validationError);
+      return;
+    }
+    const formData = new FormData();
+    formData.append('avatar', file);
+    try {
+      const res = await axiosClient.post('/v1/user/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const newUrl = res.avatarUrl;
+      const savedInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      localStorage.setItem('userInfo', JSON.stringify({ ...savedInfo, avatarUrl: newUrl }));
+      window.dispatchEvent(new Event('userProfileUpdated'));
+      setNotice(t('Avatar updated.'));
+    } catch (err) {
+      setNotice(apiError(err));
+    } finally {
+      event.target.value = '';
+    }
+  };
+
   const handleLogout = () => { logout(); navigate('/'); };
   const handleSaved = async (message = 'Changes saved.') => { setModal(null); setNotice(message); await refreshAll(); };
   const applyFilters = (nextFilters = filters) => { setAppliedFilters({ ...nextFilters }); if (active === 'operations') { const next = new URLSearchParams(query); next.set('from', nextFilters.from); next.set('to', nextFilters.to); setQuery(next); } };
@@ -175,7 +203,18 @@ function ManagerDashboard() {
           {adminPages.map(({ id, title, icon: Icon }) => <button key={id} title={t(title)} aria-label={t(title)} aria-current={active === id ? 'page' : undefined} className={active === id ? 'active' : ''} onClick={() => selectPage(id)}><Icon size={18} /><span>{t(title)}</span></button>)}
         </nav>
         <div className="manager-profile">
-          <div className="manager-avatar">{initials}</div><div><strong>{t(userInfo?.fullName || 'Center Manager')}</strong><small>{t(userInfo?.email || 'admin@sport.com')}</small></div>
+          <label className="manager-avatar" style={{ cursor: 'pointer', position: 'relative' }} title={t("Change photo")}>
+            {userInfo?.avatarUrl ? (
+              <img
+                src={userInfo.avatarUrl.startsWith('http') ? userInfo.avatarUrl : `http://localhost:8080${userInfo.avatarUrl}`}
+                alt=""
+                className="manager-avatar-image"
+                onError={(e) => { e.currentTarget.style.display = 'none'; if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'; }}
+              />
+            ) : null}
+            <span style={{ display: userInfo?.avatarUrl ? 'none' : 'flex' }}>{initials}</span>
+            <input type="file" accept="image/png,image/jpeg" onChange={handleAdminAvatarUpload} style={{ display: 'none' }} />
+          </label><div><strong>{t(userInfo?.fullName || 'Center Manager')}</strong><small>{t(userInfo?.email || 'admin@sport.com')}</small></div>
           <button onClick={handleLogout} title={t("Log out")} aria-label={t("Log out")}><LogOut size={17} /></button>
         </div>
       </aside>

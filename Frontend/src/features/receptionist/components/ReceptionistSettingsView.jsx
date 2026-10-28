@@ -14,7 +14,7 @@ import {
   Save,
   CheckCircle2,
   AlertCircle,
-  RefreshCw,
+  RefreshCw, Camera, Trash2,
   Sparkles,
   FileText,
 } from 'lucide-react';
@@ -45,6 +45,61 @@ const ReceptionistSettingsView = () => {
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordFeedback, setPasswordFeedback] = useState(null);
 
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setProfileFeedback({ type: 'error', message: t("Avatar image must be 2MB or smaller.") });
+      return;
+    }
+    const formData = new FormData();
+    formData.append("avatar", file);
+    try {
+      setAvatarUploading(true);
+      const res = await axiosClient.post('/v1/user/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const newUrl = res.avatarUrl;
+      setProfileData(prev => ({ ...prev, avatarUrl: newUrl }));
+      if (updateUserInfo) updateUserInfo({ avatarUrl: newUrl });
+      else {
+        const savedInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        localStorage.setItem('userInfo', JSON.stringify({ ...savedInfo, avatarUrl: newUrl }));
+        window.dispatchEvent(new Event('userProfileUpdated'));
+      }
+      setProfileFeedback({ type: 'success', message: t("Avatar updated successfully!") });
+      setTimeout(() => setProfileFeedback(null), 3000);
+    } catch (err) {
+      setProfileFeedback({ type: 'error', message: err.response?.data?.message || t("Failed to upload avatar.") });
+    } finally {
+      setAvatarUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleAvatarDelete = async () => {
+    try {
+      setAvatarUploading(true);
+      await axiosClient.delete('/v1/user/avatar');
+      setProfileData(prev => ({ ...prev, avatarUrl: null }));
+      if (updateUserInfo) updateUserInfo({ avatarUrl: null });
+      else {
+        const savedInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        localStorage.setItem('userInfo', JSON.stringify({ ...savedInfo, avatarUrl: null }));
+        window.dispatchEvent(new Event('userProfileUpdated'));
+      }
+      setProfileFeedback({ type: 'success', message: t("Avatar removed successfully!") });
+      setTimeout(() => setProfileFeedback(null), 3000);
+    } catch (err) {
+      setProfileFeedback({ type: 'error', message: err.response?.data?.message || t("Failed to remove avatar.") });
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+
   // Fetch Current Profile
   const fetchProfile = async () => {
     try {
@@ -57,6 +112,7 @@ const ReceptionistSettingsView = () => {
           email: data.email || '',
           phone: data.phone || '',
           bio: data.bio || '',
+          avatarUrl: data.avatarUrl || (data.avatarPath ? '/api/avatars/' + data.avatarPath : null),
         });
       }
     } catch (err) {
@@ -182,8 +238,32 @@ const ReceptionistSettingsView = () => {
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-black text-xl flex items-center justify-center shrink-0 shadow-sm">
-            {initials}
+          <div className="relative group shrink-0">
+            <div className="w-14 h-14 rounded-2xl overflow-hidden bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-black text-xl flex items-center justify-center shadow-sm relative">
+              {profileData.avatarUrl ? (
+                <img
+                  src={profileData.avatarUrl.startsWith('http') ? profileData.avatarUrl : `http://localhost:8080${profileData.avatarUrl}`}
+                  alt={fullName}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'; }}
+                />
+              ) : null}
+              <div style={{ display: profileData.avatarUrl ? 'none' : 'flex' }} className="w-full h-full items-center justify-center">
+                {initials}
+              </div>
+              {avatarUploading && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <RefreshCw className="w-5 h-5 text-white animate-spin" />
+                </div>
+              )}
+            </div>
+            <label
+              className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-[var(--primary)] text-white shadow-md hover:scale-110 transition-transform cursor-pointer"
+              title={t("Upload photo")}
+            >
+              <Camera className="w-3 h-3" />
+              <input type="file" accept="image/png,image/jpeg" onChange={handleAvatarUpload} className="hidden" disabled={avatarUploading} />
+            </label>
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -196,6 +276,17 @@ const ReceptionistSettingsView = () => {
             <p className="text-xs text-[var(--text-muted)] mt-1">
               {profileData.email || userInfo?.email || 'receptionist@sport.com'}
             </p>
+            {profileData.avatarUrl && (
+              <button
+                type="button"
+                onClick={handleAvatarDelete}
+                disabled={avatarUploading}
+                className="text-[11px] text-[var(--danger-text,#ef4444)] hover:underline mt-1 cursor-pointer flex items-center gap-1"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>{t("Remove photo")}</span>
+              </button>
+            )}
           </div>
         </div>
 

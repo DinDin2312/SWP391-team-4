@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axiosClient from '../../../services/axiosClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  RefreshCw, 
+  RefreshCw, Camera, Trash2, 
   User, 
   CheckCircle2, 
   BadgeCheck, 
@@ -158,6 +158,53 @@ const Settings = () => {
 
   // Turnstile QR Code Modal State
   const [qrZoomOpen, setQrZoomOpen] = useState(false);
+
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showToast(t("Avatar image must be 2MB or smaller."), "error");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("avatar", file);
+    try {
+      setAvatarUploading(true);
+      const res = await axiosClient.post('/v1/user/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const newUrl = res.avatarUrl;
+      setProfile(prev => ({ ...prev, avatarUrl: newUrl }));
+      const savedInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      localStorage.setItem('userInfo', JSON.stringify({ ...savedInfo, avatarUrl: newUrl }));
+      window.dispatchEvent(new Event('userProfileUpdated'));
+      showToast(t("Avatar updated successfully!"), "success");
+    } catch (err) {
+      showToast(err.response?.data?.message || t("Failed to upload avatar."), "error");
+    } finally {
+      setAvatarUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleAvatarDelete = async () => {
+    try {
+      setAvatarUploading(true);
+      await axiosClient.delete('/v1/user/avatar');
+      setProfile(prev => ({ ...prev, avatarUrl: null, avatarPath: null }));
+      const savedInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      localStorage.setItem('userInfo', JSON.stringify({ ...savedInfo, avatarUrl: null }));
+      window.dispatchEvent(new Event('userProfileUpdated'));
+      showToast(t("Avatar removed successfully!"), "success");
+    } catch (err) {
+      showToast(err.response?.data?.message || t("Failed to remove avatar."), "error");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const [copiedUid, setCopiedUid] = useState(false);
 
   const showToast = (message, type = 'success') => {
@@ -170,6 +217,13 @@ const Settings = () => {
       try {
         const data = await axiosClient.get('/v1/user/profile');
         setProfile(data);
+        if (data.avatarUrl) {
+          const savedInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+          if (savedInfo.avatarUrl !== data.avatarUrl) {
+            localStorage.setItem('userInfo', JSON.stringify({ ...savedInfo, avatarUrl: data.avatarUrl }));
+            window.dispatchEvent(new Event('userProfileUpdated'));
+          }
+        }
 
         // Load local notification preferences for this user
         if (data.userId) {
@@ -452,9 +506,45 @@ const Settings = () => {
             {/* Left Card: Avatar & Quick Summary */}
             <div className="lg:col-span-4 flex flex-col gap-6">
               <div className="bg-surface-container-low rounded-2xl p-6 shadow-xs border border-surface-container flex flex-col items-center text-center relative overflow-hidden">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-primary to-blue-500 text-on-primary text-3xl font-black flex items-center justify-center shadow-lg shadow-primary/20 mb-3 border-4 border-surface">
-                  {profile.fullName ? profile.fullName.substring(0, 2).toUpperCase() : 'NX'}
+                <div className="relative group mb-3">
+                  <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-tr from-primary to-blue-500 text-on-primary text-3xl font-black flex items-center justify-center shadow-lg shadow-primary/20 border-4 border-surface relative">
+                    {profile.avatarUrl ? (
+                      <img
+                        src={profile.avatarUrl.startsWith('http') ? profile.avatarUrl : `http://localhost:8080${profile.avatarUrl}`}
+                        alt={profile.fullName || 'User'}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'; }}
+                      />
+                    ) : null}
+                    <div style={{ display: profile.avatarUrl ? 'none' : 'flex' }} className="w-full h-full items-center justify-center">
+                      {profile.fullName ? profile.fullName.substring(0, 2).toUpperCase() : 'NX'}
+                    </div>
+                    {avatarUploading && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <RefreshCw className="w-6 h-6 text-white animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                  <label
+                    className="absolute bottom-0 right-0 p-2 rounded-full bg-primary text-on-primary shadow-md hover:scale-110 transition-transform cursor-pointer"
+                    title={t("Upload photo")}
+                  >
+                    <Camera className="w-4 h-4" />
+                    <input type="file" accept="image/png,image/jpeg" onChange={handleAvatarUpload} className="hidden" disabled={avatarUploading} />
+                  </label>
                 </div>
+
+                {profile.avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={handleAvatarDelete}
+                    disabled={avatarUploading}
+                    className="text-xs text-[var(--danger-text,#ef4444)] hover:underline mb-2 cursor-pointer flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>{t("Remove photo")}</span>
+                  </button>
+                )}
 
                 <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[11px] font-extrabold tracking-wider mb-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

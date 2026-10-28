@@ -1416,10 +1416,34 @@ translations['Number of active registrations']=['Number of active registrations'
 
 Object.assign(translations, {
   'Back to Home': ['Back to Home', 'Quay lại trang chủ'],
+  'Checkout awaiting payment (Invoice #': ['Checkout awaiting payment (Invoice #', 'Đơn hàng đang chờ thanh toán (Mã #'],
+  'You can click Confirm & Pay to create a fresh payment link, or cancel the pending session.': ['You can click Confirm & Pay to create a fresh payment link, or cancel the pending session.', 'Bạn có thể bấm Xác nhận & Thanh toán ngay để tạo liên kết thanh toán mới, hoặc hủy phiên chờ.'],
+  'Cancel Pending Session': ['Cancel Pending Session', 'Hủy phiên thanh toán chờ'],
+  'Cancelled': ['Cancelled', 'Đã hủy'],
+  'Pending session cancelled successfully.': ['Pending session cancelled successfully.', 'Đã hủy phiên thanh toán chờ thành công.'],
+  'Failed to cancel pending session.': ['Failed to cancel pending session.', 'Hủy phiên thanh toán chờ thất bại.'],
+  'Cancel / Close': ['Cancel / Close', 'Hủy / Đóng']
 });
 
 Object.assign(translations, {
   'Nexus AI can make mistakes. Verify before buying.': ['Nexus AI can make mistakes. Verify before buying.', 'Nexus AI có thể mắc lỗi. Vui lòng kiểm tra kỹ trước khi mua.'],
+  'Search packages by name...': ['Search packages by name...', 'Tìm kiếm gói tập theo tên...'],
+  'Secure Payment Gateway': ['Secure Payment Gateway', 'Cổng thanh toán an toàn'],
+  'Instant processing with VNPay and MoMo': ['Instant processing with VNPay and MoMo', 'Xử lý tức thì qua VNPay và MoMo'],
+  'Fast QR Pass Check-in': ['Fast QR Pass Check-in', 'Check-in bằng mã QR nhanh chóng'],
+  'Seamless access at the turnstile gate': ['Seamless access at the turnstile gate', 'Quét mã qua cổng kiểm soát tự động'],
+  'Flexible Class Bookings': ['Flexible Class Bookings', 'Đặt lịch tập linh hoạt'],
+  'Easy schedule enrollment and class switching': ['Easy schedule enrollment and class switching', 'Dễ dàng đăng ký và đổi lịch lớp học'],
+  'Featured Packages': ['Featured Packages', 'Gói tập nổi bật'],
+  '24/7 AI Coach Consultation': ['24/7 AI Coach Consultation', 'Tư vấn HLV AI trực tuyến 24/7'],
+  'Personalized Workout & Meal Plans': ['Personalized Workout & Meal Plans', 'Lộ trình tập luyện & dinh dưỡng cá nhân'],
+  'Real-time Form & Metric Analysis': ['Real-time Form & Metric Analysis', 'Phân tích chỉ số & tư thế tập luyện'],
+  'Full Sports Center & Equipment Access': ['Full Sports Center & Equipment Access', 'Sử dụng toàn bộ cơ sở & trang thiết bị'],
+  'Smart Locker & RFID Key Access': ['Smart Locker & RFID Key Access', 'Sử dụng tủ đồ thông minh an toàn'],
+  'Hot Shower & Sauna Access': ['Hot Shower & Sauna Access', 'Phòng xông hơi & tắm nóng lạnh VIP'],
+  'Instant QR Pass Provisioning': ['Instant QR Pass Provisioning', 'Kích hoạt thẻ QR hội viên tức thì'],
+  'Direct Member Support Desk': ['Direct Member Support Desk', 'Hỗ trợ hội viên trực tiếp tại quầy'],
+  'Gain full access for {0} days. Upgrade your fitness routine today.': ['Gain full access for {0} days. Upgrade your fitness routine today.', 'Toàn quyền sử dụng dịch vụ trong {0} ngày. Nâng tầm thể lực cùng NEXUS ngay hôm nay.']
 });
 
 Object.assign(translations, {'Gain full access for ': ['Gain full access for ', 'Sử dụng toàn bộ dịch vụ trong ']});
@@ -3313,6 +3337,11 @@ const memberSettingsTranslations = [
   ["Email changes require OTP verification sent to the new mailbox.", "Thay đổi email bắt buộc xác thực mã OTP gửi về hòm thư mới."],
   ["Saving...", "Đang lưu..."],
   ["Personal profile saved successfully!", "Hồ sơ cá nhân đã được lưu thành công!"],
+  ["Avatar updated successfully!", "Cập nhật ảnh đại diện thành công!"],
+  ["Avatar removed successfully!", "Đã gỡ ảnh đại diện thành công!"],
+  ["Avatar image must be 2MB or smaller.", "Ảnh đại diện phải có dung lượng tối đa 2MB."],
+  ["Failed to upload avatar.", "Tải lên ảnh đại diện thất bại."],
+  ["Failed to remove avatar.", "Xóa ảnh đại diện thất bại."],
   ["Failed to load profile data.", "Không thể tải thông tin hồ sơ"],
   ["Error saving profile information.", "Lỗi khi lưu thông tin hồ sơ."],
   ["Failed to send OTP to new email.", "Không thể gửi mã OTP tới email mới."],

@@ -134,7 +134,18 @@ const CoachLayout = () => {
           <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-9 h-9 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center">
+                {userInfo?.avatarUrl ? (
+                  <img
+                    src={userInfo.avatarUrl.startsWith('http') ? userInfo.avatarUrl : `http://localhost:8080${userInfo.avatarUrl}`}
+                    alt={fullName}
+                    className="w-9 h-9 rounded-xl object-cover border border-[var(--primary-soft)]"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'; }}
+                  />
+                ) : null}
+                <div
+                  style={{ display: userInfo?.avatarUrl ? 'none' : 'flex' }}
+                  className="w-9 h-9 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs items-center justify-center"
+                >
                   {initials}
                 </div>
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[var(--success-hover)] border-2 border-[var(--border)]"></span>

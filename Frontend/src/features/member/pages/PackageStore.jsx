@@ -5,14 +5,15 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import {
-  Search, ShoppingBag, Percent, Smartphone, RefreshCw,
+  Search, ShoppingBag, CreditCard, CalendarCheck, RefreshCw,
   Dumbbell, Bot, Crown, Flame, Trophy, Activity, Snowflake,
-  Building2, Lock, QrCode, FileCheck, ArrowRight, CheckCircle2,
+  Lock, QrCode, FileCheck, ArrowRight, CheckCircle2,
   Trash2, ShoppingCart, Check, ShieldCheck, Tag,
   DollarSign, BadgeCheck, AlertCircle
 } from 'lucide-react';
 import { Meteors } from '../../../components/ui/meteors';
 import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
+import { motion, AnimatePresence } from 'framer-motion';
 
 
 const loadStoreDetail=id=>axios.get(`http://localhost:8080/api/v1/member/packages/${id}`,{headers:{Authorization:`Bearer ${localStorage.getItem('token')}`}});
@@ -26,6 +27,7 @@ const PackageStore = () => {
 
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('featured');
 
   // Fake cart context until Backend Cart API supports packages
   const [cartCount, setCartCount] = useState(0);
@@ -87,11 +89,18 @@ const PackageStore = () => {
     }
   };
 
-  const filteredPackages = packages.filter(p => {
-    const matchCategory = activeCategory === 'all' || p.packageType?.toUpperCase() === activeCategory.toUpperCase();
-    const matchSearch = p.packageName?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchCategory && matchSearch;
-  });
+  const filteredPackages = packages
+    .filter(p => {
+      const matchCategory = activeCategory === 'all' || p.packageType?.toUpperCase() === activeCategory.toUpperCase();
+      const matchSearch = p.packageName?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchCategory && matchSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'low') return (a.price || 0) - (b.price || 0);
+      if (sortBy === 'high') return (b.price || 0) - (a.price || 0);
+      if (sortBy === 'duration') return (b.durationDays || 0) - (a.durationDays || 0);
+      return 0;
+    });
 
   const handleAddToCart = async (pkg) => {
     if (addedItems[pkg.packageId]||pkg.canPurchase===false) return;
@@ -218,13 +227,13 @@ const PackageStore = () => {
             {/* Header Actions: Search & Cart Button */}
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-space-sm">
               <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-5 h-5" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={t("Search tiers, cryo, passes...")}
-                  className="w-full bg-surface-container-highest text-on-surface placeholder:text-on-surface-variant text-sm pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary border-none shadow-[var(--shadow)]"
+                  placeholder={t("Search packages by name...")}
+                  className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 text-sm pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 shadow-sm"
                 />
               </div>
               <button
@@ -232,16 +241,16 @@ const PackageStore = () => {
                   setIsCartHighlighted(false);
                   navigate('/member/cart');
                 }}
-                className={`flex-shrink-0 flex items-center gap-space-sm px-space-md py-2.5 rounded-lg transition-all group ${
+                className={`flex-shrink-0 flex items-center gap-space-sm px-space-md py-2.5 rounded-xl border transition-all group ${
                   isCartHighlighted
-                    ? 'bg-gradient-to-r from-cyan-500/20 via-blue-600/25 to-purple-600/20 ring-2 ring-cyan-400 shadow-[0_0_22px_rgba(59,130,246,0.75)] scale-105'
-                    : 'bg-surface-container-high hover:bg-surface-container-highest'
+                    ? 'bg-gradient-to-r from-cyan-500/20 via-blue-600/25 to-purple-600/20 border-cyan-400 ring-2 ring-cyan-400 shadow-[0_0_22px_rgba(59,130,246,0.75)] scale-105'
+                    : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 border-slate-200 dark:border-slate-800 shadow-sm'
                 }`}
               >
                 <div className="relative">
                   <ShoppingBag className="text-primary w-6 h-6 group-hover:scale-110 transition-transform" />
                   {cartCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary-container text-on-primary-container text-[10px] flex items-center justify-center font-bold">
+                    <span className="absolute -top-1.5 -right-2 z-10 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--success-hover)] text-white text-[10px] flex items-center justify-center font-black border border-[var(--surface-hover)] shadow-sm">
                       {cartCount}
                     </span>
                   )}
@@ -257,32 +266,32 @@ const PackageStore = () => {
           </div>
 
           {/* Perks Strip */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-space-sm pt-space-xs">
-            <div className="flex items-center gap-space-sm p-space-sm rounded-lg bg-surface-container-highest/50">
-              <div className="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center">
-                <Percent className="w-4 h-4" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center shrink-0">
+                <CreditCard className="w-4 h-4" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[12px] text-on-surface font-semibold">{t("Active Member Privilege")}</span>
-                <span className="text-[11px] text-on-surface-variant">{t("Instant 15% discount applied at checkout")}</span>
+                <span className="text-[12px] text-slate-900 dark:text-white font-bold">{t("Secure Payment Gateway")}</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">{t("Instant processing with VNPay and MoMo")}</span>
               </div>
             </div>
-            <div className="flex items-center gap-space-sm p-space-sm rounded-lg bg-surface-container-highest/50">
-              <div className="w-8 h-8 rounded bg-tertiary/10 text-tertiary flex items-center justify-center">
-                <Smartphone className="w-4 h-4" />
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50 flex items-center justify-center shrink-0">
+                <QrCode className="w-4 h-4" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[12px] text-on-surface font-semibold">{t("Instant NFC Band Sync")}</span>
-                <span className="text-[11px] text-on-surface-variant">{t("Digital wristband credentials activate instantly")}</span>
+                <span className="text-[12px] text-slate-900 dark:text-white font-bold">{t("Fast QR Pass Check-in")}</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">{t("Seamless access at the turnstile gate")}</span>
               </div>
             </div>
-            <div className="flex items-center gap-space-sm p-space-sm rounded-lg bg-surface-container-highest/50 sm:col-span-2 lg:col-span-1">
-              <div className="w-8 h-8 rounded bg-secondary/10 text-secondary flex items-center justify-center">
-                <RefreshCw className="w-4 h-4" />
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-sm sm:col-span-2 lg:col-span-1">
+              <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center shrink-0">
+                <CalendarCheck className="w-4 h-4" />
               </div>
               <div className="flex flex-col">
-                <span className="text-[12px] text-on-surface font-semibold">{t("Flexible Carry-Over")}</span>
-                <span className="text-[11px] text-on-surface-variant">{t("Unused bio-lab sessions rollover up to 60 days")}</span>
+                <span className="text-[12px] text-slate-900 dark:text-white font-bold">{t("Flexible Class Bookings")}</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">{t("Easy schedule enrollment and class switching")}</span>
               </div>
             </div>
           </div>
@@ -292,7 +301,7 @@ const PackageStore = () => {
       {/* Interactive Filter Bar & View Toggle */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-space-md mb-space-lg">
         {/* Category Tabs */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-surface-container-low overflow-x-auto max-w-full">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto max-w-full">
           {[
             { id: 'all',        label: t('All Packages'),     count: packages.length },
             ...Array.from(new Set(packages.map(pkg=>pkg.packageType))).map(type=>({id:type.toLowerCase(),label:packages.find(pkg=>pkg.packageType===type)?.packageTypeName||codeLabel(type),count:packages.filter(pkg=>pkg.packageType===type).length})),
@@ -304,13 +313,13 @@ const PackageStore = () => {
                 onClick={() => setActiveCategory(tab.id)}
                 className={`flex items-center whitespace-nowrap gap-2 px-4 py-2 rounded-lg text-[13px] transition-all font-semibold ${
                   isActive
-                    ? 'bg-primary-container text-on-primary-container shadow-[var(--shadow)]'
-                    : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <span>{t(tab.label)}</span>
                 <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                  isActive ? 'bg-on-primary-container/20' : 'bg-surface-container-high'
+                  isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                 }`}>
                   {tab.count}
                 </span>
@@ -321,14 +330,18 @@ const PackageStore = () => {
 
         {/* Right Controls / Sort */}
         <div className="flex items-center gap-space-sm w-full md:w-auto justify-between md:justify-end">
-          <span className="text-[13px] text-on-surface-variant hidden xl:inline">{t("Showing")}{' '}{filteredPackages.length}{' '}{t("verified packages")}</span>
-          <div className="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-lg">
-            <span className="text-[11px] font-semibold text-on-surface-variant px-2">{t("SORT:")}</span>
-            <select className="bg-transparent text-on-surface text-[12px] font-semibold focus:outline-none cursor-pointer pr-2 border-none">
-              <option className="bg-surface-container" value="featured">{t("Featured Lab Packs")}</option>
-              <option className="bg-surface-container" value="low">{t("Price: Low to High")}</option>
-              <option className="bg-surface-container" value="high">{t("Price: High to Low")}</option>
-              <option className="bg-surface-container" value="duration">{t("Validity Duration")}</option>
+          <span className="text-[13px] text-slate-500 dark:text-slate-400 hidden xl:inline">{t("Showing")}{' '}{filteredPackages.length}{' '}{t("verified packages")}</span>
+          <div className="flex items-center gap-space-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm p-1.5 rounded-lg">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 px-2">{t("SORT:")}</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-transparent text-slate-900 dark:text-white text-[12px] font-semibold focus:outline-none cursor-pointer pr-2 border-none"
+            >
+              <option className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white" value="featured">{t("Featured Packages")}</option>
+              <option className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white" value="low">{t("Price: Low to High")}</option>
+              <option className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white" value="high">{t("Price: High to Low")}</option>
+              <option className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white" value="duration">{t("Validity Duration")}</option>
             </select>
           </div>
         </div>
@@ -362,60 +375,88 @@ const PackageStore = () => {
               id={`ai-package-${pkg.packageId}`}
               className={`flex flex-col justify-between rounded-2xl p-6 transition-all duration-300 group relative ${
                 isPopular 
-                  ? 'overflow-hidden bg-surface-container-high/90 shadow-xl shadow-primary-container/10 border border-blue-500/30'
-                  : 'overflow-hidden bg-surface-container-low hover:bg-surface-container shadow-md'
+                  ? 'bg-white dark:bg-slate-900 border-2 border-blue-500 shadow-xl shadow-blue-500/10 dark:shadow-blue-500/20 ring-1 ring-blue-500/30 dark:ring-blue-400/30 hover:-translate-y-1'
+                  : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500/50 dark:hover:border-blue-400/50 shadow-md hover:shadow-xl hover:-translate-y-1'
               }`}
             >
               {isPopular && (
                 <>
                   <Meteors number={8} />
                   <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-blue-500/10 to-teal-500/10 blur-xl pointer-events-none -z-0"></div>
-                  {/* Absolute so it overlays the cover photo and doesn't push content down (keeps cards aligned) */}
-                  <div className="absolute top-9 left-9 z-20 px-4 py-1.5 rounded-full bg-primary-container text-on-primary-container text-[11px] font-bold tracking-widest uppercase shadow-md flex items-center gap-1 w-fit pointer-events-none">
-                    <Flame className="w-3.5 h-3.5" />
-                    <span>{t("Most Popular")}</span>
-                  </div>
                 </>
               )}
 
               <div className="relative z-10">
-                <div className="mb-4"><ResourcePhoto imagePath={pkg.imagePath} name={pkg.packageName} variant="cover" fallback={<Icon size={42} aria-hidden="true" />} /></div>
-                <div className="flex items-start justify-between mb-4 pt-1">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors bg-surface-container-high group-hover:bg-primary-container/20 text-primary`}>
-                    <Icon className="w-7 h-7" />
-                  </div>
-                  <span className={`px-2 py-1 rounded text-[11px] font-bold tracking-wider uppercase bg-surface-variant text-on-surface-variant`}>
-                    {pkg.durationDays}{' '}{t("Days")}</span>
+                {/* Bento Cover Image with Ambient Glowing Light */}
+                <div className="relative mb-5 rounded-2xl overflow-hidden aspect-[16/10] bg-gradient-to-br from-blue-50/70 via-slate-100/80 to-indigo-50/60 dark:from-slate-900/95 dark:via-slate-850 dark:to-slate-950 border border-slate-200/90 dark:border-white/10 flex items-center justify-center group-hover:border-primary/40 transition-all duration-300 shadow-sm dark:shadow-inner">
+                  {/* Ambient Glow */}
+                  <div className={`absolute inset-0 bg-radial-[at_50%_35%] ${isPopular ? 'from-blue-500/20 dark:from-blue-500/25 via-indigo-500/10' : 'from-primary/15 dark:from-primary/20 via-primary/5'} to-transparent pointer-events-none`} />
+
+                  {isPopular && (
+                    <div className="absolute top-3.5 left-3.5 z-20 px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-extrabold tracking-wider uppercase shadow-md shadow-blue-500/30 border border-white/25 flex items-center gap-1.5 pointer-events-none backdrop-blur-md">
+                      <Flame className="w-3.5 h-3.5 text-amber-300" />
+                      <span>{t("Most Popular")}</span>
+                    </div>
+                  )}
+
+                  {pkg.imagePath ? (
+                    <ResourcePhoto imagePath={pkg.imagePath} name={pkg.packageName} variant="cover" />
+                  ) : (
+                    <div className="relative z-10 flex flex-col items-center justify-center gap-2 group-hover:scale-105 transition-transform duration-300">
+                      <div className="w-16 h-16 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/90 dark:border-white/10 flex items-center justify-center shadow-md dark:shadow-black/40">
+                        <Icon className="w-8 h-8 text-blue-600 dark:text-blue-400 drop-shadow-[0_0_10px_rgba(59,130,246,0.3)] dark:drop-shadow-[0_0_12px_rgba(59,130,246,0.6)]" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Corner Duration Badge */}
+                  <span className="absolute top-3.5 right-3.5 z-20 px-3 py-1 rounded-lg bg-white/95 dark:bg-slate-950/80 border border-slate-200/90 dark:border-white/15 text-[11px] font-black tracking-wider text-slate-800 dark:text-white uppercase shadow-sm">
+                    {pkg.durationDays}{' '}{t("Days")}
+                  </span>
                 </div>
 
                 <div className="mb-4">
                   {pkg.packageType && (
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="text-[11px] font-bold text-primary uppercase">{pkg.packageTypeName?t(pkg.packageTypeName):codeLabel(pkg.packageType)}</span>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                        {pkg.packageTypeName ? t(pkg.packageTypeName) : codeLabel(pkg.packageType)}
+                      </span>
                     </div>
                   )}
-                  <h3 className="text-xl font-bold text-on-surface mb-2"><button type="button" className="text-left hover:underline" onClick={()=>setDetailId(pkg.packageId)}>{pkg.packageName}</button></h3>
-                    {pkg.canPurchase===false&&<p className="text-sm mb-2" role="status">{t(pkg.purchaseBlockReason)}</p>}
-                    <button type="button" className="text-sm underline mb-3" onClick={()=>setDetailId(pkg.packageId)}>{t("Package details")}</button>
-                  <p className="text-sm text-on-surface-variant min-h-[40px] leading-relaxed">
-                    {t(pkg.description || ("Gain full access for " + pkg.durationDays + " days. Upgrade your fitness routine today."))}
+                  <h3 className="text-xl font-extrabold text-slate-900 dark:text-white mb-1.5 tracking-tight">
+                    <button type="button" className="text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors" onClick={() => setDetailId(pkg.packageId)}>
+                      {pkg.packageName}
+                    </button>
+                  </h3>
+                  {pkg.canPurchase === false && <p className="text-sm mb-2 text-rose-500 font-semibold" role="status">{t(pkg.purchaseBlockReason)}</p>}
+                  <button type="button" className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline mb-2.5 inline-flex items-center gap-1" onClick={() => setDetailId(pkg.packageId)}>
+                    <span>{t("Package details")}</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 min-h-[38px] leading-relaxed line-clamp-2">
+                    {pkg.description ? t(pkg.description) : t("Gain full access for {0} days. Upgrade your fitness routine today.", [pkg.durationDays])}
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between mb-2">
-                  <span className={`text-[11px] font-bold tracking-wider uppercase ${isPopular ? t('text-primary') : t('text-on-surface-variant')}`}>{t("Membership Fee")}</span>
-                </div>
-                <div className="flex items-baseline gap-1 mt-0.5 mb-5">
-                  <span className="text-2xl font-extrabold text-on-surface">{formatMoney(pkg.price)}</span>
-                  <span className="text-[12px] text-on-surface-variant ml-1">/ {pkg.durationDays}{' '}{t("days")}</span>
+                <div className="border-t border-slate-100 dark:border-slate-800/80 my-3.5" />
+
+                <div className="mb-4">
+                  <span className="text-[10px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">{t("Membership Fee")}</span>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-2xl font-black text-slate-900 dark:text-white">{formatMoney(pkg.price)}</span>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">/ {pkg.durationDays}{' '}{t("days")}</span>
+                  </div>
                 </div>
 
-                <div className="flex flex-col gap-3 mb-6">
-                  <span className={`text-[11px] uppercase tracking-wider font-semibold ${isPopular ? t('text-primary') : t('text-on-surface-variant')}`}>{t("Included Privileges")}</span>
-                  {['Full facility access', 'Smart locker usage', 'AI Fitness assistant sync'].map((feature, idx) => (
-                    <div key={idx} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-tertiary shrink-0 mt-0.5" />
-                      <span className="text-[14px] text-on-surface">{t(feature)}</span>
+                <div className="flex flex-col gap-2.5 mb-6">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("Included Privileges")}</span>
+                  {(pkg.packageType === 'AI_ACCESS' || (pkg.packageName && pkg.packageName.toLowerCase().includes('ai'))
+                    ? ['24/7 AI Coach Consultation', 'Personalized Workout & Meal Plans', 'Real-time Form & Metric Analysis']
+                    : ['Full Sports Center & Equipment Access', 'Smart Locker & RFID Key Access', 'Hot Shower & Sauna Access']
+                  ).map((feature, idx) => (
+                    <div key={idx} className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      <span className="text-[13px] text-slate-700 dark:text-slate-300 font-medium leading-snug">{t(feature)}</span>
                     </div>
                   ))}
                 </div>
@@ -424,23 +465,23 @@ const PackageStore = () => {
               <button
                 onClick={() => handleAddToCart(pkg)}
                 disabled={isAdded||pkg.canPurchase===false}
-                className={`relative z-10 w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-semibold text-[14px] transition-all active:scale-[0.99] ${
+                className={`relative z-10 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all active:scale-[0.99] ${
                   isAdded
-                    ? t('bg-surface-container-highest text-on-surface-variant cursor-not-allowed border border-surface-container-highest')
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-500/30 cursor-not-allowed'
                     : isPopular
-                      ? t('bg-primary-container hover:bg-inverse-primary text-on-primary-container hover:text-surface shadow-[var(--shadow)] shadow-primary-container/20')
-                      : t('bg-surface-container-high hover:bg-primary text-on-surface hover:text-on-primary shadow-[var(--shadow)]')
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25'
+                      : 'bg-slate-100 hover:bg-blue-600 text-slate-800 hover:text-white border border-slate-200 hover:border-transparent dark:bg-slate-800 dark:hover:bg-blue-600 dark:text-white dark:border-slate-700 shadow-sm'
                 }`}
               >
                 {isAdded ? (
                   <>
-                    <Check className="w-5 h-5 text-tertiary" />
-                    <span className="text-tertiary">{t("Added to Cart")}</span>
+                    <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-emerald-600 dark:text-emerald-400">{t("Added to Cart")}</span>
                   </>
                 ) : (
                   <>
                     <ShoppingCart className="w-5 h-5" />
-                    <span>{t(isPopular ? t('Claim Pro Access') : t('Add to Cart'))}</span>
+                    <span>{t(isPopular ? 'Claim Pro Access' : 'Add to Cart')}</span>
                   </>
                 )}
               </button>
@@ -449,86 +490,78 @@ const PackageStore = () => {
         })}
       </div>
 
-      {/* Corporate Callout Banner */}
-      <div className="mt-space-xl p-space-lg lg:p-space-xl rounded-2xl bg-surface-container-low flex flex-col md:flex-row items-center justify-between gap-space-lg shadow-[var(--shadow)] relative overflow-hidden">
-        <div className="absolute -right-10 -bottom-10 w-48 h-48 rounded-full bg-primary/10 blur-3xl pointer-events-none"></div>
-        <div className="flex items-center gap-space-md z-10">
-          <div className="w-14 h-14 rounded-2xl bg-surface-container-high text-primary flex items-center justify-center shrink-0">
-            <Building2 className="w-8 h-8" />
-          </div>
-          <div>
-            <h3 className="text-[16px] font-bold text-on-surface">{t("Athletic Squads & Enterprise Corporate Plans")}</h3>
-            <p className="text-[14px] text-on-surface-variant max-w-xl mt-1">{t("Equip your company or semi-pro sports franchise with pooled court access, biomechanical telemetry passes, and private training bookings.")}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 shrink-0 w-full md:w-auto z-10">
-          <button className="w-full md:w-auto px-6 py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-[13px] font-semibold transition-all">{t("Corporate Inquiry")}</button>
-          <button className="w-full md:w-auto px-6 py-2.5 rounded-lg bg-primary text-on-primary text-[13px] font-bold hover:bg-primary-container transition-all">{t("Book Facility Tour")}</button>
-        </div>
-      </div>
-
       {/* Trust Indicators Footing */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 py-4 px-2 text-center">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12 py-4 px-2 text-center">
         <div className="flex items-center justify-center gap-2 text-on-surface-variant">
           <Lock className="w-5 h-5 text-tertiary" />
           <span className="text-[11px] font-bold tracking-wide uppercase">{t("256-Bit SSL Encrypted Checkout")}</span>
         </div>
         <div className="flex items-center justify-center gap-2 text-on-surface-variant">
           <QrCode className="w-5 h-5 text-primary" />
-          <span className="text-[11px] font-bold tracking-wide uppercase">{t("Instant NFC & QR Pass Provisioning")}</span>
+          <span className="text-[11px] font-bold tracking-wide uppercase">{t("Instant QR Pass Provisioning")}</span>
         </div>
         <div className="flex items-center justify-center gap-2 text-on-surface-variant">
           <FileCheck className="w-5 h-5 text-secondary" />
-          <span className="text-[11px] font-bold tracking-wide uppercase">{t("Zero Setup Fees &bull; Cancel Anytime")}</span>
+          <span className="text-[11px] font-bold tracking-wide uppercase">{t("Direct Member Support Desk")}</span>
         </div>
       </div>
 
-      {/* Sticky Bottom Cart & Checkout Bar */}
-      <div className="fixed bottom-4 left-4 right-4 lg:left-80 lg:right-8 z-40">
-        <div className={`p-4 sm:p-6 rounded-2xl bg-surface-container-high/95 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4 border transition-all duration-300 ${
-          isCartHighlighted
-            ? 'border-cyan-400 ring-2 ring-cyan-400/70 shadow-[0_0_28px_rgba(59,130,246,0.75)]'
-            : 'border-surface-container-highest/50 shadow-[var(--shadow)]'
-        }`}>
-          <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
-            <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-primary-container text-on-primary-container shrink-0">
-              <ShoppingBag className="w-6 h-6" />
-              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-secondary-container text-on-secondary-container text-[11px] font-bold flex items-center justify-center">
-                {cartCount}
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className="text-[13px] text-on-surface font-semibold">{t("Active Cart Allocation:")}</span>
-                <span className="text-[11px] text-tertiary font-bold uppercase">{cartCount}{' '}{t("items selected")}</span>
+      {/* Sticky Bottom Cart & Checkout Bar with Smooth Slide-Up Motion */}
+      <AnimatePresence>
+        {cartCount > 0 && (
+          <motion.div
+            initial={{ y: 150 }}
+            animate={{ y: 0 }}
+            exit={{ y: 150 }}
+            transition={{ type: "spring", stiffness: 320, damping: 30 }}
+            className="fixed bottom-4 left-4 right-4 lg:left-80 lg:right-8 z-40"
+          >
+            <div className={`p-4 sm:p-6 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border flex flex-col sm:flex-row items-center justify-between gap-4 transition-[border-color,box-shadow] duration-300 shadow-2xl shadow-black/20 ${
+              isCartHighlighted
+                ? 'border-cyan-400 ring-2 ring-cyan-400/70 shadow-[0_0_28px_rgba(59,130,246,0.75)]'
+                : 'border-slate-200 dark:border-slate-800'
+            }`}>
+              <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
+                <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 text-white shrink-0 shadow-md shadow-blue-500/30">
+                  <ShoppingBag className="w-6 h-6" />
+                  <span className="absolute -top-2 -right-2 z-20 min-w-[22px] h-[22px] px-1 rounded-full bg-emerald-500 text-white text-[11px] font-black flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-md">
+                    {cartCount}
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] text-slate-900 dark:text-white font-bold">{t("Active Cart Allocation:")}</span>
+                    <span className="text-[11px] text-amber-500 font-extrabold uppercase">{cartCount}{' '}{t("items selected")}</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-[12px] text-slate-500 dark:text-slate-400">{t("Subtotal:")}</span>
+                    <span className="text-xl font-black text-slate-900 dark:text-white">{formatMoney(cartTotal)}</span>
+                    <span className="text-[12px] text-blue-600 dark:text-blue-400 font-bold">{t("VND")}</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden md:inline ml-1">{t("(15% Member Rebate Calculated)")}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-[12px] text-on-surface-variant">{t("Subtotal:")}</span>
-                <span className="text-xl font-bold text-on-surface">{formatMoney(cartTotal)}</span>
-                <span className="text-[12px] text-primary font-bold">{t("VND")}</span>
-                <span className="text-[11px] text-on-surface-variant hidden md:inline ml-1">{t("(15% Member Rebate Calculated)")}</span>
-              </div>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <button
-              onClick={clearCart}
-              className="hidden md:flex items-center gap-1 px-4 py-3 rounded-xl bg-surface-container text-on-surface-variant hover:text-on-surface text-[13px] font-semibold transition-all"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>{t("Clear")}</span>
-            </button>
-            <button
-              onClick={() => navigate('/member/cart')}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-primary-container hover:bg-inverse-primary text-on-primary-container hover:text-surface text-[14px] font-bold transition-all shadow-[var(--shadow)] shadow-primary-container/20 active:scale-95"
-            >
-              <span>{t("Proceed to Checkout")}</span>
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </div>
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <button
+                  onClick={clearCart}
+                  className="hidden md:flex items-center gap-1 px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-750 dark:text-slate-300 text-[13px] font-semibold transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{t("Clear")}</span>
+                </button>
+                <button
+                  onClick={() => navigate('/member/cart')}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[14px] font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-95"
+                >
+                  <span>{t("Proceed to Checkout")}</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Floating Action Toast Notification */}
       <div className={`fixed bottom-32 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ${

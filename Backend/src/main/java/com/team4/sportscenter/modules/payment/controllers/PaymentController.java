@@ -31,8 +31,16 @@ public class PaymentController {
         String ipAddress = VNPayConfig.getIpAddress(request);
         String paymentMethod = (body != null && body.containsKey("paymentMethod")) ? body.get("paymentMethod") : "vnpay";
         String creditCode = (body != null && body.containsKey("creditCode")) ? body.get("creditCode") : null;
-        String paymentUrl = paymentService.checkout(email, ipAddress, paymentMethod, creditCode);
+        boolean cancelPending = body != null && "true".equalsIgnoreCase(body.get("cancelPending"));
+        String paymentUrl = paymentService.checkout(email, ipAddress, paymentMethod, creditCode, cancelPending);
         return ResponseEntity.ok(Map.of("paymentUrl", paymentUrl,"completed",paymentUrl.startsWith("/member/")));
+    }
+
+    @PostMapping("/cart/cancel-pending")
+    public ResponseEntity<?> cancelPendingCheckout(Authentication authentication) {
+        String email = authentication.getName();
+        paymentService.cancelPendingCheckout(email);
+        return ResponseEntity.ok(Map.of("message", "Pending checkout cancelled."));
     }
     
     @DeleteMapping("/cart/{classId}")

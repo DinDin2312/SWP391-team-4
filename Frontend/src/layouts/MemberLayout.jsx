@@ -43,6 +43,14 @@ const MemberLayout = () => {
   }, []);
 
   useEffect(() => {
+    const handleProfileSync = () => {
+      // Force rerender or sync profile if needed
+    };
+    window.addEventListener('userProfileUpdated', handleProfileSync);
+    return () => window.removeEventListener('userProfileUpdated', handleProfileSync);
+  }, []);
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -197,7 +205,18 @@ const MemberLayout = () => {
           <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-9 h-9 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center">
+                {userInfo?.avatarUrl ? (
+                  <img
+                    src={userInfo.avatarUrl.startsWith('http') ? userInfo.avatarUrl : `http://localhost:8080${userInfo.avatarUrl}`}
+                    alt={fullName}
+                    className="w-9 h-9 rounded-xl object-cover border border-[var(--primary-soft)]"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'; }}
+                  />
+                ) : null}
+                <div
+                  style={{ display: userInfo?.avatarUrl ? 'none' : 'flex' }}
+                  className="w-9 h-9 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs items-center justify-center"
+                >
                   {initials}
                 </div>
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[var(--success-hover)] border-2 border-[var(--border)]"></span>
@@ -221,12 +240,6 @@ const MemberLayout = () => {
           <nav className="role-breadcrumb" aria-label={t("Breadcrumb")}><span>{t("Member portal")}</span><span aria-hidden="true">/</span><strong>{t(getPageTitle())}</strong></nav>
 
           <div className="role-header-actions">
-            <div className="px-3.5 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-2 text-xs text-[var(--text)]">
-              <span className="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
-              <span className="text-[var(--text-muted)]">{t("Next Session:")}</span>
-              <span className="font-semibold text-[var(--text)]">{t("HIIT Endurance in 1h 45m")}</span>
-            </div>
-
             <button onClick={() => { if (hasAiAccess) setIsChatOpen(!isChatOpen); else { setToast({ visible: true, message: t('Please purchase an AI package in the Package Store to unlock this feature.') }); setTimeout(() => setToast({ visible: false, message: '' }), 4000); } }} className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--primary-hover)] to-[var(--primary-hover)] hover:from-[var(--primary-hover)] hover:to-[var(--primary-hover)] text-[color:var(--on-primary)] font-semibold text-xs flex items-center gap-2 shadow-[var(--shadow)] transition-all">
                 <Bot className="w-4 h-4" />
                 <span>{t("Ask NEXUS AI")}</span>
@@ -250,10 +263,10 @@ const MemberLayout = () => {
               )}
               <ShoppingCart className={`relative z-10 w-4 h-4 ${isCartHighlighted ? 'animate-bounce' : ''}`} />
               {cartCount > 0 && (
-                <span className={`absolute -top-1.5 -right-1.5 z-20 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center border-2 ${
+                <span className={`absolute -top-1.5 -right-1.5 z-20 min-w-[18px] h-[18px] px-0.5 rounded-full text-[10px] font-black flex items-center justify-center border-2 ${
                   isCartHighlighted
                     ? 'bg-amber-400 text-slate-950 border-white animate-pulse'
-                    : 'bg-[var(--success-hover)] text-[color:var(--on-primary)] border-[var(--border)]'
+                    : 'bg-[var(--success-hover)] text-white border-[var(--surface)]'
                 }`}>
                   {cartCount}
                 </span>
