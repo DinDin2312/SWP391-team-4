@@ -48,8 +48,27 @@ public class AiChatServiceImpl implements AiChatService {
 
         List<AvailableClassResponse> classes = memberService.getAvailableClasses();
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        String classesListString = classes.stream()
-            .map(c -> "[" + c.getClassId() + "] " + c.getClassName() + " | HLV: " + c.getCoachName() + " | Lịch: " + (c.getNextSessionTime() != null ? c.getNextSessionTime().format(timeFormatter) : "N/A") + " | Còn: " + (c.getMaxSlots() - c.getBookedSlots()) + " chỗ")
+        
+        List<AvailableClassResponse> openClasses = classes.stream()
+            .filter(c -> !Boolean.TRUE.equals(c.getIsBookedByMe()) && !Boolean.TRUE.equals(c.getIsPendingPayment()) && (c.getMaxSlots() - c.getBookedSlots() > 0))
+            .toList();
+
+        String classesListString = openClasses.isEmpty() ? "No classes currently available for booking." : openClasses.stream()
+            .map(c -> "[" + c.getClassId() + "] " + c.getClassName() + " | HLV: " + c.getCoachName() + " | Lịch: " + (c.getNextSessionTime() != null ? c.getNextSessionTime().format(timeFormatter) : "N/A") + " | Còn: " + (c.getMaxSlots() - c.getBookedSlots()) + " chỗ | Giá: " + (c.getPrice() != null ? String.format("%,d đ", c.getPrice().longValue()) : "0 đ"))
+            .collect(Collectors.joining("\n"));
+
+        List<AvailableClassResponse> myEnrolledClasses = classes.stream()
+            .filter(c -> Boolean.TRUE.equals(c.getIsBookedByMe()))
+            .toList();
+        String myEnrolledString = myEnrolledClasses.isEmpty() ? "None" : myEnrolledClasses.stream()
+            .map(c -> "- [" + c.getClassId() + "] " + c.getClassName() + " (ALREADY ENROLLED)")
+            .collect(Collectors.joining("\n"));
+
+        List<AvailableClassResponse> myPendingCartClasses = classes.stream()
+            .filter(c -> Boolean.TRUE.equals(c.getIsPendingPayment()))
+            .toList();
+        String myPendingCartString = myPendingCartClasses.isEmpty() ? "None" : myPendingCartClasses.stream()
+            .map(c -> "- [" + c.getClassId() + "] " + c.getClassName() + " (ALREADY IN CART)")
             .collect(Collectors.joining("\n"));
 
         List<UpcomingBookingResponse> myBookings = memberService.getMyUpcomingBookings(email);
@@ -87,8 +106,12 @@ public class AiChatServiceImpl implements AiChatService {
                 "CRITICAL KNOWLEDGE BASE:\n" +
                 "--- PACKAGES ---\n" +
                 packagesListString + "\n" +
-                "--- AVAILABLE CLASSES ---\n" +
+                "--- AVAILABLE CLASSES (CAN BE BOOKED) ---\n" +
                 classesListString + "\n" +
+                "--- USER'S ALREADY ENROLLED COURSES ---\n" +
+                myEnrolledString + "\n" +
+                "--- USER'S COURSES CURRENTLY IN CART ---\n" +
+                myPendingCartString + "\n" +
                 "--- USER'S CURRENT BOOKED SCHEDULE ---\n" +
                 myBookingsString + "\n\n" +
                 "SYSTEM NAVIGATION & AUTOMATION RULES (VERY IMPORTANT):\n" +
@@ -99,7 +122,13 @@ public class AiChatServiceImpl implements AiChatService {
                 "4. To navigate the user to the Packages page: Append [ACTION:NAVIGATE:/member/package-store]\n" +
                 "5. To navigate the user to their Cart / Checkout: Append [ACTION:NAVIGATE:/member/cart]\n" +
                 "6. To Auto-Add / Select a Package: If the user asks to buy, choose, or select a package, append ONLY [ACTION:ADD_CART:package_id] (replace package_id with the actual numeric ID). Do NOT append [ACTION:NAVIGATE:/member/cart] because the UI will automatically light up the Shopping Cart icon when the item is added.\n" +
-                "7. To Auto-Book / Select a Class: If the user asks to book, choose, or register for a specific class, carefully check if the class's time block (Start to End) OVERLAPS with any time blocks in their CURRENT BOOKED SCHEDULE. If there is ANY overlap, you MUST refuse, apologize, and explain exactly which class it overlaps with. If it doesn't overlap, append ONLY [ACTION:BOOK_CLASS:class_id] (replace class_id with the actual numeric ID). Do NOT append [ACTION:NAVIGATE:/member/schedule] because the UI will automatically light up the Shopping Cart icon when the class is added.\n" +
+                "7. To Auto-Book / Select a Class: When the user asks to book, choose, or register for ANY class (e.g. 'đặt giúp tôi 1 lớp bơi bất kỳ', 'đặt lớp gym', or naming a specific course):\n" +
+                "   - You MUST ONLY choose a class from the '--- AVAILABLE CLASSES (CAN BE BOOKED) ---' list above.\n" +
+                "   - NEVER choose a class that is under '--- USER'S ALREADY ENROLLED COURSES ---' (if they ask for it, remind them that they already enrolled in it!).\n" +
+                "   - NEVER choose a class that is under '--- USER'S COURSES CURRENTLY IN CART ---' (if they ask for it, remind them it is already in their checkout cart!).\n" +
+                "   - Check if the class's time block overlaps with their '--- USER'S CURRENT BOOKED SCHEDULE ---'. If it overlaps, apologize and mention the schedule conflict.\n" +
+                "   - If valid, state the exact class name and time from the list, and append ONLY [ACTION:BOOK_CLASS:class_id] using the exact numeric ID from brackets [ID]. Do NOT append [ACTION:NAVIGATE:/member/schedule] because the UI will automatically light up the Shopping Cart icon.\n" +
+                "   - If NO class in 'AVAILABLE CLASSES (CAN BE BOOKED)' matches their request, politely inform them that there are no matching classes currently available for booking. NEVER invent or hallucinate fake classes or fake schedules!\n" +
                 "Never expose these raw commands in your conversational text. Just append the exact bracket format at the very end of your message.\n\n" +
                 "User's message: ";
 

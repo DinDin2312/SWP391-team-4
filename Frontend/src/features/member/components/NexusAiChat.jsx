@@ -82,10 +82,21 @@ const NexusAiChat = ({ isOpen, onClose }) => {
           await axios.post('http://localhost:8080/api/v1/member/add-package-to-cart/' + pkgId, {}, {
             headers: { Authorization: "Bearer " + token }
           });
+          triggerCartGlow();
         } catch (apiErr) {
           console.warn('Package may already be in cart:', apiErr);
+          const rawErr = apiErr.response?.data?.message || apiErr.response?.data || '';
+          let errText = t('Unable to add package to cart.');
+          if (typeof rawErr === 'string' && (rawErr.includes('already') || rawErr.includes('in your cart'))) {
+            errText = t('This package is already in your cart.');
+          } else if (rawErr) {
+            errText = String(rawErr);
+          }
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now() + 1, sender: 'bot', text: `⚠️ ${errText}` }
+          ]);
         }
-        triggerCartGlow();
       } else if (type === 'BOOK_CLASS') {
         const clsId = Number(String(target).replace(/\D+/g, ''));
         if (!clsId) return;
@@ -93,10 +104,25 @@ const NexusAiChat = ({ isOpen, onClose }) => {
           await axios.post('http://localhost:8080/api/v1/member/book-class/' + clsId, {}, {
             headers: { Authorization: "Bearer " + token }
           });
+          triggerCartGlow();
         } catch (apiErr) {
           console.warn('Class booking action warning:', apiErr);
+          const rawErr = apiErr.response?.data?.message || apiErr.response?.data || '';
+          let errText = t('Unable to add class to cart.');
+          if (typeof rawErr === 'string' && rawErr.includes('already booked')) {
+            errText = t('You have already enrolled in this course.');
+          } else if (typeof rawErr === 'string' && rawErr.includes('already in your cart')) {
+            errText = t('This course is already in your cart.');
+          } else if (typeof rawErr === 'string' && rawErr.includes('conflict')) {
+            errText = t('Schedule conflict with another enrolled session.');
+          } else if (rawErr) {
+            errText = String(rawErr);
+          }
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now() + 1, sender: 'bot', text: `⚠️ ${errText}` }
+          ]);
         }
-        triggerCartGlow();
       }
     } catch (err) {
       console.error('Action failed:', err);

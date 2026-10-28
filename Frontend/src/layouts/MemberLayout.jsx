@@ -251,21 +251,21 @@ const MemberLayout = () => {
                 setIsCartHighlighted(false);
                 navigate('/member/cart');
               }}
-              className={`relative p-2.5 rounded-xl transition-all duration-300 ${
+              className={`relative p-2.5 rounded-xl transition-all duration-300 transform ${
                 isCartHighlighted
-                  ? 'bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 text-white border-transparent shadow-[0_0_24px_rgba(59,130,246,0.85)] ring-4 ring-cyan-400/50 scale-110'
-                  : 'bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--success-soft)] hover:text-[var(--success-text)] text-[var(--text)]'
+                  ? 'bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 text-white border-transparent shadow-[0_0_28px_rgba(59,130,246,0.9),0_10px_25px_rgba(0,0,0,0.35)] ring-4 ring-cyan-400/70 scale-125 z-30'
+                  : 'bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)] text-[var(--text)] hover:scale-105'
               }`}
               title={t("View Cart")}
             >
               {isCartHighlighted && (
-                <span className="absolute -inset-1 rounded-xl bg-gradient-to-r from-cyan-400 via-indigo-500 to-amber-400 opacity-75 blur-md animate-pulse pointer-events-none" />
+                <span className="absolute -inset-1 rounded-xl bg-gradient-to-r from-cyan-400 via-indigo-500 to-amber-400 opacity-80 blur-md animate-pulse pointer-events-none" />
               )}
-              <ShoppingCart className={`relative z-10 w-4 h-4 ${isCartHighlighted ? 'animate-bounce' : ''}`} />
+              <ShoppingCart className="relative z-10 w-4 h-4" />
               {cartCount > 0 && (
                 <span className={`absolute -top-1.5 -right-1.5 z-20 min-w-[18px] h-[18px] px-0.5 rounded-full text-[10px] font-black flex items-center justify-center border-2 ${
                   isCartHighlighted
-                    ? 'bg-amber-400 text-slate-950 border-white animate-pulse'
+                    ? 'bg-amber-400 text-slate-950 border-white shadow-sm'
                     : 'bg-[var(--success-hover)] text-white border-[var(--surface)]'
                 }`}>
                   {cartCount}
