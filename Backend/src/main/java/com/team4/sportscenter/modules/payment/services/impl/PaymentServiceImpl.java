@@ -795,24 +795,24 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         List<String> paidItems = new ArrayList<>();
         if (!purchased.isEmpty()) {
             for (var m : purchased) {
-                String pkgName = m.getAPackage() != null ? m.getAPackage().getPackageName() : "GĂ³i há»™i viĂªn";
+                String pkgName = m.getAPackage() != null ? m.getAPackage().getPackageName() : "Gói hội viên";
                 int duration = m.purchasedDuration() > 0 ? m.purchasedDuration() : 30;
-                paidItems.add("GĂ³i táº­p: " + pkgName + " (" + duration + " ngĂ y)");
+                paidItems.add("Gói tập: " + pkgName + " (" + duration + " ngày)");
             }
         }
         if (!booked.isEmpty()) {
             String className = (booked.get(0).getSchedule() != null && booked.get(0).getSchedule().getGymClass() != null)
-                ? booked.get(0).getSchedule().getGymClass().getClassName() : "KhĂ³a há»c";
-            paidItems.add("KhĂ³a há»c: " + className + " (" + booked.size() + " buá»•i)");
+                ? booked.get(0).getSchedule().getGymClass().getClassName() : "Khóa học";
+            paidItems.add("Khóa học: " + className + " (" + booked.size() + " buổi)");
         }
-        String itemsSummary = paidItems.isEmpty() ? "Dá»‹ch vá»¥ phĂ²ng táº­p" : String.join(", ", paidItems);
+        String itemsSummary = paidItems.isEmpty() ? "Dịch vụ phòng tập" : String.join(", ", paidItems);
         String formattedAmount = invoice.getTotalAmount() != null
-                ? String.format("%,d Ä‘", invoice.getTotalAmount().longValue())
-                : "0 Ä‘";
+                ? String.format("%,d đ", invoice.getTotalAmount().longValue())
+                : "0 đ";
         String method = (payment != null && payment.getPaymentMethod() != null) ? payment.getPaymentMethod() : "ONLINE";
 
         String invoiceMsg = String.format(
-            "HĂ³a Ä‘Æ¡n #%d Ä‘Ă£ thanh toĂ¡n thĂ nh cĂ´ng.\nâ€¢ Dá»‹ch vá»¥: %s\nâ€¢ Sá»‘ tiá»n: %s (%s)\nCáº£m Æ¡n báº¡n Ä‘Ă£ lá»±a chá»n Sports Center!",
+            "Hóa đơn #%d đã thanh toán thành công.\n• Dịch vụ: %s\n• Số tiền: %s (%s)\nCảm ơn bạn đã lựa chọn Sports Center!",
             invoice.getInvoiceId(),
             itemsSummary,
             formattedAmount,
@@ -821,31 +821,31 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
 
         notificationService.createNotification(
             invoice.getUser().getEmail(),
-            "Thanh toĂ¡n thĂ nh cĂ´ng / Payment Successful #" + invoice.getInvoiceId(),
+            "Thanh toán thành công / Payment Successful #" + invoice.getInvoiceId(),
             invoiceMsg,
             "PAYMENT"
         );
         if (!purchased.isEmpty()) {
             for (var m : purchased) {
-                String pkgName = m.getAPackage() != null ? m.getAPackage().getPackageName() : "GĂ³i há»™i viĂªn";
+                String pkgName = m.getAPackage() != null ? m.getAPackage().getPackageName() : "Gói hội viên";
                 int duration = m.purchasedDuration() > 0 ? m.purchasedDuration() : 30;
                 notificationService.createNotification(
                     invoice.getUser().getEmail(),
-                    "ÄÄƒng kĂ½ gĂ³i há»™i viĂªn thĂ nh cĂ´ng / Package Activated",
-                    "GĂ³i há»™i viĂªn '" + pkgName + "' (" + duration + " ngĂ y) cá»§a báº¡n Ä‘Ă£ Ä‘Æ°á»£c kĂ­ch hoáº¡t thĂ nh cĂ´ng. "
-                        + "Thá»i háº¡n sá»­ dá»¥ng tá»« " + m.getStartDate() + " Ä‘áº¿n " + m.getEndDate() + ". "
-                        + "Vui lĂ²ng kiá»ƒm tra quyá»n lá»£i trong má»¥c Package Benefits.",
+                    "Đăng ký gói hội viên thành công / Package Activated",
+                    "Gói hội viên '" + pkgName + "' (" + duration + " ngày) của bạn đã được kích hoạt thành công. "
+                        + "Thời hạn sử dụng từ " + m.getStartDate() + " đến " + m.getEndDate() + ". "
+                        + "Vui lòng kiểm tra quyền lợi trong mục Package Benefits.",
                     "PAYMENT"
                 );
             }
         }
         if (!booked.isEmpty()) {
             String className = booked.get(0).getSchedule() != null && booked.get(0).getSchedule().getGymClass() != null
-                ? booked.get(0).getSchedule().getGymClass().getClassName() : "khĂ³a há»c";
+                ? booked.get(0).getSchedule().getGymClass().getClassName() : "khóa học";
             notificationService.createNotification(
                 invoice.getUser().getEmail(),
-                "ÄÄƒng kĂ½ lá»›p há»c thĂ nh cĂ´ng / Class Enrolled",
-                "Báº¡n Ä‘Ă£ thanh toĂ¡n vĂ  Ä‘Äƒng kĂ½ thĂ nh cĂ´ng khĂ³a há»c: " + className + " (" + booked.size() + " buá»•i). Vui lĂ²ng kiá»ƒm tra lá»‹ch há»c trong My Schedule.",
+                "Đăng ký lớp học thành công / Class Enrolled",
+                "Bạn đã thanh toán và đăng ký thành công khóa học: " + className + " (" + booked.size() + " buổi). Vui lòng kiểm tra lịch học trong My Schedule.",
                 "BOOKING"
             );
         }

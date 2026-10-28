@@ -150,8 +150,8 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
 
         // ==================== 3. CALL GEMINI API ====================
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(2500);
-        factory.setReadTimeout(5000);
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(15000);
         RestTemplate restTemplate = new RestTemplate(factory);
 
         Map<String, Object> requestBody = new HashMap<>();
@@ -164,8 +164,11 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
         requestBody.put("contents", List.of(content));
 
         Map<String, Object> generationConfig = new HashMap<>();
-        generationConfig.put("maxOutputTokens", 500);
+        generationConfig.put("maxOutputTokens", 1500);
         generationConfig.put("temperature", 0.7);
+        Map<String, Object> thinkingConfig = new HashMap<>();
+        thinkingConfig.put("thinkingBudget", 0);
+        generationConfig.put("thinkingConfig", thinkingConfig);
         requestBody.put("generationConfig", generationConfig);
 
         HttpHeaders headers = new HttpHeaders();

@@ -58,8 +58,8 @@ public class AiChatServiceImpl implements AiChatService {
             .collect(Collectors.joining("\n"));
 
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(2500);
-        factory.setReadTimeout(5000);
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(15000);
         RestTemplate restTemplate = new RestTemplate(factory);
 
         String systemPrompt = "You are NEXUS AI, a cool, friendly, and energetic personal trainer & assistant EXCLUSIVELY for NEXUS Sports Lab.\n" +
@@ -113,8 +113,11 @@ public class AiChatServiceImpl implements AiChatService {
         requestBody.put("contents", List.of(content));
 
         Map<String, Object> generationConfig = new HashMap<>();
-        generationConfig.put("maxOutputTokens", 300);
+        generationConfig.put("maxOutputTokens", 1000);
         generationConfig.put("temperature", 0.7);
+        Map<String, Object> thinkingConfig = new HashMap<>();
+        thinkingConfig.put("thinkingBudget", 0);
+        generationConfig.put("thinkingConfig", thinkingConfig);
         requestBody.put("generationConfig", generationConfig);
 
         HttpHeaders headers = new HttpHeaders();
