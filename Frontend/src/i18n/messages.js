@@ -3689,3 +3689,93 @@ for (const [en, vi] of billingAndTermsTranslations) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }
+
+const memberDashboardTranslations = [
+  [
+    "Digital Member Pass",
+    "Thẻ hội viên số"
+  ],
+  [
+    "Book Class & PT",
+    "Đặt lớp & HLV cá nhân"
+  ],
+  [
+    "Group classes, courts & 1-on-1 personal training",
+    "Lớp nhóm, đặt sân & huấn luyện viên 1-1"
+  ],
+  [
+    "Memberships, class packages & access passes",
+    "Gói hội viên, thẻ tập & gia hạn dịch vụ"
+  ],
+  [
+    "InBody & Body Metrics",
+    "Chỉ số InBody & Thể chất"
+  ],
+  [
+    "Track weight, body fat & trainer evaluations",
+    "Theo dõi cân nặng, tỷ lệ mỡ & đánh giá HLV"
+  ],
+  [
+    "Attendance Log",
+    "Lịch sử điểm danh"
+  ],
+  [
+    "Verified check-in history & attendance rate",
+    "Tra cứu lịch sử check-in & số buổi tham gia"
+  ],
+  [
+    "shortcuts",
+    "lối tắt"
+  ],
+  [
+    "upcoming sessions",
+    "buổi tập sắp tới"
+  ],
+  [
+    "View Full Schedule",
+    "Xem toàn bộ lịch tập"
+  ],
+  [
+    "Calories burned",
+    "Năng lượng tiêu hao"
+  ],
+  [
+    "Verified check-ins and session completion records",
+    "Ghi nhận lịch sử check-in và hoàn thành buổi tập"
+  ],
+  [
+    "Check schedule below",
+    "Xem lịch chi tiết bên dưới"
+  ],
+  [
+    "Simulate Turnstile Check-in",
+    "Mô phỏng check-in cổng"
+  ]
+];
+
+for (const [en, vi] of memberDashboardTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const attendanceHistoryTranslations = [
+  ["Track your check-in consistency, workout attendance rate, and session history.", "Theo dõi độ chuyên cần, tỷ lệ điểm danh và lịch sử các buổi tập."],
+  ["Upcoming / Pending", "Chưa điểm danh / Sắp tới"],
+  ["Awaiting check-in", "Chờ HLV điểm danh"],
+  ["Missed sessions", "Buổi chưa tham gia"],
+  ["Search by course, coach, room or ID...", "Tìm theo tên lớp, HLV, phòng tập hoặc mã..."],
+  ["Booking ID: #", "Mã đặt chỗ: #"],
+  ["No attendance sessions found", "Không tìm thấy buổi tập nào"],
+  ["Try adjusting your search query or status filter.", "Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái."],
+  ["Reset Filters", "Đặt lại bộ lọc"],
+  ["Loading attendance records...", "Đang tải lịch sử điểm danh..."],
+  ["Coach & Room", "HLV & Phòng tập"],
+  ["Excellent", "Xuất sắc"],
+  ["Good", "Tốt"],
+  ["Needs Improvement", "Cần cố gắng"]
+];
+
+for (const [en, vi] of attendanceHistoryTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
