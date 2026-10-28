@@ -75,7 +75,6 @@ const PaymentCart = () => {
         } else {
           setPendingInvoice(null);
         }
-        }
       }
 
       if (profileRes.status === 'fulfilled' && profileRes.value?.data) {
@@ -128,8 +127,6 @@ const PaymentCart = () => {
       setCancellingCheckout(false);
     }
   };
-    }
-  };
 
   const handleRemoveItem = async (id, type) => {
     try {
@@ -177,8 +174,6 @@ const PaymentCart = () => {
               navigate(response.data.paymentUrl);
           } else {
               window.location.href = response.data.paymentUrl;
-          }
-      }
           }
       }
 
@@ -290,8 +285,6 @@ const PaymentCart = () => {
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
-        </div>
-      )}
         </div>
       )}
 
