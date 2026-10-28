@@ -23,6 +23,7 @@ const Notifications = lazy(() => import('../features/member/pages/Notifications'
 const Settings = lazy(() => import('../features/member/pages/Settings'));
 const PaymentCart = lazy(() => import('../features/member/pages/PaymentCart'));
 const PaymentResult = lazy(() => import('../features/member/pages/PaymentResult'));
+const VietQRPayment = lazy(() => import('../features/member/pages/VietQRPayment'));
 const PackageStore = lazy(() => import('../features/member/pages/PackageStore'));
 const BillingHistory = lazy(() => import('../features/member/pages/BillingHistory'));
 const AttendanceHistory = lazy(() => import('../features/member/pages/AttendanceHistory'));
@@ -65,6 +66,7 @@ function AppRoutes() {
         <Route path="settings" element={<Settings />} />
         <Route path="cart" element={<PaymentCart />} />
         <Route path="payment-result" element={<PaymentResult />} />
+        <Route path="vietqr-pay" element={<VietQRPayment />} />
         <Route path="package-store" element={<PackageStore />} />
         <Route path="billing" element={<BillingHistory />} />
         <Route path="attendance" element={<AttendanceHistory />} />

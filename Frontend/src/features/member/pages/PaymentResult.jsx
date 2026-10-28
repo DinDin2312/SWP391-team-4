@@ -26,13 +26,19 @@ const PaymentResult = () => {
     const processPayment = async () => {
       try {
         const token = localStorage.getItem('token');
-        let endpoint = searchParams.has('partnerCode') ? 'momo-callback' : 'vnpay-callback';
+        let endpoint = 'vnpay-callback';
+        if (searchParams.has('partnerCode')) {
+          endpoint = 'momo-callback';
+        } else if (searchParams.has('orderCode')) {
+          endpoint = 'payos-callback';
+        }
         const response = await axios.get(`http://localhost:8080/api/v1/payment/${endpoint}?${queryString}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
 
         setStatus(response.data.status === 'PAID' ? 'success' : 'error');
         window.dispatchEvent(new Event('notificationUpdated'));
+        window.dispatchEvent(new Event('cartUpdated'));
         setMessage(response.data.message || 'Payment Successful! Your courses are now confirmed.');
       } catch (error) {
         setStatus('error');

@@ -626,6 +626,43 @@ Please do not close this window|Vui lòng không đóng cửa sổ này
 Please do not close this window...|Vui lòng không đóng cửa sổ này...
 Connecting to VNPay Gateway...|Đang kết nối cổng VNPay...
 Opening Momo App...|Đang mở ứng dụng Momo...
+Generating VietQR payment code...|Đang tạo mã thanh toán VietQR...
+VietQR (Bank Transfer)|VietQR (Chuyển khoản Ngân hàng)
+Real-time bank payment|Thanh toán ngân hàng thật tức thì
+Instant Bank Settlement|Nhận tiền tức thì vào tài khoản
+VietQR (PayOS)|VietQR (PayOS)
+VietQR Bank Transfer Payment|Thanh toán Chuyển khoản VietQR
+Open any banking app or e-wallet to scan Napas 247 QR|Mở ứng dụng ngân hàng hoặc ví điện tử bất kỳ để quét mã Napas 247
+Beneficiary Transfer Information|Thông tin chuyển khoản thụ hưởng
+I have successfully transferred|Tôi đã chuyển khoản thành công
+Cancel / Back to Cart|Hủy / Quay lại giỏ hàng
+Beneficiary Bank|Ngân hàng thụ hưởng
+Account Number|Số tài khoản
+Account Holder Name|Tên người nhận (Chủ TK)
+Transfer Amount|Số tiền cần chuyển
+Transfer Content (Required)|Nội dung chuyển khoản (bắt buộc)
+Keep this content unchanged for automatic confirmation|Giữ nguyên nội dung này để xác nhận tự động
+Download QR Code Image|Tải ảnh mã QR về máy
+Expires in:|Hết hạn sau:
+Confirming payment with system...|Đang xác nhận với hệ thống...
+Fetching beneficiary account information...|Đang lấy thông tin tài khoản thụ hưởng...
+Payment Loading Error|Lỗi tải thanh toán
+Invoice not found or expired.|Hóa đơn không tồn tại hoặc đã hết hạn.
+QR code has expired|Mã QR đã hết hạn
+Re-create order|Tạo lại đơn hàng
+Cancelling...|Đang hủy...
+System automatically fills the exact Amount & Content when scanning|Hệ thống tự động điền đúng Số tiền & Nội dung khi quét mã
+After completing the transfer on your banking app, please click|Sau khi hoàn tất thao tác chuyển khoản trên ứng dụng ngân hàng, vui lòng bấm nút
+below to activate your package/course.|bên dưới để hệ thống kích hoạt gói dịch vụ cho bạn.
+Unable to load VietQR payment information.|Không thể tải thông tin thanh toán VietQR.
+An error occurred while confirming payment.|Có lỗi xảy ra khi xác nhận thanh toán.
+Unable to cancel checkout session.|Không thể hủy phiên thanh toán.
+Unable to cancel order.|Không thể hủy đơn hàng.
+Cancel Order|Hủy đơn hàng
+Cancel Pending Checkout|Hủy phiên thanh toán
+Resume Payment|Tiếp tục thanh toán
+Pending Checkout Session|Phiên thanh toán đang chờ xử lý
+Copy|Sao chép
 Verifying Credit Card Details...|Đang xác minh thông tin thẻ...
 Credit Card|Thẻ tín dụng
 Proceed to Member Portal|Đến cổng hội viên
@@ -1422,7 +1459,23 @@ Object.assign(translations, {
   'Cancelled': ['Cancelled', 'Đã hủy'],
   'Pending session cancelled successfully.': ['Pending session cancelled successfully.', 'Đã hủy phiên thanh toán chờ thành công.'],
   'Failed to cancel pending session.': ['Failed to cancel pending session.', 'Hủy phiên thanh toán chờ thất bại.'],
-  'Cancel / Close': ['Cancel / Close', 'Hủy / Đóng']
+  'Cancel / Close': ['Cancel / Close', 'Hủy / Đóng'],
+  'Pending Checkout Session': ['Pending Checkout Session', 'Phiên thanh toán đang chờ xử lý'],
+  'Phiên thanh toán đang chờ xử lý': ['Pending Checkout Session', 'Phiên thanh toán đang chờ xử lý'],
+  'You have a checkout session awaiting payment. The cart is temporarily locked. You can resume payment or cancel the session to edit your cart.': ['You have a checkout session awaiting payment. The cart is temporarily locked. You can resume payment or cancel the session to edit your cart.', 'Bạn có một lượt checkout đang chờ thanh toán. Giỏ hàng tạm thời bị khóa. Bạn có thể tiếp tục thanh toán hoặc hủy phiên để chỉnh sửa giỏ hàng.'],
+  'Bạn có một lượt checkout đang chờ thanh toán. Giỏ hàng tạm thời bị khóa. Bạn có thể tiếp tục thanh toán hoặc hủy phiên để chỉnh sửa giỏ hàng.': ['You have a checkout session awaiting payment. The cart is temporarily locked. You can resume payment or cancel the session to edit your cart.', 'Bạn có một lượt checkout đang chờ thanh toán. Giỏ hàng tạm thời bị khóa. Bạn có thể tiếp tục thanh toán hoặc hủy phiên để chỉnh sửa giỏ hàng.'],
+  'Cancel Pending Checkout': ['Cancel Pending Checkout', 'Hủy phiên thanh toán'],
+  'Hủy phiên thanh toán': ['Cancel Pending Checkout', 'Hủy phiên thanh toán'],
+  'Resume Payment': ['Resume Payment', 'Tiếp tục thanh toán'],
+  'Tiếp tục thanh toán': ['Resume Payment', 'Tiếp tục thanh toán'],
+  'Checkout Cancelled': ['Checkout Cancelled', 'Đã hủy thanh toán'],
+  'Đã hủy thanh toán': ['Checkout Cancelled', 'Đã hủy thanh toán'],
+  'Pending checkout session has been cancelled. Your cart is now unlocked.': ['Pending checkout session has been cancelled. Your cart is now unlocked.', 'Phiên thanh toán đang chờ đã được hủy. Giỏ hàng hiện đã được mở khóa.'],
+  'Phiên thanh toán đang chờ đã được hủy. Giỏ hàng hiện đã được mở khóa.': ['Pending checkout session has been cancelled. Your cart is now unlocked.', 'Phiên thanh toán đang chờ đã được hủy. Giỏ hàng hiện đã được mở khóa.'],
+  'Cancelling...': ['Cancelling...', 'Đang hủy...'],
+  'Đang hủy...': ['Cancelling...', 'Đang hủy...'],
+  'Cancel Order': ['Cancel Order', 'Hủy đơn hàng'],
+  'Hủy đơn hàng': ['Cancel Order', 'Hủy đơn hàng']
 });
 
 Object.assign(translations, {

@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   ShoppingCart, Trash2, ArrowRight, CreditCard,
-  Wallet, QrCode, AlertCircle, CheckCircle2, Ticket, X
+  Wallet, QrCode, AlertCircle, CheckCircle2, Ticket, X,
+  Clock, XCircle, Loader2
 } from 'lucide-react';
 
 const PaymentCart = () => {
@@ -18,9 +19,10 @@ const PaymentCart = () => {
   const [discountPercent, setDiscountPercent] = useState(0);
   const [availableCredits, setAvailableCredits] = useState([]);
   const [selectedCredit, setSelectedCredit] = useState(null);
-  const [selectedMethod, setSelectedMethod] = useState('credit');
+  const [selectedMethod, setSelectedMethod] = useState('payos');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [pendingCheckout, setPendingCheckout] = useState(null);
+  const [pendingInvoice, setPendingInvoice] = useState(null);
+  const [cancellingCheckout, setCancellingCheckout] = useState(false);
   const [toast, setToast] = useState({ visible: false, type: 'success', title: '', message: '' });
 
   useEffect(() => {
@@ -64,13 +66,15 @@ const PaymentCart = () => {
       if (cartRes.status === 'fulfilled' && cartRes.value?.data) {
         setItems(cartRes.value.data.items || []);
         setTotalPrice(cartRes.value.data.totalPrice || 0);
-        if (cartRes.value.data.hasPendingCheckout) {
-          setPendingCheckout({
+        if (cartRes.value.data.hasPendingCheckout || cartRes.value.data.pendingInvoiceId) {
+          setPendingInvoice({
             invoiceId: cartRes.value.data.pendingInvoiceId,
+            paymentUrl: cartRes.value.data.pendingPaymentUrl,
             paymentMethod: cartRes.value.data.pendingPaymentMethod
           });
         } else {
-          setPendingCheckout(null);
+          setPendingInvoice(null);
+        }
         }
       }
 
@@ -95,19 +99,35 @@ const PaymentCart = () => {
     }
   };
 
-  const handleCancelPending = async () => {
+  const handleCancelPendingCheckout = async (targetInvoiceId = null) => {
     try {
+      setCancellingCheckout(true);
       const token = localStorage.getItem('token');
       const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
-      await axios.post('http://localhost:8080/api/v1/payment/cart/cancel-pending', {}, { headers: authHeader });
-      setPendingCheckout(null);
-      setToast({ visible: true, type: 'success', title: t('Cancelled'), message: t('Pending session cancelled successfully.') });
-      setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 3000);
-      fetchCartItems();
+      const invId = targetInvoiceId || pendingInvoice?.invoiceId;
+      try {
+        await axios.post('http://localhost:8080/api/v1/payment/cancel-pending-checkout', { invoiceId: invId }, { headers: authHeader });
+      } catch (e) {
+        await axios.post('http://localhost:8080/api/v1/payment/cart/cancel-pending', {}, { headers: authHeader });
+      }
+      setToast({
+        visible: true,
+        type: 'success',
+        title: t('Checkout Cancelled'),
+        message: t('Pending checkout session has been cancelled. Your cart is now unlocked.')
+      });
+      setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 4000);
+      setPendingInvoice(null);
+      await fetchCartItems();
       window.dispatchEvent(new Event('cartUpdated'));
     } catch (err) {
-      setToast({ visible: true, type: 'error', title: t('Error'), message: t('Failed to cancel pending session.') });
-      setTimeout(() => setToast({ visible: false, type: 'error', title: '', message: '' }), 3000);
+      const msg = err.response?.data?.message || err.response?.data || t('Unable to cancel checkout session.');
+      setToast({ visible: true, type: 'error', title: t('Error'), message: t(msg) });
+      setTimeout(() => setToast({ visible: false, type: 'error', title: '', message: '' }), 4000);
+    } finally {
+      setCancellingCheckout(false);
+    }
+  };
     }
   };
 
@@ -124,13 +144,15 @@ const PaymentCart = () => {
           headers: authHeader
         });
       }
-      setToast({ visible: true, type: 'success', title: 'Removed', message: t('Item removed from cart.') });
+      setToast({ visible: true, type: 'success', title: t('Removed'), message: t('Item removed from cart.') });
       setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 3000);
       fetchCartItems(); // Refresh the cart
       window.dispatchEvent(new Event('cartUpdated')); // Update the global badge
     } catch (err) {
-      setToast({ visible: true, type: 'error', title: 'Error', message: t('Failed to remove item.') });
-      setTimeout(() => setToast({ visible: false, type: 'error', title: '', message: '' }), 3000);
+      const errorMsg = err.response?.data?.message || err.response?.data || t('Failed to remove item.');
+      setToast({ visible: true, type: 'error', title: t('Error'), message: t(errorMsg) });
+      setTimeout(() => setToast({ visible: false, type: 'error', title: '', message: '' }), 4000);
+      fetchCartItems(); // Refresh to catch pending checkout if locked
     }
   };
 
@@ -147,22 +169,25 @@ const PaymentCart = () => {
         headers: { Authorization: `Bearer ${token}`}
       });
 
-      // Redirect to VNPay / MoMo.
+      // Redirect to payment gateway or internal payment page
       if (response.data && response.data.paymentUrl) {
           window.dispatchEvent(new Event("cartUpdated"));
-          if (response.data.completed) {
-            setCheckoutLoading(false);
-            navigate(response.data.paymentUrl);
+          if (response.data.paymentUrl.startsWith('/') || response.data.completed) {
+              setCheckoutLoading(false);
+              navigate(response.data.paymentUrl);
           } else {
-            window.location.href = response.data.paymentUrl;
+              window.location.href = response.data.paymentUrl;
+          }
+      }
           }
       }
 
     } catch (err) {
       const errorMsg = err.response?.data?.message || 'Payment failed. Please try again.';
-      setToast({ visible: true, type: 'error', title: t('Checkout Error'), message: errorMsg });
+      setToast({ visible: true, type: 'error', title: t('Checkout Error'), message: t(errorMsg) });
       setTimeout(() => setToast({ visible: false, type: 'error', title: '', message: '' }), 5000);
       setCheckoutLoading(false);
+      fetchCartItems(); // Refresh to detect pending checkout if locked
     }
   };
 
@@ -198,7 +223,8 @@ const PaymentCart = () => {
             <div className="w-16 h-16 border-4 border-[var(--primary-soft)] border-t-blue-500 rounded-full animate-spin mb-6"></div>
             <h3 className="text-xl font-bold text-[var(--text)] mb-2">{t("Processing Payment")}</h3>
             <p className="text-sm text-[var(--text-muted)] text-center">
-              {t(selectedMethod === 'vnpay' ? t('Connecting to VNPay Gateway...') :
+              {t(selectedMethod === 'payos' ? t('Generating VietQR payment code...') :
+               selectedMethod === 'vnpay' ? t('Connecting to VNPay Gateway...') :
                selectedMethod === 'momo' ? t('Opening Momo App...') :
                t('Verifying Credit Card Details...'))}
             </p>
@@ -220,29 +246,52 @@ const PaymentCart = () => {
         <p className="text-sm text-[var(--text-muted)] mt-2">{t("Courses in cart are first-come, first-served. Complete payment to secure your spot.")}</p>
       </section>
 
-      {/* Pending Session Banner */}
-      {pendingCheckout && (
-        <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-[var(--text)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-              <AlertCircle className="w-5 h-5" />
+      {/* Pending Checkout Alert Banner */}
+      {pendingInvoice && (
+        <div className="mb-8 p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+              <Clock className="w-5 h-5 animate-pulse" />
             </div>
             <div className="flex flex-col">
-              <span className="font-bold text-sm text-amber-700 dark:text-amber-300">
-                {t('Checkout awaiting payment (Invoice #')}{pendingCheckout.invoiceId}{')'}
+              <span className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
+                {t("Pending Checkout Session")}
+                <span className="font-mono text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                  #{pendingInvoice.invoiceId}
+                </span>
               </span>
-              <span className="text-xs text-[var(--text-muted)]">
-                {t('You can click Confirm & Pay to create a fresh payment link, or cancel the pending session.')}
-              </span>
+              <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
+                {t("You have a checkout session awaiting payment. The cart is temporarily locked. You can resume payment or cancel the session to edit your cart.")}
+              </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleCancelPending}
-            className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 font-semibold text-xs transition-colors self-end sm:self-auto cursor-pointer"
-          >
-            {t('Cancel Pending Session')}
-          </button>
+          <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 justify-end">
+            <button
+              type="button"
+              onClick={() => handleCancelPendingCheckout(pendingInvoice.invoiceId)}
+              disabled={cancellingCheckout}
+              className="px-4 py-2 text-xs font-semibold rounded-xl border border-[var(--border)] text-[var(--danger-text)] hover:bg-[var(--danger-soft)] transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              {cancellingCheckout ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+              {t("Cancel Pending Checkout")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (pendingInvoice.paymentUrl) {
+                  navigate(pendingInvoice.paymentUrl);
+                } else {
+                  navigate(`/member/vietqr-pay?invoiceId=${pendingInvoice.invoiceId}`);
+                }
+              }}
+              className="px-4 py-2 text-xs font-bold rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[color:var(--on-primary)] transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+            >
+              {t("Resume Payment")}
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
         </div>
       )}
 
@@ -341,29 +390,68 @@ const PaymentCart = () => {
 
             {/* Payment Methods */}
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 flex flex-col gap-4">
-              <h2 className="text-lg font-bold text-[var(--text)] mb-2">{t("Payment Method")}</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-[var(--text)]">{t("Payment Method")}</h2>
+                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
+                  {t("Instant Bank Settlement")}
+                </span>
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
-                  onClick={() => setSelectedMethod('credit')}
-                  className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-colors ${selectedMethod === 'credit' ? t('border-[var(--primary-soft)] bg-[var(--primary-soft)] text-[var(--primary)]') : t('border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]')}`}
+                  type="button"
+                  onClick={() => setSelectedMethod('payos')}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedMethod === 'payos' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]'}`}
                 >
-                  <CreditCard className="w-6 h-6 mb-2" />
-                  <span className="text-xs font-bold">{t("Credit Card")}</span>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${selectedMethod === 'payos' ? 'bg-emerald-500 text-white' : 'bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}>
+                    <QrCode className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-[var(--text)]">{t("VietQR (Bank Transfer)")}</span>
+                    <span className="text-[10px] text-[var(--text-muted)]">{t("Real-time bank payment")}</span>
+                  </div>
                 </button>
+
                 <button
-                  onClick={() => setSelectedMethod('momo')}
-                  className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-colors ${selectedMethod === 'momo' ? t('border-[var(--rose-soft)] bg-[var(--rose-soft)] text-[var(--rose)]') : t('border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]')}`}
-                >
-                  <Wallet className="w-6 h-6 mb-2" />
-                  <span className="text-xs font-bold">{t("Momo")}</span>
-                </button>
-                <button
+                  type="button"
                   onClick={() => setSelectedMethod('vnpay')}
-                  className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-colors ${selectedMethod === 'vnpay' ? t('border-[var(--cyan-soft)] bg-[var(--cyan-soft)] text-[var(--cyan)]') : t('border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]')}`}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedMethod === 'vnpay' ? 'border-[var(--cyan-soft)] bg-[var(--cyan-soft)] text-[var(--cyan)] shadow-sm' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]'}`}
                 >
-                  <QrCode className="w-6 h-6 mb-2" />
-                  <span className="text-xs font-bold">{t("VNPay")}</span>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${selectedMethod === 'vnpay' ? 'bg-[var(--cyan)] text-white' : 'bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}>
+                    <QrCode className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-[var(--text)]">{t("VNPay")}</span>
+                    <span className="text-[10px] text-[var(--text-muted)]">{t("VNPay gateway")}</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedMethod('momo')}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedMethod === 'momo' ? 'border-[var(--rose-soft)] bg-[var(--rose-soft)] text-[var(--rose)] shadow-sm' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]'}`}
+                >
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${selectedMethod === 'momo' ? 'bg-[var(--rose)] text-white' : 'bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}>
+                    <Wallet className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-[var(--text)]">{t("Momo")}</span>
+                    <span className="text-[10px] text-[var(--text-muted)]">{t("MoMo e-wallet")}</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedMethod('credit')}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedMethod === 'credit' ? 'border-[var(--primary-soft)] bg-[var(--primary-soft)] text-[var(--primary)] shadow-sm' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]'}`}
+                >
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${selectedMethod === 'credit' ? 'bg-[var(--primary)] text-white' : 'bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}>
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-[var(--text)]">{t("Credit Card")}</span>
+                    <span className="text-[10px] text-[var(--text-muted)]">{t("International cards")}</span>
+                  </div>
                 </button>
               </div>
             </div>

@@ -17,5 +17,6 @@ public class CartResponse {
     @Builder.Default
     private boolean hasPendingCheckout = false;
     private Integer pendingInvoiceId;
+    private String pendingPaymentUrl;
     private String pendingPaymentMethod;
 }

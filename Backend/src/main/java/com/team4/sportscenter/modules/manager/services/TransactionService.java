@@ -22,7 +22,7 @@ public class TransactionService {
         if (from == null || to == null || from.isAfter(to) || page < 0 || size < 1 || size > 100)
             throw new IllegalArgumentException("Invalid date range or pagination.");
         Set<String> statuses = payments ? Set.of("ALL","SUCCESS","PENDING","FAILED","CANCELLED","REVIEW") : Set.of("ALL","PAID","PENDING","FAILED","CANCELLED","REVIEW");
-        if (!statuses.contains(status) || !Set.of("ALL","VNPAY","MOMO","CASH","FREE").contains(method)) throw new IllegalArgumentException("Invalid transaction filter.");
+        if (!statuses.contains(status) || !Set.of("ALL","VNPAY","MOMO","CASH","FREE","PAYOS").contains(method)) throw new IllegalArgumentException("Invalid transaction filter.");
         String source = payments ? " FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id LEFT JOIN USERS u ON u.user_id=i.user_id " : " FROM INVOICES i LEFT JOIN USERS u ON u.user_id=i.user_id ";
         String date = payments ? "p.payment_date" : "i.created_at";
         String state = payments ? PAYMENT_STATE : "i.status";

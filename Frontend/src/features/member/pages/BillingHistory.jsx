@@ -1,32 +1,53 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDateTime } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Receipt, Dumbbell, CreditCard, RefreshCw } from 'lucide-react';
 
 const BillingHistory = () => {
   useLanguage();
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
+
+  const fetchInvoices = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:8080/api/v1/invoices', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setInvoices(res.data);
+    } catch (err) {
+      console.error("Failed to fetch invoices", err);
+      setError("Unable to load billing history.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchInvoices = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:8080/api/v1/invoices', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setInvoices(res.data);
-      } catch (err) {
-        console.error("Failed to fetch invoices", err);
-        setError("Unable to load billing history.");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchInvoices();
   }, []);
+
+  const handleCancelInvoice = async (invoiceId) => {
+    try {
+      setCancellingId(invoiceId);
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:8080/api/v1/payment/cancel-pending-checkout',
+        { invoiceId },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      window.dispatchEvent(new Event('cartUpdated'));
+      await fetchInvoices();
+    } catch (err) {
+      alert(err.response?.data?.message || t('Unable to cancel order.'));
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -149,6 +170,25 @@ const BillingHistory = () => {
                         <span className="text-sm font-semibold text-on-surface mt-1">{formatDateTime(invoice.paymentDate)}</span>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Actions for PENDING invoice */}
+                {invoice.status === 'PENDING' && (
+                  <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-surface-container">
+                    <button
+                      onClick={() => handleCancelInvoice(invoice.invoiceId)}
+                      disabled={cancellingId === invoice.invoiceId}
+                      className="px-4 py-2 text-xs font-semibold rounded-xl border border-[var(--border)] text-[var(--danger-text)] hover:bg-[var(--danger-soft)] transition-colors"
+                    >
+                      {cancellingId === invoice.invoiceId ? t('Cancelling...') : t('Cancel Order')}
+                    </button>
+                    <button
+                      onClick={() => navigate(`/member/vietqr-pay?invoiceId=${invoice.invoiceId}`)}
+                      className="px-4 py-2 text-xs font-bold rounded-xl bg-primary text-on-primary hover:opacity-90 transition-all shadow-sm"
+                    >
+                      {t('Resume Payment')}
+                    </button>
                   </div>
                 )}
 
