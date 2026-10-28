@@ -543,7 +543,6 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     @Transactional
     public void removeFromCart(String email, Integer classId) {
         bookingRepository.lockOperations();
-        userRepository.findByEmail(email).ifPresent(u -> cancelPendingInvoicesForUser(u.getUserId()));
         assertCartMutable(email);
         List<Booking> pendingBookings = bookingRepository.findAllBookingsByEmail(email)
                 .stream()
@@ -562,7 +561,6 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     @Transactional
     public void removePackageFromCart(String email, Integer packageId) {
         bookingRepository.lockOperations();
-        userRepository.findByEmail(email).ifPresent(u -> cancelPendingInvoicesForUser(u.getUserId()));
         assertCartMutable(email);
         List<com.team4.sportscenter.modules.member.entities.UserMembership> memberships = userMembershipRepository.findByEmailAndStatus(email, "PENDING").stream().filter(m -> m.getAPackage().getPackageId().equals(packageId)).toList();
         if (!memberships.isEmpty()) {
@@ -574,7 +572,6 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     @Transactional
     public void clearCart(String email) {
         bookingRepository.lockOperations();
-        userRepository.findByEmail(email).ifPresent(u -> cancelPendingInvoicesForUser(u.getUserId()));
         assertCartMutable(email);
         List<Booking> pendingBookings = bookingRepository.findAllBookingsByEmail(email)
                 .stream().filter(b -> "PENDING".equals(b.getStatus())).toList();

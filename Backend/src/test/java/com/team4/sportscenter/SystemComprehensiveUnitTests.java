@@ -491,6 +491,7 @@ class SystemComprehensiveUnitTests {
         InvoiceDetailRepository detailRepo = mock(InvoiceDetailRepository.class);
         PaymentRepository paymentRepo = mock(PaymentRepository.class);
         com.team4.sportscenter.config.VNPayConfig vnPay = mock(com.team4.sportscenter.config.VNPayConfig.class);
+        com.team4.sportscenter.config.PayOSConfig payOS = mock(com.team4.sportscenter.config.PayOSConfig.class);
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         com.team4.sportscenter.modules.member.services.PackageCommerceService commerce = mock(com.team4.sportscenter.modules.member.services.PackageCommerceService.class);
         com.team4.sportscenter.modules.notification.services.NotificationService notifService = mock(com.team4.sportscenter.modules.notification.services.NotificationService.class);
@@ -499,7 +500,7 @@ class SystemComprehensiveUnitTests {
 
         com.team4.sportscenter.modules.payment.services.impl.PaymentServiceImpl paymentService = new com.team4.sportscenter.modules.payment.services.impl.PaymentServiceImpl(
             bookingRepo, membershipRepo, userRepo, invoiceRepo, detailRepo, paymentRepo,
-            vnPay, jdbc, commerce, notifService, pkgTypes, creditRepo
+            vnPay, payOS, jdbc, commerce, notifService, pkgTypes, creditRepo
         );
 
         User user = User.builder().userId(10).email("member@gym.vn").build();
