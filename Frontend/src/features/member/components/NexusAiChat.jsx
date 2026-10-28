@@ -324,7 +324,18 @@ const NexusAiChat = ({ isOpen, onClose }) => {
             </div>
 
             {/* QUICK SUGGESTION CHIPS */}
-            <div className="px-3 py-2 border-t border-[var(--border)] bg-[var(--surface-hover)]/30 overflow-x-auto no-scrollbar flex items-center gap-1.5 whitespace-nowrap">
+            <div 
+              onWheel={(e) => {
+                if (e.deltaY !== 0) {
+                  e.currentTarget.scrollLeft += e.deltaY;
+                }
+              }}
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+              }}
+              className="px-3 py-2 border-t border-[var(--border)] bg-[var(--surface-hover)]/30 overflow-x-auto no-scrollbar flex items-center gap-1.5 whitespace-nowrap [&::-webkit-scrollbar]:hidden select-none"
+            >
               <span className="flex items-center gap-1 text-[11px] font-semibold text-[var(--primary)] pl-0.5 select-none flex-shrink-0">
                 <Sparkles className="w-3 h-3 text-amber-500" />
                 {t("Suggestions")}:
