@@ -15,9 +15,15 @@ const NexusAiChat = ({ isOpen, onClose }) => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isChipsHovered, setIsChipsHovered] = useState(false);
+  
   const dragRef = useRef(null);
   const offset = useRef({ x: 0, y: 0 });
   const recognitionRef = useRef(null);
+  const chipsScrollRef = useRef(null);
+  const isDraggingChips = useRef(false);
+  const dragStartX = useRef(0);
+  const scrollStartX = useRef(0);
   const navigate = useNavigate();
 
   const messagesEndRef = useRef(null);
@@ -68,6 +74,73 @@ const NexusAiChat = ({ isOpen, onClose }) => {
       }
     };
   }, [lang]);
+
+  // Infinite marquee conveyor loop for suggestion chips
+  useEffect(() => {
+    let animId;
+    const track = chipsScrollRef.current;
+    if (!track) return;
+
+    if (track.scrollLeft === 0) {
+      track.scrollLeft = 1;
+    }
+
+    const step = () => {
+      if (!isChipsHovered && !isLoading && track && !isDraggingChips.current) {
+        track.scrollLeft += 0.55;
+        const setWidth = track.scrollWidth / 3;
+        if (setWidth > 0 && track.scrollLeft >= setWidth * 2) {
+          track.scrollLeft -= setWidth;
+        }
+      }
+      animId = requestAnimationFrame(step);
+    };
+
+    animId = requestAnimationFrame(step);
+
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [isChipsHovered, isLoading]);
+
+  const handleChipsWheel = (e) => {
+    const track = chipsScrollRef.current;
+    if (!track || e.deltaY === 0) return;
+    track.scrollLeft += e.deltaY * 0.75;
+    const setWidth = track.scrollWidth / 3;
+    if (setWidth > 0) {
+      if (track.scrollLeft >= setWidth * 2) {
+        track.scrollLeft -= setWidth;
+      } else if (track.scrollLeft <= 0) {
+        track.scrollLeft += setWidth;
+      }
+    }
+  };
+
+  const handleChipsMouseDown = (e) => {
+    isDraggingChips.current = true;
+    dragStartX.current = e.pageX - (chipsScrollRef.current?.offsetLeft || 0);
+    scrollStartX.current = chipsScrollRef.current?.scrollLeft || 0;
+  };
+
+  const handleChipsMouseMove = (e) => {
+    if (!isDraggingChips.current || !chipsScrollRef.current) return;
+    const x = e.pageX - chipsScrollRef.current.offsetLeft;
+    const walk = (x - dragStartX.current) * 1.2;
+    chipsScrollRef.current.scrollLeft = scrollStartX.current - walk;
+    const setWidth = chipsScrollRef.current.scrollWidth / 3;
+    if (setWidth > 0) {
+      if (chipsScrollRef.current.scrollLeft >= setWidth * 2) {
+        chipsScrollRef.current.scrollLeft -= setWidth;
+      } else if (chipsScrollRef.current.scrollLeft <= 0) {
+        chipsScrollRef.current.scrollLeft += setWidth;
+      }
+    }
+  };
+
+  const handleChipsMouseUp = () => {
+    isDraggingChips.current = false;
+  };
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
@@ -323,34 +396,48 @@ const NexusAiChat = ({ isOpen, onClose }) => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* QUICK SUGGESTION CHIPS */}
-            <div 
-              onWheel={(e) => {
-                if (e.deltaY !== 0) {
-                  e.currentTarget.scrollLeft += e.deltaY;
-                }
-              }}
-              style={{
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-              }}
-              className="px-3 py-2 border-t border-[var(--border)] bg-[var(--surface-hover)]/30 overflow-x-auto no-scrollbar flex items-center gap-1.5 whitespace-nowrap [&::-webkit-scrollbar]:hidden select-none"
-            >
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-[var(--primary)] pl-0.5 select-none flex-shrink-0">
-                <Sparkles className="w-3 h-3 text-amber-500" />
-                {t("Suggestions")}:
-              </span>
-              {quickChips.map((chip, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  disabled={isLoading}
-                  onClick={() => handleSend(chip.prompt)}
-                  className="text-[11.5px] px-2.5 py-1 rounded-full bg-[var(--surface)] hover:bg-[var(--primary)] hover:text-white text-[var(--text)] border border-[var(--border)] transition-all flex-shrink-0 shadow-xs disabled:opacity-50 active:scale-95 cursor-pointer font-medium"
-                >
-                  {chip.label}
-                </button>
-              ))}
+            {/* QUICK SUGGESTION CHIPS (INFINITE CONVEYOR) */}
+            <div className="px-2.5 py-1.5 border-t border-[var(--border)] bg-[var(--surface-hover)]/30 flex items-center gap-1.5 overflow-hidden">
+              <div className="flex items-center gap-1 text-[11px] font-semibold text-[var(--primary)] pl-1 select-none shrink-0">
+                <Sparkles className="w-3 h-3 text-amber-500 animate-spin" style={{ animationDuration: '8s' }} />
+                <span className="hidden sm:inline">{t("Suggestions")}:</span>
+              </div>
+
+              <div 
+                ref={chipsScrollRef}
+                onMouseEnter={() => setIsChipsHovered(true)}
+                onMouseLeave={() => {
+                  setIsChipsHovered(false);
+                  handleChipsMouseUp();
+                }}
+                onWheel={handleChipsWheel}
+                onMouseDown={handleChipsMouseDown}
+                onMouseMove={handleChipsMouseMove}
+                onMouseUp={handleChipsMouseUp}
+                style={{
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                  maskImage: 'linear-gradient(to right, transparent, black 4%, black 96%, transparent)',
+                  WebkitMaskImage: 'linear-gradient(to right, transparent, black 4%, black 96%, transparent)',
+                }}
+                className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-1.5 whitespace-nowrap [&::-webkit-scrollbar]:hidden select-none cursor-grab active:cursor-grabbing py-0.5"
+              >
+                {[0, 1, 2].map((copyIdx) => (
+                  <div key={copyIdx} className="flex items-center gap-1.5 shrink-0">
+                    {quickChips.map((chip, idx) => (
+                      <button
+                        key={`${copyIdx}-${idx}`}
+                        type="button"
+                        disabled={isLoading}
+                        onClick={() => handleSend(chip.prompt)}
+                        className="text-[11px] px-2.5 py-1 rounded-full bg-[var(--surface)] hover:bg-[var(--primary)] hover:text-white text-[var(--text)] border border-[var(--border)] hover:border-transparent transition-all shrink-0 shadow-2xs disabled:opacity-50 active:scale-95 cursor-pointer font-medium hover:shadow-xs"
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* INPUT AREA */}
