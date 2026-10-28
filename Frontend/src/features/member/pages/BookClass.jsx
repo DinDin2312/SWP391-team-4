@@ -157,8 +157,10 @@ const BookClass = () => {
 
   const filteredCourses = sortCoursesStably(courses.filter(s => {
     const matchesDate = new Date(s.nextSessionTime).toDateString() === selectedDate;
-    const matchesSearch = s.className.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          s.coachName.toLowerCase().includes(searchTerm.toLowerCase());
+    const term = searchTerm.trim().toLowerCase();
+    const matchesSearch = !term ||
+                          s.className.toLowerCase().includes(term) ||
+                          s.coachName.toLowerCase().includes(term);
     return matchesDate && matchesSearch;
   }));
 
@@ -412,12 +414,16 @@ const BookClass = () => {
             animate={{ y: 0 }}
             exit={{ y: 150 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
-            className="fixed bottom-4 left-4 right-4 lg:left-80 lg:right-8 z-40"
+            className="fixed bottom-4 z-40 pointer-events-none transition-[left] duration-200 ease-out flex justify-center px-4 sm:px-6"
+            style={{
+              left: 'var(--role-sidebar-width, 0px)',
+              right: 0,
+            }}
           >
-            <div className={`p-4 sm:p-6 rounded-2xl bg-surface-container-high/90 backdrop-blur-xl border flex flex-col sm:flex-row items-center justify-between gap-4 transition-[border-color,box-shadow] duration-300 shadow-2xl shadow-black/30 ${
+            <div className={`pointer-events-auto w-full max-w-5xl p-4 sm:p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl backdrop-saturate-150 border flex flex-col sm:flex-row items-center justify-between gap-4 transition-[border-color,box-shadow] duration-300 shadow-[0_20px_50px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)] ${
               isCartHighlighted
                 ? 'border-cyan-400 ring-2 ring-cyan-400/70 shadow-[0_0_28px_rgba(59,130,246,0.75)]'
-                : 'border-surface-container-highest/50'
+                : 'border-white/30 dark:border-white/10'
             }`}>
               <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
                 <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-primary-container text-on-primary-container shrink-0">
@@ -443,7 +449,8 @@ const BookClass = () => {
               <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                 <button
                   onClick={clearCart}
-                  className="hidden md:flex items-center gap-1 px-4 py-3 rounded-xl bg-surface-container text-on-surface-variant hover:text-on-surface text-[13px] font-semibold transition-all"
+                  className="hidden md:flex items-center gap-1.5 px-4 py-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/25 hover:border-rose-500/40 text-[13px] font-semibold transition-all shadow-xs active:scale-95 cursor-pointer"
+                  title={t("Clear")}
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>{t("Clear")}</span>

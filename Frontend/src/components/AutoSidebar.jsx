@@ -6,12 +6,29 @@ export default function AutoSidebar({ children, className = '', style }) {
   const language = useLanguage();
   const [collapsed, setCollapsed] = useState(true);
   const sidebar = useRef(null);
+
   useEffect(() => {
     sidebar.current?.querySelectorAll('button').forEach((button) => {
       const label = t(button.getAttribute('aria-label') || button.title || button.textContent.trim());
       if (label) { button.setAttribute('aria-label', label); button.title = label; }
     });
   }, [children, language]);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      const parent = sidebar.current?.closest('.role-shell');
+      if (!parent) return;
+      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+        parent.style.setProperty('--role-sidebar-width', '0px');
+      } else {
+        parent.style.setProperty('--role-sidebar-width', collapsed ? '76px' : '256px');
+      }
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, [collapsed]);
+
   return <aside ref={sidebar} className={`auto-sidebar ${collapsed ? 'is-collapsed' : ''} ${className}`}
     style={{ ...style, width: 'var(--role-sidebar-width)' }}
     onMouseEnter={() => setCollapsed(false)} onMouseLeave={() => setCollapsed(true)}
