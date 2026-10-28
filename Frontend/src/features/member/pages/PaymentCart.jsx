@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   ShoppingCart, Trash2, ArrowRight, CreditCard,
-  Wallet, QrCode, AlertCircle, CheckCircle2, Ticket
+  Wallet, QrCode, AlertCircle, CheckCircle2, Ticket,
+  Clock, XCircle, Loader2
 } from 'lucide-react';
 
 const PaymentCart = () => {
@@ -18,8 +19,10 @@ const PaymentCart = () => {
   const [discountPercent, setDiscountPercent] = useState(0);
   const [availableCredits, setAvailableCredits] = useState([]);
   const [selectedCredit, setSelectedCredit] = useState(null);
-  const [selectedMethod, setSelectedMethod] = useState('credit');
+  const [selectedMethod, setSelectedMethod] = useState('payos');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [pendingInvoice, setPendingInvoice] = useState(null);
+  const [cancellingCheckout, setCancellingCheckout] = useState(false);
   const [toast, setToast] = useState({ visible: false, type: 'success', title: '', message: '' });
 
   useEffect(() => {
@@ -40,6 +43,15 @@ const PaymentCart = () => {
       if (cartRes.status === 'fulfilled' && cartRes.value?.data) {
         setItems(cartRes.value.data.items || []);
         setTotalPrice(cartRes.value.data.totalPrice || 0);
+        if (cartRes.value.data.pendingInvoiceId) {
+          setPendingInvoice({
+            invoiceId: cartRes.value.data.pendingInvoiceId,
+            paymentUrl: cartRes.value.data.pendingPaymentUrl,
+            paymentMethod: cartRes.value.data.pendingPaymentMethod
+          });
+        } else {
+          setPendingInvoice(null);
+        }
       }
 
       if (profileRes.status === 'fulfilled' && profileRes.value?.data) {
@@ -63,6 +75,33 @@ const PaymentCart = () => {
     }
   };
 
+  const handleCancelPendingCheckout = async (targetInvoiceId = null) => {
+    try {
+      setCancellingCheckout(true);
+      const token = localStorage.getItem('token');
+      const invId = targetInvoiceId || pendingInvoice?.invoiceId;
+      await axios.post('http://localhost:8080/api/v1/payment/cancel-pending-checkout',
+        { invoiceId: invId },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      setToast({
+        visible: true,
+        type: 'success',
+        title: t('Checkout Cancelled'),
+        message: t('Pending checkout session has been cancelled. Your cart is now unlocked.')
+      });
+      setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 4000);
+      setPendingInvoice(null);
+      await fetchCartItems();
+      window.dispatchEvent(new Event('cartUpdated'));
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data || t('Unable to cancel checkout session.');
+      setToast({ visible: true, type: 'error', title: t('Error'), message: t(msg) });
+      setTimeout(() => setToast({ visible: false, type: 'error', title: '', message: '' }), 4000);
+    } finally {
+      setCancellingCheckout(false);
+    }
+  };
 
   const handleRemoveItem = async (id, type) => {
     try {
@@ -76,13 +115,15 @@ const PaymentCart = () => {
           headers: { Authorization: `Bearer ${token}`}
         });
       }
-      setToast({ visible: true, type: 'success', title: 'Removed', message: t('Item removed from cart.') });
+      setToast({ visible: true, type: 'success', title: t('Removed'), message: t('Item removed from cart.') });
       setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 3000);
       fetchCartItems(); // Refresh the cart
       window.dispatchEvent(new Event('cartUpdated')); // Update the global badge
     } catch (err) {
-      setToast({ visible: true, type: 'error', title: 'Error', message: t('Failed to remove item.') });
-      setTimeout(() => setToast({ visible: false, type: 'error', title: '', message: '' }), 3000);
+      const errorMsg = err.response?.data?.message || err.response?.data || t('Failed to remove item.');
+      setToast({ visible: true, type: 'error', title: t('Error'), message: t(errorMsg) });
+      setTimeout(() => setToast({ visible: false, type: 'error', title: '', message: '' }), 4000);
+      fetchCartItems(); // Refresh to catch pending checkout if locked
     }
   };
 
@@ -95,17 +136,22 @@ const PaymentCart = () => {
         headers: { Authorization: `Bearer ${token}`}
       });
 
-      // Redirect to VNPay.
+      // Redirect to payment gateway or internal payment page
       if (response.data && response.data.paymentUrl) {
           window.dispatchEvent(new Event("cartUpdated"));
-          if(response.data.completed)navigate(response.data.paymentUrl);else window.location.href = response.data.paymentUrl;
+          if (response.data.paymentUrl.startsWith('/')) {
+              navigate(response.data.paymentUrl);
+          } else {
+              window.location.href = response.data.paymentUrl;
+          }
       }
 
     } catch (err) {
       const errorMsg = err.response?.data?.message || 'Payment failed. Please try again.';
-      setToast({ visible: true, type: 'error', title: t('Checkout Error'), message: errorMsg });
+      setToast({ visible: true, type: 'error', title: t('Checkout Error'), message: t(errorMsg) });
       setTimeout(() => setToast({ visible: false, type: 'error', title: '', message: '' }), 5000);
       setCheckoutLoading(false);
+      fetchCartItems(); // Refresh to detect pending checkout if locked
     }
   };
 
@@ -133,7 +179,8 @@ const PaymentCart = () => {
             <div className="w-16 h-16 border-4 border-[var(--primary-soft)] border-t-blue-500 rounded-full animate-spin mb-6"></div>
             <h3 className="text-xl font-bold text-[var(--text)] mb-2">{t("Processing Payment")}</h3>
             <p className="text-sm text-[var(--text-muted)] text-center">
-              {t(selectedMethod === 'vnpay' ? t('Connecting to VNPay Gateway...') :
+              {t(selectedMethod === 'payos' ? t('Generating VietQR payment code...') :
+               selectedMethod === 'vnpay' ? t('Connecting to VNPay Gateway...') :
                selectedMethod === 'momo' ? t('Opening Momo App...') :
                t('Verifying Credit Card Details...'))}
             </p>
@@ -147,6 +194,51 @@ const PaymentCart = () => {
           <ShoppingCart className="w-8 h-8 text-[var(--primary)]" />{t("Checkout")}</h1>
         <p className="text-sm text-[var(--text-muted)] mt-2">{t("Courses in cart are first-come, first-served. Complete payment to secure your spot.")}</p>
       </section>
+
+      {/* Pending Checkout Alert Banner */}
+      {pendingInvoice && (
+        <div className="mb-8 p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+              <Clock className="w-5 h-5 animate-pulse" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
+                {t("Pending Checkout Session")}
+                <span className="font-mono text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                  #{pendingInvoice.invoiceId}
+                </span>
+              </span>
+              <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
+                {t("You have a checkout session awaiting payment. The cart is temporarily locked. You can resume payment or cancel the session to edit your cart.")}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 justify-end">
+            <button
+              onClick={() => handleCancelPendingCheckout(pendingInvoice.invoiceId)}
+              disabled={cancellingCheckout}
+              className="px-4 py-2 text-xs font-semibold rounded-xl border border-[var(--border)] text-[var(--danger-text)] hover:bg-[var(--danger-soft)] transition-colors flex items-center gap-1.5"
+            >
+              {cancellingCheckout ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+              {t("Cancel Pending Checkout")}
+            </button>
+            <button
+              onClick={() => {
+                if (pendingInvoice.paymentUrl) {
+                  navigate(pendingInvoice.paymentUrl);
+                } else {
+                  navigate(`/member/vietqr-pay?invoiceId=${pendingInvoice.invoiceId}`);
+                }
+              }}
+              className="px-4 py-2 text-xs font-bold rounded-xl bg-[var(--primary)] hover:bg-[var(--primary)] text-[color:var(--on-primary)] transition-all shadow-sm flex items-center gap-1.5"
+            >
+              {t("Resume Payment")}
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {error ? (
         <div className="p-4 rounded-xl bg-[var(--danger-soft)] border border-[var(--danger-soft)] text-[var(--danger-text)] text-sm">
@@ -243,29 +335,68 @@ const PaymentCart = () => {
 
             {/* Payment Methods */}
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 flex flex-col gap-4">
-              <h2 className="text-lg font-bold text-[var(--text)] mb-2">{t("Payment Method")}</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-[var(--text)]">{t("Payment Method")}</h2>
+                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
+                  {t("Instant Bank Settlement")}
+                </span>
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
-                  onClick={() => setSelectedMethod('credit')}
-                  className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-colors ${selectedMethod === 'credit' ? t('border-[var(--primary-soft)] bg-[var(--primary-soft)] text-[var(--primary)]') : t('border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]')}`}
+                  type="button"
+                  onClick={() => setSelectedMethod('payos')}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedMethod === 'payos' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]'}`}
                 >
-                  <CreditCard className="w-6 h-6 mb-2" />
-                  <span className="text-xs font-bold">{t("Credit Card")}</span>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${selectedMethod === 'payos' ? 'bg-emerald-500 text-white' : 'bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}>
+                    <QrCode className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-[var(--text)]">{t("VietQR (Bank Transfer)")}</span>
+                    <span className="text-[10px] text-[var(--text-muted)]">{t("Real-time bank payment")}</span>
+                  </div>
                 </button>
+
                 <button
-                  onClick={() => setSelectedMethod('momo')}
-                  className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-colors ${selectedMethod === 'momo' ? t('border-[var(--rose-soft)] bg-[var(--rose-soft)] text-[var(--rose)]') : t('border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]')}`}
-                >
-                  <Wallet className="w-6 h-6 mb-2" />
-                  <span className="text-xs font-bold">{t("Momo")}</span>
-                </button>
-                <button
+                  type="button"
                   onClick={() => setSelectedMethod('vnpay')}
-                  className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-colors ${selectedMethod === 'vnpay' ? t('border-[var(--cyan-soft)] bg-[var(--cyan-soft)] text-[var(--cyan)]') : t('border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]')}`}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedMethod === 'vnpay' ? 'border-[var(--cyan-soft)] bg-[var(--cyan-soft)] text-[var(--cyan)] shadow-sm' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]'}`}
                 >
-                  <QrCode className="w-6 h-6 mb-2" />
-                  <span className="text-xs font-bold">{t("VNPay")}</span>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${selectedMethod === 'vnpay' ? 'bg-[var(--cyan)] text-white' : 'bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}>
+                    <QrCode className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-[var(--text)]">{t("VNPay")}</span>
+                    <span className="text-[10px] text-[var(--text-muted)]">{t("VNPay gateway")}</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedMethod('momo')}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedMethod === 'momo' ? 'border-[var(--rose-soft)] bg-[var(--rose-soft)] text-[var(--rose)] shadow-sm' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]'}`}
+                >
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${selectedMethod === 'momo' ? 'bg-[var(--rose)] text-white' : 'bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}>
+                    <Wallet className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-[var(--text)]">{t("Momo")}</span>
+                    <span className="text-[10px] text-[var(--text-muted)]">{t("MoMo e-wallet")}</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedMethod('credit')}
+                  className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedMethod === 'credit' ? 'border-[var(--primary-soft)] bg-[var(--primary-soft)] text-[var(--primary)] shadow-sm' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]'}`}
+                >
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${selectedMethod === 'credit' ? 'bg-[var(--primary)] text-white' : 'bg-[var(--surface-hover)] text-[var(--text-muted)]'}`}>
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-[var(--text)]">{t("Credit Card")}</span>
+                    <span className="text-[10px] text-[var(--text-muted)]">{t("International cards")}</span>
+                  </div>
                 </button>
               </div>
             </div>

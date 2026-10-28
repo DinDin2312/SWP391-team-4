@@ -23,6 +23,7 @@ export default function InvoiceReceiptModal({ isOpen, onClose, receipt }) {
     const m = method.toUpperCase();
     if (m === 'CASH') return t('Cash');
     if (m === 'BANK_TRANSFER' || m === 'TRANSFER') return t('Bank Transfer');
+    if (m === 'PAYOS' || m === 'VIETQR') return 'VietQR (PayOS)';
     if (m === 'VNPAY') return 'VNPay';
     if (m === 'MOMO') return 'MoMo';
     return method;

@@ -2,6 +2,7 @@ package com.team4.sportscenter.modules.payment.services.impl;
 
 import com.team4.sportscenter.config.VNPayConfig;
 import com.team4.sportscenter.config.MoMoConfig;
+import com.team4.sportscenter.config.PayOSConfig;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -47,6 +48,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final InvoiceDetailRepository invoiceDetailRepository;
     private final PaymentRepository paymentRepository;
     private final VNPayConfig vnPayConfig;
+    private final PayOSConfig payOSConfig;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final com.team4.sportscenter.modules.member.services.PackageCommerceService commerce;
     private final NotificationService notificationService;
@@ -91,9 +93,34 @@ public class PaymentServiceImpl implements PaymentService {
                 .map(CartItemDto::getPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        Integer pendingInvId = null;
+        String pendingUrl = null;
+        String pendingMethod = null;
+        try {
+            List<Map<String, Object>> pendingInvoices = jdbc.queryForList(
+                "SELECT i.invoice_id, p.payment_method FROM INVOICES i " +
+                "JOIN USERS u ON u.user_id = i.user_id " +
+                "LEFT JOIN PAYMENTS p ON p.invoice_id = i.invoice_id " +
+                "WHERE u.email = ? AND i.status = 'PENDING' AND i.created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE) " +
+                "ORDER BY i.invoice_id DESC LIMIT 1",
+                email
+            );
+            if (!pendingInvoices.isEmpty()) {
+                Map<String, Object> row = pendingInvoices.get(0);
+                pendingInvId = ((Number) row.get("invoice_id")).intValue();
+                pendingMethod = row.get("payment_method") != null ? String.valueOf(row.get("payment_method")) : "PAYOS";
+                if ("PAYOS".equalsIgnoreCase(pendingMethod) || "VIETQR".equalsIgnoreCase(pendingMethod)) {
+                    pendingUrl = "/member/vietqr-pay?invoiceId=" + pendingInvId;
+                }
+            }
+        } catch (Exception ignored) {}
+
         return CartResponse.builder()
                 .items(items)
                 .totalPrice(totalPrice)
+                .pendingInvoiceId(pendingInvId)
+                .pendingPaymentUrl(pendingUrl)
+                .pendingPaymentMethod(pendingMethod)
                 .build();
     }
 
@@ -223,16 +250,22 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
             invoiceDetailRepository.save(detail);
         }
 
+        String resolvedMethod = "momo".equalsIgnoreCase(paymentMethod) ? "MOMO" :
+                ("payos".equalsIgnoreCase(paymentMethod) || "vietqr".equalsIgnoreCase(paymentMethod)) ? "PAYOS" : "VNPAY";
+
         PaymentEntity payment = PaymentEntity.builder()
                 .invoice(invoice)
                 .amount(totalAmount)
-                .paymentMethod("momo".equalsIgnoreCase(paymentMethod)?"MOMO":"VNPAY")
+                .paymentMethod(resolvedMethod)
                 .status("PENDING")
                 .paymentDate(LocalDateTime.now())
                 .build();
         paymentRepository.saveAndFlush(payment);
         if(totalAmount.signum()==0){finishPayment(invoice,true,appliedCredit!=null?("CREDIT-"+appliedCredit.getCreditCode()):("FREE-"+invoice.getInvoiceId()));return "/member/memberships";}
 
+        if ("payos".equalsIgnoreCase(paymentMethod) || "vietqr".equalsIgnoreCase(paymentMethod)) {
+            return createPayOSUrl(invoice.getInvoiceId(), totalAmount, user);
+        }
 
         if ("momo".equalsIgnoreCase(paymentMethod)) {
             try {
@@ -289,6 +322,114 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         }
         
         return createVNPayUrl(invoice.getInvoiceId(), totalAmount, ipAddress);
+    }
+
+    private String createPayOSUrl(Integer invoiceId, BigDecimal amount, User user) {
+        if (payOSConfig.isConfigured()) {
+            try {
+                long orderCode = invoiceId.longValue();
+                long amountVal = amount.longValue();
+                String description = "HD " + invoiceId;
+                String returnUrl = payOSConfig.returnUrl;
+                String cancelUrl = payOSConfig.cancelUrl;
+
+                String rawSignature = "amount=" + amountVal +
+                        "&cancelUrl=" + cancelUrl +
+                        "&description=" + description +
+                        "&orderCode=" + orderCode +
+                        "&returnUrl=" + returnUrl;
+
+                String signature = PayOSConfig.signHmacSHA256(rawSignature, payOSConfig.checksumKey);
+
+                Map<String, Object> requestBody = new HashMap<>();
+                requestBody.put("orderCode", orderCode);
+                requestBody.put("amount", amountVal);
+                requestBody.put("description", description);
+                requestBody.put("returnUrl", returnUrl);
+                requestBody.put("cancelUrl", cancelUrl);
+                requestBody.put("signature", signature);
+                if (user != null) {
+                    if (user.getFullName() != null && !user.getFullName().isBlank()) {
+                        requestBody.put("buyerName", user.getFullName());
+                    }
+                    if (user.getEmail() != null && !user.getEmail().isBlank()) {
+                        requestBody.put("buyerEmail", user.getEmail());
+                    }
+                    if (user.getPhone() != null && !user.getPhone().isBlank()) {
+                        requestBody.put("buyerPhone", user.getPhone());
+                    }
+                }
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.set("x-client-id", payOSConfig.clientId);
+                headers.set("x-api-key", payOSConfig.apiKey);
+
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+                RestTemplate restTemplate = new RestTemplate();
+                String endpoint = payOSConfig.endpoint + "/v2/payment-requests";
+
+                @SuppressWarnings("unchecked")
+                Map<String, Object> response = restTemplate.postForObject(endpoint, entity, Map.class);
+                if (response != null) {
+                    String code = String.valueOf(response.get("code"));
+                    if ("00".equals(code) || "0".equals(code)) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> data = (Map<String, Object>) response.get("data");
+                        if (data != null && data.containsKey("checkoutUrl")) {
+                            return (String) data.get("checkoutUrl");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // If PayOS credentials fail or offline, smoothly fallback to direct VietQR
+            }
+        }
+
+        // Direct bank transfer mode: redirect to internal VietQR payment page
+        return "/member/vietqr-pay?invoiceId=" + invoiceId;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getVietQRInfo(Integer invoiceId, String userEmail) {
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hóa đơn / Invoice not found: " + invoiceId));
+
+        long amount = invoice.getTotalAmount() != null ? invoice.getTotalAmount().longValue() : 0L;
+        String desc = "HD " + invoiceId;
+        String qrUrl = payOSConfig.buildVietQRUrl(amount, desc);
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("invoiceId", invoice.getInvoiceId());
+        res.put("amount", amount);
+        res.put("bankId", payOSConfig.getNormalizedBankId());
+        res.put("bankName", payOSConfig.getBankDisplayName());
+        res.put("accountNo", (payOSConfig.accountNo != null && !payOSConfig.accountNo.isBlank()) ? payOSConfig.accountNo : "0386789999");
+        res.put("accountName", (payOSConfig.accountName != null && !payOSConfig.accountName.isBlank()) ? payOSConfig.accountName : "SPORTS CENTER");
+        res.put("description", desc);
+        res.put("qrUrl", qrUrl);
+        res.put("status", invoice.getStatus());
+        return res;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> confirmVietQRPayment(Integer invoiceId, String userEmail) {
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hóa đơn / Invoice not found: " + invoiceId));
+
+        if ("PAID".equals(invoice.getStatus())) {
+            return Map.of("success", true, "status", "PAID", "message", "Hóa đơn đã được thanh toán thành công.");
+        }
+
+        finishPayment(invoice, true, "VIETQR-HD" + invoiceId);
+
+        return Map.of(
+                "success", true,
+                "status", "PAID",
+                "message", "Thanh toán thành công! Khóa học/gói tập của bạn đã được kích hoạt."
+        );
     }
 
     private String createVNPayUrl(Integer invoiceId, BigDecimal amount, String ipAddress) {
@@ -400,6 +541,56 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
             for(var m:pendingMemberships){if(m.getCheckoutInvoiceId()!=null){m.setStatus("CANCELLED");userMembershipRepository.save(m);}else userMembershipRepository.delete(m);}
         }
     }
+
+    @Override
+    @Transactional
+    public void cancelPendingCheckout(String email, Integer invoiceId) {
+        bookingRepository.lockOperations();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Invoice invoice;
+        if (invoiceId != null) {
+            invoice = invoiceRepository.findById(invoiceId)
+                    .filter(i -> i.getUser().getUserId().equals(user.getUserId()))
+                    .orElse(null);
+        } else {
+            List<Invoice> pendingList = invoiceRepository.findByUser_EmailOrderByCreatedAtDesc(email)
+                    .stream()
+                    .filter(i -> "PENDING".equals(i.getStatus()) && i.getCreatedAt() != null && i.getCreatedAt().isAfter(LocalDateTime.now().minusMinutes(15)))
+                    .toList();
+            invoice = pendingList.isEmpty() ? null : pendingList.get(0);
+        }
+
+        if (invoice == null || !"PENDING".equals(invoice.getStatus())) {
+            return;
+        }
+
+        invoice.setStatus("CANCELLED");
+        invoiceRepository.save(invoice);
+
+        paymentRepository.findByInvoice_InvoiceId(invoice.getInvoiceId()).ifPresent(p -> {
+            p.setStatus("CANCELLED");
+            paymentRepository.save(p);
+        });
+
+        userCreditRepository.findByUsedInvoiceId(invoice.getInvoiceId()).ifPresent(c -> {
+            c.setUsedInvoiceId(null);
+            userCreditRepository.save(c);
+        });
+
+        var memberships = userMembershipRepository.findByCheckoutInvoiceId(invoice.getInvoiceId());
+        for (var m : memberships) {
+            m.setCheckoutInvoiceId(null);
+            userMembershipRepository.save(m);
+        }
+
+        jdbc.update("DELETE FROM INVOICE_BOOKINGS WHERE invoice_id=?", invoice.getInvoiceId());
+
+        jdbc.update("INSERT INTO AUDIT_LOGS(actor_email,action,entity_type,entity_id,details,created_at) VALUES(?,'CHECKOUT_CANCELLED','INVOICE',?,?,NOW())",
+                email, String.valueOf(invoice.getInvoiceId()), "Checkout cancelled by member");
+    }
+
     @Override
     @Transactional
     public void handleMoMoCallback(Map<String,String> query){
@@ -414,6 +605,97 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         if(!"MOMO".equals(paymentMethod(invoice)))throw new IllegalArgumentException("Payment method mismatch");
         if(new BigDecimal(query.get("amount")).compareTo(invoice.getTotalAmount())!=0)throw new IllegalArgumentException("Payment amount mismatch");
         finishPayment(invoice,"0".equals(query.get("resultCode")),query.get("transId"));
+    }
+
+    @Override
+    @Transactional
+    public void handlePayOSCallback(Map<String, String> query) {
+        bookingRepository.lockOperations();
+        String orderCodeStr = query.get("orderCode");
+        if (orderCodeStr == null || orderCodeStr.isBlank()) {
+            throw new IllegalArgumentException("Missing PayOS orderCode");
+        }
+        int invoiceId = Integer.parseInt(orderCodeStr);
+        var invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new IllegalArgumentException("Invoice not found: " + invoiceId));
+        if (!"PAYOS".equals(paymentMethod(invoice))) {
+            throw new IllegalArgumentException("Payment method mismatch for invoice " + invoiceId);
+        }
+
+        if (Set.of("PAID", "REVIEW").contains(invoice.getStatus())) {
+            return;
+        }
+
+        boolean isCancel = "true".equalsIgnoreCase(query.get("cancel")) || "CANCELLED".equalsIgnoreCase(query.get("status"));
+        boolean isSuccess = "00".equals(query.get("code")) || "PAID".equalsIgnoreCase(query.get("status"));
+        String transactionNo = query.getOrDefault("id", "PAYOS-" + invoiceId);
+
+        if (payOSConfig.isConfigured() && !isCancel) {
+            try {
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("x-client-id", payOSConfig.clientId);
+                headers.set("x-api-key", payOSConfig.apiKey);
+                HttpEntity<?> entity = new HttpEntity<>(headers);
+                RestTemplate restTemplate = new RestTemplate();
+                String endpoint = payOSConfig.endpoint + "/v2/payment-requests/" + invoiceId;
+                @SuppressWarnings("unchecked")
+                Map<String, Object> resp = restTemplate.exchange(endpoint, org.springframework.http.HttpMethod.GET, entity, Map.class).getBody();
+                if (resp != null) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> data = (Map<String, Object>) resp.get("data");
+                    if (data != null) {
+                        String realStatus = String.valueOf(data.get("status"));
+                        isSuccess = "PAID".equalsIgnoreCase(realStatus);
+                        if (data.containsKey("id")) {
+                            transactionNo = String.valueOf(data.get("id"));
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        finishPayment(invoice, isSuccess && !isCancel, transactionNo);
+    }
+
+    @Override
+    @Transactional
+    public void handlePayOSWebhook(Map<String, Object> webhookBody) {
+        if (webhookBody == null) return;
+        @SuppressWarnings("unchecked")
+        Map<String, Object> data = (Map<String, Object>) webhookBody.get("data");
+        if (data == null) return;
+
+        String signature = (String) webhookBody.get("signature");
+        if (payOSConfig.isConfigured() && signature != null) {
+            boolean valid = payOSConfig.verifyWebhookData(data, signature);
+            if (!valid) {
+                throw new IllegalArgumentException("Invalid PayOS webhook signature");
+            }
+        }
+
+        Object orderCodeObj = data.get("orderCode");
+        if (orderCodeObj == null) return;
+        int invoiceId = Integer.parseInt(String.valueOf(orderCodeObj));
+
+        bookingRepository.lockOperations();
+        var maybeInvoice = invoiceRepository.findById(invoiceId);
+        if (maybeInvoice.isEmpty()) {
+            return;
+        }
+        var invoice = maybeInvoice.get();
+        if (!"PAYOS".equals(paymentMethod(invoice))) {
+            return;
+        }
+
+        if (Set.of("PAID", "REVIEW").contains(invoice.getStatus())) {
+            return;
+        }
+
+        boolean isPaid = "00".equals(webhookBody.get("code")) || "00".equals(data.get("code")) || "PAID".equalsIgnoreCase(String.valueOf(data.get("desc")));
+        String transactionNo = String.valueOf(data.getOrDefault("reference", data.getOrDefault("paymentLinkId", "PAYOS-" + invoiceId)));
+
+        finishPayment(invoice, isPaid, transactionNo);
     }
 
     private String paymentMethod(Invoice invoice){return paymentRepository.findByInvoice_InvoiceId(invoice.getInvoiceId()).orElseThrow().getPaymentMethod();}
