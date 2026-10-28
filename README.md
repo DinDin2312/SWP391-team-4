@@ -288,8 +288,9 @@ Hệ thống cung cấp các nhóm RESTful API chuẩn hóa theo phân hệ:
 
 ### 6. Phân hệ Thanh toán, Giỏ hàng & Thông báo (`/api/v1/payment`, `/api/v1/notifications`)
 *   `GET /api/v1/payment/cart`, `DELETE /api/v1/payment/cart/remove/{classId}`, `DELETE /api/v1/payment/cart/remove-package/{packageId}`, `DELETE /api/v1/payment/cart/clear` : Quản lý Giỏ hàng.
-*   `POST /api/v1/payment/checkout` : Khóa giỏ hàng 15 phút, áp dụng chiết khấu hạng thẻ (`Silver`/`Gold`/`Platinum`) và sinh URL thanh toán VNPay / MoMo.
-*   `GET /api/v1/payment/vnpay-return` & `GET /api/v1/payment/momo-return` : Xác thực chữ ký số, hậu kiểm điều kiện đơn hàng (`PAID` hoặc chuyển `REVIEW` nếu phát sinh xung đột).
+*   `POST /api/v1/payment/checkout` : Khóa giỏ hàng 15 phút, áp dụng chiết khấu hạng thẻ (`Silver`/`Gold`/`Platinum`), khấu trừ Voucher tín dụng và sinh URL thanh toán VietQR (PayOS nhận tiền vào STK thật) / VNPay / MoMo.
+*   `GET /api/v1/payment/payos-callback`, `POST /api/v1/payment/payos-webhook`, `GET /api/v1/payment/vnpay-callback` & `GET /api/v1/payment/momo-callback` : Xác thực chữ ký số, xử lý Webhook nhận tiền thật, hậu kiểm điều kiện đơn hàng (`PAID` hoặc chuyển `REVIEW` nếu phát sinh xung đột).
+*   `GET /api/v1/payment/vietqr-info/{invoiceId}` & `POST /api/v1/payment/vietqr-confirm/{invoiceId}` : Cung cấp thông tin tài khoản ngân hàng cấu hình từ `application.properties`, mã VietQR Napas 247 và cơ chế xác nhận thanh toán tức thì.
 *   `GET /api/v1/payment/my-invoices` : Tra cứu lịch sử hóa đơn của hội viên.
 *   `GET /api/v1/notifications`, `PUT /api/v1/notifications/{id}/read`, `PUT /api/v1/notifications/read-all` : Quản lý thông báo người dùng.
 

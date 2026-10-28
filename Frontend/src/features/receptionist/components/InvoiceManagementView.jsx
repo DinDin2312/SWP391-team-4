@@ -73,7 +73,7 @@ export default function InvoiceManagementView() {
       result = result.filter((inv) => {
         const method = (inv.paymentMethod || 'CASH').toUpperCase();
         if (paymentFilter === 'CASH') return method === 'CASH';
-        if (paymentFilter === 'BANK_TRANSFER') return method === 'BANK_TRANSFER' || method === 'TRANSFER' || method === 'VNPAY';
+        if (paymentFilter === 'BANK_TRANSFER') return method === 'BANK_TRANSFER' || method === 'TRANSFER' || method === 'VNPAY' || method === 'PAYOS' || method === 'VIETQR';
         return true;
       });
     }

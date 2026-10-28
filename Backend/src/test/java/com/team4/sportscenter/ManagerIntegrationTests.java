@@ -356,6 +356,17 @@ class ManagerIntegrationTests {
         assertEquals(0,count("SELECT COUNT(*) FROM USER_MEMBERSHIPS WHERE user_id=? AND purchase_completed_at IS NOT NULL",member));
     }
 
+    @Test void cancelPendingCheckoutReleasesCartLockAndAllowsRemovalAndRecheckout(){
+        int pkg=commercePackage(1,BigDecimal.TEN);members.addPackageToCart("member"+actor,pkg);
+        payments.checkout("member"+actor,"127.0.0.1","vnpay");int invoice=checkoutInvoice();
+        assertThrows(com.team4.sportscenter.common.exception.PackageRuleException.class,()->payments.checkout("member"+actor,"127.0.0.1","vnpay"));
+        assertThrows(com.team4.sportscenter.common.exception.PackageRuleException.class,()->payments.removePackageFromCart("member"+actor,pkg));
+        payments.cancelPendingCheckout("member"+actor,invoice);
+        assertEquals("CANCELLED",jdbc.queryForObject("SELECT status FROM INVOICES WHERE invoice_id=?",String.class,invoice));
+        assertDoesNotThrow(()->payments.removePackageFromCart("member"+actor,pkg));
+        assertEquals(0,count("SELECT COUNT(*) FROM USER_MEMBERSHIPS WHERE user_id=?",member));
+    }
+
     @Test void counterSaleCountsAndSharesReservationWithOnline(){
         int pkg=commercePackage(1,BigDecimal.TEN);members.addPackageToCart("member"+actor,pkg);payments.checkout("member"+actor,"127.0.0.1","vnpay");
         var request=new com.team4.sportscenter.modules.receptionist.dtos.request.SubscribePackageRequest();request.setUserId(member);request.setPackageId(pkg);

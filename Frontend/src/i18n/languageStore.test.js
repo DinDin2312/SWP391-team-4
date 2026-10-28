@@ -36,3 +36,34 @@ test('cached copy and messages follow language changes and retain non-string val
   const object={fullName:'John'};assert.equal(t(object),object);assert.equal(t(null),null);assert.equal(t(4),4);
   assert.equal(t('Trang 2 trên 10'),'Trang 2 trên 10');setLanguage('en');assert.equal(t('Trang 2 trên 10'),'Page 2 of 10');
 });
+test('VietQR payment and checkout strings translate correctly for EN and VI without inversion', () => {
+  setLanguage('vi');
+  assert.equal(t('VietQR Bank Transfer Payment'), 'Thanh toán Chuyển khoản VietQR');
+  assert.equal(t('Beneficiary Transfer Information'), 'Thông tin chuyển khoản thụ hưởng');
+  assert.equal(t('Cancel / Back to Cart'), 'Hủy / Quay lại giỏ hàng');
+  assert.equal(t('I have successfully transferred'), 'Tôi đã chuyển khoản thành công');
+  assert.equal(t('Account Number'), 'Số tài khoản');
+  assert.equal(t('Transfer Amount'), 'Số tiền cần chuyển');
+  assert.equal(t('Transfer Content (Required)'), 'Nội dung chuyển khoản (bắt buộc)');
+  assert.equal(t('Expires in:'), 'Hết hạn sau:');
+  assert.equal(t('Confirming payment with system...'), 'Đang xác nhận với hệ thống...');
+  assert.equal(t('Pending Checkout Session'), 'Phiên thanh toán đang chờ xử lý');
+
+  setLanguage('en');
+  assert.equal(t('VietQR Bank Transfer Payment'), 'VietQR Bank Transfer Payment');
+  assert.equal(t('Beneficiary Transfer Information'), 'Beneficiary Transfer Information');
+  assert.equal(t('Cancel / Back to Cart'), 'Cancel / Back to Cart');
+  assert.equal(t('I have successfully transferred'), 'I have successfully transferred');
+  assert.equal(t('Account Number'), 'Account Number');
+  assert.equal(t('Transfer Amount'), 'Transfer Amount');
+  assert.equal(t('Transfer Content (Required)'), 'Transfer Content (Required)');
+  assert.equal(t('Expires in:'), 'Expires in:');
+  assert.equal(t('Confirming payment with system...'), 'Confirming payment with system...');
+  assert.equal(t('Pending Checkout Session'), 'Pending Checkout Session');
+
+  // Verify reverse lookup: passing Vietnamese string while language is 'en' returns English
+  assert.equal(t('Thanh toán Chuyển khoản VietQR'), 'VietQR Bank Transfer Payment');
+  assert.equal(t('Thông tin chuyển khoản thụ hưởng'), 'Beneficiary Transfer Information');
+  assert.equal(t('Phiên thanh toán đang chờ xử lý'), 'Pending Checkout Session');
+});
+

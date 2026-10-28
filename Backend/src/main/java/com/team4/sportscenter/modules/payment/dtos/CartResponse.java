@@ -10,4 +10,7 @@ import java.util.List;
 public class CartResponse {
     private List<CartItemDto> items;
     private BigDecimal totalPrice;
+    private Integer pendingInvoiceId;
+    private String pendingPaymentUrl;
+    private String pendingPaymentMethod;
 }

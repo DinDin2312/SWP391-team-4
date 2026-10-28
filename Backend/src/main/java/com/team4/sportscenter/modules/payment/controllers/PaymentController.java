@@ -56,6 +56,19 @@ public class PaymentController {
         return ResponseEntity.ok(Map.of("message", "Cart cleared."));
     }
 
+    @PostMapping("/cancel-pending-checkout")
+    public ResponseEntity<?> cancelPendingCheckout(Authentication authentication, @RequestBody(required = false) Map<String, Object> body) {
+        String email = authentication.getName();
+        Integer invoiceId = null;
+        if (body != null && body.containsKey("invoiceId") && body.get("invoiceId") != null) {
+            try {
+                invoiceId = Integer.parseInt(String.valueOf(body.get("invoiceId")));
+            } catch (Exception ignored) {}
+        }
+        paymentService.cancelPendingCheckout(email, invoiceId);
+        return ResponseEntity.ok(Map.of("success", true, "message", "Pending checkout cancelled."));
+    }
+
     @GetMapping("/momo-callback")
     public ResponseEntity<?> momoCallback(@RequestParam Map<String, String> queryParams) {
         paymentService.handleMoMoCallback(queryParams);
@@ -66,5 +79,29 @@ public class PaymentController {
     public ResponseEntity<?> vnpayCallback(@RequestParam Map<String, String> queryParams) {
         paymentService.handleVNPayCallback(queryParams);
         return ResponseEntity.ok(result(Integer.parseInt(queryParams.get("vnp_TxnRef"))));
+    }
+
+    @GetMapping("/payos-callback")
+    public ResponseEntity<?> payosCallback(@RequestParam Map<String, String> queryParams) {
+        paymentService.handlePayOSCallback(queryParams);
+        return ResponseEntity.ok(result(Integer.parseInt(queryParams.get("orderCode"))));
+    }
+
+    @PostMapping("/payos-webhook")
+    public ResponseEntity<?> payosWebhook(@RequestBody Map<String, Object> body) {
+        paymentService.handlePayOSWebhook(body);
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    @GetMapping("/vietqr-info/{invoiceId}")
+    public ResponseEntity<?> getVietQRInfo(Authentication authentication, @PathVariable Integer invoiceId) {
+        String email = authentication != null ? authentication.getName() : null;
+        return ResponseEntity.ok(paymentService.getVietQRInfo(invoiceId, email));
+    }
+
+    @PostMapping("/vietqr-confirm/{invoiceId}")
+    public ResponseEntity<?> confirmVietQR(Authentication authentication, @PathVariable Integer invoiceId) {
+        String email = authentication != null ? authentication.getName() : null;
+        return ResponseEntity.ok(paymentService.confirmVietQRPayment(invoiceId, email));
     }
 }

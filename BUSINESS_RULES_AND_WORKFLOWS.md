@@ -373,6 +373,9 @@ Thẻ tập Gym Pass (`GYMPASS-`) được thiết kế với cơ chế sử d�
 ### 7.1. Cơ chế Giỏ hàng & Khóa Giỏ hàng 15 Phút (`assertCartMutable`)
 - Giỏ hàng của Hội viên là tập hợp các bản ghi `Booking` có `status = 'PENDING'` (gom nhóm theo `GymClass`) và các bản ghi `UserMembership` có `status = 'PENDING'`.
 - **Quy tắc Khóa Giỏ hàng (`PACKAGE_CHECKOUT_PENDING`)**: Khi hội viên nhấn Thanh toán (`checkout`), một hóa đơn `Invoice(status = 'PENDING')` được tạo ra. Trong vòng **15 phút** kể từ `invoice.created_at`, nếu hóa đơn đó vẫn đang `PENDING`, hội viên **không được phép** thêm gói mới, xóa món trong giỏ hoặc tạo lượt checkout mới để tránh xung đột giao dịch đang xử lý trên cổng VNPay/MoMo.
+- **Cơ chế Hủy Phiên Thanh toán Đang Chờ (`cancelPendingCheckout`)**:
+  - Hội viên có thể chủ động hủy phiên checkout đang chờ qua nút *"Hủy / Quay lại giỏ hàng"* (tại trang VietQR), nút *"Hủy phiên thanh toán"* (tại banner giỏ hàng) hoặc tại trang Lịch sử hóa đơn.
+  - Khi hủy: Hóa đơn và giao dịch chuyển thành `CANCELLED`, hoàn trả voucher tín dụng (nếu có), gỡ liên kết hóa đơn khỏi các món trong giỏ và mở khóa giỏ hàng ngay lập tức mà không cần đợi đủ 15 phút.
 - **Quy tắc Xóa món khỏi Giỏ hàng (`removeFromCart`, `removePackageFromCart`)**:
   - Nếu món hàng chưa từng gắn với hóa đơn checkout nào: Xóa cứng (`DELETE`) bản ghi `PENDING` khỏi DB.
   - Nếu món hàng đã từng gắn với một hóa đơn checkout trước đó (đã quá 15 phút): Chuyển `status = 'CANCELLED'` để bảo toàn tham chiếu lịch sử hóa đơn.
@@ -421,6 +424,22 @@ sequenceDiagram
         end
     end
 ```
+
+### 7.4. Luồng Thanh toán Tiền Thật vào Tài khoản Ngân hàng (VietQR / PayOS)
+- **Mã nguồn**: [`PayOSConfig.java`](Backend/src/main/java/com/team4/sportscenter/config/PayOSConfig.java), [`PaymentServiceImpl.java`](Backend/src/main/java/com/team4/sportscenter/modules/payment/services/impl/PaymentServiceImpl.java), [`PaymentCart.jsx`](Frontend/src/features/member/pages/PaymentCart.jsx), [`VietQRPayment.jsx`](Frontend/src/features/member/pages/VietQRPayment.jsx), [`PaymentResult.jsx`](Frontend/src/features/member/pages/PaymentResult.jsx).
+- **Hai chế độ vận hành linh hoạt**:
+  1. **Chế độ Điền Trực tiếp Tài khoản Ngân hàng (Dễ vận hành nhất - Khuyên dùng cho Demo/Vận hành nhanh)**:
+     - Quản trị viên chỉ cần khai báo 3 dòng trong `application.properties`:
+       - `vietqr.bank-id`: Mã/tên ngân hàng (ví dụ: `MB`, `VCB`, `TCB`, `ICB`, `BIDV`, `ACB`,...)
+       - `vietqr.account-no`: Số tài khoản ngân hàng thật của bạn.
+       - `vietqr.account-name`: Tên chủ tài khoản người nhận.
+     - Khi hội viên bấm thanh toán, hệ thống tạo mã VietQR Napas 247 chuẩn (chuẩn EMVCo Napas). Hội viên quét mã bằng bất kỳ App ngân hàng nào $\rightarrow$ **Tiền chuyển thẳng 100% vào tài khoản thật của bạn**.
+     - Hội viên nhấn nút **"Tôi đã chuyển khoản thành công"** $\rightarrow$ Hệ thống gọi `POST /api/v1/payment/vietqr-confirm/{invoiceId}` để kích hoạt tức thì gói tập/buổi học và điều hướng sang trang kết quả thành công.
+     - Hệ thống có cơ chế tự động thăm dò (polling mỗi 4 giây) để tự chuyển trang khi đơn hàng chuyển trạng thái `PAID`.
+  2. **Chế độ Cổng PayOS Merchant (Tích hợp nâng cao)**:
+     - Nếu có tài khoản cổng PayOS, điền `payos.clientId`, `payos.apiKey`, `payos.checksumKey`.
+     - Hệ thống tự động sinh liên kết PayOS Checkout và nhận Webhook thời gian thực (`POST /api/v1/payment/payos-webhook`) kèm đối soát chữ ký số HMAC-SHA256.
+- **Tính bất biến & Idempotent**: Cơ chế `finishPayment` kiểm tra trạng thái khóa `PAID`/`REVIEW`, đảm bảo không bao giờ kích hoạt quyền lợi hai lần.
 
 ---
 

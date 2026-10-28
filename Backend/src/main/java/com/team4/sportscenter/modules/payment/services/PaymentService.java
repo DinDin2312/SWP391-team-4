@@ -10,6 +10,11 @@ public interface PaymentService {
     void removeFromCart(String email, Integer classId);
     void removePackageFromCart(String email, Integer packageId);
     void clearCart(String email);
+    void cancelPendingCheckout(String email, Integer invoiceId);
     void handleVNPayCallback(Map<String, String> queryParams);
     void handleMoMoCallback(Map<String, String> queryParams);
+    void handlePayOSCallback(Map<String, String> queryParams);
+    void handlePayOSWebhook(Map<String, Object> webhookBody);
+    Map<String, Object> getVietQRInfo(Integer invoiceId, String userEmail);
+    Map<String, Object> confirmVietQRPayment(Integer invoiceId, String userEmail);
 }

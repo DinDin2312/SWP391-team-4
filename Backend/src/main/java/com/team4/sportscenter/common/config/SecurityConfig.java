@@ -48,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**", "/api/auth/**", "/auth/**", "/api/guest/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/avatars/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/resource-images/**").permitAll()
+                        .requestMatchers("/api/v1/payment/payos-webhook", "/api/v1/payment/payos-callback", "/api/v1/payment/vietqr-info/**", "/api/v1/payment/vietqr-confirm/**").permitAll()
 
                         // Cho phĂ„â€Ă‚Â©p truy cÄ‚Â¡Ă‚ÂºĂ‚Â­p cĂ„â€Ă‚Â¡c API cÄ‚Â¡Ă‚Â»Ă‚Â§a Receptionist
                         .requestMatchers("/api/receptionist/**", "/receptionist/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
