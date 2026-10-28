@@ -3600,3 +3600,92 @@ for (const [en, vi] of themeModeTranslations) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }
+
+const nexusAiUpgradeTranslations = [
+  ["Listening... Speak now...", "Đang lắng nghe... Xin mời nói..."],
+  ["Stop listening", "Dừng nghe"],
+  ["Voice input", "Nhập bằng giọng nói"],
+  ["Your browser does not support voice recognition. Please use Google Chrome or Edge.", "Trình duyệt chưa hỗ trợ nhận diện giọng nói. Vui lòng dùng Google Chrome hoặc Edge."],
+  ["Suggestions", "Gợi ý"],
+  ["🏊 Book Swim Class", "🏊 Đặt lớp bơi"],
+  ["Book me the nearest swimming class", "Đặt giúp tôi 1 lớp bơi gần nhất"],
+  ["📅 My Schedule", "📅 Lịch tập của tôi"],
+  ["View my workout schedule", "Xem lịch tập của tôi"],
+  ["💪 Workout Advice", "💪 Tư vấn bài tập"],
+  ["Suggest a workout routine for today", "Gợi ý cho tôi bài tập thể hình hôm nay"],
+  ["💳 View Packages", "💳 Xem gói tập"],
+  ["Recommend suitable membership packages", "Tư vấn các gói tập phù hợp"],
+  ["🛒 View Cart", "🛒 Đến giỏ hàng"],
+  ["Open my shopping cart", "Mở giỏ hàng thanh toán"],
+  ["Unable to add package to cart.", "Không thể thêm gói tập vào giỏ hàng."],
+  ["This package is already in your cart.", "Gói tập này đã có trong giỏ hàng của bạn."],
+  ["Unable to add class to cart.", "Không thể thêm lớp học vào giỏ hàng."],
+  ["You have already enrolled in this course.", "Bạn đã đăng ký khóa học này rồi."],
+  ["This course is already in your cart.", "Khóa học này đã có trong giỏ hàng của bạn."],
+  ["Schedule conflict with another enrolled session.", "Lịch học bị trùng với một buổi tập đã đăng ký khác."],
+  ["Sorry, the AI system is currently busy. Please try again later.", "Xin lỗi, hệ thống AI hiện đang bận. Vui lòng thử lại sau."]
+];
+
+for (const [en, vi] of nexusAiUpgradeTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const billingAndTermsTranslations = [
+  // Billing & Invoices
+  ["Paid", "Đã thanh toán"],
+  ["Search by invoice # or package...", "Tìm theo mã hóa đơn hoặc tên gói..."],
+  ["Try adjusting your keyword filter or changing status tab.", "Hãy thử đổi từ khóa tìm kiếm hoặc chọn tab trạng thái khác."],
+  ["Total Spending", "Tổng chi tiêu tích lũy"],
+  ["paid", "đã thanh toán"],
+  ["Lifetime verified membership & course investment", "Tổng giá trị đầu tư thẻ hội viên & khóa học"],
+  ["Active Invoices", "Hóa đơn hiện có"],
+  ["100% Protected", "Bảo mật 100%"],
+  ["Pending Action Required", "Cần hoàn tất thanh toán"],
+  ["order(s) waiting for payment", "đơn hàng đang chờ thanh toán"],
+  ["is currently reserving your slots. Complete checkout before expiration.", "đang giữ chỗ lớp học của bạn. Vui lòng thanh toán trước khi hết hạn."],
+  ["Pay Invoice Now", "Thanh toán ngay"],
+  ["Transaction Breakdown", "Phân loại giao dịch"],
+  ["Paid Orders", "Đơn đã thanh toán"],
+  ["Pending Orders", "Đơn chờ xử lý"],
+  ["Cancelled / Expired", "Đã hủy / Quá hạn"],
+  ["Official Electronic Invoices", "Hóa đơn điện tử chính thức"],
+  ["All transactions are digitally logged with SSL 256-bit encryption. Present your Invoice ID at Reception for corporate VAT tax receipts.", "Mọi giao dịch đều được số hóa với mã hóa bảo mật SSL 256-bit. Vui lòng xuất trình Mã hóa đơn tại Quầy lễ tân để xuất hóa đơn đỏ VAT doanh nghiệp."],
+  ["By confirming payment, you agree to our", "Bằng việc xác nhận thanh toán, bạn đồng ý với"],
+
+  // Terms of Service Modal
+  ["Terms of Service & Regulations", "Điều khoản Dịch vụ & Quy chế Hoạt động"],
+  ["Official Legal Document · NEXUS 2026", "Văn bản pháp lý chính thức · NEXUS 2026"],
+  ["Welcome to NEXUS High-Tech Sports Center Ecosystem!", "Chào mừng bạn gia nhập Hệ sinh thái Thể thao Công nghệ cao NEXUS Sports Center!"],
+  ["By registering an account or using our services/memberships, you agree to comply with all legal regulations, physical safety guidelines, and privacy policies below.", "Bằng việc đăng ký tài khoản hoặc sử dụng dịch vụ/thẻ hội viên của chúng tôi, bạn đồng ý tuân thủ toàn bộ các quy định pháp lý, an toàn vận động và chính sách bảo mật dưới đây."],
+  ["Applicable across all NEXUS Sports Center facilities", "Áp dụng trên toàn bộ hệ thống cơ sở NEXUS Sports Center"],
+  ["1. Membership & QR Pass Policy", "1. Quy chế Thẻ Hội viên & Định danh mã QR (Membership & QR Pass)"],
+  ["Member accounts and QR Pass Check-in credentials are strictly personal and non-transferable. Sharing, lending, or unauthorized assignment to third parties is prohibited.", "Tài khoản hội viên và mã QR Pass Check-in là định danh cá nhân độc quyền, nghiêm cấm chia sẻ, cho mượn hoặc chuyển nhượng trái phép cho bên thứ ba."],
+  ["Members must scan their QR code at turnstile gates 5-10 minutes prior to session start for automatic attendance recording.", "Hội viên cần thực hiện quét mã QR tại cổng kiểm soát Turnstile trước mỗi buổi tập ít nhất 05–10 phút để hệ thống ghi nhận điểm danh tự động."],
+  ["In cases of pass sharing or fraud, the Center reserves the right to suspend facility access without refunding membership fees.", "Trường hợp phát hiện hành vi gian lận mượn thẻ, Trung tâm có quyền đình chỉ quyền ra vào của tài khoản mà không hoàn lại học phí."],
+  ["2. Health Commitment & Liability Waiver", "2. Cam kết Thể chất & Miễn trừ Trách nhiệm Y tế (Health & Liability Waiver)"],
+  ["Members commit to self-assess fitness and honestly notify Trainers (PT) of any cardiovascular issues, injuries, blood pressure conditions, or movement limits before classes.", "Hội viên cam kết chủ động đánh giá thể trạng và thông báo trung thực với Huấn luyện viên (PT) về tiền sử chấn thương, tim mạch, huyết áp hoặc hạn chế vận động trước khi tham gia lớp."],
+  ["Members participate voluntarily and agree to heed physical limits. The Center is not liable for injuries resulting from unauthorized improper weight lifting outside coach guidance.", "Hội viên tự nguyện tham gia các chương trình tập luyện và chịu trách nhiệm lắng nghe giới hạn thể lực của bản thân. Trung tâm không chịu trách nhiệm đối với các chấn thương phát sinh do tự ý nâng tạ sai kỹ thuật ngoài hướng dẫn của HLV."],
+  ["The Center provides standard first aid kits and biomedical vital monitors at the Reception desk.", "Trung tâm trang bị đầy đủ dụng cụ sơ cứu y tế khẩn cấp và thiết bị theo dõi nhịp tim sinh trắc học tiêu chuẩn tại quầy Lễ tân."],
+  ["3. Facility & Pool Conduct", "3. Nội quy Phòng tập & Khu Bể bơi Bốn Mùa (Facility & Pool Conduct)"],
+  ["Workout Attire: Clean rubber-soled athletic shoes and sportswear are mandatory. Barefoot or slippers on the weightlifting floor are prohibited.", "Trang phục tập luyện: Bắt buộc đi giày thể thao đế cao su sạch và mặc quần áo thể thao co giãn chuyên dụng. Không đi chân đất hoặc dép lê vào sàn tạ."],
+  ["Pool Area: Showering with clean water is required before pool entry; swim caps are mandatory, and lifeguard instructions must be strictly followed.", "Khu Bể bơi: Bắt buộc tắm tráng bằng nước sạch trước khi xuống hồ; đội mũ bơi và tuân thủ tuyệt đối sự hướng dẫn của Cứu hộ viên trực sàn."],
+  ["General Etiquette: Wipe sweat off equipment after use; return dumbbells, plates, and accessories to designated racks.", "Ý thức chung: Lau sạch mồ hôi trên máy tập sau khi sử dụng; cất trả tạ đơn, đĩa tạ và phụ kiện về đúng giá đỡ quy định."],
+  ["4. Class Booking, Cancellation & Deferral", "4. Quy chế Đặt lịch, Hủy ca & Bảo lưu Khóa học (Class Booking & Cancellation)"],
+  ["Members can book sessions up to 7 days in advance online. Seats are guaranteed once reservation/payment is confirmed.", "Hội viên được đặt trước chỗ lớp học tối đa 07 ngày qua Cổng trực tuyến. Chỗ học chỉ được đảm bảo sau khi hoàn tất xác nhận thanh toán/giữ chỗ."],
+  ["Cancellation Policy: All cancellations must be submitted at least 2 hours before start time. The system will restore quota or issue corresponding Voucher Credit.", "Chính sách hủy ca: Mọi yêu cầu hủy lớp phải được gửi trước giờ học tối thiểu 02 (hai) giờ. Hệ thống sẽ tự động hoàn trả hạn mức buổi tập hoặc cấp Tín dụng hoàn tiền (Voucher Credit) tương ứng."],
+  ["Unexcused Absence (No-show): The session will be counted as attended with no credit refund.", "Vắng mặt không báo trước (No-show): Buổi học sẽ bị tính là đã tham gia và không được bồi hoàn."],
+  ["5. Fees, Credits & Refund Policy", "5. Phí dịch vụ, Tín dụng & Chính sách Hoàn tiền (Fees & Refund Policy)"],
+  ["All listed prices include sports service charges and taxes. Transactions are securely processed with 256-bit SSL encryption (VNPay, MoMo, PayOS).", "Tất cả mức giá niêm yết trên hệ thống đã bao gồm thuế và phí dịch vụ thể thao. Giao dịch được xử lý an toàn qua cổng thanh toán bảo mật mã hóa SSL 256-bit (VNPay, MoMo, PayOS)."],
+  ["Active/started packages are non-refundable in cash. In force majeure health events (with medical certificates), deferrals are supported up to 30 days.", "Các gói tập đã thanh toán và kích hoạt sử dụng sẽ không được hoàn trả tiền mặt. Trong trường hợp bất khả kháng về sức khỏe (có chỉ định y khoa), hội viên được hỗ trợ bảo lưu thời hạn tối đa 30 ngày."],
+  ["Electronic VAT invoices are issued automatically and stored permanently in Member Transaction History.", "Hóa đơn điện tử VAT được xuất tự động và lưu trữ vĩnh viễn trong mục Lịch sử Giao dịch của Hội viên."],
+  ["6. Data Privacy & Video Security", "6. Bảo vệ Dữ liệu Cá nhân & An ninh Giám sát (Privacy & Security)"],
+  ["NEXUS commits to strict privacy of identities, phone numbers, workout history, and biometrics, never sharing data with advertisers.", "NEXUS cam kết bảo mật tuyệt đối thông tin danh tính, số điện thoại, lịch sử tập luyện và chỉ số thể chất của Hội viên, không cung cấp cho bất kỳ đơn vị quảng cáo nào."],
+  ["High-definition security cameras operate 24/7 in public workout areas for life and property safety (cameras are strictly prohibited in Lockers and changing rooms).", "Hệ thống Camera an ninh độ phân giải cao được vận hành 24/7 tại các khu vực tập luyện công cộng nhằm đảm bảo an toàn tính mạng và tài sản (nghiêm cấm lắp đặt camera tại khu Locker và phòng thay đồ)."],
+  ["I Understand & Agree", "Tôi đã hiểu và Đồng ý"]
+];
+
+for (const [en, vi] of billingAndTermsTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
