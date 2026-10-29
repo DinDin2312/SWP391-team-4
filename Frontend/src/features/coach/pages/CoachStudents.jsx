@@ -52,8 +52,9 @@ const CoachStudents = () => {
   };
 
   // Filter students by name, email, or phone
+  const q = searchQuery.trim().toLowerCase();
   const filteredStudents = students.filter(s =>
-    s.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    !q || s.fullName?.toLowerCase().includes(q) ||
     s.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.phone?.includes(searchQuery)
   );

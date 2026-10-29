@@ -123,12 +123,11 @@ public class AiChatServiceImpl implements AiChatService {
                 "5. To navigate the user to their Cart / Checkout: Append [ACTION:NAVIGATE:/member/cart]\n" +
                 "6. To Auto-Add / Select a Package: If the user asks to buy, choose, or select a package, append ONLY [ACTION:ADD_CART:package_id] (replace package_id with the actual numeric ID). Do NOT append [ACTION:NAVIGATE:/member/cart] because the UI will automatically light up the Shopping Cart icon when the item is added.\n" +
                 "7. To Auto-Book / Select a Class: When the user asks to book, choose, or register for ANY class (e.g. 'đặt giúp tôi 1 lớp bơi bất kỳ', 'đặt lớp gym', or naming a specific course):\n" +
-                "   - You MUST ONLY choose a class from the '--- AVAILABLE CLASSES (CAN BE BOOKED) ---' list above.\n" +
-                "   - NEVER choose a class that is under '--- USER'S ALREADY ENROLLED COURSES ---' (if they ask for it, remind them that they already enrolled in it!).\n" +
-                "   - NEVER choose a class that is under '--- USER'S COURSES CURRENTLY IN CART ---' (if they ask for it, remind them it is already in their checkout cart!).\n" +
+                "   - CRITICAL RESTRICTION: You MUST ONLY choose a class from the '--- AVAILABLE CLASSES (CAN BE BOOKED) ---' list above. You must never invent or book any ID not listed there!\n" +
+                "   - STRICT FORBIDDEN RULE: NEVER choose, recommend for booking, or append [ACTION:BOOK_CLASS:...] for ANY class under '--- USER'S ALREADY ENROLLED COURSES ---' or '--- USER'S COURSES CURRENTLY IN CART ---'. If the user asks for a class they already enrolled in or already in cart, tell them clearly: 'Bạn đã đăng ký khoá học này rồi nha!' or 'Khoá này đã có trong giỏ hàng rồi nè!' and NEVER append an ACTION tag.\n" +
+                "   - If NO class in 'AVAILABLE CLASSES (CAN BE BOOKED)' matches their requested sport or time (e.g. they ask for swimming but all swimming classes are already enrolled or none are open): You MUST inform them politely that no available open slots/classes for that sport can be booked right now. DO NOT pick an already-enrolled class!\n" +
                 "   - Check if the class's time block overlaps with their '--- USER'S CURRENT BOOKED SCHEDULE ---'. If it overlaps, apologize and mention the schedule conflict.\n" +
                 "   - If valid, state the exact class name and time from the list, and append ONLY [ACTION:BOOK_CLASS:class_id] using the exact numeric ID from brackets [ID]. Do NOT append [ACTION:NAVIGATE:/member/schedule] because the UI will automatically light up the Shopping Cart icon.\n" +
-                "   - If NO class in 'AVAILABLE CLASSES (CAN BE BOOKED)' matches their request, politely inform them that there are no matching classes currently available for booking. NEVER invent or hallucinate fake classes or fake schedules!\n" +
                 "Never expose these raw commands in your conversational text. Just append the exact bracket format at the very end of your message.\n\n" +
                 "User's message: ";
 
@@ -142,7 +141,7 @@ public class AiChatServiceImpl implements AiChatService {
         requestBody.put("contents", List.of(content));
 
         Map<String, Object> generationConfig = new HashMap<>();
-        generationConfig.put("maxOutputTokens", 1000);
+        generationConfig.put("maxOutputTokens", 1200);
         generationConfig.put("temperature", 0.7);
         Map<String, Object> thinkingConfig = new HashMap<>();
         thinkingConfig.put("thinkingBudget", 0);
@@ -154,7 +153,7 @@ public class AiChatServiceImpl implements AiChatService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        String[] models = {"gemini-3-flash-preview", "gemini-3.8-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"};
+        String[] models = {"gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"};
         
         for (String model : models) {
             String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;

@@ -143,24 +143,24 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in">
-      <div className="bg-[#091124] border border-[#1b2b4f] rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col my-auto transition-colors">
 
         {/* Header */}
-        <div className="p-5 bg-gradient-to-r from-[#0b1326] via-[#111d38] to-[#0e172a] border-b border-[#1b2b4f] flex items-center justify-between">
+        <div className="p-5 bg-gradient-to-r from-[var(--surface)] via-[var(--surface-hover)] to-[var(--surface)] border-b border-[var(--border)] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600/30 border border-blue-500/40 text-blue-400 flex items-center justify-center shadow-lg">
+            <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-lg">
               <Bell className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <h3 className="text-lg font-bold text-white tracking-tight">{t("Gửi Thông Báo Cho Học Viên")}</h3>
-              <p className="text-xs text-slate-400">{t("Tạo & truyền tải thông báo trực tiếp đến học viên")}</p>
+              <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">{t("Gửi Thông Báo Cho Học Viên")}</h3>
+              <p className="text-xs text-[var(--text-muted)]">{t("Tạo & truyền tải thông báo trực tiếp đến học viên")}</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-[#111d38] text-slate-400 hover:text-white hover:bg-[#1a2947] flex items-center justify-center transition-all cursor-pointer"
+            className="w-8 h-8 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] flex items-center justify-center transition-all cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -171,33 +171,33 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
 
           {/* Error Alert */}
           {errorMsg && (
-            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 flex items-center gap-2.5 animate-shake">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 flex items-center gap-2.5 animate-shake">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
               <span>{t(errorMsg)}</span>
             </div>
           )}
 
           {/* Success Alert */}
           {successMsg && (
-            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center gap-2.5 animate-fade-in">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 flex items-center gap-2.5 animate-fade-in">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
               <span>{successMsg}</span>
             </div>
           )}
 
           {/* 1. Recipient Scope Selection */}
           <div className="space-y-2">
-            <label className="block text-slate-300 font-bold uppercase tracking-wider text-[11px]">{t("1. Phạm vi người nhận thông báo")}</label>
+            <label className="block text-[var(--text)] font-bold uppercase tracking-wider text-[11px]">{t("1. Phạm vi người nhận thông báo")}</label>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setTargetType('ALL')}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${targetType === 'ALL'
-                  ? 'bg-blue-600/20 border-blue-500 text-blue-300 font-bold shadow-lg shadow-blue-500/10'
-                  : 'bg-[#0e172a] border-[#1a2947] text-slate-400 hover:border-slate-600 hover:text-slate-200'
+                  ? 'bg-blue-600/15 border-blue-500 text-blue-600 dark:text-blue-400 font-bold shadow-md shadow-blue-500/10'
+                  : 'bg-[var(--surface-hover)] border-[var(--border)] text-[var(--text-muted)] hover:border-slate-400 dark:hover:border-slate-600 hover:text-[var(--text)]'
                   }`}
               >
-                <Users className="w-5 h-5 text-blue-400" />
+                <Users className="w-5 h-5 text-blue-500" />
                 <span className="text-center text-[11px]">{t("Tất cả học viên")}</span>
               </button>
 
@@ -205,11 +205,11 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
                 type="button"
                 onClick={() => setTargetType('CLASS')}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${targetType === 'CLASS'
-                  ? 'bg-blue-600/20 border-blue-500 text-blue-300 font-bold shadow-lg shadow-blue-500/10'
-                  : 'bg-[#0e172a] border-[#1a2947] text-slate-400 hover:border-slate-600 hover:text-slate-200'
+                  ? 'bg-blue-600/15 border-blue-500 text-blue-600 dark:text-blue-400 font-bold shadow-md shadow-blue-500/10'
+                  : 'bg-[var(--surface-hover)] border-[var(--border)] text-[var(--text-muted)] hover:border-slate-400 dark:hover:border-slate-600 hover:text-[var(--text)]'
                   }`}
               >
-                <School className="w-5 h-5 text-emerald-400" />
+                <School className="w-5 h-5 text-emerald-500" />
                 <span className="text-center text-[11px]">{t("Theo lớp học")}</span>
               </button>
 
@@ -217,11 +217,11 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
                 type="button"
                 onClick={() => setTargetType('INDIVIDUAL')}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${targetType === 'INDIVIDUAL'
-                  ? 'bg-blue-600/20 border-blue-500 text-blue-300 font-bold shadow-lg shadow-blue-500/10'
-                  : 'bg-[#0e172a] border-[#1a2947] text-slate-400 hover:border-slate-600 hover:text-slate-200'
+                  ? 'bg-blue-600/15 border-blue-500 text-blue-600 dark:text-blue-400 font-bold shadow-md shadow-blue-500/10'
+                  : 'bg-[var(--surface-hover)] border-[var(--border)] text-[var(--text-muted)] hover:border-slate-400 dark:hover:border-slate-600 hover:text-[var(--text)]'
                   }`}
               >
-                <User className="w-5 h-5 text-amber-400" />
+                <User className="w-5 h-5 text-amber-500" />
                 <span className="text-center text-[11px]">{t("Học viên cá nhân")}</span>
               </button>
             </div>
@@ -230,11 +230,11 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
           {/* Conditional Input: Select Class */}
           {targetType === 'CLASS' && (
             <div className="space-y-1.5 animate-fade-in">
-              <label className="block text-slate-400 font-semibold">{t("Chọn lớp học:")}</label>
+              <label className="block text-[var(--text-muted)] font-semibold">{t("Chọn lớp học:")}</label>
               <select
                 value={selectedClassId}
                 onChange={(e) => setSelectedClassId(e.target.value)}
-                className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-xs text-[var(--text)] focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
               >
                 {classes.length === 0 ? (
                   <option value="">{t("-- Chưa có lớp học nào --")}</option>
@@ -252,11 +252,11 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
           {/* Conditional Input: Select Individual Student */}
           {targetType === 'INDIVIDUAL' && (
             <div className="space-y-1.5 animate-fade-in">
-              <label className="block text-slate-400 font-semibold">{t("Chọn học viên nhận thông báo:")}</label>
+              <label className="block text-[var(--text-muted)] font-semibold">{t("Chọn học viên nhận thông báo:")}</label>
               <select
                 value={selectedStudentId}
                 onChange={(e) => setSelectedStudentId(e.target.value)}
-                className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-xs text-[var(--text)] focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
               >
                 {students.length === 0 ? (
                   <option value="">{t("-- Chưa có học viên nào --")}</option>
@@ -274,11 +274,11 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
           {/* 2. Notification Category & Title */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
             <div className="space-y-1.5 sm:col-span-1">
-              <label className="block text-slate-300 font-bold uppercase tracking-wider text-[11px]">{t("Loại thông báo")}</label>
+              <label className="block text-[var(--text)] font-bold uppercase tracking-wider text-[11px]">{t("Loại thông báo")}</label>
               <select
                 value={notificationType}
                 onChange={(e) => setNotificationType(e.target.value)}
-                className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-xs text-[var(--text)] focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
               >
                 <option value="COACH">{t("💬 Lời nhắn HLV")}</option>
                 <option value="ANNOUNCEMENT">{t("📢 Thông báo chung")}</option>
@@ -288,45 +288,45 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
             </div>
 
             <div className="space-y-1.5 sm:col-span-2">
-              <label className="block text-slate-300 font-bold uppercase tracking-wider text-[11px]">{t("Tiêu đề thông báo")}<span className="text-red-400">*</span>
+              <label className="block text-[var(--text)] font-bold uppercase tracking-wider text-[11px]">{t("Tiêu đề thông báo")}<span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={t("VD: Thay đổi lịch tập tuần tới / Nhắc nhở bài tập...")}
-                className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-blue-500 transition-all"
               />
             </div>
           </div>
 
           {/* 3. Notification Message Content */}
           <div className="space-y-1.5">
-            <label className="block text-slate-300 font-bold uppercase tracking-wider text-[11px]">{t("Nội dung thông báo")}<span className="text-red-400">*</span>
+            <label className="block text-[var(--text)] font-bold uppercase tracking-wider text-[11px]">{t("Nội dung thông báo")}<span className="text-red-500">*</span>
             </label>
             <textarea
               rows={4}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder={t("Nhập nội dung chi tiết muốn truyền tải tới học viên...")}
-              className="w-full bg-[#0e172a] border border-[#1a2947] rounded-xl p-3.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none leading-relaxed"
+              className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3.5 text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-blue-500 resize-none leading-relaxed transition-all"
             />
           </div>
 
           {/* Summary Preview Banner */}
-          <div className="p-3 rounded-xl bg-[#0e172a] border border-[#1b2b4f] flex items-center justify-between text-[11px] text-slate-400">
+          <div className="p-3 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] flex items-center justify-between text-[11px] text-[var(--text-muted)]">
             <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-blue-400" />
+              <Layers className="w-4 h-4 text-blue-500" />
               <span>{t(getRecipientSummary())}</span>
             </div>
           </div>
 
           {/* Footer Action Buttons */}
-          <div className="pt-3 border-t border-[#1b2b4f] flex items-center justify-end gap-3">
+          <div className="pt-3 border-t border-[var(--border)] flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl bg-[#111d38] hover:bg-[#1a2947] text-slate-300 hover:text-white font-semibold text-xs transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] hover:bg-[var(--border)] text-[var(--text)] font-semibold text-xs transition-all cursor-pointer"
             >{t("Hủy")}</button>
 
             <button

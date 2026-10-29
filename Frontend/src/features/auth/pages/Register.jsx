@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   Calendar
 } from 'lucide-react';
+import TermsOfServiceModal from '../../../components/TermsOfServiceModal';
 
 export default function Register() {
   const currentLang = useLanguage();
@@ -37,6 +38,7 @@ export default function Register() {
     password: ''
   });
   const [isAgreed, setIsAgreed] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
   const [selectedSport, setSelectedSport] = useState('Courts');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -354,16 +356,28 @@ export default function Register() {
                 </div>
 
                 {/* Terms Agreement Checkbox */}
-                <div className="flex items-start gap-2.5 pt-0.5 cursor-pointer select-none" onClick={toggleAgreement}>
-                  <div className={`w-4 h-4 rounded-md border flex items-center justify-center mt-0.5 transition-colors shrink-0 ${
-                    isAgreed ? 'bg-blue-600 border-blue-600 text-white shadow-xs' : 'bg-white hover:bg-slate-50 border-slate-300'
-                  }`}>
+                <div className="flex items-start gap-2.5 pt-0.5 select-none">
+                  <div 
+                    onClick={toggleAgreement}
+                    className={`w-4 h-4 rounded-md border flex items-center justify-center mt-0.5 transition-colors shrink-0 cursor-pointer ${
+                      isAgreed ? 'bg-blue-600 border-blue-600 text-white shadow-xs' : 'bg-white hover:bg-slate-50 border-slate-300'
+                    }`}
+                  >
                     {isAgreed && <Check className="w-3 h-3 stroke-[3]" />}
                   </div>
                   <p className="text-xs text-slate-800 font-medium leading-normal">
-                    <span>{t("I accept the")} </span>
-                    <span className="text-blue-600 font-extrabold hover:underline">{t("Terms of Service")}</span>
-                    <span>{t(", safety protocols, and health liability waivers.")}</span>
+                    <span onClick={toggleAgreement} className="cursor-pointer">{t("I accept the")} </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsTermsOpen(true);
+                      }}
+                      className="text-blue-600 font-extrabold hover:underline cursor-pointer inline focus:outline-none"
+                    >
+                      {t("Terms of Service")}
+                    </button>
+                    <span onClick={toggleAgreement} className="cursor-pointer">{t(", safety protocols, and health liability waivers.")}</span>
                   </p>
                 </div>
 
@@ -440,6 +454,13 @@ export default function Register() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Terms of Service Modal */}
+      <TermsOfServiceModal
+        isOpen={isTermsOpen}
+        onClose={() => setIsTermsOpen(false)}
+        onAccept={() => setIsAgreed(true)}
+      />
     </motion.main>
   );
 }

@@ -11,6 +11,15 @@
 
 * { box-sizing: border-box; }
 
+/* Utility to completely hide scrollbar while preserving scrolling functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 html { background: var(--bg); }
 
 body {
@@ -489,4 +498,42 @@ button { color: inherit; }
 .no-scrollbar {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
+}
+
+
+/* =========================================================================
+   GOOGLE PRO / GEMINI AVATAR TIER RINGS
+   ========================================================================= */
+@keyframes spin-gradient {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse-ring {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.06); }
+}
+
+.avatar-ring-platinum {
+  background: conic-gradient(from 0deg, #1A73E8, #00E5FF, #8E24AA, #FF4081, #FBBC04, #1A73E8);
+}
+
+.avatar-ring-gold {
+  background: conic-gradient(from 0deg, #FDE68A, #F59E0B, #D97706, #B45309, #FBBF24, #FDE68A);
+}
+
+.avatar-ring-silver {
+  background: conic-gradient(from 0deg, #FFFFFF, #CBD5E1, #94A3B8, #64748B, #E2E8F0, #FFFFFF);
+}
+
+.avatar-ring-member {
+  background: conic-gradient(from 0deg, #3B82F6, #60A5FA, #93C5FD, #2563EB, #3B82F6);
+}
+
+.animate-spin-slow {
+  animation: spin-gradient 10s linear infinite;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-ring 3.5s ease-in-out infinite;
 }

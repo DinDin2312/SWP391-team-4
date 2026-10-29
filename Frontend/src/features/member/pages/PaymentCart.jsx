@@ -1,5 +1,6 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
+import TermsOfServiceModal from '../../../components/TermsOfServiceModal';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -23,6 +24,7 @@ const PaymentCart = () => {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [pendingInvoice, setPendingInvoice] = useState(null);
   const [cancellingCheckout, setCancellingCheckout] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
   const [toast, setToast] = useState({ visible: false, type: 'success', title: '', message: '' });
 
   useEffect(() => {
@@ -490,11 +492,28 @@ const PaymentCart = () => {
                 {!checkoutLoading && <ArrowRight className="w-5 h-5" />}
               </button>
 
+              <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--text-muted)] text-center">
+                <span>{t("By confirming payment, you agree to our")}</span>
+                <button
+                  type="button"
+                  onClick={() => setIsTermsOpen(true)}
+                  className="text-blue-500 hover:underline font-semibold cursor-pointer"
+                >
+                  {t("Terms of Service")}
+                </button>
+              </div>
+
               <p className="text-[10px] text-center text-[var(--text-muted)] uppercase tracking-wider font-bold">{t("Secure 256-bit SSL Encryption")}</p>
             </div>
           </div>
         </div>
       )}
+
+      {/* Terms of Service Modal */}
+      <TermsOfServiceModal
+        isOpen={isTermsOpen}
+        onClose={() => setIsTermsOpen(false)}
+      />
     </div>
   );
 };

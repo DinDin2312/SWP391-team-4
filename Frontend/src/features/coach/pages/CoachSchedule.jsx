@@ -258,8 +258,9 @@ const CoachSchedule = () => {
   };
 
   // Filter trainees in active modal by search term
+  const modalQ = searchModalQuery.trim().toLowerCase();
   const modalTrainees = activeModalSchedule?.enrolledStudents?.filter(st =>
-    st.fullName?.toLowerCase().includes(searchModalQuery.toLowerCase()) ||
+    !modalQ || st.fullName?.toLowerCase().includes(modalQ) ||
     st.email?.toLowerCase().includes(searchModalQuery.toLowerCase()) ||
     st.phone?.includes(searchModalQuery)
   ) || [];

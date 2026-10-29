@@ -10,12 +10,27 @@ import {
   Banknote,
   User,
   ArrowUpDown,
-  RotateCw
+  RotateCw,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { receptionistService } from '../services/receptionistService';
 import InvoiceReceiptModal from './InvoiceReceiptModal';
 import { formatMoney, formatDateTime } from '../../../utils/displayFormat';
 import { t } from '../../../i18n/useLanguage';
+
+const getPaginationRange = (current, total) => {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, '...', total];
+  }
+  if (current >= total - 3) {
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, '...', current - 1, current, current + 1, '...', total];
+};
 
 export default function InvoiceManagementView() {
   const [invoices, setInvoices] = useState([]);
@@ -24,6 +39,8 @@ export default function InvoiceManagementView() {
   const [paymentFilter, setPaymentFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('ALL');
   const [sortOrder, setSortOrder] = useState('DESC');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
@@ -114,6 +131,22 @@ export default function InvoiceManagementView() {
 
     return result;
   }, [invoices, searchKeyword, paymentFilter, dateFilter, sortOrder]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchKeyword, paymentFilter, dateFilter, sortOrder]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / pageSize));
+  const validPage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const paginatedInvoices = useMemo(() => {
+    const start = (validPage - 1) * pageSize;
+    return filteredInvoices.slice(start, start + pageSize);
+  }, [filteredInvoices, validPage, pageSize]);
+
+  const startRecord = filteredInvoices.length === 0 ? 0 : (validPage - 1) * pageSize + 1;
+  const endRecord = Math.min(validPage * pageSize, filteredInvoices.length);
 
   const handleOpenReceipt = (invoice) => {
     setSelectedReceipt(invoice);
@@ -232,7 +265,8 @@ export default function InvoiceManagementView() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-xs sm:text-sm">
               <thead>
                 <tr className="bg-[var(--surface-hover)] border-b border-[var(--border)] text-[var(--text-muted)] font-semibold">
@@ -249,7 +283,7 @@ export default function InvoiceManagementView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)] text-[var(--text)]">
-                {filteredInvoices.map((inv, idx) => {
+                {paginatedInvoices.map((inv, idx) => {
                   const method = (inv.paymentMethod || 'CASH').toUpperCase();
                   const isCash = method === 'CASH';
 
@@ -339,6 +373,76 @@ export default function InvoiceManagementView() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {filteredInvoices.length > 0 && (
+            <div className="p-4 sm:p-5 border-t border-[var(--border)] bg-[var(--surface-hover)]/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-xs text-[var(--text-muted)] flex items-center gap-1.5 order-2 sm:order-1">
+                <span>{t("Showing")}</span>
+                <strong className="text-[var(--text)] font-bold">{startRecord}–{endRecord}</strong>
+                <span>{t("of")}</span>
+                <strong className="text-[var(--text)] font-bold">{filteredInvoices.length}</strong>
+                <span>{t("invoices")}</span>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1.5 order-1 sm:order-2 select-none">
+                  {/* Previous button */}
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={validPage === 1}
+                    className="px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] disabled:opacity-30 disabled:pointer-events-none text-xs text-[var(--text)] transition-all flex items-center gap-1 cursor-pointer"
+                    title={t("Previous")}
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{t("Previous")}</span>
+                  </button>
+
+                  {/* Page numbers (1, 2, 3...) */}
+                  <div className="flex items-center gap-1">
+                    {getPaginationRange(validPage, totalPages).map((p, idx) => {
+                      if (p === '...') {
+                        return (
+                          <span key={`dots-${idx}`} className="px-2 py-1 text-xs text-[var(--text-muted)]">
+                            ...
+                          </span>
+                        );
+                      }
+                      const isCurrent = p === validPage;
+                      return (
+                        <button
+                          key={`page-${p}`}
+                          type="button"
+                          onClick={() => setCurrentPage(p)}
+                          className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            isCurrent
+                              ? "bg-blue-600 text-white shadow-xs shadow-blue-500/30 ring-1 ring-blue-500"
+                              : "border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Next button */}
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={validPage === totalPages}
+                    className="px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] disabled:opacity-30 disabled:pointer-events-none text-xs text-[var(--text)] transition-all flex items-center gap-1 cursor-pointer"
+                    title={t("Next")}
+                  >
+                    <span className="hidden sm:inline">{t("Next")}</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          </>
         )}
       </div>
 

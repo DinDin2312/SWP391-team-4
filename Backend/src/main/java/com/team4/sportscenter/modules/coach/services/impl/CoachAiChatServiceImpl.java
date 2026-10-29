@@ -164,7 +164,7 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
         requestBody.put("contents", List.of(content));
 
         Map<String, Object> generationConfig = new HashMap<>();
-        generationConfig.put("maxOutputTokens", 1500);
+        generationConfig.put("maxOutputTokens", 3000);
         generationConfig.put("temperature", 0.7);
         Map<String, Object> thinkingConfig = new HashMap<>();
         thinkingConfig.put("thinkingBudget", 0);
@@ -176,7 +176,7 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        String[] models = {"gemini-3-flash-preview", "gemini-3.8-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"};
+        String[] models = {"gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"};
 
         for (String model : models) {
             String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;

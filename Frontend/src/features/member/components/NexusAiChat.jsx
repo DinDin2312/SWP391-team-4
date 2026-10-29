@@ -16,7 +16,27 @@ const NexusAiChat = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isChipsHovered, setIsChipsHovered] = useState(false);
+  const [voiceLang, setVoiceLang] = useState(() => {
+    try {
+      return localStorage.getItem('nexus_voice_lang') || 'vi-VN';
+    } catch {
+      return 'vi-VN';
+    }
+  });
+
+  const toggleVoiceLang = () => {
+    if (isListening && recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+      setIsListening(false);
+    }
+    const nextLang = voiceLang === 'vi-VN' ? 'en-US' : 'vi-VN';
+    setVoiceLang(nextLang);
+    try {
+      localStorage.setItem('nexus_voice_lang', nextLang);
+    } catch {}
+  };
   
+  const baseInputRef = useRef('');
   const dragRef = useRef(null);
   const offset = useRef({ x: 0, y: 0 });
   const recognitionRef = useRef(null);
@@ -32,30 +52,46 @@ const NexusAiChat = ({ isOpen, onClose }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isOpen]);
 
-  // Khởi tạo và đồng bộ Web Speech API theo ngôn ngữ hiện tại
+  // Khởi tạo và đồng bộ Web Speech API theo ngôn ngữ giọng nói đã chọn (mặc định vi-VN)
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       try {
         const recognition = new SpeechRecognition();
         recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = lang === 'vi' ? 'vi-VN' : 'en-US';
+        recognition.interimResults = true;
+        recognition.lang = voiceLang;
 
         recognition.onstart = () => {
           setIsListening(true);
         };
 
         recognition.onresult = (event) => {
-          const transcript = event.results?.[0]?.[0]?.transcript;
-          if (transcript) {
-            setInput((prev) => (prev ? prev.trim() + ' ' + transcript : transcript));
+          let currentTranscript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            currentTranscript += event.results[i][0].transcript;
+          }
+          if (currentTranscript) {
+            const prefix = baseInputRef.current ? baseInputRef.current.trim() + ' ' : '';
+            setInput(prefix + currentTranscript);
           }
         };
 
         recognition.onerror = (event) => {
           console.warn('Speech recognition error:', event.error);
           setIsListening(false);
+          if (event.error === 'not-allowed') {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: Date.now(),
+                sender: 'bot',
+                text: voiceLang === 'vi-VN'
+                  ? '⚠️ Bạn chưa cấp quyền Microphone cho trình duyệt. Vui lòng bấm vào biểu tượng trên thanh địa chỉ URL để cho phép truy cập Micro.'
+                  : '⚠️ Microphone permission denied. Please allow microphone access in your browser address bar.'
+              }
+            ]);
+          }
         };
 
         recognition.onend = () => {
@@ -73,7 +109,7 @@ const NexusAiChat = ({ isOpen, onClose }) => {
         try { recognitionRef.current.abort(); } catch {}
       }
     };
-  }, [lang]);
+  }, [voiceLang]);
 
   // Infinite marquee conveyor loop for suggestion chips
   useEffect(() => {
@@ -167,7 +203,8 @@ const NexusAiChat = ({ isOpen, onClose }) => {
       setIsListening(false);
     } else {
       try {
-        recognitionRef.current.lang = lang === 'vi' ? 'vi-VN' : 'en-US';
+        baseInputRef.current = input;
+        recognitionRef.current.lang = voiceLang;
         recognitionRef.current.start();
       } catch (err) {
         console.warn('Could not start speech recognition:', err);
@@ -462,22 +499,35 @@ const NexusAiChat = ({ isOpen, onClose }) => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder={isListening ? t("Listening... Speak now...") : t("Ask about workouts, packages, gym services...")}
+                  placeholder={
+                    isListening
+                      ? (voiceLang === 'vi-VN' ? "🎙️ Đang nghe tiếng Việt... Hãy nói..." : "🎙️ Listening (English)... Speak now...")
+                      : t("Ask about workouts, packages, gym services...")
+                  }
                   disabled={isLoading}
-                  className={`w-full bg-[var(--surface)] text-[var(--text)] text-sm rounded-xl pl-4 pr-20 py-3 border ${
+                  className={`w-full bg-[var(--surface)] text-[var(--text)] text-sm rounded-xl pl-4 pr-24 py-3 border ${
                     isListening ? 'border-red-500 ring-2 ring-red-400/40 animate-pulse' : 'border-[var(--border)] focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]'
                   } outline-none transition-all placeholder-[var(--text-muted)] disabled:opacity-50 disabled:bg-[var(--surface-hover)]`}
                 />
                 <div className="absolute right-1.5 flex items-center gap-1">
                   <button
                     type="button"
+                    onClick={toggleVoiceLang}
+                    className="px-1.5 py-1 text-[10px] font-bold rounded-md bg-[var(--surface-hover)] hover:bg-[var(--primary)] hover:text-white text-[var(--text)] transition-colors border border-[var(--border)] cursor-pointer select-none"
+                    title={voiceLang === 'vi-VN' ? "Giọng nói: Tiếng Việt (Bấm để đổi sang Tiếng Anh)" : "Voice: English (Click to switch to Vietnamese)"}
+                    aria-label="Toggle voice language"
+                  >
+                    {voiceLang === 'vi-VN' ? 'VI' : 'EN'}
+                  </button>
+                  <button
+                    type="button"
                     onClick={toggleListening}
-                    className={`p-1.5 rounded-lg transition-all ${
+                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                       isListening
                         ? 'bg-red-500 text-white animate-pulse shadow-md shadow-red-500/30'
                         : 'text-[var(--text-muted)] hover:text-[var(--primary)] hover:bg-[var(--surface-hover)]'
                     }`}
-                    title={isListening ? t("Stop listening") : t("Voice input")}
+                    title={isListening ? t("Stop listening") : (voiceLang === 'vi-VN' ? "Nói tiếng Việt" : t("Voice input"))}
                     aria-label={isListening ? t("Stop listening") : t("Voice input")}
                   >
                     {isListening ? <MicOff className="w-4 h-4 text-white" /> : <Mic className="w-4 h-4" />}
@@ -486,7 +536,7 @@ const NexusAiChat = ({ isOpen, onClose }) => {
                     type="button"
                     onClick={() => handleSend()}
                     disabled={!input.trim() || isLoading}
-                    className="p-1.5 bg-[var(--primary)] text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-[var(--primary)] transition-colors"
+                    className="p-1.5 bg-[var(--primary)] text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-[var(--primary)] transition-colors cursor-pointer"
                     title={t("Send message")}
                     aria-label={t("Send message")}
                   >

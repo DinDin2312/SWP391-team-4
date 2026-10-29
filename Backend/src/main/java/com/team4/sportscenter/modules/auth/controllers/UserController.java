@@ -133,7 +133,7 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/change-password")
+    @PutMapping({"/change-password", "/password"})
     public ResponseEntity<?> changePassword(Authentication authentication, @RequestBody Map<String, String> payload) {
         String email = authentication.getName();
         String currentPassword = payload.get("currentPassword");

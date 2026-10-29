@@ -7,12 +7,13 @@ import PackagesPage from '../packages/PackagesPage';
 import ReportsPage from '../reports/ReportsPage';
 import TransactionsPage from '../transactions/TransactionsPage';
 import AuditPage from '../audit/AuditPage';
+import ManagerSettingsView from '../components/ManagerSettingsView';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   BarChart3, CalendarDays, Camera,
   ClipboardList, Dumbbell, LayoutDashboard, LogOut,
-  Menu, Package, RefreshCw, ShieldCheck, Users, X, Wallet, LifeBuoy,
+  Menu, Package, RefreshCw, ShieldCheck, Users, X, Wallet, LifeBuoy, Settings,
 } from 'lucide-react';
 import { AuthContext } from '../../../context/AuthContext';
 import managerService from '../services/managerService';
@@ -46,6 +47,7 @@ const adminPages = [
   { id: 'transactions', title: 'Transactions', description: 'Monitor system-wide invoices and payment history.', icon: Wallet },
   { id: 'support', title: 'Support & Escalations', description: 'Review escalated member cancellation appeals and facility inquiries.', icon: LifeBuoy },
   { id: 'audit', title: 'System Audit Log', description: 'Review administrative changes and account activity.', icon: ClipboardList },
+  { id: 'settings', title: 'Settings', description: 'Manage your administrator profile, credentials, and system preferences.', icon: Settings },
 ];
 
 function Loading() {
@@ -202,8 +204,8 @@ function ManagerDashboard() {
         <nav>
           {adminPages.map(({ id, title, icon: Icon }) => <button key={id} title={t(title)} aria-label={t(title)} aria-current={active === id ? 'page' : undefined} className={active === id ? 'active' : ''} onClick={() => selectPage(id)}><Icon size={18} /><span>{t(title)}</span></button>)}
         </nav>
-        <div className="manager-profile">
-          <label className="manager-avatar" style={{ cursor: 'pointer', position: 'relative' }} title={t("Change photo")}>
+        <div className="manager-profile" onClick={() => selectPage('settings')} style={{ cursor: 'pointer' }} title={t("Profile & Settings")}>
+          <label className="manager-avatar" style={{ cursor: 'pointer', position: 'relative' }} title={t("Change photo")} onClick={(e) => e.stopPropagation()}>
             {userInfo?.avatarUrl ? (
               <img
                 src={userInfo.avatarUrl.startsWith('http') ? userInfo.avatarUrl : `http://localhost:8080${userInfo.avatarUrl}`}
@@ -215,7 +217,7 @@ function ManagerDashboard() {
             <span style={{ display: userInfo?.avatarUrl ? 'none' : 'flex' }}>{initials}</span>
             <input type="file" accept="image/png,image/jpeg" onChange={handleAdminAvatarUpload} style={{ display: 'none' }} />
           </label><div><strong>{t(userInfo?.fullName || 'Center Manager')}</strong><small>{t(userInfo?.email || 'admin@sport.com')}</small></div>
-          <button onClick={handleLogout} title={t("Log out")} aria-label={t("Log out")}><LogOut size={17} /></button>
+          <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} title={t("Log out")} aria-label={t("Log out")}><LogOut size={17} /></button>
         </div>
       </aside>
       {mobileNav && <button className="manager-overlay" onClick={() => setMobileNav(false)} aria-label={t("Close menu")} />}
@@ -233,7 +235,7 @@ function ManagerDashboard() {
 
         <section className="manager-content">
           {error && active !== 'packages' && <div className="manager-alert" role="alert"><span>{t(error)}</span><button onClick={load}>{t("Retry")}</button></div>}
-          {initialLoading && !['dashboard', 'packages', 'transactions', 'support'].includes(active) ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={dataView === active ? data : null} filters={filters} appliedFilters={active === 'operations' ? operationFilters : appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={refreshAll} loading={loading || dataView !== active} loadError={error} updatedAt={updatedAt} openTransactions={openTransactions} />}
+          {initialLoading && !['dashboard', 'packages', 'transactions', 'support', 'settings'].includes(active) ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={dataView === active ? data : null} filters={filters} appliedFilters={active === 'operations' ? operationFilters : appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={refreshAll} loading={loading || dataView !== active} loadError={error} updatedAt={updatedAt} openTransactions={openTransactions} />}
         </section>
       </main>
       <ManagerToast message={t(notice)} onClose={() => setNotice('')} />
@@ -252,6 +254,7 @@ function ManagerView(props) {
   if (props.active === 'reports') return <ReportsPage {...props} />;
   if (props.active === 'transactions') return <TransactionsPage {...props} />;
   if (props.active === 'support') return <SupportDeskView {...props} />;
+  if (props.active === 'settings') return <ManagerSettingsView {...props} />;
   return <AuditPage {...props} />;
 }
 

@@ -3779,3 +3779,190 @@ for (const [en, vi] of attendanceHistoryTranslations) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }
+
+const scheduleTimeTranslations = [
+  [
+    "Next 7 Days",
+    "7 ngày tới"
+  ],
+  [
+    "No classes scheduled for today.",
+    "Không có lịch tập nào trong ngày hôm nay."
+  ],
+  [
+    "No classes scheduled in the next 7 days.",
+    "Không có lịch tập nào trong 7 ngày tới."
+  ],
+  [
+    "No classes scheduled this month.",
+    "Không có lịch tập nào trong tháng này."
+  ]
+];
+
+for (const [en, vi] of scheduleTimeTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const notificationRedesignTranslations = [
+  [
+    "Notification Center Digest",
+    "Tổng quan thông báo"
+  ],
+  [
+    "Unread Notifications",
+    "Thông báo chưa đọc"
+  ],
+  [
+    "All Caught Up!",
+    "Đã đọc tất cả!"
+  ],
+  [
+    "You have no unread notifications.",
+    "Bạn đã xem hết mọi thông báo mới."
+  ],
+  [
+    "new updates waiting for your review",
+    "thông báo mới đang chờ bạn xem"
+  ],
+  [
+    "Notification Categories",
+    "Danh mục thông báo"
+  ],
+  [
+    "Notification Channels",
+    "Kênh nhận thông báo"
+  ],
+  [
+    "Real-time push alerts for class schedules, gate check-in & e-invoices.",
+    "Thông báo đẩy tức thì về lịch tập, điểm danh cổng và biên lai điện tử."
+  ],
+  [
+    "Manage Channels",
+    "Quản lý kênh"
+  ],
+  [
+    "Email & Push Sync",
+    "Đồng bộ Email & Thông báo đẩy"
+  ],
+  [
+    "Turnstile Access Sync",
+    "Đồng bộ điểm danh cổng"
+  ],
+  [
+    "Instant Delivery",
+    "Nhận ngay tức thì"
+  ],
+  [
+    "Schedule",
+    "Lịch tập"
+  ],
+  [
+    "Billing",
+    "Thanh toán"
+  ]
+];
+
+for (const [en, vi] of notificationRedesignTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const myPackagesRedesignTranslations = [
+  ["Explore Package Store", "Khám phá cửa hàng gói tập"],
+  ["Manage your active memberships, class passes, and facility privileges.", "Quản lý các gói hội viên, thẻ lớp học và đặc quyền sử dụng trung tâm."],
+  ["Digital Membership Pass", "Thẻ hội viên điện tử"],
+  ["Turnstile Gate Access", "Cổng kiểm soát tự động"],
+  ["Tap to view Check-in QR", "Chạm để xem mã QR điểm danh"],
+  ["Member Pass QR Code", "Mã QR thẻ hội viên"],
+  ["Scan at center turnstile gate to enter", "Quét tại cổng turnstile để vào tập"],
+  ["Expiring Soon", "Sắp hết hạn"],
+  ["Renew Package", "Gia hạn gói tập"],
+  ["Renew this package", "Gia hạn gói này"],
+  ["Book Class", "Đặt lịch tập"],
+  ["Search my packages...", "Tìm kiếm gói tập..."],
+  ["Valid Until", "Có hiệu lực đến"],
+  ["Days Left", "Ngày còn lại"],
+  ["Day Left", "Ngày còn lại"],
+  ["Unlimited Access", "Sử dụng không giới hạn"],
+  ["Included Privileges", "Đặc quyền đi kèm"],
+  ["Expires in", "Hết hạn sau"],
+  ["days", "ngày"],
+  ["No packages found", "Không tìm thấy gói tập"],
+  ["Try adjusting your search query or filter.", "Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc."],
+  ["You don't have any active packages right now. Explore our membership tiers and class packages.", "Bạn hiện chưa sở hữu gói tập nào. Hãy khám phá các hạng thẻ hội viên và gói lớp học của chúng tôi."],
+  ["View Pass QR", "Mở mã QR"],
+  ["Membership Tier", "Hạng hội viên"],
+  ["CARDHOLDER", "Chủ thẻ"],
+  ["VALID THRU", "Hiệu lực"],
+  ["Verified Account", "Tài khoản đã xác thực"]
+];
+
+for (const [en, vi] of myPackagesRedesignTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const managerSettingsTranslations = [
+  ["Manage your administrator profile, credentials, and system preferences.", "Quản lý hồ sơ quản trị viên, thông tin bảo mật và phân quyền hệ thống."],
+  ["Profile & Settings", "Hồ sơ & Cài đặt"],
+  ["Personal Profile", "Hồ sơ cá nhân"],
+  ["Security & Password", "Bảo mật & Mật khẩu"],
+  ["Role Privileges & Authority", "Quyền hạn & Phân quyền quản trị"],
+  ["General Information", "Thông tin chung"],
+  ["Update your administrator display name, contact phone, and administrative notes.", "Cập nhật tên hiển thị quản trị viên, số điện thoại liên hệ và ghi chú quản lý."],
+  ["Primary Email Address", "Địa chỉ email chính"],
+  ["Managed by System", "Hệ thống quản lý cố định"],
+  ["Bio & Operational Responsibilities", "Giới thiệu & Phạm vi trách nhiệm"],
+  ["Specialties, direct escalation contact, or manager office hours...", "Chuyên môn, kênh tiếp nhận khiếu nại trực tiếp hoặc giờ làm việc của quản lý..."],
+  ["Saving Changes...", "Đang lưu thay đổi..."],
+  ["Save Changes", "Lưu thay đổi"],
+  ["Administrative Status", "Tình trạng quản trị"],
+  ["Clearance Tier", "Cấp bậc đặc quyền"],
+  ["Level 5 Full Access", "Toàn quyền Cấp 5"],
+  ["System Audit Scope", "Phạm vi kiểm toán hệ thống"],
+  ["Full Center", "Toàn bộ trung tâm"],
+  ["Multi-Branch ID", "Mã chi nhánh"],
+  ["Security Notice", "Thông báo an ninh"],
+  ["As Center Manager, updates to your administrative profile are automatically logged in the System Audit Trail for enterprise accountability.", "Với vai trò Quản lý Trung tâm, các cập nhật hồ sơ quản trị của bạn được ghi nhận tự động vào Nhật ký Kiểm toán Hệ thống nhằm đảm bảo trách nhiệm giải trình doanh nghiệp."],
+  ["Change Administrator Password", "Thay đổi mật khẩu quản trị viên"],
+  ["Ensure your account uses a strong, complex passphrase to safeguard center operations.", "Đảm bảo tài khoản sử dụng mật khẩu mạnh, phức tạp nhằm bảo vệ an toàn cho hoạt động trung tâm."],
+  ["Enter current password", "Nhập mật khẩu hiện tại"],
+  ["New Password", "Mật khẩu mới"],
+  ["Enter new password (min. 6 characters)", "Nhập mật khẩu mới (tối thiểu 6 ký tự)"],
+  ["Confirm New Password", "Xác nhận mật khẩu mới"],
+  ["Confirm your new password", "Nhập lại mật khẩu mới"],
+  ["Updating Password...", "Đang cập nhật mật khẩu..."],
+  ["Update Password", "Cập nhật mật khẩu"],
+  ["Password Security Standard", "Tiêu chuẩn bảo mật mật khẩu"],
+  ["Administrative passphrases must fulfill the enterprise security baseline before activation.", "Mật khẩu quản trị phải đáp ứng tiêu chuẩn an ninh tối thiểu của doanh nghiệp trước khi kích hoạt."],
+  ["Minimum 6 characters", "Tối thiểu 6 ký tự"],
+  ["Contains alphabet letters (A-Z, a-z)", "Chứa chữ cái (A-Z, a-z)"],
+  ["Contains at least one number (0-9)", "Chứa ít nhất một chữ số (0-9)"],
+  ["Confirm password matches new password", "Mật khẩu xác nhận phải trùng khớp"],
+  ["Tip: Use a memorable passphrase or password manager. Never share manager credentials.", "Mẹo: Hãy dùng chuỗi ký tự dễ nhớ hoặc trình quản lý mật khẩu. Tuyệt đối không chia sẻ tài khoản quản trị."],
+  ["Center Manager RBAC Governance Matrix", "Ma trận Phân quyền Quản trị Trung tâm (RBAC)"],
+  ["Pre-authorized privileges assigned to the Center Manager role in the Nexus Sports Lab system.", "Các đặc quyền được ủy quyền trước gán cho vai trò Quản lý Trung tâm trong hệ thống Nexus Sports Lab."],
+  ["Staff & RBAC Control", "Kiểm soát Nhân sự & Phân quyền"],
+  ["Create, activate, deactivate, or assign system roles to Receptionists, Coaches, and administrative staff members.", "Tạo mới, kích hoạt, vô hiệu hóa hoặc phân quyền cho Lễ tân, Huấn luyện viên và nhân sự quản lý."],
+  ["Full Grant", "Toàn quyền"],
+  ["Membership Plans & Pricing", "Kế hoạch Gói tập & Định giá"],
+  ["Author and publish Gym Access, AI Access, and Combo packages with customized durations and pricing tiers.", "Thiết kế và phát hành các gói Gym Access, AI Access, và Combo với thời hạn và mức giá tùy chỉnh."],
+  ["Facility Operations", "Vận hành Cơ sở vật chất"],
+  ["Supervise subjects, training rooms, capacity caps, teaching slots, and coach schedule assignments across the 3 floors.", "Giám sát bộ môn, phòng tập, giới hạn sức chứa, ca dạy và phân công lịch dạy HLV trên 3 tầng."],
+  ["Financial & Revenue Audits", "Kiểm toán Tài chính & Doanh thu"],
+  ["Comprehensive date-range financial reporting, cashflow analysis, payment transactions, and invoice ledger oversight.", "Báo cáo tài chính theo khoảng thời gian, phân tích dòng tiền, giao dịch thanh toán và giám sát sổ cái hóa đơn."],
+  ["Escalations & Credit Passes", "Xử lý Khiếu nại & Thẻ Tín dụng Voucher"],
+  ["Sole authority to review escalated cancellation appeals, approve credit passes, and adjudicate member refunds.", "Thẩm quyền duy nhất xét duyệt khiếu nại hủy khóa học, duyệt cấp mã voucher tín dụng và hoàn tiền."],
+  ["Exclusive Authority", "Thẩm quyền độc quyền"],
+  ["System Audit Log Inspection", "Kiểm tra Nhật ký Kiểm toán Hệ thống"],
+  ["Immutable change tracking recording timestamped IP addresses, user actions, and security state modifications.", "Truy vết thay đổi bất biến ghi nhận mốc thời gian, địa chỉ IP, hành động người dùng và thay đổi bảo mật."],
+  ["Read & Audit", "Đọc & Kiểm toán"],
+  ["Refresh Profile", "Tải lại hồ sơ"],
+  ["requests", "phiếu yêu cầu"]
+];
+
+for (const [en, vi] of managerSettingsTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}

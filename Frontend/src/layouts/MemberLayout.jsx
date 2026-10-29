@@ -2,6 +2,7 @@ import { t, useLanguage } from '../i18n/useLanguage';
 import AutoSidebar from '../components/AutoSidebar';
 import LanguageSwitcher from '../i18n/LanguageSwitcher';
 import ThemeToggle from '../components/ThemeToggle';
+import MemberTierAvatar from '../components/MemberTierAvatar';
 
 import React, { useContext, useState, useEffect, Suspense } from 'react';
 import { useNavigate, useLocation, useOutlet } from 'react-router-dom';
@@ -20,6 +21,7 @@ const MemberLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentOutlet = useOutlet();
+  const { userInfo, logout, updateUserInfo } = useContext(AuthContext);
   const [cartCount, setCartCount] = useState(0);
   const [isCartHighlighted, setIsCartHighlighted] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -44,19 +46,26 @@ const MemberLayout = () => {
 
   useEffect(() => {
     const handleProfileSync = () => {
-      // Force rerender or sync profile if needed
+      const stored = localStorage.getItem('userInfo');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && updateUserInfo) {
+            updateUserInfo(parsed);
+          }
+        } catch {}
+      }
     };
     window.addEventListener('userProfileUpdated', handleProfileSync);
     return () => window.removeEventListener('userProfileUpdated', handleProfileSync);
-  }, []);
+  }, [updateUserInfo]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('token');
         if (token) {
-          // Thực thi đồng thời cả 3 requests song song qua Promise.all thay vì chờ nối tiếp
-          const [cartRes, notifRes, myPkgsRes] = await Promise.all([
+          const [cartRes, notifRes, myPkgsRes, profileRes] = await Promise.all([
             axios.get('http://localhost:8080/api/v1/payment/cart', {
               headers: { Authorization: `Bearer ${token}` }
             }).catch(() => ({ data: { items: [] } })),
@@ -65,13 +74,26 @@ const MemberLayout = () => {
             }).catch(() => ({ data: [] })),
             axios.get('http://localhost:8080/api/v1/member/my-packages', {
               headers: { Authorization: `Bearer ${token}` }
-            }).catch(() => ({ data: [] }))
+            }).catch(() => ({ data: [] })),
+            axios.get('http://localhost:8080/api/v1/user/profile', {
+              headers: { Authorization: `Bearer ${token}` }
+            }).catch(() => ({ data: null }))
           ]);
 
           setCartCount(cartRes.data.items?.length || 0);
           setUnreadCount(notifRes.data.filter(n => !n.read).length || 0);
           const hasAi = myPkgsRes.data.some(p => (p.packageType === 'AI_ACCESS' || p.packageType === 'COMBO') && p.status === 'ACTIVE');
           setHasAiAccess(hasAi);
+
+          if (profileRes?.data) {
+            const p = profileRes.data;
+            updateUserInfo({
+              avatarUrl: p.avatarUrl,
+              fullName: p.fullName || userInfo?.fullName,
+              memberTier: p.memberTier || 'MEMBER',
+              loyaltyPoints: p.loyaltyPoints ?? 0
+            });
+          }
         }
       } catch (err) {
         console.error("Data fetch error", err);
@@ -86,8 +108,6 @@ const MemberLayout = () => {
         window.removeEventListener('notificationUpdated', fetchData);
     };
   }, [location.pathname]); // Refresh when navigating
-
-  const { userInfo, logout } = useContext(AuthContext);
 
   const fullName = userInfo?.fullName || 'Active Member';
   const initials = fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
@@ -203,27 +223,32 @@ const MemberLayout = () => {
         {/* Member Profile Footer */}
         <div className="auto-sidebar-footer p-4 border-t border-[var(--border)]">
           <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                {userInfo?.avatarUrl ? (
-                  <img
-                    src={userInfo.avatarUrl.startsWith('http') ? userInfo.avatarUrl : `http://localhost:8080${userInfo.avatarUrl}`}
-                    alt={fullName}
-                    className="w-9 h-9 rounded-xl object-cover border border-[var(--primary-soft)]"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'; }}
-                  />
-                ) : null}
-                <div
-                  style={{ display: userInfo?.avatarUrl ? 'none' : 'flex' }}
-                  className="w-9 h-9 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs items-center justify-center"
-                >
-                  {initials}
-                </div>
-                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[var(--success-hover)] border-2 border-[var(--border)]"></span>
-              </div>
-              <div className="auto-sidebar-profile-text text-left">
-                <p className="text-xs font-bold text-[var(--text)] leading-tight">{fullName}</p>
-                <p className="text-[10px] text-[var(--primary)]">{t("Elite Pro Member")}</p>
+            <div 
+              onClick={() => navigate("/member/settings")}
+              className="flex items-center gap-3 cursor-pointer group"
+              title={t("Settings & Avatar")}
+            >
+              <MemberTierAvatar
+                avatarUrl={userInfo?.avatarUrl}
+                fullName={fullName}
+                memberTier={userInfo?.memberTier || 'MEMBER'}
+                size="sm"
+              />
+              <div className="auto-sidebar-profile-text text-left min-w-0">
+                <p className="text-xs font-bold text-[var(--text)] leading-tight group-hover:text-[var(--primary)] transition-colors truncate max-w-[120px]">{fullName}</p>
+                <p className="text-[10px] font-semibold flex items-center gap-1 mt-0.5">
+                  {userInfo?.memberTier === 'PLATINUM' ? (
+                    <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-600 dark:from-cyan-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent font-extrabold tracking-tight">
+                      {t("VIP Platinum • PRO")}
+                    </span>
+                  ) : userInfo?.memberTier === 'GOLD' ? (
+                    <span className="text-amber-500 font-bold">{t("Gold Elite")}</span>
+                  ) : userInfo?.memberTier === 'SILVER' ? (
+                    <span className="text-slate-400 font-bold">{t("Silver Member")}</span>
+                  ) : (
+                    <span className="text-[var(--text-muted)]">{t("Standard Member")}</span>
+                  )}
+                </p>
               </div>
             </div>
             <button onClick={handleLogout} title={t("Logout")} className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors p-1">
@@ -276,6 +301,9 @@ const MemberLayout = () => {
             <button onClick={handleLogout} className="px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-[var(--text)] hover:text-[var(--text)] text-xs font-medium transition-colors">{t("Logout")}</button>
             <ThemeToggle />
             <LanguageSwitcher />
+            <button type="button" onClick={() => navigate("/member/settings")} title={t("Settings & Avatar")} className="p-0.5 rounded-full hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0">
+              <MemberTierAvatar avatarUrl={userInfo?.avatarUrl} fullName={fullName} memberTier={userInfo?.memberTier || 'MEMBER'} size="xs" showBadge={false} />
+            </button>
           </div>
         </header>
 
