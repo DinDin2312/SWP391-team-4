@@ -96,6 +96,7 @@ public class PaymentServiceImpl implements PaymentService {
         Integer pendingInvId = null;
         String pendingUrl = null;
         String pendingMethod = null;
+        boolean hasPending = false;
         try {
             List<Map<String, Object>> pendingInvoices = jdbc.queryForList(
                 "SELECT i.invoice_id, p.payment_method FROM INVOICES i " +
@@ -106,6 +107,7 @@ public class PaymentServiceImpl implements PaymentService {
                 email
             );
             if (!pendingInvoices.isEmpty()) {
+                hasPending = true;
                 Map<String, Object> row = pendingInvoices.get(0);
                 pendingInvId = ((Number) row.get("invoice_id")).intValue();
                 pendingMethod = row.get("payment_method") != null ? String.valueOf(row.get("payment_method")) : "PAYOS";
@@ -116,24 +118,62 @@ public class PaymentServiceImpl implements PaymentService {
         } catch (Exception ignored) {}
 
         return CartResponse.builder()
-                .items(items)
-                .totalPrice(totalPrice)
+                .hasPendingCheckout(hasPending)
                 .pendingInvoiceId(pendingInvId)
                 .pendingPaymentUrl(pendingUrl)
                 .pendingPaymentMethod(pendingMethod)
+                .items(items)
+                .totalPrice(totalPrice)
                 .build();
     }
 
     @Override
     @Transactional
     public String checkout(String email, String ipAddress, String paymentMethod) {
-        return checkout(email, ipAddress, paymentMethod, null);
+        return checkout(email, ipAddress, paymentMethod, null, false);
+    }
+
+    private void cancelPendingInvoicesForUser(Integer userId) {
+        if (userId == null || userId == 0) return;
+        List<Integer> pendingInvoiceIds = jdbc.queryForList(
+            "SELECT invoice_id FROM INVOICES WHERE user_id=? AND status='PENDING'",
+            Integer.class, userId
+        );
+        for (Integer invId : pendingInvoiceIds) {
+            jdbc.update("UPDATE INVOICES SET status='CANCELLED' WHERE invoice_id=?", invId);
+            jdbc.update("UPDATE PAYMENTS SET status='CANCELLED' WHERE invoice_id=? AND status='PENDING'", invId);
+            userCreditRepository.findByUsedInvoiceId(invId).ifPresent(credit -> {
+                credit.setUsedInvoiceId(null);
+                userCreditRepository.save(credit);
+            });
+            List<UserMembership> memberships = userMembershipRepository.findByCheckoutInvoiceId(invId);
+            for (UserMembership m : memberships) {
+                m.setCheckoutInvoiceId(null);
+                userMembershipRepository.save(m);
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void cancelPendingCheckout(String email) {
+        bookingRepository.lockOperations();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        cancelPendingInvoicesForUser(user.getUserId());
     }
 
     @Override
     @Transactional
     public String checkout(String email, String ipAddress, String paymentMethod, String creditCode) {
+        return checkout(email, ipAddress, paymentMethod, creditCode, false);
+    }
+
+    @Override
+    @Transactional
+    public String checkout(String email, String ipAddress, String paymentMethod, String creditCode, boolean cancelPending) {
         bookingRepository.lockOperations();
+        if (cancelPending) userRepository.findByEmail(email).ifPresent(u -> cancelPendingInvoicesForUser(u.getUserId()));
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
                 
@@ -189,17 +229,17 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         BigDecimal creditDiscount = BigDecimal.ZERO;
         if (creditCode != null && !creditCode.trim().isEmpty()) {
             appliedCredit = userCreditRepository.findByCreditCode(creditCode.trim().toUpperCase())
-                    .orElseThrow(() -> new IllegalArgumentException("Mã tín dụng không hợp lệ / Invalid credit code: " + creditCode));
+                    .orElseThrow(() -> new IllegalArgumentException("MĂ£ tĂ­n dá»¥ng khĂ´ng há»£p lá»‡ / Invalid credit code: " + creditCode));
             if (!appliedCredit.getUser().getUserId().equals(user.getUserId())) {
-                throw new IllegalArgumentException("Mã tín dụng không thuộc về bạn / Credit code does not belong to your account");
+                throw new IllegalArgumentException("MĂ£ tĂ­n dá»¥ng khĂ´ng thuá»™c vá» báº¡n / Credit code does not belong to your account");
             }
             if (appliedCredit.getStatus() != com.team4.sportscenter.modules.support.enums.CreditStatus.ACTIVE) {
-                throw new IllegalArgumentException("Mã tín dụng đã hết hạn hoặc đã được sử dụng / Credit is no longer active");
+                throw new IllegalArgumentException("MĂ£ tĂ­n dá»¥ng Ä‘Ă£ háº¿t háº¡n hoáº·c Ä‘Ă£ Ä‘Æ°á»£c sá»­ dá»¥ng / Credit is no longer active");
             }
             if (appliedCredit.getExpiryDate().isBefore(java.time.LocalDate.now())) {
                 appliedCredit.setStatus(com.team4.sportscenter.modules.support.enums.CreditStatus.EXPIRED);
                 userCreditRepository.save(appliedCredit);
-                throw new IllegalArgumentException("Mã tín dụng đã quá hạn sử dụng / Credit code has expired");
+                throw new IllegalArgumentException("MĂ£ tĂ­n dá»¥ng Ä‘Ă£ quĂ¡ háº¡n sá»­ dá»¥ng / Credit code has expired");
             }
             creditDiscount = appliedCredit.getRemainingAmount();
             if (creditDiscount.compareTo(totalAmount) >= 0) {
@@ -502,7 +542,8 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     @Override
     @Transactional
     public void removeFromCart(String email, Integer classId) {
-        bookingRepository.lockOperations();assertCartMutable(email);
+        bookingRepository.lockOperations();
+        assertCartMutable(email);
         List<Booking> pendingBookings = bookingRepository.findAllBookingsByEmail(email)
                 .stream()
                 .filter(b -> "PENDING".equals(b.getStatus()) && b.getSchedule().getGymClass().getClassId().equals(classId))
@@ -519,7 +560,8 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     @Override
     @Transactional
     public void removePackageFromCart(String email, Integer packageId) {
-        bookingRepository.lockOperations();assertCartMutable(email);
+        bookingRepository.lockOperations();
+        assertCartMutable(email);
         List<com.team4.sportscenter.modules.member.entities.UserMembership> memberships = userMembershipRepository.findByEmailAndStatus(email, "PENDING").stream().filter(m -> m.getAPackage().getPackageId().equals(packageId)).toList();
         if (!memberships.isEmpty()) {
             for(var m:memberships){if(m.getCheckoutInvoiceId()!=null){m.setStatus("CANCELLED");userMembershipRepository.save(m);}else userMembershipRepository.delete(m);}
@@ -529,7 +571,8 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     @Override
     @Transactional
     public void clearCart(String email) {
-        bookingRepository.lockOperations();assertCartMutable(email);
+        bookingRepository.lockOperations();
+        assertCartMutable(email);
         List<Booking> pendingBookings = bookingRepository.findAllBookingsByEmail(email)
                 .stream().filter(b -> "PENDING".equals(b.getStatus())).toList();
         if (!pendingBookings.isEmpty()) {

@@ -1,5 +1,5 @@
 import { useLanguage } from '../i18n/useLanguage';
-import React, { createContext, useState } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 
 export const AuthContext = createContext();
 
@@ -11,12 +11,35 @@ export const AuthProvider = ({ children }) => {
     return stored ? JSON.parse(stored) : null;
   });
 
-  const login = ({ token, role, email, fullName }) => {
+  useEffect(() => {
+    const handleProfileUpdated = () => {
+      const stored = localStorage.getItem('userInfo');
+      if (stored) {
+        try {
+          setUserInfo(JSON.parse(stored));
+        } catch {}
+      }
+    };
+    window.addEventListener('userProfileUpdated', handleProfileUpdated);
+    return () => window.removeEventListener('userProfileUpdated', handleProfileUpdated);
+  }, []);
+
+  const login = ({ token, role, email, fullName, avatarUrl }) => {
     localStorage.setItem('token', token);
     localStorage.setItem('userRole', role);
-    localStorage.setItem('userInfo', JSON.stringify({ email, fullName, role }));
+    const info = { email, fullName, role, avatarUrl };
+    localStorage.setItem('userInfo', JSON.stringify(info));
     setUserRole(role);
-    setUserInfo({ email, fullName, role });
+    setUserInfo(info);
+  };
+
+  const updateUserInfo = (updates) => {
+    setUserInfo((prev) => {
+      const next = { ...(prev || {}), ...updates };
+      localStorage.setItem('userInfo', JSON.stringify(next));
+      return next;
+    });
+    window.dispatchEvent(new Event('userProfileUpdated'));
   };
 
   const logout = () => {
@@ -28,7 +51,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ userRole, userInfo, login, logout }}>
+    <AuthContext.Provider value={{ userRole, userInfo, login, logout, updateUserInfo }}>
       {children}
     </AuthContext.Provider>
   );

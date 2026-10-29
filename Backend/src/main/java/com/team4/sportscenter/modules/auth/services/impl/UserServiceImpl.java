@@ -226,6 +226,7 @@ public class UserServiceImpl implements UserService {
                     .email(user.getEmail())
                     .fullName(user.getFullName())
                     .role(user.getRole().getRoleName())
+                    .avatarUrl(user.getAvatarPath() != null && !user.getAvatarPath().isBlank() ? "/api/avatars/" + user.getAvatarPath() : null)
                     .build();
 
         } catch (Exception e) {

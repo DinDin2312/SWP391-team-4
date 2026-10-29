@@ -7,10 +7,12 @@ public interface PaymentService {
     CartResponse getCartItems(String email);
     String checkout(String email, String ipAddress, String paymentMethod);
     String checkout(String email, String ipAddress, String paymentMethod, String creditCode);
+    String checkout(String email, String ipAddress, String paymentMethod, String creditCode, boolean cancelPending);
+    void cancelPendingCheckout(String email);
+    void cancelPendingCheckout(String email, Integer invoiceId);
     void removeFromCart(String email, Integer classId);
     void removePackageFromCart(String email, Integer packageId);
     void clearCart(String email);
-    void cancelPendingCheckout(String email, Integer invoiceId);
     void handleVNPayCallback(Map<String, String> queryParams);
     void handleMoMoCallback(Map<String, String> queryParams);
     void handlePayOSCallback(Map<String, String> queryParams);

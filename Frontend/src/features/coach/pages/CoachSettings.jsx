@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
   User, Mail, Phone, BookOpen, AlertTriangle, CheckCircle,
-  Award, FileText, Save, X, RefreshCw, AlertCircle, Sparkles, ShieldCheck
+  Award, FileText, Save, X, RefreshCw, Camera, Trash2, AlertCircle, Sparkles, ShieldCheck
 } from 'lucide-react';
 
 const CoachSettings = () => {
@@ -12,6 +12,60 @@ const CoachSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ visible: false, type: 'success', message: '' });
+
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('error', t("Avatar image must be 2MB or smaller."));
+      return;
+    }
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append("avatar", file);
+    try {
+      setAvatarUploading(true);
+      const res = await axios.post('http://localhost:8080/api/v1/user/avatar', formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      const newUrl = res.data.avatarUrl;
+      setProfile(prev => ({ ...prev, avatarUrl: newUrl }));
+      const savedInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      localStorage.setItem('userInfo', JSON.stringify({ ...savedInfo, avatarUrl: newUrl }));
+      window.dispatchEvent(new Event('userProfileUpdated'));
+      showToast('success', t("Avatar updated successfully!"));
+    } catch (err) {
+      showToast('error', err.response?.data?.message || t("Failed to upload avatar."));
+    } finally {
+      setAvatarUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleAvatarDelete = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      setAvatarUploading(true);
+      await axios.delete('http://localhost:8080/api/v1/user/avatar', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProfile(prev => ({ ...prev, avatarUrl: null, avatarPath: null }));
+      const savedInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      localStorage.setItem('userInfo', JSON.stringify({ ...savedInfo, avatarUrl: null }));
+      window.dispatchEvent(new Event('userProfileUpdated'));
+      showToast('success', t("Avatar removed successfully!"));
+    } catch (err) {
+      showToast('error', err.response?.data?.message || t("Failed to remove avatar."));
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
 
   // Coach Profile Data
   const [profile, setProfile] = useState({
@@ -49,6 +103,14 @@ const CoachSettings = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = res.data;
+      if (data.avatarPath) {
+        data.avatarUrl = '/api/avatars/' + data.avatarPath;
+        const savedInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        if (savedInfo.avatarUrl !== data.avatarUrl) {
+          localStorage.setItem('userInfo', JSON.stringify({ ...savedInfo, avatarUrl: data.avatarUrl }));
+          window.dispatchEvent(new Event('userProfileUpdated'));
+        }
+      }
       setProfile(data);
       setSelectedSubjectId(data.currentSubjectId || (data.availableSubjects?.[0]?.subjectId ?? null));
     } catch (err) {
@@ -204,11 +266,45 @@ const CoachSettings = () => {
             <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-[var(--primary-soft)] blur-2xl pointer-events-none"></div>
 
             {/* Avatar Circle */}
-            <div className="relative mb-4">
-              <div className="w-24 h-24 rounded-2xl bg-[var(--primary-soft)] border-2 border-[var(--primary)] text-[var(--primary)] text-3xl font-black flex items-center justify-center shadow-lg">
-                {initials}
+            <div className="relative mb-4 group">
+              <div className="w-24 h-24 rounded-2xl overflow-hidden bg-[var(--primary-soft)] border-2 border-[var(--primary)] text-[var(--primary)] text-3xl font-black flex items-center justify-center shadow-lg relative">
+                {profile.avatarUrl ? (
+                  <img
+                    src={profile.avatarUrl.startsWith('http') ? profile.avatarUrl : `http://localhost:8080${profile.avatarUrl}`}
+                    alt={profile.fullName || 'Coach'}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'; }}
+                  />
+                ) : null}
+                <div style={{ display: profile.avatarUrl ? 'none' : 'flex' }} className="w-full h-full items-center justify-center">
+                  {initials}
+                </div>
+                {avatarUploading && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <RefreshCw className="w-6 h-6 text-white animate-spin" />
+                  </div>
+                )}
               </div>
+              <label
+                className="absolute -bottom-2 -right-2 p-2 rounded-full bg-[var(--primary)] text-white shadow-md hover:scale-110 transition-transform cursor-pointer"
+                title={t("Upload photo")}
+              >
+                <Camera className="w-4 h-4" />
+                <input type="file" accept="image/png,image/jpeg" onChange={handleAvatarUpload} className="hidden" disabled={avatarUploading} />
+              </label>
             </div>
+
+            {profile.avatarUrl && (
+              <button
+                type="button"
+                onClick={handleAvatarDelete}
+                disabled={avatarUploading}
+                className="text-xs text-[var(--danger-text,#ef4444)] hover:underline mb-3 cursor-pointer flex items-center gap-1"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>{t("Remove photo")}</span>
+              </button>
+            )}
 
             {/* Verified Badge */}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] text-[11px] font-bold tracking-wider mb-2 border border-[var(--primary-soft)]">

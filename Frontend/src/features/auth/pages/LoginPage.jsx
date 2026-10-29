@@ -54,8 +54,8 @@ function LoginPage() {
         setLoading(true);
         const data = await authService.googleLogin(tokenResponse.access_token);
 
-        const { token, role, email: userEmail, fullName } = data;
-        login({ token, role, email: userEmail, fullName });
+        const { token, role, email: userEmail, fullName, avatarUrl } = data;
+        login({ token, role, email: userEmail, fullName, avatarUrl });
         const route = ROLE_ROUTES[role] || '/customer/dashboard';
         navigate(route);
       } catch (err) {
@@ -88,7 +88,7 @@ function LoginPage() {
         password,
       });
 
-      const { token, role, email: userEmail, fullName } = data;
+      const { token, role, email: userEmail, fullName, avatarUrl } = data;
 
       if (rememberMe) {
         try { localStorage.setItem('nexus_remembered_email', email); } catch {}
@@ -96,7 +96,7 @@ function LoginPage() {
         try { localStorage.removeItem('nexus_remembered_email'); } catch {}
       }
 
-      login({ token, role, email: userEmail, fullName });
+      login({ token, role, email: userEmail, fullName, avatarUrl });
 
       const route = ROLE_ROUTES[role] || '/customer/dashboard';
       navigate(route);

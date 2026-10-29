@@ -1453,6 +1453,13 @@ translations['Number of active registrations']=['Number of active registrations'
 
 Object.assign(translations, {
   'Back to Home': ['Back to Home', 'Quay lại trang chủ'],
+  'Checkout awaiting payment (Invoice #': ['Checkout awaiting payment (Invoice #', 'Đơn hàng đang chờ thanh toán (Mã #'],
+  'You can click Confirm & Pay to create a fresh payment link, or cancel the pending session.': ['You can click Confirm & Pay to create a fresh payment link, or cancel the pending session.', 'Bạn có thể bấm Xác nhận & Thanh toán ngay để tạo liên kết thanh toán mới, hoặc hủy phiên chờ.'],
+  'Cancel Pending Session': ['Cancel Pending Session', 'Hủy phiên thanh toán chờ'],
+  'Cancelled': ['Cancelled', 'Đã hủy'],
+  'Pending session cancelled successfully.': ['Pending session cancelled successfully.', 'Đã hủy phiên thanh toán chờ thành công.'],
+  'Failed to cancel pending session.': ['Failed to cancel pending session.', 'Hủy phiên thanh toán chờ thất bại.'],
+  'Cancel / Close': ['Cancel / Close', 'Hủy / Đóng'],
   'Pending Checkout Session': ['Pending Checkout Session', 'Phiên thanh toán đang chờ xử lý'],
   'Phiên thanh toán đang chờ xử lý': ['Pending Checkout Session', 'Phiên thanh toán đang chờ xử lý'],
   'You have a checkout session awaiting payment. The cart is temporarily locked. You can resume payment or cancel the session to edit your cart.': ['You have a checkout session awaiting payment. The cart is temporarily locked. You can resume payment or cancel the session to edit your cart.', 'Bạn có một lượt checkout đang chờ thanh toán. Giỏ hàng tạm thời bị khóa. Bạn có thể tiếp tục thanh toán hoặc hủy phiên để chỉnh sửa giỏ hàng.'],
@@ -1461,17 +1468,35 @@ Object.assign(translations, {
   'Hủy phiên thanh toán': ['Cancel Pending Checkout', 'Hủy phiên thanh toán'],
   'Resume Payment': ['Resume Payment', 'Tiếp tục thanh toán'],
   'Tiếp tục thanh toán': ['Resume Payment', 'Tiếp tục thanh toán'],
-  'Checkout Cancelled': ['Checkout Cancelled', 'Đã hủy phiên thanh toán'],
+  'Checkout Cancelled': ['Checkout Cancelled', 'Đã hủy thanh toán'],
+  'Đã hủy thanh toán': ['Checkout Cancelled', 'Đã hủy thanh toán'],
   'Pending checkout session has been cancelled. Your cart is now unlocked.': ['Pending checkout session has been cancelled. Your cart is now unlocked.', 'Phiên thanh toán đang chờ đã được hủy. Giỏ hàng hiện đã được mở khóa.'],
   'Phiên thanh toán đang chờ đã được hủy. Giỏ hàng hiện đã được mở khóa.': ['Pending checkout session has been cancelled. Your cart is now unlocked.', 'Phiên thanh toán đang chờ đã được hủy. Giỏ hàng hiện đã được mở khóa.'],
   'Cancelling...': ['Cancelling...', 'Đang hủy...'],
   'Đang hủy...': ['Cancelling...', 'Đang hủy...'],
   'Cancel Order': ['Cancel Order', 'Hủy đơn hàng'],
-  'Hủy đơn hàng': ['Cancel Order', 'Hủy đơn hàng'],
+  'Hủy đơn hàng': ['Cancel Order', 'Hủy đơn hàng']
 });
 
 Object.assign(translations, {
   'Nexus AI can make mistakes. Verify before buying.': ['Nexus AI can make mistakes. Verify before buying.', 'Nexus AI có thể mắc lỗi. Vui lòng kiểm tra kỹ trước khi mua.'],
+  'Search packages by name...': ['Search packages by name...', 'Tìm kiếm gói tập theo tên...'],
+  'Secure Payment Gateway': ['Secure Payment Gateway', 'Cổng thanh toán an toàn'],
+  'Instant processing with VNPay and MoMo': ['Instant processing with VNPay and MoMo', 'Xử lý tức thì qua VNPay và MoMo'],
+  'Fast QR Pass Check-in': ['Fast QR Pass Check-in', 'Check-in bằng mã QR nhanh chóng'],
+  'Seamless access at the turnstile gate': ['Seamless access at the turnstile gate', 'Quét mã qua cổng kiểm soát tự động'],
+  'Flexible Class Bookings': ['Flexible Class Bookings', 'Đặt lịch tập linh hoạt'],
+  'Easy schedule enrollment and class switching': ['Easy schedule enrollment and class switching', 'Dễ dàng đăng ký và đổi lịch lớp học'],
+  'Featured Packages': ['Featured Packages', 'Gói tập nổi bật'],
+  '24/7 AI Coach Consultation': ['24/7 AI Coach Consultation', 'Tư vấn HLV AI trực tuyến 24/7'],
+  'Personalized Workout & Meal Plans': ['Personalized Workout & Meal Plans', 'Lộ trình tập luyện & dinh dưỡng cá nhân'],
+  'Real-time Form & Metric Analysis': ['Real-time Form & Metric Analysis', 'Phân tích chỉ số & tư thế tập luyện'],
+  'Full Sports Center & Equipment Access': ['Full Sports Center & Equipment Access', 'Sử dụng toàn bộ cơ sở & trang thiết bị'],
+  'Smart Locker & RFID Key Access': ['Smart Locker & RFID Key Access', 'Sử dụng tủ đồ thông minh an toàn'],
+  'Hot Shower & Sauna Access': ['Hot Shower & Sauna Access', 'Phòng xông hơi & tắm nóng lạnh VIP'],
+  'Instant QR Pass Provisioning': ['Instant QR Pass Provisioning', 'Kích hoạt thẻ QR hội viên tức thì'],
+  'Direct Member Support Desk': ['Direct Member Support Desk', 'Hỗ trợ hội viên trực tiếp tại quầy'],
+  'Gain full access for {0} days. Upgrade your fitness routine today.': ['Gain full access for {0} days. Upgrade your fitness routine today.', 'Toàn quyền sử dụng dịch vụ trong {0} ngày. Nâng tầm thể lực cùng NEXUS ngay hôm nay.']
 });
 
 Object.assign(translations, {'Gain full access for ': ['Gain full access for ', 'Sử dụng toàn bộ dịch vụ trong ']});
@@ -3365,6 +3390,11 @@ const memberSettingsTranslations = [
   ["Email changes require OTP verification sent to the new mailbox.", "Thay đổi email bắt buộc xác thực mã OTP gửi về hòm thư mới."],
   ["Saving...", "Đang lưu..."],
   ["Personal profile saved successfully!", "Hồ sơ cá nhân đã được lưu thành công!"],
+  ["Avatar updated successfully!", "Cập nhật ảnh đại diện thành công!"],
+  ["Avatar removed successfully!", "Đã gỡ ảnh đại diện thành công!"],
+  ["Avatar image must be 2MB or smaller.", "Ảnh đại diện phải có dung lượng tối đa 2MB."],
+  ["Failed to upload avatar.", "Tải lên ảnh đại diện thất bại."],
+  ["Failed to remove avatar.", "Xóa ảnh đại diện thất bại."],
   ["Failed to load profile data.", "Không thể tải thông tin hồ sơ"],
   ["Error saving profile information.", "Lỗi khi lưu thông tin hồ sơ."],
   ["Failed to send OTP to new email.", "Không thể gửi mã OTP tới email mới."],
@@ -3567,6 +3597,372 @@ const themeModeTranslations = [
 ];
 
 for (const [en, vi] of themeModeTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const nexusAiUpgradeTranslations = [
+  ["Listening... Speak now...", "Đang lắng nghe... Xin mời nói..."],
+  ["Stop listening", "Dừng nghe"],
+  ["Voice input", "Nhập bằng giọng nói"],
+  ["Your browser does not support voice recognition. Please use Google Chrome or Edge.", "Trình duyệt chưa hỗ trợ nhận diện giọng nói. Vui lòng dùng Google Chrome hoặc Edge."],
+  ["Suggestions", "Gợi ý"],
+  ["🏊 Book Swim Class", "🏊 Đặt lớp bơi"],
+  ["Book me the nearest swimming class", "Đặt giúp tôi 1 lớp bơi gần nhất"],
+  ["📅 My Schedule", "📅 Lịch tập của tôi"],
+  ["View my workout schedule", "Xem lịch tập của tôi"],
+  ["💪 Workout Advice", "💪 Tư vấn bài tập"],
+  ["Suggest a workout routine for today", "Gợi ý cho tôi bài tập thể hình hôm nay"],
+  ["💳 View Packages", "💳 Xem gói tập"],
+  ["Recommend suitable membership packages", "Tư vấn các gói tập phù hợp"],
+  ["🛒 View Cart", "🛒 Đến giỏ hàng"],
+  ["Open my shopping cart", "Mở giỏ hàng thanh toán"],
+  ["Unable to add package to cart.", "Không thể thêm gói tập vào giỏ hàng."],
+  ["This package is already in your cart.", "Gói tập này đã có trong giỏ hàng của bạn."],
+  ["Unable to add class to cart.", "Không thể thêm lớp học vào giỏ hàng."],
+  ["You have already enrolled in this course.", "Bạn đã đăng ký khóa học này rồi."],
+  ["This course is already in your cart.", "Khóa học này đã có trong giỏ hàng của bạn."],
+  ["Schedule conflict with another enrolled session.", "Lịch học bị trùng với một buổi tập đã đăng ký khác."],
+  ["Sorry, the AI system is currently busy. Please try again later.", "Xin lỗi, hệ thống AI hiện đang bận. Vui lòng thử lại sau."]
+];
+
+for (const [en, vi] of nexusAiUpgradeTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const billingAndTermsTranslations = [
+  // Billing & Invoices
+  ["Paid", "Đã thanh toán"],
+  ["Search by invoice # or package...", "Tìm theo mã hóa đơn hoặc tên gói..."],
+  ["Try adjusting your keyword filter or changing status tab.", "Hãy thử đổi từ khóa tìm kiếm hoặc chọn tab trạng thái khác."],
+  ["Total Spending", "Tổng chi tiêu tích lũy"],
+  ["paid", "đã thanh toán"],
+  ["Lifetime verified membership & course investment", "Tổng giá trị đầu tư thẻ hội viên & khóa học"],
+  ["Active Invoices", "Hóa đơn hiện có"],
+  ["100% Protected", "Bảo mật 100%"],
+  ["Pending Action Required", "Cần hoàn tất thanh toán"],
+  ["order(s) waiting for payment", "đơn hàng đang chờ thanh toán"],
+  ["is currently reserving your slots. Complete checkout before expiration.", "đang giữ chỗ lớp học của bạn. Vui lòng thanh toán trước khi hết hạn."],
+  ["Pay Invoice Now", "Thanh toán ngay"],
+  ["Transaction Breakdown", "Phân loại giao dịch"],
+  ["Paid Orders", "Đơn đã thanh toán"],
+  ["Pending Orders", "Đơn chờ xử lý"],
+  ["Cancelled / Expired", "Đã hủy / Quá hạn"],
+  ["Official Electronic Invoices", "Hóa đơn điện tử chính thức"],
+  ["All transactions are digitally logged with SSL 256-bit encryption. Present your Invoice ID at Reception for corporate VAT tax receipts.", "Mọi giao dịch đều được số hóa với mã hóa bảo mật SSL 256-bit. Vui lòng xuất trình Mã hóa đơn tại Quầy lễ tân để xuất hóa đơn đỏ VAT doanh nghiệp."],
+  ["By confirming payment, you agree to our", "Bằng việc xác nhận thanh toán, bạn đồng ý với"],
+
+  // Terms of Service Modal
+  ["Terms of Service & Regulations", "Điều khoản Dịch vụ & Quy chế Hoạt động"],
+  ["Official Legal Document · NEXUS 2026", "Văn bản pháp lý chính thức · NEXUS 2026"],
+  ["Welcome to NEXUS High-Tech Sports Center Ecosystem!", "Chào mừng bạn gia nhập Hệ sinh thái Thể thao Công nghệ cao NEXUS Sports Center!"],
+  ["By registering an account or using our services/memberships, you agree to comply with all legal regulations, physical safety guidelines, and privacy policies below.", "Bằng việc đăng ký tài khoản hoặc sử dụng dịch vụ/thẻ hội viên của chúng tôi, bạn đồng ý tuân thủ toàn bộ các quy định pháp lý, an toàn vận động và chính sách bảo mật dưới đây."],
+  ["Applicable across all NEXUS Sports Center facilities", "Áp dụng trên toàn bộ hệ thống cơ sở NEXUS Sports Center"],
+  ["1. Membership & QR Pass Policy", "1. Quy chế Thẻ Hội viên & Định danh mã QR (Membership & QR Pass)"],
+  ["Member accounts and QR Pass Check-in credentials are strictly personal and non-transferable. Sharing, lending, or unauthorized assignment to third parties is prohibited.", "Tài khoản hội viên và mã QR Pass Check-in là định danh cá nhân độc quyền, nghiêm cấm chia sẻ, cho mượn hoặc chuyển nhượng trái phép cho bên thứ ba."],
+  ["Members must scan their QR code at turnstile gates 5-10 minutes prior to session start for automatic attendance recording.", "Hội viên cần thực hiện quét mã QR tại cổng kiểm soát Turnstile trước mỗi buổi tập ít nhất 05–10 phút để hệ thống ghi nhận điểm danh tự động."],
+  ["In cases of pass sharing or fraud, the Center reserves the right to suspend facility access without refunding membership fees.", "Trường hợp phát hiện hành vi gian lận mượn thẻ, Trung tâm có quyền đình chỉ quyền ra vào của tài khoản mà không hoàn lại học phí."],
+  ["2. Health Commitment & Liability Waiver", "2. Cam kết Thể chất & Miễn trừ Trách nhiệm Y tế (Health & Liability Waiver)"],
+  ["Members commit to self-assess fitness and honestly notify Trainers (PT) of any cardiovascular issues, injuries, blood pressure conditions, or movement limits before classes.", "Hội viên cam kết chủ động đánh giá thể trạng và thông báo trung thực với Huấn luyện viên (PT) về tiền sử chấn thương, tim mạch, huyết áp hoặc hạn chế vận động trước khi tham gia lớp."],
+  ["Members participate voluntarily and agree to heed physical limits. The Center is not liable for injuries resulting from unauthorized improper weight lifting outside coach guidance.", "Hội viên tự nguyện tham gia các chương trình tập luyện và chịu trách nhiệm lắng nghe giới hạn thể lực của bản thân. Trung tâm không chịu trách nhiệm đối với các chấn thương phát sinh do tự ý nâng tạ sai kỹ thuật ngoài hướng dẫn của HLV."],
+  ["The Center provides standard first aid kits and biomedical vital monitors at the Reception desk.", "Trung tâm trang bị đầy đủ dụng cụ sơ cứu y tế khẩn cấp và thiết bị theo dõi nhịp tim sinh trắc học tiêu chuẩn tại quầy Lễ tân."],
+  ["3. Facility & Pool Conduct", "3. Nội quy Phòng tập & Khu Bể bơi Bốn Mùa (Facility & Pool Conduct)"],
+  ["Workout Attire: Clean rubber-soled athletic shoes and sportswear are mandatory. Barefoot or slippers on the weightlifting floor are prohibited.", "Trang phục tập luyện: Bắt buộc đi giày thể thao đế cao su sạch và mặc quần áo thể thao co giãn chuyên dụng. Không đi chân đất hoặc dép lê vào sàn tạ."],
+  ["Pool Area: Showering with clean water is required before pool entry; swim caps are mandatory, and lifeguard instructions must be strictly followed.", "Khu Bể bơi: Bắt buộc tắm tráng bằng nước sạch trước khi xuống hồ; đội mũ bơi và tuân thủ tuyệt đối sự hướng dẫn của Cứu hộ viên trực sàn."],
+  ["General Etiquette: Wipe sweat off equipment after use; return dumbbells, plates, and accessories to designated racks.", "Ý thức chung: Lau sạch mồ hôi trên máy tập sau khi sử dụng; cất trả tạ đơn, đĩa tạ và phụ kiện về đúng giá đỡ quy định."],
+  ["4. Class Booking, Cancellation & Deferral", "4. Quy chế Đặt lịch, Hủy ca & Bảo lưu Khóa học (Class Booking & Cancellation)"],
+  ["Members can book sessions up to 7 days in advance online. Seats are guaranteed once reservation/payment is confirmed.", "Hội viên được đặt trước chỗ lớp học tối đa 07 ngày qua Cổng trực tuyến. Chỗ học chỉ được đảm bảo sau khi hoàn tất xác nhận thanh toán/giữ chỗ."],
+  ["Cancellation Policy: All cancellations must be submitted at least 2 hours before start time. The system will restore quota or issue corresponding Voucher Credit.", "Chính sách hủy ca: Mọi yêu cầu hủy lớp phải được gửi trước giờ học tối thiểu 02 (hai) giờ. Hệ thống sẽ tự động hoàn trả hạn mức buổi tập hoặc cấp Tín dụng hoàn tiền (Voucher Credit) tương ứng."],
+  ["Unexcused Absence (No-show): The session will be counted as attended with no credit refund.", "Vắng mặt không báo trước (No-show): Buổi học sẽ bị tính là đã tham gia và không được bồi hoàn."],
+  ["5. Fees, Credits & Refund Policy", "5. Phí dịch vụ, Tín dụng & Chính sách Hoàn tiền (Fees & Refund Policy)"],
+  ["All listed prices include sports service charges and taxes. Transactions are securely processed with 256-bit SSL encryption (VNPay, MoMo, PayOS).", "Tất cả mức giá niêm yết trên hệ thống đã bao gồm thuế và phí dịch vụ thể thao. Giao dịch được xử lý an toàn qua cổng thanh toán bảo mật mã hóa SSL 256-bit (VNPay, MoMo, PayOS)."],
+  ["Active/started packages are non-refundable in cash. In force majeure health events (with medical certificates), deferrals are supported up to 30 days.", "Các gói tập đã thanh toán và kích hoạt sử dụng sẽ không được hoàn trả tiền mặt. Trong trường hợp bất khả kháng về sức khỏe (có chỉ định y khoa), hội viên được hỗ trợ bảo lưu thời hạn tối đa 30 ngày."],
+  ["Electronic VAT invoices are issued automatically and stored permanently in Member Transaction History.", "Hóa đơn điện tử VAT được xuất tự động và lưu trữ vĩnh viễn trong mục Lịch sử Giao dịch của Hội viên."],
+  ["6. Data Privacy & Video Security", "6. Bảo vệ Dữ liệu Cá nhân & An ninh Giám sát (Privacy & Security)"],
+  ["NEXUS commits to strict privacy of identities, phone numbers, workout history, and biometrics, never sharing data with advertisers.", "NEXUS cam kết bảo mật tuyệt đối thông tin danh tính, số điện thoại, lịch sử tập luyện và chỉ số thể chất của Hội viên, không cung cấp cho bất kỳ đơn vị quảng cáo nào."],
+  ["High-definition security cameras operate 24/7 in public workout areas for life and property safety (cameras are strictly prohibited in Lockers and changing rooms).", "Hệ thống Camera an ninh độ phân giải cao được vận hành 24/7 tại các khu vực tập luyện công cộng nhằm đảm bảo an toàn tính mạng và tài sản (nghiêm cấm lắp đặt camera tại khu Locker và phòng thay đồ)."],
+  ["I Understand & Agree", "Tôi đã hiểu và Đồng ý"]
+];
+
+for (const [en, vi] of billingAndTermsTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const memberDashboardTranslations = [
+  [
+    "Digital Member Pass",
+    "Thẻ hội viên số"
+  ],
+  [
+    "Book Class & PT",
+    "Đặt lớp & HLV cá nhân"
+  ],
+  [
+    "Group classes, courts & 1-on-1 personal training",
+    "Lớp nhóm, đặt sân & huấn luyện viên 1-1"
+  ],
+  [
+    "Memberships, class packages & access passes",
+    "Gói hội viên, thẻ tập & gia hạn dịch vụ"
+  ],
+  [
+    "InBody & Body Metrics",
+    "Chỉ số InBody & Thể chất"
+  ],
+  [
+    "Track weight, body fat & trainer evaluations",
+    "Theo dõi cân nặng, tỷ lệ mỡ & đánh giá HLV"
+  ],
+  [
+    "Attendance Log",
+    "Lịch sử điểm danh"
+  ],
+  [
+    "Verified check-in history & attendance rate",
+    "Tra cứu lịch sử check-in & số buổi tham gia"
+  ],
+  [
+    "shortcuts",
+    "lối tắt"
+  ],
+  [
+    "upcoming sessions",
+    "buổi tập sắp tới"
+  ],
+  [
+    "View Full Schedule",
+    "Xem toàn bộ lịch tập"
+  ],
+  [
+    "Calories burned",
+    "Năng lượng tiêu hao"
+  ],
+  [
+    "Verified check-ins and session completion records",
+    "Ghi nhận lịch sử check-in và hoàn thành buổi tập"
+  ],
+  [
+    "Check schedule below",
+    "Xem lịch chi tiết bên dưới"
+  ],
+  [
+    "Simulate Turnstile Check-in",
+    "Mô phỏng check-in cổng"
+  ]
+];
+
+for (const [en, vi] of memberDashboardTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const attendanceHistoryTranslations = [
+  ["Track your check-in consistency, workout attendance rate, and session history.", "Theo dõi độ chuyên cần, tỷ lệ điểm danh và lịch sử các buổi tập."],
+  ["Upcoming / Pending", "Chưa điểm danh / Sắp tới"],
+  ["Awaiting check-in", "Chờ HLV điểm danh"],
+  ["Missed sessions", "Buổi chưa tham gia"],
+  ["Search by course, coach, room or ID...", "Tìm theo tên lớp, HLV, phòng tập hoặc mã..."],
+  ["Booking ID: #", "Mã đặt chỗ: #"],
+  ["No attendance sessions found", "Không tìm thấy buổi tập nào"],
+  ["Try adjusting your search query or status filter.", "Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái."],
+  ["Reset Filters", "Đặt lại bộ lọc"],
+  ["Loading attendance records...", "Đang tải lịch sử điểm danh..."],
+  ["Coach & Room", "HLV & Phòng tập"],
+  ["Excellent", "Xuất sắc"],
+  ["Good", "Tốt"],
+  ["Needs Improvement", "Cần cố gắng"]
+];
+
+for (const [en, vi] of attendanceHistoryTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const scheduleTimeTranslations = [
+  [
+    "Next 7 Days",
+    "7 ngày tới"
+  ],
+  [
+    "No classes scheduled for today.",
+    "Không có lịch tập nào trong ngày hôm nay."
+  ],
+  [
+    "No classes scheduled in the next 7 days.",
+    "Không có lịch tập nào trong 7 ngày tới."
+  ],
+  [
+    "No classes scheduled this month.",
+    "Không có lịch tập nào trong tháng này."
+  ]
+];
+
+for (const [en, vi] of scheduleTimeTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const notificationRedesignTranslations = [
+  [
+    "Notification Center Digest",
+    "Tổng quan thông báo"
+  ],
+  [
+    "Unread Notifications",
+    "Thông báo chưa đọc"
+  ],
+  [
+    "All Caught Up!",
+    "Đã đọc tất cả!"
+  ],
+  [
+    "You have no unread notifications.",
+    "Bạn đã xem hết mọi thông báo mới."
+  ],
+  [
+    "new updates waiting for your review",
+    "thông báo mới đang chờ bạn xem"
+  ],
+  [
+    "Notification Categories",
+    "Danh mục thông báo"
+  ],
+  [
+    "Notification Channels",
+    "Kênh nhận thông báo"
+  ],
+  [
+    "Real-time push alerts for class schedules, gate check-in & e-invoices.",
+    "Thông báo đẩy tức thì về lịch tập, điểm danh cổng và biên lai điện tử."
+  ],
+  [
+    "Manage Channels",
+    "Quản lý kênh"
+  ],
+  [
+    "Email & Push Sync",
+    "Đồng bộ Email & Thông báo đẩy"
+  ],
+  [
+    "Turnstile Access Sync",
+    "Đồng bộ điểm danh cổng"
+  ],
+  [
+    "Instant Delivery",
+    "Nhận ngay tức thì"
+  ],
+  [
+    "Schedule",
+    "Lịch tập"
+  ],
+  [
+    "Billing",
+    "Thanh toán"
+  ]
+];
+
+for (const [en, vi] of notificationRedesignTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const myPackagesRedesignTranslations = [
+  ["Explore Package Store", "Khám phá cửa hàng gói tập"],
+  ["Manage your active memberships, class passes, and facility privileges.", "Quản lý các gói hội viên, thẻ lớp học và đặc quyền sử dụng trung tâm."],
+  ["Digital Membership Pass", "Thẻ hội viên điện tử"],
+  ["Turnstile Gate Access", "Cổng kiểm soát tự động"],
+  ["Tap to view Check-in QR", "Chạm để xem mã QR điểm danh"],
+  ["Member Pass QR Code", "Mã QR thẻ hội viên"],
+  ["Scan at center turnstile gate to enter", "Quét tại cổng turnstile để vào tập"],
+  ["Expiring Soon", "Sắp hết hạn"],
+  ["Renew Package", "Gia hạn gói tập"],
+  ["Renew this package", "Gia hạn gói này"],
+  ["Book Class", "Đặt lịch tập"],
+  ["Search my packages...", "Tìm kiếm gói tập..."],
+  ["Valid Until", "Có hiệu lực đến"],
+  ["Days Left", "Ngày còn lại"],
+  ["Day Left", "Ngày còn lại"],
+  ["Unlimited Access", "Sử dụng không giới hạn"],
+  ["Included Privileges", "Đặc quyền đi kèm"],
+  ["Expires in", "Hết hạn sau"],
+  ["days", "ngày"],
+  ["No packages found", "Không tìm thấy gói tập"],
+  ["Try adjusting your search query or filter.", "Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc."],
+  ["You don't have any active packages right now. Explore our membership tiers and class packages.", "Bạn hiện chưa sở hữu gói tập nào. Hãy khám phá các hạng thẻ hội viên và gói lớp học của chúng tôi."],
+  ["View Pass QR", "Mở mã QR"],
+  ["Membership Tier", "Hạng hội viên"],
+  ["CARDHOLDER", "Chủ thẻ"],
+  ["VALID THRU", "Hiệu lực"],
+  ["Verified Account", "Tài khoản đã xác thực"]
+];
+
+for (const [en, vi] of myPackagesRedesignTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const managerSettingsTranslations = [
+  ["Manage your administrator profile, credentials, and system preferences.", "Quản lý hồ sơ quản trị viên, thông tin bảo mật và phân quyền hệ thống."],
+  ["Profile & Settings", "Hồ sơ & Cài đặt"],
+  ["Personal Profile", "Hồ sơ cá nhân"],
+  ["Security & Password", "Bảo mật & Mật khẩu"],
+  ["Role Privileges & Authority", "Quyền hạn & Phân quyền quản trị"],
+  ["General Information", "Thông tin chung"],
+  ["Update your administrator display name, contact phone, and administrative notes.", "Cập nhật tên hiển thị quản trị viên, số điện thoại liên hệ và ghi chú quản lý."],
+  ["Primary Email Address", "Địa chỉ email chính"],
+  ["Managed by System", "Hệ thống quản lý cố định"],
+  ["Bio & Operational Responsibilities", "Giới thiệu & Phạm vi trách nhiệm"],
+  ["Specialties, direct escalation contact, or manager office hours...", "Chuyên môn, kênh tiếp nhận khiếu nại trực tiếp hoặc giờ làm việc của quản lý..."],
+  ["Saving Changes...", "Đang lưu thay đổi..."],
+  ["Save Changes", "Lưu thay đổi"],
+  ["Administrative Status", "Tình trạng quản trị"],
+  ["Clearance Tier", "Cấp bậc đặc quyền"],
+  ["Level 5 Full Access", "Toàn quyền Cấp 5"],
+  ["System Audit Scope", "Phạm vi kiểm toán hệ thống"],
+  ["Full Center", "Toàn bộ trung tâm"],
+  ["Multi-Branch ID", "Mã chi nhánh"],
+  ["Security Notice", "Thông báo an ninh"],
+  ["As Center Manager, updates to your administrative profile are automatically logged in the System Audit Trail for enterprise accountability.", "Với vai trò Quản lý Trung tâm, các cập nhật hồ sơ quản trị của bạn được ghi nhận tự động vào Nhật ký Kiểm toán Hệ thống nhằm đảm bảo trách nhiệm giải trình doanh nghiệp."],
+  ["Change Administrator Password", "Thay đổi mật khẩu quản trị viên"],
+  ["Ensure your account uses a strong, complex passphrase to safeguard center operations.", "Đảm bảo tài khoản sử dụng mật khẩu mạnh, phức tạp nhằm bảo vệ an toàn cho hoạt động trung tâm."],
+  ["Enter current password", "Nhập mật khẩu hiện tại"],
+  ["New Password", "Mật khẩu mới"],
+  ["Enter new password (min. 6 characters)", "Nhập mật khẩu mới (tối thiểu 6 ký tự)"],
+  ["Confirm New Password", "Xác nhận mật khẩu mới"],
+  ["Confirm your new password", "Nhập lại mật khẩu mới"],
+  ["Updating Password...", "Đang cập nhật mật khẩu..."],
+  ["Update Password", "Cập nhật mật khẩu"],
+  ["Password Security Standard", "Tiêu chuẩn bảo mật mật khẩu"],
+  ["Administrative passphrases must fulfill the enterprise security baseline before activation.", "Mật khẩu quản trị phải đáp ứng tiêu chuẩn an ninh tối thiểu của doanh nghiệp trước khi kích hoạt."],
+  ["Minimum 6 characters", "Tối thiểu 6 ký tự"],
+  ["Contains alphabet letters (A-Z, a-z)", "Chứa chữ cái (A-Z, a-z)"],
+  ["Contains at least one number (0-9)", "Chứa ít nhất một chữ số (0-9)"],
+  ["Confirm password matches new password", "Mật khẩu xác nhận phải trùng khớp"],
+  ["Tip: Use a memorable passphrase or password manager. Never share manager credentials.", "Mẹo: Hãy dùng chuỗi ký tự dễ nhớ hoặc trình quản lý mật khẩu. Tuyệt đối không chia sẻ tài khoản quản trị."],
+  ["Center Manager RBAC Governance Matrix", "Ma trận Phân quyền Quản trị Trung tâm (RBAC)"],
+  ["Pre-authorized privileges assigned to the Center Manager role in the Nexus Sports Lab system.", "Các đặc quyền được ủy quyền trước gán cho vai trò Quản lý Trung tâm trong hệ thống Nexus Sports Lab."],
+  ["Staff & RBAC Control", "Kiểm soát Nhân sự & Phân quyền"],
+  ["Create, activate, deactivate, or assign system roles to Receptionists, Coaches, and administrative staff members.", "Tạo mới, kích hoạt, vô hiệu hóa hoặc phân quyền cho Lễ tân, Huấn luyện viên và nhân sự quản lý."],
+  ["Full Grant", "Toàn quyền"],
+  ["Membership Plans & Pricing", "Kế hoạch Gói tập & Định giá"],
+  ["Author and publish Gym Access, AI Access, and Combo packages with customized durations and pricing tiers.", "Thiết kế và phát hành các gói Gym Access, AI Access, và Combo với thời hạn và mức giá tùy chỉnh."],
+  ["Facility Operations", "Vận hành Cơ sở vật chất"],
+  ["Supervise subjects, training rooms, capacity caps, teaching slots, and coach schedule assignments across the 3 floors.", "Giám sát bộ môn, phòng tập, giới hạn sức chứa, ca dạy và phân công lịch dạy HLV trên 3 tầng."],
+  ["Financial & Revenue Audits", "Kiểm toán Tài chính & Doanh thu"],
+  ["Comprehensive date-range financial reporting, cashflow analysis, payment transactions, and invoice ledger oversight.", "Báo cáo tài chính theo khoảng thời gian, phân tích dòng tiền, giao dịch thanh toán và giám sát sổ cái hóa đơn."],
+  ["Escalations & Credit Passes", "Xử lý Khiếu nại & Thẻ Tín dụng Voucher"],
+  ["Sole authority to review escalated cancellation appeals, approve credit passes, and adjudicate member refunds.", "Thẩm quyền duy nhất xét duyệt khiếu nại hủy khóa học, duyệt cấp mã voucher tín dụng và hoàn tiền."],
+  ["Exclusive Authority", "Thẩm quyền độc quyền"],
+  ["System Audit Log Inspection", "Kiểm tra Nhật ký Kiểm toán Hệ thống"],
+  ["Immutable change tracking recording timestamped IP addresses, user actions, and security state modifications.", "Truy vết thay đổi bất biến ghi nhận mốc thời gian, địa chỉ IP, hành động người dùng và thay đổi bảo mật."],
+  ["Read & Audit", "Đọc & Kiểm toán"],
+  ["Refresh Profile", "Tải lại hồ sơ"],
+  ["requests", "phiếu yêu cầu"]
+];
+
+for (const [en, vi] of managerSettingsTranslations) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }

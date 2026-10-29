@@ -481,4 +481,69 @@ class SystemComprehensiveUnitTests {
         assertEquals("Class Booking", responses.get(1).getDetails().get(1).getItemName());
         assertEquals("UNKNOWN", responses.get(1).getDetails().get(2).getItemType());
     }
+
+    @Test
+    void paymentServiceCancelsPendingInvoicesAndReleasesLockOnRetry() {
+        BookingRepository bookingRepo = mock(BookingRepository.class);
+        com.team4.sportscenter.modules.member.repositories.UserMembershipRepository membershipRepo = mock(com.team4.sportscenter.modules.member.repositories.UserMembershipRepository.class);
+        UserRepository userRepo = mock(UserRepository.class);
+        InvoiceRepository invoiceRepo = mock(InvoiceRepository.class);
+        InvoiceDetailRepository detailRepo = mock(InvoiceDetailRepository.class);
+        PaymentRepository paymentRepo = mock(PaymentRepository.class);
+        com.team4.sportscenter.config.VNPayConfig vnPay = mock(com.team4.sportscenter.config.VNPayConfig.class);
+        com.team4.sportscenter.config.PayOSConfig payOS = mock(com.team4.sportscenter.config.PayOSConfig.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        com.team4.sportscenter.modules.member.services.PackageCommerceService commerce = mock(com.team4.sportscenter.modules.member.services.PackageCommerceService.class);
+        com.team4.sportscenter.modules.notification.services.NotificationService notifService = mock(com.team4.sportscenter.modules.notification.services.NotificationService.class);
+        PackageTypeCatalog pkgTypes = mock(PackageTypeCatalog.class);
+        com.team4.sportscenter.modules.support.repositories.UserCreditRepository creditRepo = mock(com.team4.sportscenter.modules.support.repositories.UserCreditRepository.class);
+
+        com.team4.sportscenter.modules.payment.services.impl.PaymentServiceImpl paymentService = new com.team4.sportscenter.modules.payment.services.impl.PaymentServiceImpl(
+            bookingRepo, membershipRepo, userRepo, invoiceRepo, detailRepo, paymentRepo,
+            vnPay, payOS, jdbc, commerce, notifService, pkgTypes, creditRepo
+        );
+
+        User user = User.builder().userId(10).email("member@gym.vn").build();
+        when(userRepo.findByEmail("member@gym.vn")).thenReturn(Optional.of(user));
+        when(jdbc.queryForList(anyString(), eq(Integer.class), eq(10))).thenReturn(List.of(99));
+
+        paymentService.cancelPendingCheckout("member@gym.vn");
+
+        verify(jdbc).update(contains("UPDATE INVOICES SET status='CANCELLED'"), eq(99));
+        verify(jdbc).update(contains("UPDATE PAYMENTS SET status='CANCELLED'"), eq(99));
+    }
+
+    @Test
+    void userControllerUploadsAndDeletesAvatarSuccessfully() {
+        UserRepository userRepo = mock(UserRepository.class);
+        com.team4.sportscenter.modules.auth.services.UserService userService = mock(com.team4.sportscenter.modules.auth.services.UserService.class);
+        com.team4.sportscenter.modules.notification.services.NotificationService notifService = mock(com.team4.sportscenter.modules.notification.services.NotificationService.class);
+        com.team4.sportscenter.modules.manager.services.AvatarStorageService avatarStorage = mock(com.team4.sportscenter.modules.manager.services.AvatarStorageService.class);
+
+        com.team4.sportscenter.modules.auth.controllers.UserController controller = new com.team4.sportscenter.modules.auth.controllers.UserController(
+            userRepo, userService, notifService, avatarStorage
+        );
+
+        User user = User.builder().userId(1).email("test@gym.vn").fullName("Test User").avatarPath("old.png").build();
+        when(userRepo.findByEmail("test@gym.vn")).thenReturn(Optional.of(user));
+        org.springframework.security.core.Authentication auth = mock(org.springframework.security.core.Authentication.class);
+        when(auth.getName()).thenReturn("test@gym.vn");
+
+        org.springframework.web.multipart.MultipartFile mockFile = mock(org.springframework.web.multipart.MultipartFile.class);
+        when(avatarStorage.store(mockFile)).thenReturn("new-uuid.png");
+
+        // Test Upload
+        org.springframework.http.ResponseEntity<?> uploadRes = controller.uploadAvatar(auth, mockFile);
+        assertEquals(200, uploadRes.getStatusCode().value());
+        assertEquals("new-uuid.png", user.getAvatarPath());
+        verify(avatarStorage).delete("old.png");
+        verify(userRepo).save(user);
+
+        // Test Delete
+        org.springframework.http.ResponseEntity<?> deleteRes = controller.deleteAvatar(auth);
+        assertEquals(200, deleteRes.getStatusCode().value());
+        assertNull(user.getAvatarPath());
+        verify(avatarStorage).delete("new-uuid.png");
+    }
+
 }

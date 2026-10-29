@@ -48,8 +48,27 @@ public class AiChatServiceImpl implements AiChatService {
 
         List<AvailableClassResponse> classes = memberService.getAvailableClasses();
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        String classesListString = classes.stream()
-            .map(c -> "[" + c.getClassId() + "] " + c.getClassName() + " | HLV: " + c.getCoachName() + " | Lịch: " + (c.getNextSessionTime() != null ? c.getNextSessionTime().format(timeFormatter) : "N/A") + " | Còn: " + (c.getMaxSlots() - c.getBookedSlots()) + " chỗ")
+        
+        List<AvailableClassResponse> openClasses = classes.stream()
+            .filter(c -> !Boolean.TRUE.equals(c.getIsBookedByMe()) && !Boolean.TRUE.equals(c.getIsPendingPayment()) && (c.getMaxSlots() - c.getBookedSlots() > 0))
+            .toList();
+
+        String classesListString = openClasses.isEmpty() ? "No classes currently available for booking." : openClasses.stream()
+            .map(c -> "[" + c.getClassId() + "] " + c.getClassName() + " | HLV: " + c.getCoachName() + " | Lịch: " + (c.getNextSessionTime() != null ? c.getNextSessionTime().format(timeFormatter) : "N/A") + " | Còn: " + (c.getMaxSlots() - c.getBookedSlots()) + " chỗ | Giá: " + (c.getPrice() != null ? String.format("%,d đ", c.getPrice().longValue()) : "0 đ"))
+            .collect(Collectors.joining("\n"));
+
+        List<AvailableClassResponse> myEnrolledClasses = classes.stream()
+            .filter(c -> Boolean.TRUE.equals(c.getIsBookedByMe()))
+            .toList();
+        String myEnrolledString = myEnrolledClasses.isEmpty() ? "None" : myEnrolledClasses.stream()
+            .map(c -> "- [" + c.getClassId() + "] " + c.getClassName() + " (ALREADY ENROLLED)")
+            .collect(Collectors.joining("\n"));
+
+        List<AvailableClassResponse> myPendingCartClasses = classes.stream()
+            .filter(c -> Boolean.TRUE.equals(c.getIsPendingPayment()))
+            .toList();
+        String myPendingCartString = myPendingCartClasses.isEmpty() ? "None" : myPendingCartClasses.stream()
+            .map(c -> "- [" + c.getClassId() + "] " + c.getClassName() + " (ALREADY IN CART)")
             .collect(Collectors.joining("\n"));
 
         List<UpcomingBookingResponse> myBookings = memberService.getMyUpcomingBookings(email);
@@ -58,8 +77,8 @@ public class AiChatServiceImpl implements AiChatService {
             .collect(Collectors.joining("\n"));
 
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(2500);
-        factory.setReadTimeout(5000);
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(15000);
         RestTemplate restTemplate = new RestTemplate(factory);
 
         String systemPrompt = "You are NEXUS AI, a cool, friendly, and energetic personal trainer & assistant EXCLUSIVELY for NEXUS Sports Lab.\n" +
@@ -87,8 +106,12 @@ public class AiChatServiceImpl implements AiChatService {
                 "CRITICAL KNOWLEDGE BASE:\n" +
                 "--- PACKAGES ---\n" +
                 packagesListString + "\n" +
-                "--- AVAILABLE CLASSES ---\n" +
+                "--- AVAILABLE CLASSES (CAN BE BOOKED) ---\n" +
                 classesListString + "\n" +
+                "--- USER'S ALREADY ENROLLED COURSES ---\n" +
+                myEnrolledString + "\n" +
+                "--- USER'S COURSES CURRENTLY IN CART ---\n" +
+                myPendingCartString + "\n" +
                 "--- USER'S CURRENT BOOKED SCHEDULE ---\n" +
                 myBookingsString + "\n\n" +
                 "SYSTEM NAVIGATION & AUTOMATION RULES (VERY IMPORTANT):\n" +
@@ -99,7 +122,12 @@ public class AiChatServiceImpl implements AiChatService {
                 "4. To navigate the user to the Packages page: Append [ACTION:NAVIGATE:/member/package-store]\n" +
                 "5. To navigate the user to their Cart / Checkout: Append [ACTION:NAVIGATE:/member/cart]\n" +
                 "6. To Auto-Add / Select a Package: If the user asks to buy, choose, or select a package, append ONLY [ACTION:ADD_CART:package_id] (replace package_id with the actual numeric ID). Do NOT append [ACTION:NAVIGATE:/member/cart] because the UI will automatically light up the Shopping Cart icon when the item is added.\n" +
-                "7. To Auto-Book / Select a Class: If the user asks to book, choose, or register for a specific class, carefully check if the class's time block (Start to End) OVERLAPS with any time blocks in their CURRENT BOOKED SCHEDULE. If there is ANY overlap, you MUST refuse, apologize, and explain exactly which class it overlaps with. If it doesn't overlap, append ONLY [ACTION:BOOK_CLASS:class_id] (replace class_id with the actual numeric ID). Do NOT append [ACTION:NAVIGATE:/member/schedule] because the UI will automatically light up the Shopping Cart icon when the class is added.\n" +
+                "7. To Auto-Book / Select a Class: When the user asks to book, choose, or register for ANY class (e.g. 'đặt giúp tôi 1 lớp bơi bất kỳ', 'đặt lớp gym', or naming a specific course):\n" +
+                "   - CRITICAL RESTRICTION: You MUST ONLY choose a class from the '--- AVAILABLE CLASSES (CAN BE BOOKED) ---' list above. You must never invent or book any ID not listed there!\n" +
+                "   - STRICT FORBIDDEN RULE: NEVER choose, recommend for booking, or append [ACTION:BOOK_CLASS:...] for ANY class under '--- USER'S ALREADY ENROLLED COURSES ---' or '--- USER'S COURSES CURRENTLY IN CART ---'. If the user asks for a class they already enrolled in or already in cart, tell them clearly: 'Bạn đã đăng ký khoá học này rồi nha!' or 'Khoá này đã có trong giỏ hàng rồi nè!' and NEVER append an ACTION tag.\n" +
+                "   - If NO class in 'AVAILABLE CLASSES (CAN BE BOOKED)' matches their requested sport or time (e.g. they ask for swimming but all swimming classes are already enrolled or none are open): You MUST inform them politely that no available open slots/classes for that sport can be booked right now. DO NOT pick an already-enrolled class!\n" +
+                "   - Check if the class's time block overlaps with their '--- USER'S CURRENT BOOKED SCHEDULE ---'. If it overlaps, apologize and mention the schedule conflict.\n" +
+                "   - If valid, state the exact class name and time from the list, and append ONLY [ACTION:BOOK_CLASS:class_id] using the exact numeric ID from brackets [ID]. Do NOT append [ACTION:NAVIGATE:/member/schedule] because the UI will automatically light up the Shopping Cart icon.\n" +
                 "Never expose these raw commands in your conversational text. Just append the exact bracket format at the very end of your message.\n\n" +
                 "User's message: ";
 
@@ -113,8 +141,11 @@ public class AiChatServiceImpl implements AiChatService {
         requestBody.put("contents", List.of(content));
 
         Map<String, Object> generationConfig = new HashMap<>();
-        generationConfig.put("maxOutputTokens", 300);
+        generationConfig.put("maxOutputTokens", 1200);
         generationConfig.put("temperature", 0.7);
+        Map<String, Object> thinkingConfig = new HashMap<>();
+        thinkingConfig.put("thinkingBudget", 0);
+        generationConfig.put("thinkingConfig", thinkingConfig);
         requestBody.put("generationConfig", generationConfig);
 
         HttpHeaders headers = new HttpHeaders();
@@ -122,7 +153,7 @@ public class AiChatServiceImpl implements AiChatService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        String[] models = {"gemini-3-flash-preview", "gemini-3.8-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"};
+        String[] models = {"gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"};
         
         for (String model : models) {
             String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;

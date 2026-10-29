@@ -3,7 +3,8 @@ import {
   HelpCircle, CreditCard, Ticket, Clock, CheckCircle2,
   AlertTriangle, Plus, Send, X, Copy, Check, MessageSquare,
   ShieldCheck, AlertCircle, ChevronDown, ChevronUp, RefreshCw,
-  Dumbbell, DollarSign, Sparkles, Wrench, UserCheck, Calendar, RotateCcw
+  Dumbbell, DollarSign, Sparkles, Wrench, UserCheck, Calendar, RotateCcw,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
@@ -73,6 +74,19 @@ const CATEGORY_OPTIONS = [
   }
 ];
 
+const getPaginationRange = (current, total) => {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, '...', total];
+  }
+  if (current >= total - 3) {
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, '...', current - 1, current, current + 1, '...', total];
+};
+
 const MemberSupportView = () => {
   useLanguage();
 
@@ -82,6 +96,21 @@ const MemberSupportView = () => {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Pagination state for support tickets
+  const [ticketPage, setTicketPage] = useState(1);
+  const ticketPageSize = 5;
+
+  const totalTicketPages = Math.max(1, Math.ceil(tickets.length / ticketPageSize));
+  const validTicketPage = Math.min(Math.max(1, ticketPage), totalTicketPages);
+
+  const paginatedTickets = useMemo(() => {
+    const start = (validTicketPage - 1) * ticketPageSize;
+    return tickets.slice(start, start + ticketPageSize);
+  }, [tickets, validTicketPage, ticketPageSize]);
+
+  const ticketStartRecord = tickets.length === 0 ? 0 : (validTicketPage - 1) * ticketPageSize + 1;
+  const ticketEndRecord = Math.min(validTicketPage * ticketPageSize, tickets.length);
 
   // New ticket modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -419,110 +448,176 @@ const MemberSupportView = () => {
   };
 
   return (
-    <div className="flex flex-col w-full pb-12 space-y-6">
-      {/* Toast Notification */}
-      <div className={`fixed bottom-6 right-6 z-50 transform transition-all duration-300 ease-out flex items-center gap-3 px-5 py-4 rounded-xl bg-[var(--surface)] text-[var(--text)] shadow-2xl border border-[var(--border)] ${toast.visible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}>
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${toast.type === 'error' ? 'bg-red-500/10 text-red-600' : 'bg-emerald-500/10 text-emerald-600'}`}>
-          {toast.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+    <div className="flex flex-col w-full pb-16 space-y-6 max-w-6xl mx-auto px-2 sm:px-4">
+      {/* Toast Notification - Apple Dynamic Island Style */}
+      <div className={`fixed bottom-8 right-8 z-50 transform transition-all duration-300 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-[0_12px_36px_rgba(0,0,0,0.18)] backdrop-blur-2xl border ${
+        toast.type === 'error'
+          ? 'bg-rose-600 text-white border-rose-500 shadow-rose-600/30'
+          : 'bg-slate-950/90 dark:bg-slate-900/95 text-white border-white/10 dark:border-white/20'
+      } ${toast.visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0 pointer-events-none'}`}>
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+          toast.type === 'error' ? 'bg-white/20 text-white' : 'bg-emerald-500/20 text-emerald-400'
+        }`}>
+          {toast.type === 'error' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
         </div>
-        <span className="text-sm font-semibold">{toast.message}</span>
+        <span className="text-xs sm:text-sm font-semibold tracking-tight">{toast.message}</span>
       </div>
 
-      {/* Page Header */}
+      {/* Page Header - Apple Support Aesthetic */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-[var(--text)] tracking-tight flex items-center gap-3">
-            <HelpCircle className="w-8 h-8 text-[var(--primary)]" />
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 text-[#0071E3] dark:text-blue-400 text-[11px] font-semibold tracking-tight">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{t("NEXUS Support & Wallet")}</span>
+            </span>
+            <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+            <span className="text-xs text-slate-400 font-medium">{t("Member Concierge")}</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
             {t('Help Center & Credit Wallet')}
           </h1>
-          <p className="text-sm text-[var(--text-muted)] mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
             {t('Manage course cancellation credit vouchers and submit support requests to Reception.')}
           </p>
         </div>
+
         <button
           type="button"
           onClick={() => {
             handleCloseModal();
             setIsModalOpen(true);
           }}
-          className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 shrink-0"
+          className="px-5 py-2.5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] text-white font-semibold text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm shadow-blue-500/25 active:scale-95 shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>{t('New Support Ticket')}</span>
         </button>
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-[var(--border)] pb-2">
+      {/* Apple Segmented Control */}
+      <div className="inline-flex p-1 rounded-2xl bg-slate-100 dark:bg-white/[0.08] backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.06] self-start shadow-xs">
         <button
           type="button"
           onClick={() => setActiveTab('credits')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors ${activeTab === 'credits' ? 'bg-[var(--primary-soft)] text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+            activeTab === 'credits'
+              ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
         >
-          <CreditCard className="w-4 h-4" />
-          <span>{t('Course Credit Vouchers')} ({credits.filter(c => c.status === 'ACTIVE').length})</span>
+          <CreditCard className="w-4 h-4 text-amber-500" />
+          <span>{t('Course Credit Vouchers')}</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            activeTab === 'credits'
+              ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'
+              : 'bg-slate-200/70 text-slate-500 dark:bg-white/[0.08] dark:text-slate-400'
+          }`}>
+            {credits.filter(c => c.status === 'ACTIVE').length}
+          </span>
         </button>
+
         <button
           type="button"
           onClick={() => setActiveTab('tickets')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors ${activeTab === 'tickets' ? 'bg-[var(--primary-soft)] text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+            activeTab === 'tickets'
+              ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
         >
-          <Ticket className="w-4 h-4" />
-          <span>{t('My Support Requests')} ({tickets.length})</span>
+          <Ticket className="w-4 h-4 text-[#0071E3]" />
+          <span>{t('My Support Requests')}</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            activeTab === 'tickets'
+              ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300'
+              : 'bg-slate-200/70 text-slate-500 dark:bg-white/[0.08] dark:text-slate-400'
+          }`}>
+            {tickets.length}
+          </span>
         </button>
       </div>
 
       {/* Error Banner */}
       {error && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-sm flex items-center gap-2">
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs sm:text-sm flex items-center gap-3 backdrop-blur-md">
           <AlertTriangle className="w-5 h-5 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Tab 1: Credit Vouchers */}
+      {/* Tab 1: Credit Vouchers (Apple Wallet Pass Layout) */}
       {activeTab === 'credits' && (
-        <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs flex items-start gap-3">
-            <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5" />
+        <div className="space-y-5">
+          <div className="p-4 rounded-2xl bg-blue-50/80 dark:bg-blue-500/10 border border-blue-200/80 dark:border-blue-500/20 text-blue-900 dark:text-blue-200 text-xs flex items-start gap-3.5 backdrop-blur-md">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-[#0071E3] flex items-center justify-center shrink-0 mt-0.5">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
             <div className="space-y-1">
               <span className="font-bold">{t('Policy Tip:')} </span>
-              <span>{t('Credit Vouchers are issued when a class is cancelled before start (100% value) or approved by Reception for mid-course retention. Apply them at Cart Checkout to deduct up to 100% of your new class fee.')}</span>
+              <span className="leading-relaxed opacity-90">{t('Credit Vouchers are issued when a class is cancelled before start (100% value) or approved by Reception for mid-course retention. Apply them at Cart Checkout to deduct up to 100% of your new class fee.')}</span>
             </div>
           </div>
 
           {loading ? (
-            <div className="py-16 text-center text-[var(--text-muted)]">{t('Loading credits...')}</div>
+            <div className="py-20 flex flex-col items-center justify-center gap-3">
+              <RefreshCw className="w-6 h-6 animate-spin text-[#0071E3]" />
+              <span className="text-xs text-slate-400 font-semibold">{t('Loading credits...')}</span>
+            </div>
           ) : credits.length === 0 ? (
-            <div className="p-12 text-center rounded-2xl bg-[var(--surface)] border border-[var(--border)] space-y-3">
-              <CreditCard className="w-12 h-12 text-[var(--text-muted)] mx-auto opacity-50" />
-              <h3 className="text-base font-bold text-[var(--text)]">{t('No Credit Vouchers Yet')}</h3>
-              <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto">
+            <div className="p-12 text-center rounded-3xl bg-white/70 dark:bg-slate-900/70 backdrop-blur-3xl border border-black/[0.06] dark:border-white/[0.08] space-y-3 shadow-xs">
+              <div className="w-16 h-16 rounded-2xl bg-black/[0.03] dark:bg-white/[0.05] flex items-center justify-center mx-auto text-slate-400">
+                <CreditCard className="w-8 h-8 opacity-60" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">{t('No Credit Vouchers Yet')}</h3>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
                 {t('When you cancel an eligible class or receive a resolution from Reception, your credit vouchers will appear here.')}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {credits.map((c) => {
                 const isActive = c.status === 'ACTIVE';
                 return (
                   <div
                     key={c.creditId}
-                    className={`relative p-5 rounded-2xl bg-[var(--surface)] border transition-all ${isActive ? 'border-[var(--primary)]/40 shadow-md' : 'border-[var(--border)] opacity-60'}`}
+                    className={`relative rounded-3xl p-6 transition-all duration-200 overflow-hidden border ${
+                      isActive
+                        ? 'bg-white dark:bg-gradient-to-br dark:from-slate-900 dark:via-stone-900 dark:to-slate-950 text-slate-900 dark:text-white border-slate-200/90 dark:border-amber-500/30 shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_36px_rgba(0,0,0,0.4)] hover:-translate-y-1 hover:shadow-[0_14px_40px_rgba(0,0,0,0.09)]'
+                        : 'bg-slate-50/90 dark:bg-slate-900/40 border-slate-200/90 dark:border-white/[0.08] text-slate-500 dark:text-slate-400'
+                    }`}
                   >
-                    <div className="flex justify-between items-start mb-3">
+                    {/* Top Decorative Apple Metallic Sheen */}
+                    <div className="flex justify-between items-start mb-4">
                       <div>
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isActive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-500/10 text-zinc-500'}`}>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-amber-500 dark:bg-amber-400' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                          <span className="text-[10px] tracking-widest font-mono font-bold uppercase text-slate-400 dark:text-slate-400">
+                            NEXUS CREDIT PASS
+                          </span>
+                        </div>
+                        <span className={`inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full mt-1.5 ${
+                          isActive
+                            ? 'bg-emerald-50 dark:bg-emerald-400/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200/90 dark:border-emerald-400/30'
+                            : 'bg-slate-200/80 dark:bg-white/[0.08] text-slate-600 dark:text-slate-400 border border-slate-300/80 dark:border-white/[0.06]'
+                        }`}>
                           {isActive ? t('READY TO USE') : c.status}
                         </span>
-                        <div className="text-xs text-[var(--text-muted)] mt-1">{c.reason || t('Course Credit')}</div>
+                        <div className={`text-xs mt-1 font-medium ${isActive ? 'text-slate-600 dark:text-white/80' : 'text-slate-400 dark:text-slate-500'}`}>
+                          {c.reason || t('Course Credit')}
+                        </div>
                       </div>
+
                       <div className="text-right">
-                        <div className="text-lg font-extrabold text-[var(--primary)]">
+                        <div className={`text-xl sm:text-2xl font-black tracking-tight font-mono ${
+                          isActive
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-slate-400 dark:text-slate-500 line-through'
+                        }`}>
                           {formatMoney(c.remainingAmount)}
                         </div>
                         {c.remainingAmount < c.amount && (
-                          <div className="text-[11px] text-[var(--text-muted)] line-through">
+                          <div className="text-[11px] opacity-60 line-through text-slate-400">
                             {formatMoney(c.amount)}
                           </div>
                         )}
@@ -530,27 +625,43 @@ const MemberSupportView = () => {
                     </div>
 
                     {/* Voucher Code Box */}
-                    <div className="p-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] flex items-center justify-between my-3">
-                      <code className="text-sm font-bold text-[var(--text)] tracking-wider">
-                        {c.creditCode}
-                      </code>
+                    <div className={`p-3 rounded-2xl border flex items-center justify-between my-4 ${
+                      isActive
+                        ? 'bg-slate-50 dark:bg-white/[0.08] border-slate-200/90 dark:border-white/10'
+                        : 'bg-slate-100 dark:bg-white/[0.04] border-slate-200 dark:border-white/[0.06]'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <Ticket className={`w-4 h-4 shrink-0 ${isActive ? 'text-amber-500 dark:text-amber-400' : 'text-slate-400'}`} />
+                        <code className={`text-sm font-bold tracking-widest font-mono ${
+                          isActive
+                            ? 'text-slate-900 dark:text-white'
+                            : 'text-slate-400 dark:text-slate-500 line-through'
+                        }`}>
+                          {c.creditCode}
+                        </code>
+                      </div>
                       {isActive && (
                         <button
                           type="button"
                           onClick={() => handleCopyCode(c.creditCode)}
-                          className="px-2 py-1 text-xs font-semibold rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-colors flex items-center gap-1"
+                          className="px-3 py-1 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-white dark:bg-white/15 dark:hover:bg-white/25 dark:text-white transition-all flex items-center gap-1 active:scale-95 cursor-pointer shadow-xs"
                         >
-                          {copiedCode === c.creditCode ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                          {copiedCode === c.creditCode ? t('Copied') : t('Copy')}
+                          {copiedCode === c.creditCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedCode === c.creditCode ? t('Copied') : t('Copy')}</span>
                         </button>
                       )}
                     </div>
 
-                    <div className="flex justify-between items-center text-xs text-[var(--text-muted)] pt-2 border-t border-[var(--border)]">
+                    <div className={`flex justify-between items-center text-xs pt-3 border-t ${
+                      isActive
+                        ? 'border-slate-100 dark:border-white/10 text-slate-500 dark:text-white/70'
+                        : 'border-slate-200/60 dark:border-white/[0.06] text-slate-400 dark:text-slate-500'
+                    }`}>
                       <span>{t('Expires:')} {c.expiryDate}</span>
                       {isActive && (
-                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                          {getDaysLeft(c.expiryDate, c.daysUntilExpiry)} {t('days left')}
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>{getDaysLeft(c.expiryDate, c.daysUntilExpiry)} {t('days left')}</span>
                         </span>
                       )}
                     </div>
@@ -562,27 +673,32 @@ const MemberSupportView = () => {
         </div>
       )}
 
-      {/* Tab 2: Support Tickets */}
+      {/* Tab 2: Support Tickets (Apple Care Case List) */}
       {activeTab === 'tickets' && (
         <div className="space-y-4">
           {loading ? (
-            <div className="py-16 text-center text-[var(--text-muted)]">{t('Loading tickets...')}</div>
+            <div className="py-20 flex flex-col items-center justify-center gap-3">
+              <RefreshCw className="w-6 h-6 animate-spin text-[#0071E3]" />
+              <span className="text-xs text-slate-400 font-semibold">{t('Loading tickets...')}</span>
+            </div>
           ) : tickets.length === 0 ? (
-            <div className="p-12 text-center rounded-2xl bg-[var(--surface)] border border-[var(--border)] space-y-3">
-              <Ticket className="w-12 h-12 text-[var(--text-muted)] mx-auto opacity-50" />
-              <h3 className="text-base font-bold text-[var(--text)]">{t('No Support Tickets Submitted')}</h3>
-              <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto">
+            <div className="p-12 text-center rounded-3xl bg-white/70 dark:bg-slate-900/70 backdrop-blur-3xl border border-black/[0.06] dark:border-white/[0.08] space-y-3 shadow-xs">
+              <div className="w-16 h-16 rounded-2xl bg-black/[0.03] dark:bg-white/[0.05] flex items-center justify-center mx-auto text-slate-400">
+                <Ticket className="w-8 h-8 opacity-60" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">{t('No Support Tickets Submitted')}</h3>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
                 {t('Need help with class retention, facility reports, or feedback? Click "New Support Ticket" to contact Reception.')}
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {tickets.map((tkt) => {
+            <div className="space-y-3.5">
+              {paginatedTickets.map((tkt) => {
                 const isExpanded = expandedTicketId === tkt.requestId;
                 return (
                   <div
                     key={tkt.requestId}
-                    className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] overflow-hidden transition-all"
+                    className="rounded-3xl bg-white dark:bg-slate-900/80 backdrop-blur-2xl border border-slate-200/90 dark:border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-none hover:border-[#0071E3]/40 transition-all overflow-hidden"
                   >
                     <div
                       role="button"
@@ -594,58 +710,60 @@ const MemberSupportView = () => {
                           setExpandedTicketId(isExpanded ? null : tkt.requestId);
                         }
                       }}
-                      className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
+                      className="p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors"
                     >
-                      <div className="space-y-1.5 flex-1">
+                      <div className="space-y-2 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-mono font-bold text-[var(--primary)]">
+                          <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30">
                             #{tkt.requestId}
                           </span>
-                          <span className="text-xs font-medium px-2 py-0.5 rounded bg-[var(--surface-hover)] text-[var(--text-muted)] border border-[var(--border)]">
+                          <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.06]">
                             {getCategoryLabel(tkt.category)}
                           </span>
                           {getStatusBadge(tkt.status, { isMember: true })}
                           {getPriorityBadge(tkt.priority, tkt.preferredResolution)}
                         </div>
-                        <h4 className="text-base font-bold text-[var(--text)]">
+                        <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                           {tkt.title}
                         </h4>
-                        <p className="text-xs text-[var(--text-muted)]">
+                        <p className="text-xs text-slate-400">
                           {t('Submitted on')} {tkt.createdAt}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
-                        <span className="text-xs font-medium text-[var(--text-muted)]">
+                      <div className="flex items-center gap-2.5 shrink-0 self-end md:self-center">
+                        <span className="text-xs font-semibold text-[#0071E3]">
                           {isExpanded ? t('Hide Details') : t('View Details')}
                         </span>
-                        {isExpanded ? <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" /> : <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />}
+                        <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/[0.06] flex items-center justify-center text-slate-500 dark:text-slate-400">
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </div>
                       </div>
                     </div>
 
                     {/* Expanded details */}
                     {isExpanded && (
-                      <div className="px-5 pb-5 pt-2 border-t border-[var(--border)] bg-[var(--surface-hover)] space-y-4 text-sm animate-fade-in">
+                      <div className="px-5 pb-6 pt-3 border-t border-slate-100 dark:border-white/[0.06] bg-slate-50/80 dark:bg-slate-950/40 space-y-4 text-sm animate-fade-in">
                         <div>
-                          <div className="text-xs font-bold text-[var(--text-muted)] mb-1 uppercase tracking-wide">
+                          <div className="text-[11px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">
                             {t('Your Request Description')}
                           </div>
-                          <p className="text-sm text-[var(--text)] whitespace-pre-line leading-relaxed bg-[var(--surface)] p-3.5 rounded-xl border border-[var(--border)]">
+                          <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 whitespace-pre-line leading-relaxed bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-xs">
                             {tkt.content}
                           </p>
                         </div>
 
                         {tkt.className && (
-                          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                          <div className="flex items-center gap-2 text-xs text-slate-500">
                             <span className="font-semibold">{t('Associated Class')}:</span>
-                            <span className="font-bold text-[var(--text)]">{tkt.className}</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{tkt.className}</span>
                           </div>
                         )}
 
                         {tkt.preferredResolution && (
-                          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                          <div className="flex items-center gap-2 text-xs text-slate-500">
                             <span className="font-semibold">{t('Preferred Compensation')}:</span>
-                            <span className="font-bold text-[var(--primary)]">
+                            <span className="font-bold text-[#0071E3]">
                               {tkt.preferredResolution === 'ISSUE_CREDIT' && t('Credit Voucher')}
                               {tkt.preferredResolution === 'GYM_PASS' && t('1-Month Gym Pass')}
                               {tkt.preferredResolution === 'CASH_REFUND' && t('Cash / Bank Refund')}
@@ -655,7 +773,7 @@ const MemberSupportView = () => {
 
                         {/* Staff Response Box */}
                         {tkt.responseNote ? (
-                          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-900 dark:text-emerald-200 space-y-2">
+                          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200/90 text-emerald-950 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-200 space-y-2 backdrop-blur-md">
                             <div className="flex items-center justify-between text-xs font-bold">
                               <span className="flex items-center gap-1.5">
                                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -663,12 +781,12 @@ const MemberSupportView = () => {
                               </span>
                               <span>{tkt.respondedAt}</span>
                             </div>
-                            <p className="text-sm whitespace-pre-line leading-relaxed">
+                            <p className="text-xs sm:text-sm whitespace-pre-line leading-relaxed opacity-95">
                               {tkt.responseNote}
                             </p>
                           </div>
                         ) : (
-                          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
+                          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/90 text-amber-900 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-300 text-xs flex items-center gap-2.5 backdrop-blur-md">
                             <Clock className="w-4 h-4 shrink-0" />
                             <span>{t('Ticket is currently in queue. Reception staff will respond shortly.')}</span>
                           </div>
@@ -684,7 +802,7 @@ const MemberSupportView = () => {
                                 handleWithdrawTicket(tkt.requestId);
                               }}
                               disabled={withdrawingId === tkt.requestId}
-                              className="px-3.5 py-1.5 rounded-xl border border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10 font-bold text-xs transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                              className="px-4 py-2 rounded-full border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 font-bold text-xs transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-95"
                             >
                               <RotateCcw className={`w-3.5 h-3.5 ${withdrawingId === tkt.requestId ? 'animate-spin' : ''}`} />
                               <span>{withdrawingId === tkt.requestId ? t('Withdrawing...') : t('Withdraw / Cancel this request')}</span>
@@ -696,24 +814,100 @@ const MemberSupportView = () => {
                   </div>
                 );
               })}
+
+              {/* Pagination Controls */}
+              <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900/80 backdrop-blur-2xl border border-slate-200/90 dark:border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs mt-2">
+                <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 order-2 sm:order-1 font-medium">
+                  <span>{t('Showing')}</span>
+                  <strong className="text-slate-900 dark:text-white font-bold">{ticketStartRecord}–{ticketEndRecord}</strong>
+                  <span>{t('of')}</span>
+                  <strong className="text-slate-900 dark:text-white font-bold">{tickets.length}</strong>
+                  <span>{t('requests')}</span>
+                </div>
+
+                {totalTicketPages > 1 && (
+                  <div className="flex items-center gap-1.5 order-1 sm:order-2 select-none">
+                    {/* Previous button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTicketPage((p) => Math.max(1, p - 1));
+                        window.scrollTo({ top: 150, behavior: 'smooth' });
+                      }}
+                      disabled={validTicketPage === 1}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/[0.1] bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 disabled:opacity-30 disabled:pointer-events-none text-xs text-slate-700 dark:text-slate-200 transition-all flex items-center gap-1 cursor-pointer font-medium shadow-2xs"
+                      title={t('Previous')}
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">{t('Previous')}</span>
+                    </button>
+
+                    {/* Page numbers (1, 2, 3...) */}
+                    <div className="flex items-center gap-1">
+                      {getPaginationRange(validTicketPage, totalTicketPages).map((p, idx) => {
+                        if (p === '...') {
+                          return (
+                            <span key={`dots-${idx}`} className="px-2 py-1 text-xs text-slate-400 font-medium">
+                              ...
+                            </span>
+                          );
+                        }
+                        const isCurrent = p === validTicketPage;
+                        return (
+                          <button
+                            key={`page-${p}`}
+                            type="button"
+                            onClick={() => {
+                              setTicketPage(p);
+                              window.scrollTo({ top: 150, behavior: 'smooth' });
+                            }}
+                            className={`min-w-[34px] h-8 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                              isCurrent
+                                ? 'bg-[#0071E3] text-white shadow-xs shadow-blue-500/30'
+                                : 'border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700/60'
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Next button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTicketPage((p) => Math.min(totalTicketPages, p + 1));
+                        window.scrollTo({ top: 150, behavior: 'smooth' });
+                      }}
+                      disabled={validTicketPage === totalTicketPages}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/[0.1] bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 disabled:opacity-30 disabled:pointer-events-none text-xs text-slate-700 dark:text-slate-200 transition-all flex items-center gap-1 cursor-pointer font-medium shadow-2xs"
+                      title={t('Next')}
+                    >
+                      <span className="hidden sm:inline">{t('Next')}</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {/* Dynamic Ticket Creation Modal */}
+      {/* Dynamic Ticket Creation Modal - Apple Sheet Dialog */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md animate-fade-in">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="ticket-modal-title"
-            className="relative w-full max-w-xl rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-2xl p-6 overflow-hidden flex flex-col max-h-[90vh]"
+            className="relative w-full max-w-xl rounded-3xl bg-white dark:bg-slate-900 backdrop-blur-3xl border border-slate-200/90 dark:border-white/[0.1] shadow-2xl p-6 sm:p-7 overflow-hidden flex flex-col max-h-[90vh]"
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-white/[0.08]">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-[#0071E3] flex items-center justify-center shrink-0">
                   {modalSuccess ? (
                     <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   ) : ticketForm.category === 'CLASS_CANCELLATION' ? (
@@ -731,7 +925,7 @@ const MemberSupportView = () => {
                   )}
                 </div>
                 <div>
-                  <h3 id="ticket-modal-title" className="text-lg font-bold text-[var(--text)]">
+                  <h3 id="ticket-modal-title" className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                     {modalSuccess ? (
                       modalSuccess.type === 'DIRECT_CANCEL_SUCCESS'
                         ? t('Class Cancelled & 100% Credit Granted!')
@@ -742,7 +936,7 @@ const MemberSupportView = () => {
                       t('Submit New Support Ticket')
                     )}
                   </h3>
-                  <p className="text-xs text-[var(--text-muted)]">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {modalSuccess ? (
                       modalSuccess.type === 'DIRECT_CANCEL_SUCCESS'
                         ? t('100% credit granted to your wallet.')
@@ -758,10 +952,10 @@ const MemberSupportView = () => {
               <button
                 type="button"
                 onClick={handleCloseModal}
-                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-colors"
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/[0.08] hover:bg-slate-200 dark:hover:bg-white/[0.12] text-slate-500 dark:text-slate-400 flex items-center justify-center transition-all cursor-pointer"
                 aria-label={t('Close')}
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -785,31 +979,31 @@ const MemberSupportView = () => {
                 /* FORM VIEW */
                 <form onSubmit={handleCreateTicket} className="space-y-4">
                   {/* Category Selector with Professional Vector Icons */}
-                  <div className="relative space-y-1.5 pb-2 border-b border-[var(--border)]">
-                    <label className="block text-xs font-bold text-[var(--text)]">
-                      {t('Select Request Category')} <span className="text-red-500">*</span>
+                  <div className="relative space-y-1.5 pb-2 border-b border-slate-100 dark:border-white/[0.08]">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      {t('Select Request Category')} <span className="text-rose-500">*</span>
                     </label>
 
                     {/* Custom Dropdown Trigger */}
                     <button
                       type="button"
                       onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
-                      className="w-full flex items-center justify-between p-3 rounded-xl bg-[var(--surface-hover)] border-2 border-[var(--border)] hover:border-[var(--primary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] transition-all text-left shadow-sm"
+                      className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200/90 dark:border-white/[0.1] hover:border-[#0071E3]/50 focus:outline-none focus:ring-4 focus:ring-[#0071E3]/15 transition-all text-left shadow-xs cursor-pointer"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${activeCat.badgeBg}`}>
                           <ActiveCatIcon className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
-                          <div className="text-sm font-bold text-[var(--text)] truncate">
+                          <div className="text-sm font-bold text-slate-900 dark:text-white truncate">
                             {t(activeCat.label)}
                           </div>
-                          <div className="text-xs text-[var(--text-muted)] truncate">
+                          <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
                             {t(activeCat.desc)}
                           </div>
                         </div>
                       </div>
-                      <ChevronDown className={`w-4 h-4 text-[var(--text-muted)] shrink-0 transition-transform duration-200 ${categoryDropdownOpen ? 'rotate-180 text-[var(--primary)]' : ''}`} />
+                      <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${categoryDropdownOpen ? 'rotate-180 text-[#0071E3]' : ''}`} />
                     </button>
 
                     {/* Floating Dropdown Menu with SVG Icons */}
@@ -821,7 +1015,7 @@ const MemberSupportView = () => {
                           className="fixed inset-0 z-20 cursor-default bg-transparent border-0 p-0 w-full h-full"
                           onClick={() => setCategoryDropdownOpen(false)}
                         />
-                        <div className="absolute top-full left-0 right-0 mt-2 z-30 p-2 rounded-2xl bg-[var(--surface)] border-2 border-[var(--border)] shadow-2xl space-y-1 animate-fade-in max-h-72 overflow-y-auto">
+                        <div className="absolute top-full left-0 right-0 mt-2 z-30 p-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/[0.1] shadow-2xl space-y-1 animate-fade-in max-h-72 overflow-y-auto">
                           {CATEGORY_OPTIONS.map((cat) => {
                             const isSelected = ticketForm.category === cat.key;
                             const CatIcon = cat.icon;
@@ -835,8 +1029,8 @@ const MemberSupportView = () => {
                                 }}
                                 className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all ${
                                   isSelected
-                                    ? 'bg-[var(--primary-soft)] border border-[var(--primary)]/40 shadow-sm'
-                                    : 'hover:bg-[var(--surface-hover)] border border-transparent'
+                                    ? 'bg-blue-50 dark:bg-blue-500/15 border border-blue-500/30'
+                                    : 'hover:bg-slate-50 dark:hover:bg-white/[0.04] border border-transparent'
                                 }`}
                               >
                                 <div className="flex items-center gap-3 min-w-0">
@@ -844,16 +1038,16 @@ const MemberSupportView = () => {
                                     <CatIcon className="w-4 h-4" />
                                   </div>
                                   <div className="min-w-0">
-                                    <div className={`text-xs font-bold leading-tight ${isSelected ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}>
+                                    <div className={`text-xs font-bold leading-tight ${isSelected ? 'text-[#0071E3]' : 'text-slate-900 dark:text-white'}`}>
                                       {t(cat.label)}
                                     </div>
-                                    <div className="text-[11px] text-[var(--text-muted)] truncate mt-0.5">
+                                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                                       {t(cat.desc)}
                                     </div>
                                   </div>
                                 </div>
                                 {isSelected && (
-                                  <div className="w-5 h-5 rounded-full bg-[var(--primary)] text-white flex items-center justify-center shrink-0 ml-2 shadow-sm">
+                                  <div className="w-5 h-5 rounded-full bg-[#0071E3] text-white flex items-center justify-center shrink-0 ml-2 shadow-sm">
                                     <Check className="w-3.5 h-3.5" />
                                   </div>
                                 )}
@@ -1202,8 +1396,8 @@ const MemberSupportView = () => {
 
                       {/* Shared Title Field */}
                       <div className="space-y-1.5">
-                        <label htmlFor="ticket-title-input" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Title / Subject')} {ticketForm.category !== 'SCHEDULE_SUPPORT' && <span className="text-red-500">*</span>}
+                        <label htmlFor="ticket-title-input" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          {t('Title / Subject')} {ticketForm.category !== 'SCHEDULE_SUPPORT' && <span className="text-rose-500">*</span>}
                         </label>
                         <input
                           id="ticket-title-input"
@@ -1211,15 +1405,15 @@ const MemberSupportView = () => {
                           value={ticketForm.title}
                           onChange={(e) => setTicketForm({ ...ticketForm, title: e.target.value })}
                           placeholder={getTitlePlaceholder(ticketForm.category)}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.08] dark:border-white/[0.1] text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-[#0071E3]/15"
                           required={ticketForm.category !== 'SCHEDULE_SUPPORT'}
                         />
                       </div>
 
                       {/* Shared Detailed Content Field */}
                       <div className="space-y-1.5">
-                        <label htmlFor="ticket-content-textarea" className="block text-xs font-bold text-[var(--text)]">
-                          {t('Detailed Content')} <span className="text-red-500">*</span>
+                        <label htmlFor="ticket-content-textarea" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          {t('Detailed Content')} <span className="text-rose-500">*</span>
                         </label>
                         <textarea
                           id="ticket-content-textarea"
@@ -1227,25 +1421,25 @@ const MemberSupportView = () => {
                           value={ticketForm.content}
                           onChange={(e) => setTicketForm({ ...ticketForm, content: e.target.value })}
                           placeholder={getContentPlaceholder(ticketForm.category)}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.08] dark:border-white/[0.1] text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-[#0071E3]/15 resize-none"
                           required
                         />
                       </div>
 
                       {/* Shared Action Buttons Footer */}
-                      <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--border)]">
+                      <div className="flex items-center justify-end gap-3 pt-4 border-t border-black/[0.06] dark:border-white/[0.08]">
                         <button
                           type="button"
                           onClick={handleCloseModal}
                           disabled={creating}
-                          className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors"
+                          className="px-5 py-2.5 rounded-full border border-black/[0.08] dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] font-semibold text-xs sm:text-sm transition-all cursor-pointer"
                         >
                           {t('Cancel')}
                         </button>
                         <button
                           type="submit"
                           disabled={creating || !ticketForm.content.trim() || (ticketForm.category !== 'SCHEDULE_SUPPORT' && !ticketForm.title.trim())}
-                          className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 disabled:opacity-50"
+                          className="px-6 py-2.5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] text-white font-semibold text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm shadow-blue-500/25 disabled:opacity-50 active:scale-95 cursor-pointer"
                         >
                           {creating ? (
                             <>

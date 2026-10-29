@@ -265,18 +265,22 @@ const CoachWorkoutPlans = () => {
       const newTargetType = data.targetType || (data.studentUserId ? 'INDIVIDUAL' : 'CLASS');
       setTargetType(newTargetType);
 
-      if (data.classId) {
-        setSelectedClassId(String(data.classId));
+      const singleClassId = data.classId 
+        ? String(data.classId) 
+        : (classes.length > 0 ? String(classes[0].classId) : '');
+      if (singleClassId) {
+        setSelectedClassId(singleClassId);
         if (newTargetType === 'INDIVIDUAL') {
           setLoadingSingleStudents(true);
-          const list = await fetchStudentsForClass(data.classId);
+          const list = await fetchStudentsForClass(singleClassId);
           setSingleClassStudents(list);
+          if (data.studentUserId) {
+            setSelectedStudentUserId(String(data.studentUserId));
+          } else if (list.length > 0) {
+            setSelectedStudentUserId(String(list[0].userId));
+          }
           setLoadingSingleStudents(false);
         }
-      }
-
-      if (data.studentUserId) {
-        setSelectedStudentUserId(String(data.studentUserId));
       }
 
       if (data.title) {
@@ -303,18 +307,22 @@ const CoachWorkoutPlans = () => {
       const newTargetType = data.targetType || (data.studentUserId ? 'INDIVIDUAL' : 'CLASS');
       setTpTargetType(newTargetType);
 
-      if (data.classId) {
-        setTpClassId(String(data.classId));
+      const planClassId = data.classId 
+        ? String(data.classId) 
+        : (classes.length > 0 ? String(classes[0].classId) : '');
+      if (planClassId) {
+        setTpClassId(planClassId);
         if (newTargetType === 'INDIVIDUAL') {
           setLoadingTpStudents(true);
-          const list = await fetchStudentsForClass(data.classId);
+          const list = await fetchStudentsForClass(planClassId);
           setTpClassStudents(list);
+          if (data.studentUserId) {
+            setTpStudentUserId(String(data.studentUserId));
+          } else if (list.length > 0) {
+            setTpStudentUserId(String(list[0].userId));
+          }
           setLoadingTpStudents(false);
         }
-      }
-
-      if (data.studentUserId) {
-        setTpStudentUserId(String(data.studentUserId));
       }
 
       if (data.title) setTpTitle(data.title);
@@ -365,6 +373,19 @@ const CoachWorkoutPlans = () => {
 
       showBanner('success', t('NEXUS Coach AI đã điền kế hoạch tập luyện vào Form. Coach hãy kiểm tra và nhấn Giao kế hoạch!'));
     }
+
+    // Tự động cuộn mượt xuống Form và tạo hiệu ứng viền nổi bật (highlight glow)
+    setTimeout(() => {
+      const targetId = actionType === 'PREFILL_TRAINING_PLAN' ? 'training-plan-form' : 'single-workout-form';
+      const formEl = document.getElementById(targetId);
+      if (formEl) {
+        formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        formEl.classList.add('ring-4', 'ring-amber-500/50', 'transition-all', 'duration-700');
+        setTimeout(() => {
+          formEl.classList.remove('ring-4', 'ring-amber-500/50');
+        }, 2500);
+      }
+    }, 250);
   };
 
   useEffect(() => {
@@ -994,7 +1015,7 @@ const CoachWorkoutPlans = () => {
 
       {/* ===================== TAB 1: TẠO KẾ HOẠCH TẬP LUYỆN (TRAINING_PLAN) ===================== */}
       {activeTab === 'trainingPlan' && (
-        <form onSubmit={handleTrainingPlanSubmit} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 sm:p-8 shadow-[var(--shadow)] space-y-8 animate-fade-in">
+        <form id="training-plan-form" onSubmit={handleTrainingPlanSubmit} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 sm:p-8 shadow-[var(--shadow)] space-y-8 animate-fade-in">
           
           {/* Section 1: Phạm vi kế hoạch */}
           <div className="space-y-4">
@@ -2025,7 +2046,7 @@ const CoachWorkoutPlans = () => {
 
       {/* ===================== TAB 2: FORM GIAO BÀI TẬP NHANH (SINGLE) ===================== */}
       {activeTab === 'assign' && (
-        <form onSubmit={handleAssignSubmit} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 sm:p-8 shadow-[var(--shadow)] space-y-8 animate-fade-in">
+        <form id="single-workout-form" onSubmit={handleAssignSubmit} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 sm:p-8 shadow-[var(--shadow)] space-y-8 animate-fade-in">
           
           {/* Section 1: Đối tượng giao bài */}
           <div className="space-y-4">

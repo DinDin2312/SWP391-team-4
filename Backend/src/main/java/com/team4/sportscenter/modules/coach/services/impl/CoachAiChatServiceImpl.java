@@ -150,8 +150,8 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
 
         // ==================== 3. CALL GEMINI API ====================
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(2500);
-        factory.setReadTimeout(5000);
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(15000);
         RestTemplate restTemplate = new RestTemplate(factory);
 
         Map<String, Object> requestBody = new HashMap<>();
@@ -164,8 +164,11 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
         requestBody.put("contents", List.of(content));
 
         Map<String, Object> generationConfig = new HashMap<>();
-        generationConfig.put("maxOutputTokens", 500);
+        generationConfig.put("maxOutputTokens", 3000);
         generationConfig.put("temperature", 0.7);
+        Map<String, Object> thinkingConfig = new HashMap<>();
+        thinkingConfig.put("thinkingBudget", 0);
+        generationConfig.put("thinkingConfig", thinkingConfig);
         requestBody.put("generationConfig", generationConfig);
 
         HttpHeaders headers = new HttpHeaders();
@@ -173,7 +176,7 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        String[] models = {"gemini-3-flash-preview", "gemini-3.8-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"};
+        String[] models = {"gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"};
 
         for (String model : models) {
             String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;

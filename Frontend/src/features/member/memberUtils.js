@@ -1,18 +1,19 @@
 /**
  * Calculate attendance statistics based on booking status.
  * @param {Array} bookings 
- * @returns {Object} { presentCount, absentCount, attendanceRate }
+ * @returns {Object} { presentCount, absentCount, pendingCount, totalBookings, attendanceRate }
  */
 export function calculateAttendanceStats(bookings) {
-  if (!Array.isArray(bookings)) return { presentCount: 0, absentCount: 0, attendanceRate: 0 };
+  if (!Array.isArray(bookings)) return { presentCount: 0, absentCount: 0, pendingCount: 0, totalBookings: 0, attendanceRate: 0 };
   
   const presentCount = bookings.filter(b => b.attendanceStatus === "PRESENT").length;
   const absentCount = bookings.filter(b => b.attendanceStatus === "ABSENT").length;
+  const pendingCount = bookings.filter(b => b.attendanceStatus !== "PRESENT" && b.attendanceStatus !== "ABSENT").length;
   const totalCompleted = presentCount + absentCount;
   
   const attendanceRate = totalCompleted > 0 ? Math.round((presentCount / totalCompleted) * 100) : 0;
   
-  return { presentCount, absentCount, attendanceRate };
+  return { presentCount, absentCount, pendingCount, totalBookings: bookings.length, attendanceRate };
 }
 
 /**

@@ -6,6 +6,7 @@ import MemberAssessmentsModal from '../components/MemberAssessmentsModal';
 import SelfAssessmentModal from '../components/SelfAssessmentModal';
 import { formatDate } from '../../../utils/displayFormat';
 import React, { useState, useContext } from 'react';
+import MemberTierAvatar from '../../../components/MemberTierAvatar';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import { memberService } from '../services/memberService';
@@ -24,9 +25,28 @@ import {
   MapPin,
   User, TrendingUp,
   X, Scale, Sparkles, Star, Award, MessageSquare, PlusCircle,
+  CreditCard,
 } from 'lucide-react';
 
 const CustomerDashboard = () => {
+  const getPaginationRange = (current, total) => {
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    if (current <= 4) {
+      return [1, 2, 3, 4, 5, '...', total];
+    }
+    if (current >= total - 3) {
+      return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+    }
+    return [1, '...', current - 1, current, current + 1, '...', total];
+  };
+
+  const handleScheduleTabChange = (key) => {
+    setActiveTab(key);
+    setSchedulePage(1);
+  };
+
   useLanguage();
   const navigate = useNavigate();
   const { userInfo } = useContext(AuthContext);
@@ -47,6 +67,8 @@ const CustomerDashboard = () => {
 
 // Status for Upcoming Schedule
   const [upcomingBookings, setUpcomingBookings] = useState([]);
+  const [schedulePage, setSchedulePage] = useState(1);
+  const SCHEDULE_PAGE_SIZE = 5;
   const [loadingBookings, setLoadingBookings] = useState(true);
 
   const [totalCheckIns, setTotalCheckIns] = useState(0);
@@ -107,16 +129,32 @@ const CustomerDashboard = () => {
   };
   const dynamicMemberId = getMemberId(userInfo?.email);
 
+  const getStatusBadgeClass = (status) => {
+    const s = String(status || '').toUpperCase();
+    if (['CANCELLED', 'CANCELED', 'FAILED', 'REJECTED', 'ABSENT', 'INACTIVE', 'EXPIRED'].includes(s)) {
+      return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
+    }
+    if (['PENDING', 'WAITING', 'PROCESSING', 'NOT_YET'].includes(s)) {
+      return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+    }
+    if (['CONFIRMED', 'ATTENDED', 'COMPLETED', 'ACTIVE', 'PAID', 'SUCCESS', 'PRESENT', 'SCHEDULED'].includes(s)) {
+      return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+    }
+    return 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20';
+  };
+
   const filteredActivities = recentActivities.filter((log) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
     const dateStr = log.startTime
       ? new Date(log.startTime).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' }).toLowerCase()
       : '';
+    const localizedStatus = codeLabel(log.status).toLowerCase();
     return (
       (log.className && log.className.toLowerCase().includes(q)) ||
       (log.coachName && log.coachName.toLowerCase().includes(q)) ||
       (log.status && log.status.toLowerCase().includes(q)) ||
+      localizedStatus.includes(q) ||
       dateStr.includes(q)
     );
   });
@@ -169,70 +207,104 @@ const CustomerDashboard = () => {
   };
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-[var(--text)]">{t("Member Dashboard")}</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 rounded-3xl bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border border-black/[0.06] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div className="flex items-center gap-4">
+          <MemberTierAvatar
+            avatarUrl={userInfo?.avatarUrl}
+            fullName={userInfo?.fullName || 'Member'}
+            memberTier={memberTier}
+            size="lg"
+            onClick={() => navigate('/member/settings')}
+          />
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                {t("Welcome back,")}{' '}<span>{userInfo?.fullName || t("Member")}</span>
+              </h1>
+              {memberTier === 'PLATINUM' && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-blue-600 via-indigo-600 to-pink-600 text-white shadow-xs">
+                  {t("PRO VIP")}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+              {t("Track your progress, active packages, and workout performance.")}
+            </p>
+          </div>
+        </div>
 
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => navigate('/member/memberships')}
+            className="px-4 py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/15 text-[#0071E3] dark:text-[#0A84FF] text-xs font-bold transition-all cursor-pointer"
+          >
+            {t("View Tier Perks")}
+          </button>
+        </div>
+      </div>
 
         {/* ================= ROW 1: 4 STAT CARDS ================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Active Package */}
-          <div className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] relative overflow-hidden flex flex-col justify-between">
+          <div className="p-5 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-black/[0.06] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{t("Active Package")}</span>
-                <div className="w-7 h-7 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
-                  <ShieldCheck className="w-4 h-4" />
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{t("Active Package")}</span>
+                <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center">
+                  <ShieldCheck className="w-4 h-4 stroke-[1.75]" />
                 </div>
               </div>
               {loadingMembership ? (
-                <h3 className="text-lg font-bold text-[var(--text-muted)] leading-snug animate-pulse">{t("Loading...")}</h3>
+                <h3 className="text-lg font-bold text-slate-400 leading-snug animate-pulse">{t("Loading...")}</h3>
               ) : membership ? (
-                <h3 className="text-lg font-bold text-[var(--text)] leading-snug">{membership.packageName}</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-snug tracking-tight">{membership.packageName}</h3>
               ) : (
-                <h3 className="text-lg font-bold text-[var(--danger-text)] leading-snug">{t("No Active Package")}</h3>
+                <h3 className="text-lg font-bold text-rose-500 leading-snug tracking-tight">{t("No Active Package")}</h3>
               )}
             </div>
             <div className="mt-5">
               <div className="flex items-baseline justify-between mb-2">
-                <span className="text-2xl font-black text-[var(--text)]">
-                  {t(membership ? membership.remainingDays : 0)} <span className="text-xs font-medium text-[var(--text-muted)]">{t("days left")}</span>
+                <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  {t(membership ? membership.remainingDays : 0)} <span className="text-xs font-medium text-slate-400">{t("days left")}</span>
                 </span>
-                <span className={`text-xs font-bold ${membership && membership.remainingDays > 0 ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]'}`}>
+                <span className={`text-xs font-bold ${membership && membership.remainingDays > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
                   {membership ? codeLabel(membership.status) : t('N/A')}
                 </span>
               </div>
-              <div className="w-full h-1.5 bg-[var(--surface)] rounded-full overflow-hidden">
-                <div className="h-full bg-[var(--primary)] rounded-full" style={{ width: membership ? '100%' : '0%' }}></div>
+              <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full bg-[#0071E3] rounded-full transition-all duration-500" style={{ width: membership ? '100%' : '0%' }}></div>
               </div>
-              <div className="flex items-center gap-1.5 mt-3 text-[10px] text-[var(--text-muted)]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)]"></span>
+              <div className="flex items-center gap-1.5 mt-3 text-[10px] text-slate-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0071E3]"></span>
                 <span>{t("Valid till:")}{' '}{t(membership?.endDate ? formatDate(membership.endDate) : t('Unknown'))}</span>
               </div>
             </div>
           </div>
 
           {/* Card 2: Classes Attended */}
-          <div className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex flex-col justify-between">
+          <div className="p-5 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-black/[0.06] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{t("Classes Attended")}</span>
-                <div className="w-7 h-7 rounded-lg bg-[var(--success-soft)] text-[var(--success-text)] flex items-center justify-center">
-                  <Dumbbell className="w-4 h-4" />
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{t("Classes Attended")}</span>
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <Dumbbell className="w-4 h-4 stroke-[1.75]" />
                 </div>
               </div>
-              <h3 className="text-lg font-bold text-[var(--text)]">{t("Monthly Cycle")}</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">{t("Monthly Cycle")}</h3>
             </div>
             <div className="mt-4 flex items-end justify-between">
               <div>
-                <div className="text-2xl font-black text-[var(--text)]">
-                  {totalCheckIns} <span className="text-xs font-medium text-[var(--text-muted)]">{t("Sessions")}</span>
+                <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  {totalCheckIns} <span className="text-xs font-medium text-slate-400">{t("Sessions")}</span>
                 </div>
                 <div className="flex items-center gap-1 text-xs font-semibold mt-1">
                   {totalCheckIns > 0 ? (
-                    <span className="flex items-center gap-1 text-[var(--success-text)]">
+                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                       <TrendingUp className="w-3.5 h-3.5" /> +{totalCheckIns * 5}% {t("vs last month", { defaultValue: "vs last month" })}
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 text-[var(--text-muted)] font-medium">
+                    <span className="flex items-center gap-1 text-slate-400 font-medium">
                       {t("No data this month", { defaultValue: "No data this month" })}
                     </span>
                   )}
@@ -240,67 +312,70 @@ const CustomerDashboard = () => {
               </div>
               {/* Mini Spark Bar Graph */}
               <div className="flex items-end gap-1 h-10 pb-1">
-                <span className={`w-1.5 rounded-t h-4 ${totalCheckIns > 0 ? 'bg-[var(--border)]' : 'bg-[var(--border)]/50'}`}></span>
-                <span className={`w-1.5 rounded-t h-6 ${totalCheckIns > 0 ? 'bg-[var(--border)]' : 'bg-[var(--border)]/50'}`}></span>
-                <span className={`w-1.5 rounded-t h-5 ${totalCheckIns > 0 ? 'bg-[var(--success-soft)]' : 'bg-[var(--border)]/50'}`}></span>
-                <span className={`w-1.5 rounded-t h-8 ${totalCheckIns > 0 ? 'bg-[var(--success-hover)]' : 'bg-[var(--border)]/50'}`}></span>
-                <span className={`w-1.5 rounded-t h-10 ${totalCheckIns > 0 ? 'bg-[var(--success-hover)]' : 'bg-[var(--border)]/50'}`}></span>
+                <span className={`w-1.5 rounded-t h-4 ${totalCheckIns > 0 ? 'bg-slate-300 dark:bg-slate-700' : 'bg-slate-200 dark:bg-slate-800'}`}></span>
+                <span className={`w-1.5 rounded-t h-6 ${totalCheckIns > 0 ? 'bg-slate-300 dark:bg-slate-700' : 'bg-slate-200 dark:bg-slate-800'}`}></span>
+                <span className={`w-1.5 rounded-t h-5 ${totalCheckIns > 0 ? 'bg-emerald-400/40' : 'bg-slate-200 dark:bg-slate-800'}`}></span>
+                <span className={`w-1.5 rounded-t h-8 ${totalCheckIns > 0 ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-800'}`}></span>
+                <span className={`w-1.5 rounded-t h-10 ${totalCheckIns > 0 ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-800'}`}></span>
               </div>
             </div>
           </div>
 
           {/* Card 3: Upcoming Bookings (Dynamic) */}
-          <div className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex flex-col justify-between">
+          <div className="p-5 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-black/[0.06] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{t("Bookings")}</span>
-                <div className="w-7 h-7 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
-                  <Calendar className="w-4 h-4" />
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{t("Bookings")}</span>
+                <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center">
+                  <Calendar className="w-4 h-4 stroke-[1.75]" />
                 </div>
               </div>
-              <h3 className="text-lg font-bold text-[var(--text)]">{t("Upcoming Classes")}</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">{t("Upcoming Classes")}</h3>
             </div>
             <div className="mt-4">
-              <div className="text-2xl font-black text-[var(--text)]">
-                {upcomingBookings.length} <span className="text-xs font-medium text-[var(--text-muted)]">{t("Reserved")}</span>
+              <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                {upcomingBookings.length} <span className="text-xs font-medium text-slate-400">{t("Reserved")}</span>
               </div>
-              <div className="flex items-center gap-1.5 mt-2 text-xs text-[var(--text-muted)]">
-                <Search className="w-3 h-3 text-[var(--primary)]" />
+              <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-400">
+                <Search className="w-3 h-3 text-[#0071E3] dark:text-[#0A84FF]" />
                 <span className="truncate">{t("Check schedule below")}</span>
               </div>
             </div>
           </div>
 
           {/* Card 4: Nexus Rewards */}
-            <div className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex flex-col justify-between">
+          <div className="p-5 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-black/[0.06] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{t("Loyalty Program")}</span>
+                <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <Flame className="w-4 h-4 stroke-[1.75]" />
+                </div>
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">{t("Nexus Rewards")}</h3>
+            </div>
+            <div className="mt-4 flex items-center justify-between">
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{t("Loyalty Program")}</span>
-                  <div className="w-7 h-7 rounded-lg bg-[var(--warning-soft)] text-[var(--warning-text)] flex items-center justify-center">
-                    <Flame className="w-4 h-4" />
-                  </div>
+                <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  {loyaltyPoints} <span className="text-xs font-medium text-slate-400">{t("Pts")}</span>
                 </div>
-                <h3 className="text-lg font-bold text-[var(--text)]">{t("Nexus Rewards")}</h3>
-              </div>
-              <div className="mt-4 flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-black text-[var(--text)]">
-                    {loyaltyPoints} <span className="text-xs font-medium text-[var(--text-muted)]">{t("Pts")}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-[var(--warning-text)] mt-1 font-semibold">
-                    <span>{t(memberTier === 'PLATINUM' ? t('15% Off all purchases') : memberTier === 'GOLD' ? t('10% Off all purchases') : memberTier === 'SILVER' ? t('5% Off all purchases') : t('Reach 500 Pts for 5% Off'))}</span>
-                  </div>
-                </div>
-                {/* Circular Indicator */}
-                <div className="w-11 h-11 rounded-full border-2 border-amber-500/30 flex items-center justify-center font-bold text-[10px] text-[var(--warning-text)] shadow-lg shadow-amber-500/10">
-                  {t(memberTier === 'PLATINUM' ? t('PLAT') : memberTier === 'MEMBER' ? t('NEW') : memberTier)}
+                <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 mt-1 font-semibold">
+                  <span>{t(memberTier === 'PLATINUM' ? t('15% Off all purchases') : memberTier === 'GOLD' ? t('10% Off all purchases') : memberTier === 'SILVER' ? t('5% Off all purchases') : t('Reach 500 Pts for 5% Off'))}</span>
                 </div>
               </div>
+              <MemberTierAvatar
+                avatarUrl={userInfo?.avatarUrl}
+                fullName={userInfo?.fullName || 'Member'}
+                memberTier={memberTier}
+                size="sm"
+                onClick={() => navigate('/member/settings')}
+              />
             </div>
           </div>
+        </div>
 
         {/* ================= ROW 1.5: INBODY & BODY METRICS (CHỈ SỐ THỂ TRẠNG) ================= */}
-        <div className="p-6 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm">
+        <div className="p-6 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-black/[0.06] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           {loadingAssessment ? (
             <div className="py-8 text-center text-xs text-[var(--text-muted)] animate-pulse">
               {t("Loading body metrics...")}
@@ -538,321 +613,557 @@ const CustomerDashboard = () => {
         </div>
 
         {/* ================= ROW 2: SCHEDULE (2/3) + PASS & ACTIONS (1/3) ================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Upcoming Schedule (Left 2 Columns) */}
-          <div className="lg:col-span-2 p-6 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex flex-col justify-between">
-            <div>
-              {/* Header & Filter Tabs */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-bold text-[var(--text)]">{t("Upcoming Schedule")}</h2>
-                  <span className="px-2.5 py-0.5 rounded-full bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] text-xs font-bold">{upcomingBookings.length}{' '}{t("Active")}</span>
-                </div>
+        {(() => {
+          const now = new Date();
+          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+          const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+          const next7DaysEnd = new Date(startOfToday.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+          const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs font-semibold">
-                  {[
-                    { key: 'all', label: `All (${upcomingBookings.length})` },
-                    { key: 'group', label: t('Group Classes') },
-                    { key: 'courts', label: t('Smart Courts') },
-                    { key: 'recovery', label: t('Recovery') },
-                  ].map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => setActiveTab(tab.key)}
-                      className={`px-3 py-1.5 rounded-lg transition-all ${
-                        activeTab === tab.key
-                          ? 'bg-[var(--primary)] text-[color:var(--on-primary)] shadow-[var(--shadow)]'
-                          : 'text-[var(--text-muted)] hover:text-[var(--text)]'
-                      }`}
-                    >
-                      {t(tab.label)}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          let todayCount = 0;
+          let weekCount = 0;
+          let monthCount = 0;
 
-                {/* List of training sessions */}
-              <div className="space-y-3">
-                {loadingBookings ? (
-    <div className="text-[var(--text-muted)] text-sm py-4 text-center animate-pulse">{t("Loading upcoming classes...")}</div>
-  ) : upcomingBookings.length === 0 ? (
-    <div className="text-[var(--text-muted)] text-sm py-4 text-center">{t("No upcoming classes scheduled.")}</div>
-  ) : (
-    upcomingBookings.filter(item => {
-      if (activeTab === 'all') return true;
-      const name = item.className.toLowerCase();
-      if (activeTab === 'group') return name.includes('yoga') || name.includes('gym') || name.includes('hiit') || name.includes('cơ') || name.includes('fitness');
-      if (activeTab === 'courts') return name.includes('court') || name.includes('sân') || name.includes('tennis') || name.includes('badminton') || name.includes('cầu lông') || name.includes('bóng');
-      if (activeTab === 'recovery') return name.includes('recovery') || name.includes('hồi phục') || name.includes('stretching') || name.includes('pilates') || name.includes('spa');
-      return true;
-    }).map((item) => {
-      const dateObj = new Date(item.startTime);
-      const isToday = new Date().toDateString() === dateObj.toDateString();
-      const badge = isToday ? t("TODAY") : dateObj.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' }).toUpperCase();
-      const time = dateObj.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", hour12: false });
+          upcomingBookings.forEach((item) => {
+            if (!item.startTime) return;
+            const d = new Date(item.startTime);
+            if (d >= startOfToday && d <= endOfToday) todayCount++;
+            if (d >= startOfToday && d <= next7DaysEnd) weekCount++;
+            if (d >= startOfToday && d <= endOfMonth) monthCount++;
+          });
 
-      return (
-        <div
-          key={item.bookingId}
-          className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-[var(--border)] transition-colors"
-        >
-          <div className="flex items-start sm:items-center gap-4">
-                    {/* Date & Time Box */}
-            <div className="px-3 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-center min-w-[70px]">
-              <span className="text-[10px] font-bold text-[var(--primary)] tracking-wider block">{badge}</span>
-              <span className="text-base font-extrabold text-[var(--text)] leading-tight">{time}</span>
-            </div>
+          const filteredUpcomingBookings = upcomingBookings.filter((item) => {
+            if (activeTab === 'all') return true;
+            if (!item.startTime) return false;
+            const d = new Date(item.startTime);
+            if (activeTab === 'today') return d >= startOfToday && d <= endOfToday;
+            if (activeTab === 'week') return d >= startOfToday && d <= next7DaysEnd;
+            if (activeTab === 'month') return d >= startOfToday && d <= endOfMonth;
+            return true;
+          });
 
-                    {/* Session Details */}
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-bold text-[var(--text)]">{item.className}</h4>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--success-soft)] text-[var(--success-text)] border border-[var(--success-soft)]">{t("&bull;")}{' '}{codeLabel(item.status)}
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)] mt-1">
-                <div className="flex items-center gap-1">
-                  <User className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                  <span>{item.coachName}</span>
-                </div>
-                <span>{t("&bull;")}</span>
-                <div className="flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                  <span>{item.roomName}</span>
-                </div>
-                <span>{t("&bull;")}</span>
-                <div className="flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                  <span>{item.durationMinutes}{' '}{t("min")}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          const totalSchedulePages = Math.max(1, Math.ceil(filteredUpcomingBookings.length / SCHEDULE_PAGE_SIZE));
+          const validSchedulePage = Math.min(Math.max(1, schedulePage), totalSchedulePages);
+          const paginatedUpcomingBookings = filteredUpcomingBookings.slice(
+            (validSchedulePage - 1) * SCHEDULE_PAGE_SIZE,
+            validSchedulePage * SCHEDULE_PAGE_SIZE
+          );
 
-                    {/* Action Buttons */}
-          <div className="flex items-center gap-2 mt-2 sm:mt-0">
-            <button onClick={() => setQrModal({ isOpen: true, session: item })} className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary)] text-[color:var(--on-primary)] text-xs font-bold transition-colors">
-              <QrCode className="w-3.5 h-3.5" />{t("Check-in")}</button>
-            <button onClick={() => setCancelModal({ isOpen: true, classId: item.classId })} className="px-3 py-1.5 rounded-lg bg-transparent hover:bg-red-500/10 text-[var(--text-muted)] hover:text-[var(--danger-text)] text-xs font-semibold transition-colors">{t("Cancel")}</button>
-          </div>
-        </div>
-      );
-    })
-  )}
-              </div>
-            </div>
+          const expressActions = [
+            {
+              title: "Book Class & PT",
+              subtitle: "Group classes, courts & 1-on-1 personal training",
+              icon: Calendar,
+              iconBg: "bg-blue-500/10",
+              iconColor: "text-[#0071E3] dark:text-[#0A84FF]",
+              onClick: () => navigate('/member/book-class')
+            },
+            {
+              title: "Package Store",
+              subtitle: "Memberships, class packages & access passes",
+              icon: CreditCard,
+              iconBg: "bg-indigo-500/10",
+              iconColor: "text-[#5856D6] dark:text-[#5E5CE6]",
+              onClick: () => navigate('/member/package-store')
+            },
+            {
+              title: "InBody & Body Metrics",
+              subtitle: "Track weight, body fat & trainer evaluations",
+              icon: Activity,
+              iconBg: "bg-amber-500/10",
+              iconColor: "text-amber-600 dark:text-amber-400",
+              onClick: () => setAssessmentModalOpen(true)
+            },
+            {
+              title: "Attendance Log",
+              subtitle: "Verified check-in history & attendance rate",
+              icon: Clock,
+              iconBg: "bg-emerald-500/10",
+              iconColor: "text-emerald-600 dark:text-emerald-400",
+              onClick: () => navigate('/member/attendance')
+            }
+          ];
 
-            {/* Footer - Telemetry Sync */}
-            <div className="pt-4 mt-6 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--text-muted)]">
-              <span className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)]"></span>{t("Telemetry synchronization: Connected to Nexus Core")}</span>
-              <a href="/member/schedule" onClick={(e) => { e.preventDefault(); navigate('/member/schedule'); }} className="text-[var(--primary)] hover:text-[var(--primary)] font-semibold flex items-center gap-1">{t("View Full Calendar")}<ChevronRight className="w-3.5 h-3.5" />
-              </a>
-            </div>
-          </div>
+          return (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Upcoming Schedule (Left 2 Columns) */}
+              <div className="lg:col-span-2 p-6 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-black/[0.06] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between">
+                <div>
+                  {/* Header & Filter Tabs */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+                        {t("Upcoming Schedule")}
+                      </h2>
+                      <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-[#0071E3] dark:text-[#0A84FF] border border-blue-500/20 text-xs font-semibold">
+                        {upcomingBookings.length} {t("Active")}
+                      </span>
+                    </div>
 
-            {/* Right Column: Pass & Express Actions */}
-          <div className="space-y-6">
-            {/* NEXUS PASS Card */}
-            <div className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)]">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-[var(--primary)] flex items-center justify-center text-[color:var(--on-primary)]">
-                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <div className="inline-flex p-1 rounded-2xl bg-slate-200/60 dark:bg-slate-800/60 backdrop-blur-md border border-black/[0.04] dark:border-white/5 text-xs font-medium self-start sm:self-auto overflow-x-auto max-w-full">
+                      {[
+                        { key: 'all', label: t('All'), count: upcomingBookings.length },
+                        { key: 'today', label: t('Today'), count: todayCount },
+                        { key: 'week', label: t('Next 7 Days'), count: weekCount },
+                        { key: 'month', label: t('This Month'), count: monthCount },
+                      ].map((tab) => (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => handleScheduleTabChange(tab.key)}
+                          className={`px-3 py-1.5 rounded-xl transition-all duration-200 whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                            activeTab === tab.key
+                              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold'
+                              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          <span>{tab.label}</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                            activeTab === tab.key
+                              ? 'bg-blue-500/15 text-[#0071E3] dark:text-[#0A84FF]'
+                              : 'bg-black/[0.05] dark:bg-white/[0.08] text-slate-500 dark:text-slate-400'
+                          }`}>
+                            {tab.count}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <span className="font-bold text-sm text-[var(--text)] uppercase tracking-wider">{t("NEXUS PASS")}</span>
-                </div>
-                <span className="text-[10px] font-bold text-[var(--cyan)] bg-[var(--cyan-soft)] border border-[var(--cyan-soft)] px-2 py-0.5 rounded">{t("NFC READY")}</span>
-              </div>
 
-              <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mb-2">
-                <span>{t("MEMBER ID")}</span>
-                <span className="font-mono font-bold text-[var(--text)] tracking-widest">{t("#NX-")}{dynamicMemberId}</span>
-              </div>
-
-                {/* Simulated Modern Barcode */}
-                {/* QR Code section */}
-              <div className="p-4 rounded-xl bg-[var(--surface)] flex items-center justify-center my-4 shadow-[var(--shadow)]">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=NEXUS-${dynamicMemberId}-${userInfo?.email}`}
-                  alt="Nexus Pass QR"
-                  className="w-full max-w-[120px] rounded-lg"
-                />
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] pt-1">
-                <span>{t("Hold near turnstile optical scanner")}</span>
-                <button
-                  type="button"
-                  onClick={() => setQrModal({
-                    isOpen: true,
-                    session: {
-                      className: t("NEXUS Turnstile Access"),
-                      coachName: fullName,
-                      roomName: t("Main Gate"),
-                      status: membership ? membership.status : 'ACTIVE',
-                      bookingId: dynamicMemberId,
-                      startTime: new Date().toISOString()
-                    }
-                  })}
-                  className="text-[var(--cyan)] font-semibold flex items-center gap-1 cursor-pointer hover:underline"
-                >
-                  <Radio className="w-3.5 h-3.5 animate-pulse" />{t("Simulate Tap")}</button>
-              </div>
-            </div>
-
-            {/* Express Actions List */}
-            <div className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)]">
-              <h3 className="text-sm font-bold text-[var(--text)] mb-3">{t("Express Actions")}</h3>
-              <div className="space-y-2">
-                {[
-                  { title: t("Book PT Session"), subtitle: t("Consult biomechanics coaches"), icon: User, onClick: () => navigate('/member/book-class') },
-                  { title: t("Reserve Smart Court"), subtitle: t("Tennis, Basketball & Padel"), icon: Search, onClick: () => navigate('/member/book-class') },
-                  { title: t("Biometric Telemetry"), subtitle: t("Chỉ số thể hình & đánh giá InBody"), icon: Scale, onClick: () => setAssessmentModalOpen(true) },
-                  { title: t("Locker & Facility Access"), subtitle: t("Manage digital locker keys"), icon: Dumbbell, onClick: () => navigate('/member/memberships') },
-                ].map((action, idx) => {
-                  const Icon = action.icon;
-                  return (
-                    <button
-                      key={idx}
-                      onClick={action.onClick}
-                      className="w-full p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary-soft)] hover:bg-[var(--surface-hover)] flex items-center justify-between text-left group transition-all"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center group-hover:bg-[var(--primary)] group-hover:text-[var(--text)] transition-colors">
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-[var(--text)]">{t(action.title)}</p>
-                          <p className="text-[10px] text-[var(--text-muted)]">{t(action.subtitle)}</p>
-                        </div>
+                  {/* List of training sessions (5 per page) */}
+                  <div className="space-y-3">
+                    {loadingBookings ? (
+                      <div className="text-slate-400 text-sm py-12 text-center animate-pulse">
+                        {t("Loading upcoming classes...")}
                       </div>
-                      <ChevronRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--text)] transition-colors" />
+                    ) : filteredUpcomingBookings.length === 0 ? (
+                      <div className="py-12 text-center flex flex-col items-center justify-center gap-2">
+                        <Calendar className="w-8 h-8 text-slate-300 dark:text-slate-600 stroke-[1.5]" />
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                          {activeTab === 'today'
+                            ? t("No classes scheduled for today.")
+                            : activeTab === 'week'
+                            ? t("No classes scheduled in the next 7 days.")
+                            : activeTab === 'month'
+                            ? t("No classes scheduled this month.")
+                            : t("No upcoming classes scheduled.")}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/member/book-class')}
+                          className="mt-2 px-4 py-2 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-semibold transition-all shadow-sm active:scale-95 cursor-pointer"
+                        >
+                          {t("Book a Class")}
+                        </button>
+                      </div>
+                    ) : (
+                      paginatedUpcomingBookings.map((item) => {
+                        const dateObj = new Date(item.startTime);
+                        const isToday = new Date().toDateString() === dateObj.toDateString();
+                        const badge = isToday
+                          ? t("TODAY")
+                          : dateObj.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' }).toUpperCase();
+                        const time = dateObj.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", hour12: false });
+
+                        return (
+                          <div
+                            key={item.bookingId}
+                            className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.08] hover:border-black/[0.12] dark:hover:border-white/[0.15] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
+                          >
+                            <div className="flex items-start sm:items-center gap-4">
+                              {/* Date & Time Squircle */}
+                              <div className="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-black/[0.06] dark:border-white/[0.1] text-center min-w-[72px] shadow-xs shrink-0">
+                                <span className="text-[10px] font-bold text-[#0071E3] dark:text-[#0A84FF] tracking-wider block">{badge}</span>
+                                <span className="text-sm font-bold text-slate-900 dark:text-white leading-tight">{time}</span>
+                              </div>
+
+                              {/* Session Details */}
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight">{item.className}</h4>
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${getStatusBadgeClass(item.status)}`}>
+                                    {codeLabel(item.status)}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <User className="w-3.5 h-3.5 stroke-[1.5]" />
+                                    <span>{item.coachName}</span>
+                                  </div>
+                                  <span className="text-slate-300 dark:text-slate-600">•</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <MapPin className="w-3.5 h-3.5 stroke-[1.5]" />
+                                    <span>{item.roomName}</span>
+                                  </div>
+                                  <span className="text-slate-300 dark:text-slate-600">•</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5 stroke-[1.5]" />
+                                    <span>{item.durationMinutes} {t("min")}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-2 mt-2 sm:mt-0 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setQrModal({ isOpen: true, session: item })}
+                                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-semibold transition-all shadow-sm active:scale-95 cursor-pointer"
+                              >
+                                <QrCode className="w-3.5 h-3.5" />
+                                <span>{t("Check-in")}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCancelModal({ isOpen: true, classId: item.classId })}
+                                className="px-3 py-1.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] hover:bg-rose-500/10 text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 text-xs font-medium transition-all active:scale-95 cursor-pointer"
+                              >
+                                {t("Cancel")}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* Numbered Pagination & Full Calendar Link */}
+                <div className="pt-4 mt-6 border-t border-black/[0.06] dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <span>
+                      {t("Showing")}{' '}
+                      <strong className="text-slate-900 dark:text-white font-semibold">
+                        {filteredUpcomingBookings.length === 0 ? 0 : (validSchedulePage - 1) * SCHEDULE_PAGE_SIZE + 1} - {Math.min(validSchedulePage * SCHEDULE_PAGE_SIZE, filteredUpcomingBookings.length)}
+                      </strong>{' '}
+                      {t("of")}{' '}
+                      <strong className="text-slate-900 dark:text-white font-semibold">{filteredUpcomingBookings.length}</strong>{' '}
+                      {t("upcoming sessions")}
+                    </span>
+                  </div>
+
+                  {/* Numbered Pager */}
+                  {totalSchedulePages > 1 && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setSchedulePage(p => Math.max(1, p - 1))}
+                        disabled={validSchedulePage === 1}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                        aria-label={t("Previous")}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+
+                      {getPaginationRange(validSchedulePage, totalSchedulePages).map((p, idx) => {
+                        if (p === '...') {
+                          return (
+                            <span key={`dots-${idx}`} className="w-7 h-7 flex items-center justify-center text-slate-400 text-xs">
+                              ...
+                            </span>
+                          );
+                        }
+                        const isActive = p === validSchedulePage;
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => setSchedulePage(p)}
+                            className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                              isActive
+                                ? 'bg-[#0071E3] text-white shadow-xs'
+                                : 'text-slate-600 dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.08]'
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        );
+                      })}
+
+                      <button
+                        type="button"
+                        onClick={() => setSchedulePage(p => Math.min(totalSchedulePages, p + 1))}
+                        disabled={validSchedulePage === totalSchedulePages}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                        aria-label={t("Next")}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Link to Full Schedule */}
+                  <div>
+                    <a
+                      href="/member/schedule"
+                      onClick={(e) => { e.preventDefault(); navigate('/member/schedule'); }}
+                      className="text-[#0071E3] dark:text-[#0A84FF] hover:underline font-semibold flex items-center gap-1 active:scale-95 transition-transform"
+                    >
+                      <span>{t("View Full Schedule")}</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Pass & Express Actions */}
+              <div className="space-y-6">
+                {/* Digital Member Pass Card */}
+                <div className="p-5 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-black/[0.06] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center">
+                        <ShieldCheck className="w-4 h-4 stroke-[1.75]" />
+                      </div>
+                      <span className="font-bold text-sm text-slate-900 dark:text-white tracking-tight">{t("Digital Member Pass")}</span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                      {membership ? codeLabel(membership.status) : t("ACTIVE")}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
+                    <span>{t("Member ID")}</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white tracking-widest">#NX-{dynamicMemberId}</span>
+                  </div>
+
+                  {/* QR Code section */}
+                  <div className="p-4 rounded-2xl bg-white shadow-xs ring-1 ring-black/5 dark:ring-white/10 flex items-center justify-center my-4">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=NEXUS-${dynamicMemberId}-${userInfo?.email}`}
+                      alt="Nexus Pass QR"
+                      className="w-full max-w-[120px] rounded-lg"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+                    <span className="truncate pr-2">{t("Hold near turnstile optical scanner")}</span>
+                    <button
+                      type="button"
+                      onClick={() => setQrModal({
+                        isOpen: true,
+                        session: {
+                          className: t("NEXUS Turnstile Access"),
+                          coachName: fullName,
+                          roomName: t("Main Gate"),
+                          status: membership ? membership.status : 'ACTIVE',
+                          bookingId: dynamicMemberId,
+                          startTime: new Date().toISOString()
+                        }
+                      })}
+                      className="text-[#0071E3] dark:text-[#0A84FF] font-semibold flex items-center gap-1 shrink-0 cursor-pointer hover:underline active:scale-95 transition-all"
+                    >
+                      <Radio className="w-3.5 h-3.5" />
+                      <span>{t("Simulate Tap")}</span>
                     </button>
-                  );
-                })}
+                  </div>
+                </div>
+
+                {/* Express Actions List */}
+                <div className="p-5 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-black/[0.06] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">{t("Express Actions")}</h3>
+                    <span className="text-[11px] font-medium text-slate-400">4 {t("shortcuts")}</span>
+                  </div>
+                  <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06]">
+                    {expressActions.map((action, idx) => {
+                      const Icon = action.icon;
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={action.onClick}
+                          className="w-full py-3 px-2 flex items-center justify-between text-left group hover:bg-black/[0.02] dark:hover:bg-white/[0.04] rounded-2xl active:scale-[0.99] transition-all cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${action.iconBg}`}>
+                              <Icon className={`w-4 h-4 ${action.iconColor} stroke-[1.75]`} />
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-slate-900 dark:text-white tracking-tight group-hover:text-[#0071E3] dark:group-hover:text-[#0A84FF] transition-colors">
+                                {t(action.title)}
+                              </p>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
+                                {t(action.subtitle)}
+                              </p>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-slate-600 dark:group-hover:text-slate-300 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* ================= ROW 3: RECENT ACTIVITY TABLE ================= */}
-        <div className="p-6 rounded-2xl bg-[var(--surface)] border border-[var(--border)]">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <h3 className="text-lg font-bold text-[var(--text)]">{t("Recent Activity & Check-in Log")}</h3>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">{t("Verified turnstile entries and biometric session outputs")}</p>
-            </div>
+        {(() => {
+          const totalActivityPages = Math.max(1, Math.ceil(filteredActivities.length / 3));
+          const validActivityPage = Math.min(Math.max(1, currentPage), totalActivityPages);
+          const paginatedActivities = filteredActivities.slice(
+            (validActivityPage - 1) * 3,
+            validActivityPage * 3
+          );
 
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  placeholder={t("Search facility, date...")}
-                  className="bg-[var(--surface)] border border-[var(--border)] rounded-xl pl-9 pr-4 py-2 text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] w-52 transition-colors"
-                />
+          return (
+            <div className="p-6 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-black/[0.06] dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h3 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">{t("Recent Activity & Check-in Log")}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t("Verified check-ins and session completion records")}</p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      placeholder={t("Search facility, date...")}
+                      className="bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08] rounded-xl pl-9 pr-4 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0071E3]/50 w-52 transition-all"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleExportCsv}
+                    disabled={filteredActivities.length === 0}
+                    className="px-3.5 py-2 rounded-xl bg-black/[0.03] dark:bg-white/[0.06] border border-black/[0.06] dark:border-white/[0.08] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2 transition-all disabled:opacity-40 cursor-pointer active:scale-95"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{t("Export CSV")}</span>
+                  </button>
+                </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleExportCsv}
-                disabled={filteredActivities.length === 0}
-                className="px-3.5 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-xs font-semibold text-[var(--text)] flex items-center gap-2 transition-colors disabled:opacity-50"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>{t("Export CSV")}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Data Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-[var(--border)] text-[var(--text-muted)] uppercase tracking-wider text-[10px]">
-                    <th className="pb-3 font-semibold">{t("Date & Time")}</th>
-                    <th className="pb-3 font-semibold">{t("Activity / Facility")}</th>
-                    <th className="pb-3 font-semibold">{t("Trainer / Zone")}</th>
-                    <th className="pb-3 font-semibold">{t("Duration")}</th>
-                    <th className="pb-3 font-semibold">{t("Status")}</th>
-                    <th className="pb-3 font-semibold text-right">{t("Telemetry Metrics")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--border)]">
-                  {filteredActivities.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" className="py-8 text-center text-[var(--text-muted)] font-medium">{t("No recent activities found. Start booking classes to see your logs!")}</td>
+              {/* Data Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-black/[0.06] dark:border-white/10 text-slate-400 uppercase tracking-wider text-[10px]">
+                      <th className="pb-3 font-semibold">{t("Date & Time")}</th>
+                      <th className="pb-3 font-semibold">{t("Activity / Facility")}</th>
+                      <th className="pb-3 font-semibold">{t("Trainer / Zone")}</th>
+                      <th className="pb-3 font-semibold">{t("Duration")}</th>
+                      <th className="pb-3 font-semibold">{t("Status")}</th>
+                      <th className="pb-3 font-semibold text-right">{t("Calories burned")}</th>
                     </tr>
-                  ) : (
-                    filteredActivities.slice((currentPage - 1) * 3, currentPage * 3).map((log) => {
-                      const dateObj = new Date(log.startTime);
-                      const isYesterday = new Date(new Date().setDate(new Date().getDate()-1)).toDateString() === dateObj.toDateString();
-                      const dateStr = isYesterday ? t('Yesterday') : dateObj.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
-                      const timeStr = dateObj.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
+                  </thead>
+                  <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.06]">
+                    {filteredActivities.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="py-8 text-center text-slate-400 font-medium">{t("No recent activities found. Start booking classes to see your logs!")}</td>
+                      </tr>
+                    ) : (
+                      paginatedActivities.map((log) => {
+                        const dateObj = new Date(log.startTime);
+                        const isYesterday = new Date(new Date().setDate(new Date().getDate()-1)).toDateString() === dateObj.toDateString();
+                        const dateStr = isYesterday ? t('Yesterday') : dateObj.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
+                        const timeStr = dateObj.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
 
-                      return (
-                        <tr key={log.bookingId} className="hover:bg-[var(--surface-hover)] transition-colors">
-                          <td className="py-4 font-semibold text-[var(--text)]">{dateStr}, {timeStr}</td>
-                          <td className="py-4">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-6 h-6 rounded-md bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
-                                <Activity className="w-3.5 h-3.5" />
+                        return (
+                          <tr key={log.bookingId} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors">
+                            <td className="py-4 font-semibold text-slate-900 dark:text-white">{dateStr}, {timeStr}</td>
+                            <td className="py-4">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center">
+                                  <Activity className="w-3.5 h-3.5 stroke-[1.75]" />
+                                </div>
+                                <span className="font-medium text-slate-900 dark:text-white">{log.className}</span>
                               </div>
-                              <span className="font-medium text-[var(--text)]">{log.className}</span>
-                            </div>
-                          </td>
-                          <td className="py-4 text-[var(--text)]">{log.coachName}</td>
-                          <td className="py-4 text-[var(--text)]">{log.durationMinutes}{' '}{t("m")}</td>
-                          <td className="py-4">
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--success-soft)] text-[var(--success-text)] border border-[var(--success-soft)]">
-                              {codeLabel(log.status)}
-                            </span>
-                          </td>
-                          <td className="py-4 text-right">
-                            <div className="font-bold text-[var(--text)]">{log.calories}{' '}{t("kcal")}</div>
-                            <div className="text-[10px] text-[var(--text-muted)] mt-0.5">{t("Avg HR")}{' '}{log.avgHr}{' '}{t("bpm")}</div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-          </div>
+                            </td>
+                            <td className="py-4 text-slate-600 dark:text-slate-300">{log.coachName}</td>
+                            <td className="py-4 text-slate-600 dark:text-slate-300">{log.durationMinutes}{' '}{t("m")}</td>
+                            <td className="py-4">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${getStatusBadgeClass(log.status)}`}>
+                                {codeLabel(log.status)}
+                              </span>
+                            </td>
+                            <td className="py-4 text-right">
+                              <div className="font-bold text-slate-900 dark:text-white">{log.calories}{' '}{t("kcal")}</div>
+                              <div className="text-[10px] text-slate-400 mt-0.5">{t("Avg HR")}{' '}{log.avgHr}{' '}{t("bpm")}</div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
-          {/* Table Pagination */}
-          <div className="pt-4 mt-2 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--text-muted)]">
-            <span>{t("Showing")}{' '}{filteredActivities.slice((currentPage - 1) * 3, currentPage * 3).length}{' '}{t("of")}{' '}{filteredActivities.length}{' '}{t("recorded sessions")}</span>
-            <div className="flex items-center gap-1.5">
-              <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${currentPage === 1 ? 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] cursor-not-allowed' : 'bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-[var(--text)]'}`}
-                ><ChevronLeft className="w-4 h-4" /></button>
-                {Array.from({ length: Math.ceil(filteredActivities.length / 3) || 1 }).map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentPage(idx + 1)}
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold transition-colors ${currentPage === idx + 1 ? 'bg-[var(--primary)] text-[color:var(--on-primary)] shadow-[var(--shadow)]' : 'bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-[var(--text)]'}`}
-                  >
-                    {idx + 1}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredActivities.length / 3) || 1))}
-                  disabled={currentPage === (Math.ceil(filteredActivities.length / 3) || 1)}
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${currentPage === (Math.ceil(filteredActivities.length / 3) || 1) ? 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] cursor-not-allowed' : 'bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-[var(--text)]'}`}
-                ><ChevronRight className="w-4 h-4" /></button>
+              {/* Table Pagination */}
+              <div className="pt-4 mt-2 border-t border-black/[0.06] dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+                <span>
+                  {t("Showing")}{' '}
+                  <strong className="text-slate-900 dark:text-white font-semibold">
+                    {filteredActivities.length === 0 ? 0 : (validActivityPage - 1) * 3 + 1} - {Math.min(validActivityPage * 3, filteredActivities.length)}
+                  </strong>{' '}
+                  {t("of")}{' '}
+                  <strong className="text-slate-900 dark:text-white font-semibold">{filteredActivities.length}</strong>{' '}
+                  {t("recorded sessions")}
+                </span>
+
+                {totalActivityPages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={validActivityPage === 1}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                      aria-label={t("Previous")}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+
+                    {getPaginationRange(validActivityPage, totalActivityPages).map((p, idx) => {
+                      if (p === '...') {
+                        return (
+                          <span key={`act-dots-${idx}`} className="w-7 h-7 flex items-center justify-center text-slate-400 text-xs">
+                            ...
+                          </span>
+                        );
+                      }
+                      const isActive = p === validActivityPage;
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setCurrentPage(p)}
+                          className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-[#0071E3] text-white shadow-xs'
+                              : 'text-slate-600 dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.08]'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalActivityPages))}
+                      disabled={validActivityPage === totalActivityPages}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                      aria-label={t("Next")}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-      
+          );
+        })()}
+        
       {/* Modal tự cập nhật chỉ số InBody cá nhân */}
       <SelfAssessmentModal
         isOpen={selfModalOpen}
@@ -904,9 +1215,11 @@ const CustomerDashboard = () => {
                 <span>{t("Location:")}</span>
                 <span className="font-semibold text-[var(--text)]">{qrModal.session.roomName}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span>{t("Status:")}</span>
-                <span className="font-semibold text-[var(--success-text)]">{codeLabel(qrModal.session.status)}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusBadgeClass(qrModal.session.status)}`}>
+                  {codeLabel(qrModal.session.status)}
+                </span>
               </div>
             </div>
             <button onClick={() => setQrModal({ isOpen: false, session: null })} className="w-full py-2.5 rounded-xl bg-[var(--primary)] text-[color:var(--on-primary)] font-bold text-xs">

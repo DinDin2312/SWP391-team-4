@@ -239,8 +239,9 @@ const TraineeAssessmentModal = ({
   if (!isOpen) return null;
 
   // Filter students by search query
+  const q = searchStudentQuery.trim().toLowerCase();
   const filteredStudents = students.filter(st =>
-    st.fullName?.toLowerCase().includes(searchStudentQuery.toLowerCase()) ||
+    !q || st.fullName?.toLowerCase().includes(q) ||
     st.email?.toLowerCase().includes(searchStudentQuery.toLowerCase()) ||
     st.phone?.includes(searchStudentQuery)
   );
