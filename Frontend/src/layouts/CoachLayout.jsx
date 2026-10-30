@@ -2,25 +2,68 @@ import { t, useLanguage } from '../i18n/useLanguage';
 import AutoSidebar from '../components/AutoSidebar';
 import LanguageSwitcher from '../i18n/LanguageSwitcher';
 import ThemeToggle from '../components/ThemeToggle';
-import React, { useContext, useState, Suspense } from 'react';
+import axios from 'axios';
+import React, { useContext, useState, useEffect, Suspense } from 'react';
 import { useOutlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
 import {
   LayoutDashboard, CalendarDays, Users, Dumbbell,
-  Settings, LogOut, Award, Bell, Sparkles
+  Settings, LogOut, Award, Bell, Sparkles, Megaphone
 } from 'lucide-react';
 import SendNotificationModal from '../features/coach/components/SendNotificationModal';
 import CoachNexusAiChat from '../features/coach/components/CoachNexusAiChat';
+import CoachNotificationDropdown from '../features/coach/components/CoachNotificationDropdown';
+import { getUnreadCount, getSavedCoachPreferences } from '../features/coach/coachNotificationUtils';
 
 const CoachLayout = () => {
   useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const currentOutlet = useOutlet();
-  const { userInfo, logout } = useContext(AuthContext);
+  const { userInfo, logout, updateUserInfo } = useContext(AuthContext);
 
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+  const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const handleProfileSync = () => {
+      const stored = localStorage.getItem('userInfo');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && updateUserInfo) {
+            updateUserInfo(parsed);
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('userProfileUpdated', handleProfileSync);
+    return () => window.removeEventListener('userProfileUpdated', handleProfileSync);
+  }, [updateUserInfo]);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      try {
+        const res = await axios.get('http://localhost:8080/api/v1/notifications', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = Array.isArray(res.data) ? res.data : [];
+        const prefs = getSavedCoachPreferences();
+        setUnreadCount(getUnreadCount(data, prefs));
+      } catch (err) {
+        // silent fail
+      }
+    };
+
+    fetchUnread();
+    const handleUpdate = () => fetchUnread();
+    window.addEventListener('notificationUpdated', handleUpdate);
+    return () => window.removeEventListener('notificationUpdated', handleUpdate);
+  }, []);
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
 
 
@@ -41,6 +84,7 @@ const CoachLayout = () => {
       case '/coach/schedule': return 'Teaching Schedule & Trainees';
       case '/coach/students': return 'Assigned Trainees';
       case '/coach/workouts': return 'Workout Plans';
+      case '/coach/notifications': return 'Notifications';
       case '/coach/settings': return 'Settings';
       default: return 'Coach Portal';
     }
@@ -116,6 +160,25 @@ const CoachLayout = () => {
             </button>
 
             <button
+              onClick={() => navigate("/coach/notifications")}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                isActive('/coach/notifications')
+                  ? 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Bell className="w-4 h-4" />
+                <span>{t("Notifications")}</span>
+              </div>
+              {unreadCount > 0 && (
+                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-[#0071E3] text-white rounded-full">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            <button
               onClick={() => navigate("/coach/settings")}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                 isActive('/coach/settings')
@@ -132,26 +195,30 @@ const CoachLayout = () => {
         {/* Coach Profile Footer */}
         <div className="auto-sidebar-footer p-4 border-t border-[var(--border)]">
           <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div
+              onClick={() => navigate("/coach/settings")}
+              className="flex items-center gap-3 cursor-pointer group"
+              title={t("Settings & Avatar")}
+            >
               <div className="relative">
                 {userInfo?.avatarUrl ? (
                   <img
                     src={userInfo.avatarUrl.startsWith('http') ? userInfo.avatarUrl : `http://localhost:8080${userInfo.avatarUrl}`}
                     alt={fullName}
-                    className="w-9 h-9 rounded-xl object-cover border border-[var(--primary-soft)]"
+                    className="w-9 h-9 rounded-xl object-cover border border-[var(--primary-soft)] group-hover:ring-2 group-hover:ring-[var(--primary)] transition-all"
                     onError={(e) => { e.currentTarget.style.display = 'none'; if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'; }}
                   />
                 ) : null}
                 <div
                   style={{ display: userInfo?.avatarUrl ? 'none' : 'flex' }}
-                  className="w-9 h-9 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs items-center justify-center"
+                  className="w-9 h-9 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs items-center justify-center group-hover:ring-2 group-hover:ring-[var(--primary)] transition-all"
                 >
                   {initials}
                 </div>
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[var(--success-hover)] border-2 border-[var(--border)]"></span>
               </div>
-              <div className="auto-sidebar-profile-text text-left">
-                <p className="text-xs font-bold text-[var(--text)] leading-tight">{fullName}</p>
+              <div className="auto-sidebar-profile-text text-left min-w-0">
+                <p className="text-xs font-bold text-[var(--text)] leading-tight group-hover:text-[var(--primary)] transition-colors truncate max-w-[120px]">{fullName}</p>
                 <p className="text-[10px] text-[var(--primary)] flex items-center gap-1">
                   <Award className="w-3 h-3 text-[var(--warning-text)] inline" />{t("Senior Coach")}</p>
               </div>
@@ -181,10 +248,39 @@ const CoachLayout = () => {
             <button
               onClick={() => setIsNotifModalOpen(true)}
               className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer"
+              title={t("Send Announcement")}
             >
-              <Bell className="w-3.5 h-3.5" />
-              <span>{t("Send Notification")}</span>
+              <Megaphone className="w-3.5 h-3.5" />
+              <span>{t("Send Announcement")}</span>
             </button>
+
+            {/* Coach Notification Center Bell Trigger */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsNotifDropdownOpen(!isNotifDropdownOpen)}
+                className={`relative p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-center ${
+                  isNotifDropdownOpen
+                    ? 'bg-[#0071E3] text-white border-[#0071E3] shadow-md shadow-blue-500/20'
+                    : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                }`}
+                title={t("Notifications")}
+                aria-label={t("Notifications")}
+              >
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white dark:ring-slate-900 animate-pulse">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              <CoachNotificationDropdown
+                isOpen={isNotifDropdownOpen}
+                onClose={() => setIsNotifDropdownOpen(false)}
+                onUnreadChange={setUnreadCount}
+              />
+            </div>
             <button onClick={handleLogout} className="px-3.5 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-slate-600 text-[var(--text)] hover:text-[var(--text)] text-xs font-medium transition-colors flex items-center gap-2">
               <LogOut className="w-3.5 h-3.5" />
               <span>{t("Logout")}</span>
