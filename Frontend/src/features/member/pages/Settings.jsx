@@ -468,6 +468,7 @@ const Settings = () => {
     } catch {
       // LocalStorage access fallback
     }
+    window.dispatchEvent(new Event('notificationUpdated'));
     showToast(t("Notification preferences saved."));
   };
 

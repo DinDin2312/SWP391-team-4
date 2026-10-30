@@ -1781,14 +1781,14 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                                   borderRadius: '0.4rem',
                                   fontSize: '0.72rem',
                                   fontWeight: 700,
-                                  backgroundColor: '#FEF2F2',
-                                  color: '#EF4444',
-                                  border: '1px solid #FCA5A5',
+                                  backgroundColor: (rec.checkInType === 'COACH_OVERRIDE' || rec.anomalyReason?.includes('Chưa qua') || rec.anomalyReason?.includes('lễ tân')) ? '#FFFBEB' : '#FEF2F2',
+                                  color: (rec.checkInType === 'COACH_OVERRIDE' || rec.anomalyReason?.includes('Chưa qua') || rec.anomalyReason?.includes('lễ tân')) ? '#D97706' : '#EF4444',
+                                  border: (rec.checkInType === 'COACH_OVERRIDE' || rec.anomalyReason?.includes('Chưa qua') || rec.anomalyReason?.includes('lễ tân')) ? '1px solid #FDE68A' : '1px solid #FCA5A5',
                                   whiteSpace: 'nowrap',
                                 }}
                               >
                                 <ShieldAlert style={{ width: '12px', height: '12px', flexShrink: 0 }} />
-                                <span>{t('Coach flagged absent')}</span>
+                                <span>{t((rec.checkInType === 'COACH_OVERRIDE' || rec.anomalyReason?.includes('Chưa qua') || rec.anomalyReason?.includes('lễ tân')) ? 'Chưa qua lễ tân' : 'Coach flagged absent')}</span>
                               </div>
                             )}
                           </div>

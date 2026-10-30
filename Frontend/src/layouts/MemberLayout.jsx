@@ -11,6 +11,7 @@ import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { Bot } from 'lucide-react';
 import NexusAiChat from '../features/member/components/NexusAiChat';
+import { getSavedMemberNotificationPreferences, getMemberUnreadCount } from '../features/member/memberUtils';
 import {
   LayoutDashboard, CalendarDays, CreditCard, Dumbbell,
   Bell, Settings, LogOut, ShoppingCart, Receipt, ClipboardList, HelpCircle
@@ -81,7 +82,8 @@ const MemberLayout = () => {
           ]);
 
           setCartCount(cartRes.data.items?.length || 0);
-          setUnreadCount(notifRes.data.filter(n => !n.read).length || 0);
+          const memberNotifPrefs = getSavedMemberNotificationPreferences();
+          setUnreadCount(getMemberUnreadCount(notifRes.data, memberNotifPrefs));
           const hasAi = myPkgsRes.data.some(p => (p.packageType === 'AI_ACCESS' || p.packageType === 'COMBO') && p.status === 'ACTIVE');
           setHasAiAccess(hasAi);
 
