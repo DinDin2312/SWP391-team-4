@@ -179,6 +179,12 @@ export function getNotificationMeta(type) {
         label: 'Payment',
         iconType: 'receipt'
       };
+    case 'WORKOUT':
+      return {
+        badgeColor: 'amber',
+        label: 'Workout & Training',
+        iconType: 'workout'
+      };
     case 'SYSTEM':
     default:
       return {

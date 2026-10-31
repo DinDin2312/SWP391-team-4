@@ -2,6 +2,7 @@ import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { locale } from '../../../i18n/languageStore.js';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dumbbell, Users, Plus, Trash2, Send, CheckCircle2, AlertCircle,
   Clock, Play, ShieldAlert, Sparkles, Filter, RefreshCw, X, ChevronRight,
@@ -493,6 +494,9 @@ const CoachWorkoutPlans = () => {
       const res = await axios.post(`${API_BASE}/workouts/assign`, payload, { headers: getHeaders() });
 
       showBanner('success', res.data?.message ? t(res.data.message) : t('Giao bài tập và gửi thông báo thành công!'));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('notificationUpdated'));
+      }
 
       setPlanTitle('');
       setPlanNote('');
@@ -789,6 +793,9 @@ const CoachWorkoutPlans = () => {
       const res = await axios.post(`${API_BASE}/workouts/assign`, payload, { headers: getHeaders() });
 
       showBanner('success', res.data?.message ? t(res.data.message) : t('Tạo kế hoạch tập luyện thành công!'));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('notificationUpdated'));
+      }
 
       // Reset form
       setTpTitle('');
@@ -913,23 +920,70 @@ const CoachWorkoutPlans = () => {
         </div>
       </div>
 
-      {/* Notification Banner */}
-      {notificationBanner && (
-        <div
-          className={`p-4 rounded-xl border flex items-center gap-3 text-xs font-semibold animate-fade-in ${
-            notificationBanner.type === 'success'
-              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-              : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-          }`}
-        >
-          {notificationBanner.type === 'success' ? (
-            <CheckCircle2 className="w-5 h-5 shrink-0" />
-          ) : (
-            <AlertCircle className="w-5 h-5 shrink-0" />
-          )}
-          <span>{notificationBanner.message}</span>
-        </div>
-      )}
+      {/* Floating Animated Toast Notification */}
+      <AnimatePresence>
+        {notificationBanner && (
+          <motion.div
+            key="coach-workout-toast"
+            initial={{ opacity: 0, y: -24, scale: 0.92, filter: 'blur(8px)' }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, y: -20, scale: 0.92, filter: 'blur(6px)' }}
+            transition={{ type: 'spring', stiffness: 450, damping: 28 }}
+            className={`fixed top-6 right-6 z-50 max-w-md w-[calc(100vw-3rem)] sm:w-96 rounded-2xl p-4 shadow-2xl backdrop-blur-2xl border transition-all ${
+              notificationBanner.type === 'success'
+                ? 'bg-slate-900/90 text-white border-emerald-500/40 shadow-[0_20px_40px_rgba(16,185,129,0.25)]'
+                : 'bg-slate-900/90 text-white border-rose-500/40 shadow-[0_20px_40px_rgba(244,63,94,0.25)]'
+            }`}
+          >
+            <div className="flex items-start gap-3.5">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg ${
+                  notificationBanner.type === 'success'
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                }`}
+              >
+                {notificationBanner.type === 'success' ? (
+                  <CheckCircle2 className="w-5 h-5" />
+                ) : (
+                  <AlertCircle className="w-5 h-5" />
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0 pr-1">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                    {notificationBanner.type === 'success' ? t('Success!') : t('Error!')}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setNotificationBanner(null)}
+                    className="w-6 h-6 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all cursor-pointer"
+                    aria-label={t('Đóng')}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <p className="text-xs text-slate-200 mt-1 leading-relaxed font-medium">
+                  {notificationBanner.message}
+                </p>
+              </div>
+            </div>
+
+            {/* Subtle Progress Bar */}
+            <div className="mt-3.5 w-full bg-white/10 h-1 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: '100%' }}
+                animate={{ width: '0%' }}
+                transition={{ duration: 6, ease: 'linear' }}
+                className={`h-full ${
+                  notificationBanner.type === 'success' ? 'bg-emerald-400' : 'bg-rose-400'
+                }`}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell, BellOff, CheckCheck, Trash2, Calendar, ShieldCheck,
-  Receipt, X, RefreshCw, ExternalLink
+  Receipt, X, RefreshCw, ExternalLink, Dumbbell
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import {
@@ -164,6 +164,13 @@ const CoachNotificationDropdown = ({ isOpen, onClose, onUnreadChange }) => {
       return (
         <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
           <Receipt className="w-4 h-4" />
+        </div>
+      );
+    }
+    if (meta.iconType === 'workout') {
+      return (
+        <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+          <Dumbbell className="w-4 h-4" />
         </div>
       );
     }

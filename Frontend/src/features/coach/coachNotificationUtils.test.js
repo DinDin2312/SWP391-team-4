@@ -162,6 +162,11 @@ test('getNotificationMeta: returns appropriate style descriptors', () => {
   assert.equal(paymentMeta.badgeColor, 'emerald');
   assert.equal(paymentMeta.label, 'Payment');
 
+  const workoutMeta = getNotificationMeta('WORKOUT');
+  assert.equal(workoutMeta.badgeColor, 'amber');
+  assert.equal(workoutMeta.label, 'Workout & Training');
+  assert.equal(workoutMeta.iconType, 'workout');
+
   const systemMeta = getNotificationMeta('SYSTEM');
   assert.equal(systemMeta.badgeColor, 'slate');
   assert.equal(systemMeta.label, 'System');
