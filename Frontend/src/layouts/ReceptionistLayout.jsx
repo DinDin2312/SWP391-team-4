@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Receipt,
   LifeBuoy,
+  PackageSearch,
   Settings,
 } from 'lucide-react';
 
@@ -83,6 +84,11 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
       id: 'support-desk',
       label: 'Support & Cancellations',
       icon: LifeBuoy,
+    },
+    {
+      id: 'lost-and-found',
+      label: 'Lost & Found',
+      icon: PackageSearch,
     },
     {
       id: 'settings',

@@ -5,8 +5,9 @@ import axios from 'axios';
 import {
   Star, Award, Activity, Heart, Scale, CheckCircle2,
   AlertCircle, Loader2, X, Search, User, Users,
-  MessageSquare, Sparkles, Plus, Trash2, Clock, History, RefreshCw, Send
+  MessageSquare, Sparkles, Plus, Trash2, Clock, History, RefreshCw, Send, TrendingUp
 } from 'lucide-react';
+import BodyTransformationModal from '../../member/components/BodyTransformationModal';
 
 const API_BASE = 'http://localhost:8080/api/v1/coach';
 
@@ -42,6 +43,7 @@ const TraineeAssessmentModal = ({
   // History State
   const [assessmentHistory, setAssessmentHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [isTransformationModalOpen, setIsTransformationModalOpen] = useState(false);
 
   // Status & UI States
   const [loadingData, setLoadingData] = useState(false);
@@ -676,6 +678,27 @@ const TraineeAssessmentModal = ({
                   </div>
                 ) : (
                   <div className="space-y-3">
+                    {/* Quick Access to Body Transformation Visualizer */}
+                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-sky-500/10 to-transparent border border-emerald-500/25">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                          <TrendingUp className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h5 className="text-xs font-bold text-[var(--text)]">{t("Biểu Đồ Tiến Trình Thể Trạng (FPS)")}</h5>
+                          <p className="text-[10px] text-[var(--text-muted)]">{t("Xem trực quan biến đổi cơ mỡ, cân nặng và chỉ số cải thiện thể chất.")}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsTransformationModalOpen(true)}
+                        className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
+                      >
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        <span>{t("Xem Biểu Đồ")}</span>
+                      </button>
+                    </div>
+
                     {assessmentHistory.map(item => (
                       <div
                         key={item.assessmentId}
@@ -772,6 +795,15 @@ const TraineeAssessmentModal = ({
         </div>
 
       </div>
+
+      {/* Body Transformation Modal */}
+      <BodyTransformationModal
+        isOpen={isTransformationModalOpen}
+        onClose={() => setIsTransformationModalOpen(false)}
+        trainee={selectedStudent}
+        initialAssessments={assessmentHistory}
+        isCoachView={true}
+      />
     </div>
   );
 };

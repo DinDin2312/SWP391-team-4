@@ -7,6 +7,7 @@ import ManageMembershipsView from '../components/ManageMembershipsView';
 import MemberCheckInView from '../components/MemberCheckInView';
 import InvoiceManagementView from '../components/InvoiceManagementView';
 import SupportDeskView from '../components/SupportDeskView';
+import LostAndFoundView from '../components/LostAndFoundView';
 import ReceptionistSettingsView from '../components/ReceptionistSettingsView';
 
 const ReceptionistDashboard = () => {
@@ -62,6 +63,7 @@ const ReceptionistDashboard = () => {
 
       {activeFeature === 'manage-invoices' && <InvoiceManagementView />}
       {activeFeature === 'support-desk' && <SupportDeskView />}
+      {activeFeature === 'lost-and-found' && <LostAndFoundView />}
       {activeFeature === 'settings' && <ReceptionistSettingsView />}
     </ReceptionistLayout>
   );

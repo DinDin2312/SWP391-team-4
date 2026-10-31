@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { locale } from '../../../i18n/languageStore.js';
+import BodyTransformationModal from './BodyTransformationModal';
 
 const API_BASE = 'http://localhost:8080/api/v1/member';
 
@@ -36,6 +37,7 @@ const MemberAssessmentsModal = ({ isOpen, onClose, initialClassId = null }) => {
   const [loadingClasses, setLoadingClasses] = useState(false);
   const [loadingAssessments, setLoadingAssessments] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isTransformationModalOpen, setIsTransformationModalOpen] = useState(false);
 
   // Load enrolled classes on modal open
   useEffect(() => {
@@ -213,13 +215,25 @@ const MemberAssessmentsModal = ({ isOpen, onClose, initialClassId = null }) => {
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-all shrink-0"
-            title={t('Đóng')}
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              onClick={() => setIsTransformationModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer"
+              title={t('Xem biểu đồ tiến trình biến đổi thể trạng & Điểm FPS')}
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span className="hidden sm:inline">{t('Biểu Đồ Thể Trạng & FPS')}</span>
+              <span className="sm:hidden">{t('FPS')}</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-all shrink-0"
+              title={t('Đóng')}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* ===================== MODAL CONTENT ===================== */}
@@ -639,6 +653,14 @@ const MemberAssessmentsModal = ({ isOpen, onClose, initialClassId = null }) => {
           </div>
         </div>
       </div>
+
+      {/* Body Transformation Visualizer Modal */}
+      <BodyTransformationModal
+        isOpen={isTransformationModalOpen}
+        onClose={() => setIsTransformationModalOpen(false)}
+        initialAssessments={assessments}
+        isCoachView={false}
+      />
     </div>
   );
 };

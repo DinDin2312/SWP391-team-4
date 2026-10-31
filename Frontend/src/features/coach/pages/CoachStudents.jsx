@@ -1,11 +1,12 @@
-import { t, useLanguage } from '../../../i18n/useLanguage';
+import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
-  Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send, Dumbbell, Target, Trophy, Activity
+  Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send, Dumbbell, Target, Trophy, Activity, TrendingUp
 } from 'lucide-react';
 import SendNotificationModal from '../components/SendNotificationModal';
+import BodyTransformationModal from '../../member/components/BodyTransformationModal';
 
 const CoachStudents = () => {
   const navigate = useNavigate();
@@ -19,6 +20,10 @@ const CoachStudents = () => {
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
   const [notifTargetType, setNotifTargetType] = useState('ALL');
   const [notifStudent, setNotifStudent] = useState(null);
+
+  // Body Transformation Visualizer Modal States
+  const [isTransformationModalOpen, setIsTransformationModalOpen] = useState(false);
+  const [selectedTraineeForChart, setSelectedTraineeForChart] = useState(null);
 
   useEffect(() => {
     fetchCoachStudents();
@@ -227,6 +232,18 @@ const CoachStudents = () => {
                       <td className="px-4 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
+                            onClick={() => {
+                              setSelectedTraineeForChart(st);
+                              setIsTransformationModalOpen(true);
+                            }}
+                            title={t("Xem biểu đồ tiến trình thể trạng & FPS")}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 font-semibold text-xs border border-emerald-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <TrendingUp className="w-3.5 h-3.5" />
+                            <span>{t("Tiến độ")}</span>
+                          </button>
+
+                          <button
                             onClick={() => navigate('/coach/workouts')}
                             title={t("Giao bài tập")}
                             className="px-3 py-1.5 rounded-lg bg-[var(--primary-soft)] hover:bg-[var(--primary)] hover:text-[color:var(--on-primary)] text-[var(--primary)] font-semibold text-xs border border-[var(--primary-soft)] flex items-center gap-1.5 transition-all cursor-pointer"
@@ -362,18 +379,33 @@ const CoachStudents = () => {
               )}
             </div>
 
-            <div className="p-4 bg-[var(--surface)] border-t border-[var(--border)] flex justify-between items-center">
-              <button
-                onClick={() => {
-                  const current = selectedStudent;
-                  setSelectedStudent(null);
-                  handleOpenIndividualNotif(current);
-                }}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-[var(--text)] font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
-              >
-                <Send className="w-4 h-4" />
-                <span>{t("Gửi thông báo")}</span>
-              </button>
+            <div className="p-4 bg-[var(--surface)] border-t border-[var(--border)] flex flex-wrap justify-between items-center gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const current = selectedStudent;
+                    setSelectedStudent(null);
+                    setSelectedTraineeForChart(current);
+                    setIsTransformationModalOpen(true);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  <span>{t("Biểu đồ thể trạng (FPS)")}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const current = selectedStudent;
+                    setSelectedStudent(null);
+                    handleOpenIndividualNotif(current);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-[var(--text)] font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>{t("Gửi thông báo")}</span>
+                </button>
+              </div>
 
               <button
                 onClick={() => setSelectedStudent(null)}
@@ -390,6 +422,14 @@ const CoachStudents = () => {
         onClose={() => setIsNotifModalOpen(false)}
         initialTargetType={notifTargetType}
         initialStudent={notifStudent}
+      />
+
+      {/* Body Transformation Visualizer Modal */}
+      <BodyTransformationModal
+        isOpen={isTransformationModalOpen}
+        onClose={() => setIsTransformationModalOpen(false)}
+        trainee={selectedTraineeForChart}
+        isCoachView={true}
       />
     </div>
   );
