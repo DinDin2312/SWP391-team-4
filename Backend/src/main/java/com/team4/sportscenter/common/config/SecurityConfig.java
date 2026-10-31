@@ -62,6 +62,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/coach/**", "/api/coach/**").hasAnyRole("COACH", "CENTER_MANAGER")
 
                         .requestMatchers(HttpMethod.POST,"/api/v1/member/book-class/*/with-package/*").hasRole("MEMBER")
+                        .requestMatchers("/api/v1/member/health-profile", "/api/v1/member/health-profile/**").hasRole("MEMBER")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
