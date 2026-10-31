@@ -4063,6 +4063,10 @@ const managerSettingsTranslations = [
   ["Configure how you receive session alerts, check-in updates, and evaluation notices.", "Cấu hình phương thức nhận cảnh báo buổi tập, cập nhật check-in và nhắc nhở đánh giá."],
   ["Mốc đo đạc khởi đầu (Baseline). Biểu đồ xu hướng tăng/giảm đường kẻ sẽ tự động vẽ liên tục từ lần đo thứ 2 trở đi.", "Mốc đo đạc khởi đầu (Baseline). Biểu đồ xu hướng tăng/giảm đường kẻ sẽ tự động vẽ liên tục từ lần đo thứ 2 trở đi."],
   ["Initial baseline assessment. Multi-point trend lines will automatically connect starting from your 2nd measurement.", "Mốc đo đạc khởi đầu (Baseline). Biểu đồ xu hướng tăng/giảm đường kẻ sẽ tự động vẽ liên tục từ lần đo thứ 2 trở đi."],
+  ["Quay lại đánh giá", "Quay lại đánh giá"],
+  ["Back to Assessments", "Quay lại đánh giá"],
+  ["Quay lại", "Quay lại"],
+  ["Back", "Quay lại"],
   // Receptionist Settings (Apple macOS Sequoia HIG)
   ["Front Desk Control", "Kiểm soát Quầy Lễ Tân"],
   ["Receptionist Settings", "Cài đặt Lễ tân"],

@@ -48,6 +48,7 @@ const MemberAssessmentsModal = ({ isOpen, onClose, initialClassId = null }) => {
       }
     } else {
       setSearchTerm('');
+      setIsTransformationModalOpen(false);
     }
   }, [isOpen, initialClassId]);
 
@@ -125,6 +126,19 @@ const MemberAssessmentsModal = ({ isOpen, onClose, initialClassId = null }) => {
   };
 
   if (!isOpen) return null;
+
+  // Seamless switch: Render BodyTransformationModal directly instead of stacking
+  if (isTransformationModalOpen) {
+    return (
+      <BodyTransformationModal
+        isOpen={true}
+        onClose={onClose}
+        onBack={() => setIsTransformationModalOpen(false)}
+        initialAssessments={assessments}
+        isCoachView={false}
+      />
+    );
+  }
 
   const currentClass = classes.find((c) => c.classId === selectedClassId);
 
@@ -654,13 +668,6 @@ const MemberAssessmentsModal = ({ isOpen, onClose, initialClassId = null }) => {
         </div>
       </div>
 
-      {/* Body Transformation Visualizer Modal */}
-      <BodyTransformationModal
-        isOpen={isTransformationModalOpen}
-        onClose={() => setIsTransformationModalOpen(false)}
-        initialAssessments={assessments}
-        isCoachView={false}
-      />
     </div>
   );
 };

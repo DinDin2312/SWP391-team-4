@@ -140,13 +140,28 @@ const BodyTransformationModal = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-all cursor-pointer"
-            title={t('Đóng')}
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="px-3.5 py-2 rounded-xl flex items-center gap-1.5 text-xs font-bold text-[var(--text)] hover:text-[var(--primary)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-all cursor-pointer shadow-xs"
+                title={t('Quay lại đánh giá')}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('Quay lại đánh giá')}</span>
+                <span className="sm:hidden">{t('Quay lại')}</span>
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-all cursor-pointer"
+              title={t('Đóng')}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* ================= MODAL BODY ================= */}
@@ -634,12 +649,25 @@ const BodyTransformationModal = ({
             <span>{t('Dữ liệu được cập nhật tự động sau mỗi lần đo của Huấn luyện viên.')}</span>
           </div>
 
-          <button
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-[var(--surface-hover)] hover:bg-[var(--border)] text-[var(--text)] font-semibold text-xs transition-all cursor-pointer"
-          >
-            {t('Đóng')}
-          </button>
+          <div className="flex items-center gap-2">
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="px-4 py-2 rounded-xl bg-[var(--surface-hover)] hover:bg-[var(--border)] text-[var(--text)] font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>{t('Quay lại')}</span>
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs transition-all cursor-pointer"
+            >
+              {t('Đóng')}
+            </button>
+          </div>
         </div>
       </div>
     </div>

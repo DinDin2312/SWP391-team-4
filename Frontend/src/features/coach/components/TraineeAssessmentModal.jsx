@@ -240,6 +240,20 @@ const TraineeAssessmentModal = ({
 
   if (!isOpen) return null;
 
+  // Seamless switch: Render BodyTransformationModal directly instead of stacking
+  if (isTransformationModalOpen) {
+    return (
+      <BodyTransformationModal
+        isOpen={true}
+        onClose={onClose}
+        onBack={() => setIsTransformationModalOpen(false)}
+        trainee={selectedStudent}
+        initialAssessments={assessmentHistory}
+        isCoachView={true}
+      />
+    );
+  }
+
   // Filter students by search query
   const q = searchStudentQuery.trim().toLowerCase();
   const filteredStudents = students.filter(st =>
@@ -796,14 +810,6 @@ const TraineeAssessmentModal = ({
 
       </div>
 
-      {/* Body Transformation Modal */}
-      <BodyTransformationModal
-        isOpen={isTransformationModalOpen}
-        onClose={() => setIsTransformationModalOpen(false)}
-        trainee={selectedStudent}
-        initialAssessments={assessmentHistory}
-        isCoachView={true}
-      />
     </div>
   );
 };
