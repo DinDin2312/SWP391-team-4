@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import SendNotificationModal from '../components/SendNotificationModal';
 import BodyTransformationModal from '../../member/components/BodyTransformationModal';
-import { healthBadge } from '../../member/healthProfileUtils';
+import { healthBadge, HEALTH_CONDITIONS } from '../../member/healthProfileUtils';
 
 const CoachStudents = () => {
   const navigate = useNavigate();
@@ -103,7 +103,7 @@ const CoachStudents = () => {
         {/* Global Notification Button */}
         <button
           onClick={handleOpenBroadcastNotif}
-          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-[var(--text)] font-bold text-xs shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all cursor-pointer shrink-0 self-start md:self-auto"
+          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all cursor-pointer shrink-0 self-start md:self-auto"
         >
           <Bell className="w-4 h-4 animate-bounce" />
           <span>{t("Gửi Thông Báo")}</span>
@@ -216,12 +216,12 @@ const CoachStudents = () => {
                               <span
                                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap shrink-0 ${
                                   hBadge.variant === 'danger'
-                                    ? 'bg-rose-500/10 text-rose-500 border border-rose-500/25'
+                                    ? 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30'
                                     : hBadge.variant === 'warning'
-                                    ? 'bg-amber-500/10 text-amber-500 border border-amber-500/25'
+                                    ? 'bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30'
                                     : hBadge.variant === 'success'
-                                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/25'
-                                    : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                                    ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30'
+                                    : 'bg-slate-100 dark:bg-slate-500/15 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-500/30'
                                 }`}
                                 title={hBadge.tooltip}
                               >
@@ -383,15 +383,15 @@ const CoachStudents = () => {
               </div>
 
               {/* Workout Goal & Fitness Level Section */}
-              <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-900/30 via-[var(--surface)] to-purple-900/20 border border-indigo-500/30 space-y-3 shadow-sm">
-                <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-50/80 via-[var(--surface)] to-purple-50/50 dark:from-indigo-950/40 dark:via-[var(--surface)] dark:to-purple-950/20 border border-indigo-200/80 dark:border-indigo-500/30 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between border-b border-indigo-200/80 dark:border-indigo-500/20 pb-2">
                   <div className="flex items-center gap-2">
-                    <Target className="w-4 h-4 text-indigo-400" />
-                    <h5 className="font-bold text-indigo-300 text-xs uppercase tracking-wider">{t("Mục tiêu tập luyện & Thể lực")}</h5>
+                    <Target className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <h5 className="font-bold text-indigo-700 dark:text-indigo-300 text-xs uppercase tracking-wider">{t("Mục tiêu tập luyện & Thể lực")}</h5>
                   </div>
                   {selectedStudent.fitnessLevel && (
-                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold text-[11px] border border-indigo-500/30 flex items-center gap-1">
-                      <Activity className="w-3 h-3 text-indigo-400" />
+                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-semibold text-[11px] border border-indigo-200 dark:border-indigo-500/30 flex items-center gap-1">
+                      <Activity className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                       {codeLabel(selectedStudent.fitnessLevel) || selectedStudent.fitnessLevel}
                     </span>
                   )}
@@ -401,18 +401,18 @@ const CoachStudents = () => {
                   <div>
                     <span className="text-[11px] text-[var(--text-muted)] block">{t("Mục tiêu cá nhân:")}</span>
                     <p className="text-sm font-semibold text-[var(--text)] mt-0.5 flex items-center gap-2">
-                      <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
+                      <Trophy className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
                       <span>{selectedStudent.workoutGoal || t("Chưa thiết lập mục tiêu tập luyện")}</span>
                     </p>
                   </div>
 
                   {selectedStudent.assignedPlans && selectedStudent.assignedPlans.length > 0 && (
-                    <div className="pt-2 border-t border-indigo-500/10">
+                    <div className="pt-2 border-t border-indigo-200/60 dark:border-indigo-500/10">
                       <span className="text-[11px] text-[var(--text-muted)] block mb-1">{t("Giáo án HLV đã giao:")}</span>
                       <div className="flex flex-wrap gap-1.5">
                         {selectedStudent.assignedPlans.map((planTitle, pIdx) => (
-                          <span key={pIdx} className="px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-300 font-medium text-[11px] border border-purple-500/30 flex items-center gap-1">
-                            <Dumbbell className="w-3 h-3 text-purple-400" />
+                          <span key={pIdx} className="px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 font-medium text-[11px] border border-purple-200 dark:border-purple-500/30 flex items-center gap-1 shadow-xs">
+                            <Dumbbell className="w-3 h-3 text-purple-600 dark:text-purple-400" />
                             {planTitle}
                           </span>
                         ))}
@@ -423,28 +423,28 @@ const CoachStudents = () => {
               </div>
 
                             {/* Health Profile & Medical Alert Section */}
-              <div className="p-4 rounded-xl bg-gradient-to-br from-teal-900/30 via-[var(--surface)] to-blue-900/20 border border-teal-500/30 space-y-3 shadow-sm">
-                <div className="flex items-center justify-between border-b border-teal-500/20 pb-2">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-teal-50/80 via-[var(--surface)] to-blue-50/50 dark:from-teal-950/40 dark:via-[var(--surface)] dark:to-blue-950/20 border border-teal-200/80 dark:border-teal-500/30 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between border-b border-teal-200/80 dark:border-teal-500/20 pb-2">
                   <div className="flex items-center gap-2">
-                    <HeartPulse className="w-4 h-4 text-teal-400" />
-                    <h5 className="font-bold text-teal-300 text-xs uppercase tracking-wider">{t("Health & Physiology Profile")}</h5>
+                    <HeartPulse className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    <h5 className="font-bold text-teal-700 dark:text-teal-300 text-xs uppercase tracking-wider">{t("Health & Physiology Profile")}</h5>
                   </div>
                   {selectedStudent.health && (
                     <span className={`px-2.5 py-0.5 rounded-full font-semibold text-[11px] border flex items-center gap-1 ${
                       selectedStudent.health.clearanceRecommended
-                        ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                        ? 'bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30'
                         : selectedStudent.health.completed
-                        ? 'bg-teal-500/20 text-teal-300 border-teal-500/30'
-                        : 'bg-slate-500/20 text-slate-400 border-slate-500/30'
+                        ? 'bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30'
+                        : 'bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-500/30'
                     }`}>
-                      {healthBadge(selectedStudent.health, currentLang).label}
+                      {t(healthBadge(selectedStudent.health, currentLang).label)}
                     </span>
                   )}
                 </div>
 
                 {selectedStudent.health?.clearanceRecommended && (
-                  <div className="p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[11px] flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs flex items-center gap-2.5">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
                     <span>{t("Warning: Red-flag PAR-Q — Medical consultation advised before vigorous training.")}</span>
                   </div>
                 )}
@@ -466,19 +466,26 @@ const CoachStudents = () => {
 
                 {selectedStudent.health?.conditions && selectedStudent.health.conditions.length > 0 && (
                   <div>
-                    <span className="text-[11px] text-[var(--text-muted)] block mb-1">{t("Pre-existing conditions / Injuries:")}</span>
+                    <span className="text-[11px] text-[var(--text-muted)] block mb-1.5 font-medium">{t("Pre-existing conditions / Injuries:")}</span>
                     <div className="flex flex-wrap gap-1.5">
-                      {selectedStudent.health.conditions.map((cCode, cIdx) => (
-                        <span key={cIdx} className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-semibold border border-amber-500/30">
-                          {cCode}
-                        </span>
-                      ))}
+                      {selectedStudent.health.conditions.map((cCode, cIdx) => {
+                        const condObj = HEALTH_CONDITIONS.find(c => c.code === cCode);
+                        const condLabel = condObj ? (currentLang === 'en' ? condObj.en : condObj.vi) : cCode;
+                        return (
+                          <span
+                            key={cIdx}
+                            className="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[11px] font-semibold border border-amber-200 dark:border-amber-500/30 shadow-xs"
+                          >
+                            {condLabel}
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
                 {selectedStudent.health?.notes && (
-                  <div className="p-2 rounded-lg bg-black/10 dark:bg-white/5 text-[11px] text-[var(--text-muted)] italic">
+                  <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-[var(--text)] italic">
                     "{selectedStudent.health.notes}"
                   </div>
                 )}
@@ -537,7 +544,7 @@ const CoachStudents = () => {
 
               <button
                 onClick={() => setSelectedStudent(null)}
-                className="px-5 py-2 rounded-xl bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text)] hover:text-[var(--text)] font-semibold text-xs transition-all cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-[var(--surface-hover)] hover:bg-[var(--border)] text-[var(--text)] border border-[var(--border)] font-semibold text-xs transition-all cursor-pointer"
               >{t("Đóng")}</button>
             </div>
           </div>
