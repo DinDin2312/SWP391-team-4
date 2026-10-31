@@ -399,7 +399,7 @@ const CoachSchedule = () => {
 
         {/* Agenda Column */}
         <div className="xl:col-span-4 flex flex-col gap-4">
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 shadow-[var(--shadow)] flex flex-col sticky top-28">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 shadow-[var(--shadow)] flex flex-col sticky top-28 max-h-[calc(100vh-140px)]">
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-[var(--border)]">
               <div className="flex flex-col">
                 <span className="font-bold text-[10px] text-[var(--text-muted)] uppercase tracking-widest">{t("Teaching Agenda")}</span>
@@ -411,7 +411,7 @@ const CoachSchedule = () => {
                 {selectedDateSchedules.length}{' '}{t("Sessions")}</span>
             </div>
 
-            <div className="flex flex-col gap-3.5 max-h-[620px] overflow-y-auto pr-1.5 custom-scrollbar">
+            <div className="flex flex-col gap-3.5 max-h-[460px] 2xl:max-h-[500px] overflow-y-auto pr-1.5 custom-scrollbar">
               {loading ? (
                 <div className="text-center py-10 text-[var(--text-muted)]">{t("Loading class schedules...")}</div>
               ) : selectedDateSchedules.length === 0 ? (
@@ -428,7 +428,7 @@ const CoachSchedule = () => {
                   const isExpanded = expandedScheduleId === s.scheduleId;
 
                   return (
-                    <div key={idx} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-3 relative overflow-hidden group hover:border-[var(--primary-soft)] transition-all">
+                    <div key={idx} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-3 relative shrink-0 overflow-hidden group hover:border-[var(--primary-soft)] transition-all">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--primary)]">
                           <Clock className="w-3.5 h-3.5" />
