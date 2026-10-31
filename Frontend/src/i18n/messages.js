@@ -4547,7 +4547,10 @@ const memberHealthTranslations = [
   ["Medical contraindication", "Chống chỉ định y tế"],
   ["Medical contraindication: ", "Chống chỉ định y tế: "],
   ["Avoid", "Tránh"],
-  ["{0} years old", "{0} tuổi"]
+  ["{0} years old", "{0} tuổi"],
+  ["Please select your date of birth.", "Vui lòng chọn ngày sinh của bạn."],
+  ["Member must be at least 12 years old.", "Hội viên phải từ 12 tuổi trở lên."],
+  ["Please agree to the privacy terms to continue.", "Vui lòng đồng thuận với điều khoản để tiếp tục."]
 ];
 
 for (const [en, vi] of memberHealthTranslations) {
