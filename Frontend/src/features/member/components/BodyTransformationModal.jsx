@@ -34,7 +34,8 @@ const BodyTransformationModal = ({
   trainee = null,
   initialAssessments = null,
   coachInfo = null,
-  isCoachView = false
+  isCoachView = false,
+  onBack = null
 }) => {
   useLanguage();
 
