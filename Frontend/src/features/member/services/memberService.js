@@ -160,6 +160,17 @@ export const memberService = {
   withdrawSupportRequest: async (requestId) => {
     return await axiosClient.put(`/v1/member/support/requests/${requestId}/withdraw`);
   },
+  getHealthProfile: async () => {
+    return await axiosClient.get('/v1/member/health-profile');
+  },
+
+  saveHealthProfile: async (payload) => {
+    return await axiosClient.put('/v1/member/health-profile', payload);
+  },
+
+  withdrawHealthProfile: async () => {
+    return await axiosClient.delete('/v1/member/health-profile');
+  },
 };
 
 export default memberService;

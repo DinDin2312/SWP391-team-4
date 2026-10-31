@@ -92,7 +92,7 @@ const CustomerDashboard = () => {
         memberService.getRecentActivities(),
         memberService.getUserProfile(),
         memberService.getAssessments().catch(() => []),
-        axiosClient.get('/api/v1/member/health-profile').then(r => r.data).catch(() => null)
+        memberService.getHealthProfile().catch(() => null)
       ]);
 
       setMembership(membershipData || null);
@@ -103,8 +103,9 @@ const CustomerDashboard = () => {
         setMemberTier(profileData.memberTier || 'MEMBER');
       }
       setRecentActivities(Array.isArray(recentData) ? recentData : []);
-      if (healthData) {
-        setHealthProfileCompleted(Boolean(healthData.completed));
+      const health = healthData?.data || healthData;
+      if (health) {
+        setHealthProfileCompleted(Boolean(health.completed));
       } else {
         setHealthProfileCompleted(false);
       }

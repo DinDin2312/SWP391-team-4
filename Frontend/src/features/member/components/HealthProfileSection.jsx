@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { t } from '../../../i18n/useLanguage';
-import axiosClient from '../../../services/axiosClient';
+import { memberService } from '../services/memberService';
 import {
   HEALTH_CONDITIONS,
   PARQ_QUESTIONS,
@@ -46,9 +46,9 @@ export default function HealthProfileSection({ initialProfile = null }) {
     async function fetchHealthProfile() {
       try {
         setLoading(true);
-        const res = await axiosClient.get('/api/v1/member/health-profile');
+        const res = await memberService.getHealthProfile();
         if (!isMounted) return;
-        const data = res.data;
+        const data = res?.data || res;
         if (data) {
           if (data.gender) setGender(data.gender);
           if (data.dateOfBirth) setDateOfBirth(data.dateOfBirth);
@@ -122,7 +122,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
         notes: notes.trim(),
         consent: true
       };
-      await axiosClient.put('/api/v1/member/health-profile', payload);
+      await memberService.saveHealthProfile(payload);
       setHasExistingProfile(true);
       setToast({ type: 'success', text: t('Health profile saved successfully!') });
       setTimeout(() => setToast(null), 4000);
@@ -137,7 +137,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
   const handleWithdraw = async () => {
     try {
       setWithdrawing(true);
-      await axiosClient.delete('/api/v1/member/health-profile');
+      await memberService.withdrawHealthProfile();
       setHasExistingProfile(false);
       setParq([false, false, false, false, false, false, false]);
       setConditions([]);
