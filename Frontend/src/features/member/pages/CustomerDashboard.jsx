@@ -11,12 +11,13 @@ import MemberTierAvatar from '../../../components/MemberTierAvatar';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import { memberService } from '../services/memberService';
+import axiosClient from '../../../services/axiosClient';
 import {
   Dumbbell,
   QrCode,
   ShieldCheck,
   Calendar,
-  Activity,
+  Activity, HeartPulse,
   Flame,
   Search,
   Download,
@@ -62,6 +63,10 @@ const CustomerDashboard = () => {
   const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
   const [selfModalOpen, setSelfModalOpen] = useState(false);
   const [transformationModalOpen, setTransformationModalOpen] = useState(false);
+  const [healthProfileCompleted, setHealthProfileCompleted] = useState(true);
+  const [dismissHealthPrompt, setDismissHealthPrompt] = useState(
+    typeof window !== 'undefined' && sessionStorage.getItem('dismissHealthPrompt') === 'true'
+  );
 
 // Status for Membership Card
   const [membership, setMembership] = useState(null);
@@ -80,13 +85,14 @@ const CustomerDashboard = () => {
 
   const fetchDashboardData = React.useCallback(async () => {
     try {
-      const [membershipData, bookingsData, checkInsData, recentData, profileData, assessmentsData] = await Promise.all([
+      const [membershipData, bookingsData, checkInsData, recentData, profileData, assessmentsData, healthData] = await Promise.all([
         memberService.getMyMembership(),
         memberService.getUpcomingBookings(),
         memberService.getTotalCheckIns(),
         memberService.getRecentActivities(),
         memberService.getUserProfile(),
-        memberService.getAssessments().catch(() => [])
+        memberService.getAssessments().catch(() => []),
+        axiosClient.get('/api/v1/member/health-profile').then(r => r.data).catch(() => null)
       ]);
 
       setMembership(membershipData || null);
@@ -97,6 +103,11 @@ const CustomerDashboard = () => {
         setMemberTier(profileData.memberTier || 'MEMBER');
       }
       setRecentActivities(Array.isArray(recentData) ? recentData : []);
+      if (healthData) {
+        setHealthProfileCompleted(Boolean(healthData.completed));
+      } else {
+        setHealthProfileCompleted(false);
+      }
       const aList = Array.isArray(assessmentsData) ? assessmentsData : (assessmentsData?.data || []);
       setLatestAssessment(aList.length > 0 ? aList[0] : null);
     } catch (error) {
@@ -245,6 +256,44 @@ const CustomerDashboard = () => {
           </button>
         </div>
       </div>
+
+      {/* HEALTH PROFILE PROMPT BANNER */}
+      {!healthProfileCompleted && !dismissHealthPrompt && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-teal-500/10 via-[#0071E3]/5 to-transparent border border-teal-500/25 shadow-xs">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-teal-500 flex items-center justify-center text-white shrink-0 shadow-sm">
+              <HeartPulse className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-800 dark:text-white">
+                {t('Hoàn thiện hồ sơ sức khỏe & thể trạng')}
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {t('Complete your health profile so Coaches and AI can tailor safe workouts for you.')}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                sessionStorage.setItem('dismissHealthPrompt', 'true');
+                setDismissHealthPrompt(true);
+              }}
+              className="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-all"
+            >
+              {t('Để sau')}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/member/settings?tab=health')}
+              className="px-4 py-1.5 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95"
+            >
+              {t('Cập nhật ngay')}
+            </button>
+          </div>
+        </div>
+      )}
 
         {/* ================= ROW 1: 4 STAT CARDS ================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
