@@ -80,6 +80,23 @@ export function exerciseConflicts(conditions, contraindications) {
   return conditions.filter(c => contraindications.includes(c));
 }
 
+export function formatContraindications(codes, lang = 'vi') {
+  if (!Array.isArray(codes) || codes.length === 0) return '';
+  const isEn = lang === 'en';
+  return codes.map(code => {
+    const found = HEALTH_CONDITIONS.find(c => c.code === code);
+    return found ? (isEn ? found.en : found.vi) : code;
+  }).join(', ');
+}
+
+export function formatContraTag(contraindications, lang = 'vi') {
+  if (!contraindications || contraindications.length === 0) return '';
+  const isEn = lang === 'en';
+  const prefix = isEn ? 'Avoid' : 'Tránh';
+  const translated = formatContraindications(contraindications, lang);
+  return ` [${prefix}: ${translated}]`;
+}
+
 export function healthBadge(summary, lang = 'vi') {
   const isEn = lang === 'en';
   if (!summary || !summary.completed) {

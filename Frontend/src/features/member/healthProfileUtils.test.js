@@ -7,6 +7,8 @@ import {
   visibleConditions,
   exerciseConflicts,
   healthBadge,
+  formatContraindications,
+  formatContraTag,
 } from './healthProfileUtils.js';
 
 test('healthProfileUtils: constants are properly defined', () => {
@@ -102,4 +104,18 @@ test('healthProfileUtils: healthBadge computes badge label, variant and tooltip'
   }, 'en');
   assert.equal(enFlagged.label, 'Female • 52y');
   assert.ok(enFlagged.tooltip.includes('Medical clearance'));
+});
+
+
+test('healthProfileUtils: formatContraindications and formatContraTag translate correctly', () => {
+  const codes = ['LOWER_BACK', 'KNEE'];
+  assert.equal(formatContraindications(codes, 'vi'), 'Cột sống / Thoát vị đĩa đệm, Khớp gối / Dây chằng');
+  assert.equal(formatContraindications(codes, 'en'), 'Spine / Herniated disc, Knee / Ligament');
+  assert.equal(formatContraindications([], 'vi'), '');
+  assert.equal(formatContraindications(null, 'vi'), '');
+
+  assert.equal(formatContraTag(codes, 'vi'), ' [Tránh: Cột sống / Thoát vị đĩa đệm, Khớp gối / Dây chằng]');
+  assert.equal(formatContraTag(codes, 'en'), ' [Avoid: Spine / Herniated disc, Knee / Ligament]');
+  assert.equal(formatContraTag([], 'vi'), '');
+  assert.equal(formatContraTag(null, 'vi'), '');
 });

@@ -1,6 +1,6 @@
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { locale } from '../../../i18n/languageStore.js';
-import { exerciseConflicts } from '../../member/healthProfileUtils';
+import { exerciseConflicts, formatContraTag, formatContraindications } from '../../member/healthProfileUtils';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -72,7 +72,7 @@ const createInitialWeekSchedule = (defaultExerciseId = '') => ({
 });
 
 const CoachWorkoutPlans = () => {
-  useLanguage();
+  const currentLang = useLanguage();
 
   // Main Data States
   const [exercises, setExercises] = useState([]);
@@ -1603,7 +1603,7 @@ const CoachWorkoutPlans = () => {
                                   onChange={(e) => handleDayDurationChange(tpCurrentWeek, tpSelectedDayKey, e.target.value)}
                                   className="w-12 bg-transparent text-center font-bold text-[var(--text)] text-xs focus:outline-none"
                                 />
-                                <span className="text-[var(--text-muted)] font-medium">phút</span>
+                                <span className="text-[var(--text-muted)] font-medium">{t("phút")}</span>
                               </div>
                             </div>
 
@@ -1663,16 +1663,25 @@ const CoachWorkoutPlans = () => {
                                         const isConflict = targetedTpStudent?.health?.conditions
                                           ? exerciseConflicts(targetedTpStudent.health.conditions, eItem.contraindications || []).length > 0
                                           : false;
-                                        const contraTag = eItem.contraindications && eItem.contraindications.length > 0
-                                          ? ` [${t('Avoid')}: ${eItem.contraindications.join(',')}]`
-                                          : '';
+                                        const contraTag = formatContraTag(eItem.contraindications, currentLang);
                                         return (
                                           <option key={eItem.exerciseId} value={eItem.exerciseId}>
-                                            {isConflict ? '⚠ ' : ''}{eItem.exerciseName} [{t(eItem.muscleGroup || 'Chung')}]{contraTag}
+                                            {isConflict ? '⚠ ' : ''}{t(eItem.exerciseName)} [{t(eItem.muscleGroup || 'Chung')}]{contraTag}
                                           </option>
                                         );
                                       })}
                                     </select>
+                                    {(() => {
+                                      const tpConflicts = (targetedTpStudent?.health?.conditions && exInfo?.contraindications)
+                                        ? exerciseConflicts(targetedTpStudent.health.conditions, exInfo.contraindications)
+                                        : [];
+                                      return tpConflicts.length > 0 ? (
+                                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 text-[11px] font-semibold mt-1">
+                                          <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+                                          <span>{t('Chống chỉ định y tế: ')}{formatContraindications(tpConflicts, currentLang)}</span>
+                                        </div>
+                                      ) : null;
+                                    })()}
                                     {exInfo && exInfo.videoUrl && (
                                       <a
                                         href={exInfo.videoUrl}
@@ -1782,11 +1791,17 @@ const CoachWorkoutPlans = () => {
                                       className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] font-semibold"
                                     >
                                       <option value="">{t("-- Chọn bài tập --")}</option>
-                                      {exercises.map((eItem) => (
-                                        <option key={eItem.exerciseId} value={eItem.exerciseId}>
-                                          {eItem.exerciseName} [{t(eItem.muscleGroup || 'Chung')}]
-                                        </option>
-                                      ))}
+                                      {exercises.map((eItem) => {
+                                        const isConflict = targetedTpStudent?.health?.conditions
+                                          ? exerciseConflicts(targetedTpStudent.health.conditions, eItem.contraindications || []).length > 0
+                                          : false;
+                                        const contraTag = formatContraTag(eItem.contraindications, currentLang);
+                                        return (
+                                          <option key={eItem.exerciseId} value={eItem.exerciseId}>
+                                            {isConflict ? '⚠ ' : ''}{t(eItem.exerciseName)} [{t(eItem.muscleGroup || 'Chung')}]{contraTag}
+                                          </option>
+                                        );
+                                      })}
                                     </select>
                                     {exInfo && exInfo.videoUrl && (
                                       <a href={exInfo.videoUrl} target="_blank" rel="noreferrer" className="text-[10px] text-blue-400 hover:underline flex items-center gap-1 mt-1">
@@ -2330,12 +2345,10 @@ const CoachWorkoutPlans = () => {
                           const isConflict = targetedSingleStudent?.health?.conditions
                             ? exerciseConflicts(targetedSingleStudent.health.conditions, ex.contraindications || []).length > 0
                             : false;
-                          const contraTag = ex.contraindications && ex.contraindications.length > 0
-                            ? ` [${t('Avoid')}: ${ex.contraindications.join(',')}]`
-                            : '';
+                          const contraTag = formatContraTag(ex.contraindications, currentLang);
                           return (
                             <option key={ex.exerciseId} value={ex.exerciseId}>
-                              {isConflict ? '⚠ ' : ''}{ex.exerciseName} [{t(ex.muscleGroup || 'Chung')}]{contraTag}
+                              {isConflict ? '⚠ ' : ''}{t(ex.exerciseName)} [{t(ex.muscleGroup || 'Chung')}]{contraTag}
                             </option>
                           );
                         })}
@@ -2345,9 +2358,9 @@ const CoachWorkoutPlans = () => {
                           ? exerciseConflicts(targetedSingleStudent.health.conditions, currentExObj.contraindications)
                           : [];
                         return sConflicts.length > 0 ? (
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-500 text-[11px] font-semibold mt-1 animate-pulse">
-                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                            <span>{t('Chống chỉ định y tế: ')}{sConflicts.join(', ')}</span>
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 text-[11px] font-semibold mt-1 animate-pulse">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+                            <span>{t('Chống chỉ định y tế: ')}{formatContraindications(sConflicts, currentLang)}</span>
                           </div>
                         ) : null;
                       })()}
