@@ -282,6 +282,8 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
             User member = booking.getUser();
             User coach = schedule.getGymClass() != null ? schedule.getGymClass().getCoach() : null;
             String coachName = coach != null && coach.getFullName() != null ? coach.getFullName() : coachEmail;
+            String cleanCoachName = coachName.replaceFirst("^(?i)(HLV|Coach)\\s+", "").trim();
+            String displayCoachName = "HLV " + cleanCoachName;
             String className = schedule.getGymClass() != null && schedule.getGymClass().getClassName() != null
                     ? schedule.getGymClass().getClassName() : "lớp học";
             String roomName = (schedule.getGymClass() != null && schedule.getGymClass().getRoom() != null)
@@ -305,18 +307,18 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
             payload.put("packageType", "CLASS");
             payload.put("roomId", roomId);
             payload.put("facilityName", roomName);
-            payload.put("note", "Check-in bổ sung: HLV " + coachName + " xác nhận có mặt trực tiếp tại lớp " + className);
+            payload.put("note", "Check-in bổ sung: " + displayCoachName + " xác nhận có mặt trực tiếp tại lớp " + className);
             payload.put("status", "CHECKED_IN");
             payload.put("attendanceStatus", "PRESENT");
             payload.put("hasAnomaly", true);
-            payload.put("anomalyReason", "Chưa qua cổng lễ tân: HLV " + coachName + " xác nhận có mặt trực tiếp tại lớp " + className);
+            payload.put("anomalyReason", "Chưa qua cổng lễ tân: " + displayCoachName + " xác nhận có mặt trực tiếp tại lớp " + className);
             payload.put("checkInTime", now.toString());
             payload.put("checkOutTime", null);
             payload.put("checkedInBy", coachEmail);
 
             String jsonString = jsonMapper.writeValueAsString(payload);
-            String details = String.format("Check-in bổ sung: HLV %s duyệt có mặt trực tiếp cho hội viên %s (#%d) - Lớp %s",
-                    coachName, member.getFullName(), member.getUserId(), className);
+            String details = String.format("Check-in bổ sung: %s duyệt có mặt trực tiếp cho hội viên %s (#%d) - Lớp %s",
+                    displayCoachName, member.getFullName(), member.getUserId(), className);
 
             jdbcTemplate.update(
                     "INSERT INTO AUDIT_LOGS (actor_email, action, entity_type, entity_id, details, changes_json, created_at) " +

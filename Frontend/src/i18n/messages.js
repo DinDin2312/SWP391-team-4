@@ -4194,3 +4194,37 @@ for (const [en, vi] of bodyTransformationTranslations) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }
+
+const checkInTranslations = [
+  [
+    "Supplemental check-in: Coach {0} confirmed in-person attendance in {1}",
+    "Check-in bổ sung: HLV {0} xác nhận có mặt trực tiếp tại lớp {1}"
+  ],
+  [
+    "Bypassed front desk: Coach {0} confirmed in-person attendance in {1}",
+    "Chưa qua cổng lễ tân: HLV {0} xác nhận có mặt trực tiếp tại lớp {1}"
+  ],
+  [
+    "Checked in at facility but marked ABSENT by coach in class",
+    "Check-in vào trung tâm học lớp nhưng HLV ghi nhận VẮNG MẶT trong lớp"
+  ],
+  [
+    "Supplemental check-in: Coach {0} approved in-person attendance for member {1} (#{2}) - Class {3}",
+    "Check-in bổ sung: HLV {0} duyệt có mặt trực tiếp cho hội viên {1} (#{2}) - Lớp {3}"
+  ],
+  [
+    "Check-in for member {0} (#{1}) - {2} - Access: Gym={3}, Class={4}",
+    "Check-in hội viên {0} (#{1}) - {2} - Quyền: Gym={3}, Lớp={4}"
+  ],
+  ["Gym Floor 1", "Phòng Gym Tầng 1"],
+  ["Yoga Studio Floor 2", "Phòng Yoga Tầng 2"],
+  ["Zumba Studio Floor 3", "Phòng Zumba Tầng 3"],
+  ["Four-Season Swimming Pool", "Bể Bơi Bốn Mùa"],
+  ["Spinning Studio", "Phòng Đạp Xe"],
+  ["Workout Room", "Phòng tập"]
+];
+
+for (const [en, vi] of checkInTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
