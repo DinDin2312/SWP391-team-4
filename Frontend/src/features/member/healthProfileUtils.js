@@ -80,17 +80,20 @@ export function exerciseConflicts(conditions, contraindications) {
   return conditions.filter(c => contraindications.includes(c));
 }
 
-export function healthBadge(summary) {
+export function healthBadge(summary, lang = 'vi') {
+  const isEn = lang === 'en';
   if (!summary || !summary.completed) {
     return {
-      label: 'Chưa khai báo',
+      label: isEn ? 'Not declared' : 'Chưa khai báo',
       variant: 'neutral',
-      tooltip: 'Học viên chưa hoàn tất khai báo hồ sơ sức khỏe',
+      tooltip: isEn ? 'Trainee has not completed health profile' : 'Học viên chưa hoàn tất khai báo hồ sơ sức khỏe',
     };
   }
 
-  const genderLabel = summary.gender === 'MALE' ? 'Nam' : summary.gender === 'FEMALE' ? 'Nữ' : 'Khác';
-  const ageLabel = summary.age != null ? `${summary.age}t` : '';
+  const genderLabel = isEn
+    ? (summary.gender === 'MALE' ? 'Male' : summary.gender === 'FEMALE' ? 'Female' : 'Other')
+    : (summary.gender === 'MALE' ? 'Nam' : summary.gender === 'FEMALE' ? 'Nữ' : 'Khác');
+  const ageLabel = summary.age != null ? (isEn ? `${summary.age}y` : `${summary.age}t`) : '';
   const label = [genderLabel, ageLabel].filter(Boolean).join(' • ');
 
   let variant = 'success';
@@ -102,18 +105,18 @@ export function healthBadge(summary) {
 
   const tooltipParts = [];
   if (summary.clearanceRecommended) {
-    tooltipParts.push('⚠ PAR-Q: Cần tham khảo ý kiến bác sĩ');
+    tooltipParts.push(isEn ? '⚠ PAR-Q: Medical clearance recommended' : '⚠ PAR-Q: Cần tham khảo ý kiến bác sĩ');
   }
   if (summary.conditions && summary.conditions.length > 0) {
-    tooltipParts.push(`Bệnh lý: ${summary.conditions.join(', ')}`);
+    tooltipParts.push(isEn ? `Conditions: ${summary.conditions.join(', ')}` : `Bệnh lý: ${summary.conditions.join(', ')}`);
   }
   if (summary.notes) {
-    tooltipParts.push(`Ghi chú: ${summary.notes}`);
+    tooltipParts.push(isEn ? `Notes: ${summary.notes}` : `Ghi chú: ${summary.notes}`);
   }
 
   return {
     label,
     variant,
-    tooltip: tooltipParts.length > 0 ? tooltipParts.join('\n') : 'Sức khỏe ổn định',
+    tooltip: tooltipParts.length > 0 ? tooltipParts.join('\n') : (isEn ? 'Stable health' : 'Sức khỏe ổn định'),
   };
 }

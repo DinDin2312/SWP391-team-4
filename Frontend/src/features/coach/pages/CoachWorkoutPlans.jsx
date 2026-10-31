@@ -1664,7 +1664,7 @@ const CoachWorkoutPlans = () => {
                                           ? exerciseConflicts(targetedTpStudent.health.conditions, eItem.contraindications || []).length > 0
                                           : false;
                                         const contraTag = eItem.contraindications && eItem.contraindications.length > 0
-                                          ? ` [Tránh: ${eItem.contraindications.join(',')}]`
+                                          ? ` [${t('Avoid')}: ${eItem.contraindications.join(',')}]`
                                           : '';
                                         return (
                                           <option key={eItem.exerciseId} value={eItem.exerciseId}>
@@ -2331,7 +2331,7 @@ const CoachWorkoutPlans = () => {
                             ? exerciseConflicts(targetedSingleStudent.health.conditions, ex.contraindications || []).length > 0
                             : false;
                           const contraTag = ex.contraindications && ex.contraindications.length > 0
-                            ? ` [Tránh: ${ex.contraindications.join(',')}]`
+                            ? ` [${t('Avoid')}: ${ex.contraindications.join(',')}]`
                             : '';
                           return (
                             <option key={ex.exerciseId} value={ex.exerciseId}>

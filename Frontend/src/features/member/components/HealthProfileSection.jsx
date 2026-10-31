@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { t } from '../../../i18n/useLanguage';
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import { memberService } from '../services/memberService';
 import {
   HEALTH_CONDITIONS,
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 export default function HealthProfileSection({ initialProfile = null }) {
+  const currentLang = useLanguage();
   const [loading, setLoading] = useState(!initialProfile);
   const [saving, setSaving] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
@@ -100,15 +101,15 @@ export default function HealthProfileSection({ initialProfile = null }) {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!consent) {
-      setToast({ type: 'error', text: t('Vui lòng đồng thuận với điều khoản chia sẻ dữ liệu y tế.') });
+      setToast({ type: 'error', text: t('Please consent to the health data sharing terms.') });
       return;
     }
     if (!gender) {
-      setToast({ type: 'error', text: t('Vui lòng chọn giới tính.') });
+      setToast({ type: 'error', text: t('Please select a gender.') });
       return;
     }
     if (!dateOfBirth || age == null || age < 12 || age > 100) {
-      setToast({ type: 'error', text: t('Ngày sinh không hợp lệ (hội viên từ 12 đến 100 tuổi).') });
+      setToast({ type: 'error', text: t('Invalid date of birth (members must be 12 to 100 years old).') });
       return;
     }
 
@@ -127,7 +128,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
       setToast({ type: 'success', text: t('Health profile saved successfully!') });
       setTimeout(() => setToast(null), 4000);
     } catch (err) {
-      const msg = err.response?.data?.message || t('Không thể lưu hồ sơ sức khỏe. Vui lòng thử lại.');
+      const msg = err.response?.data?.message || t('Unable to save health profile. Please try again.');
       setToast({ type: 'error', text: msg });
     } finally {
       setSaving(false);
@@ -147,7 +148,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
       setToast({ type: 'success', text: t('Health data has been withdrawn and deleted.') });
       setTimeout(() => setToast(null), 4000);
     } catch (err) {
-      const msg = err.response?.data?.message || t('Lỗi khi rút lại dữ liệu.');
+      const msg = err.response?.data?.message || t('Error withdrawing data.');
       setToast({ type: 'error', text: msg });
     } finally {
       setWithdrawing(false);
@@ -158,7 +159,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
     return (
       <div className="flex items-center justify-center p-12 text-slate-400">
         <Activity className="w-6 h-6 animate-spin text-[#0071E3] mr-2" />
-        <span>{t('Đang tải hồ sơ sức khỏe...')}</span>
+        <span>{t('Loading health profile...')}</span>
       </div>
     );
   }
@@ -300,7 +301,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
                 <div key={q.index} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="text-xs text-slate-700 dark:text-slate-200 flex-1 pr-2">
                     <span className="font-semibold mr-1.5">{q.index + 1}.</span>
-                    {q.vi}
+                    {currentLang === 'vi' ? q.vi : q.en}
                   </div>
                   <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
                     <button
@@ -312,7 +313,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
                           : 'border-slate-200 dark:border-white/[0.1] text-slate-500 hover:bg-slate-50 dark:hover:bg-white/[0.04]'
                       }`}
                     >
-                      {t('Không')}
+                      {t('No')}
                     </button>
                     <button
                       type="button"
@@ -323,7 +324,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
                           : 'border-slate-200 dark:border-white/[0.1] text-slate-500 hover:bg-slate-50 dark:hover:bg-white/[0.04]'
                       }`}
                     >
-                      {t('Có')}
+                      {t('Yes')}
                     </button>
                   </div>
                 </div>
@@ -358,7 +359,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
                       : 'border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.03]'
                   }`}
                 >
-                  <span>{cond.vi}</span>
+                  <span>{currentLang === 'vi' ? cond.vi : cond.en}</span>
                   {selected && <CheckCircle2 className="w-4 h-4 text-purple-500 shrink-0 ml-1.5" />}
                 </button>
               );
@@ -429,7 +430,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
             ) : (
               <Save className="w-4 h-4" />
             )}
-            <span>{saving ? t('Saving…') : t('Save Health Profile')}</span>
+            <span>{saving ? t('Saving...') : t('Save Health Profile')}</span>
           </button>
         </div>
       </form>
@@ -455,7 +456,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
                 onClick={() => setShowWithdrawModal(false)}
                 className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/[0.1] text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05] cursor-pointer"
               >
-                {t('Hủy')}
+                {t('Cancel')}
               </button>
               <button
                 type="button"
@@ -464,7 +465,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 {withdrawing && <Activity className="w-3.5 h-3.5 animate-spin" />}
-                <span>{withdrawing ? t('Đang xóa...') : t('Xác nhận xóa')}</span>
+                <span>{withdrawing ? t('Deleting...') : t('Confirm Delete')}</span>
               </button>
             </div>
           </div>

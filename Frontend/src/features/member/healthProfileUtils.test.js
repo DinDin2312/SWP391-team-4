@@ -88,4 +88,18 @@ test('healthProfileUtils: healthBadge computes badge label, variant and tooltip'
   });
   assert.equal(healthyBadge.label, 'Nam • 28t');
   assert.equal(healthyBadge.variant, 'success');
+
+  // English localization tests
+  const enEmpty = healthBadge(null, 'en');
+  assert.equal(enEmpty.label, 'Not declared');
+
+  const enFlagged = healthBadge({
+    completed: true,
+    gender: 'FEMALE',
+    age: 52,
+    clearanceRecommended: true,
+    conditions: ['KNEE'],
+  }, 'en');
+  assert.equal(enFlagged.label, 'Female • 52y');
+  assert.ok(enFlagged.tooltip.includes('Medical clearance'));
 });

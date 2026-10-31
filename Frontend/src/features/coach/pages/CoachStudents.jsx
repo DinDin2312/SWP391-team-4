@@ -11,7 +11,7 @@ import { healthBadge } from '../../member/healthProfileUtils';
 
 const CoachStudents = () => {
   const navigate = useNavigate();
-  useLanguage();
+  const currentLang = useLanguage();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -191,7 +191,7 @@ const CoachStudents = () => {
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-[var(--text)] text-sm group-hover:text-[var(--primary)] transition-colors">{st.fullName}</span>
                               {(() => {
-                                const hBadge = healthBadge(st.health);
+                                const hBadge = healthBadge(st.health, currentLang);
                                 return (
                                   <span
                                     className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
@@ -384,7 +384,7 @@ const CoachStudents = () => {
                 <div className="flex items-center justify-between border-b border-teal-500/20 pb-2">
                   <div className="flex items-center gap-2">
                     <HeartPulse className="w-4 h-4 text-teal-400" />
-                    <h5 className="font-bold text-teal-300 text-xs uppercase tracking-wider">{t("Hồ sơ Sức khỏe & Thể trạng")}</h5>
+                    <h5 className="font-bold text-teal-300 text-xs uppercase tracking-wider">{t("Health & Physiology Profile")}</h5>
                   </div>
                   {selectedStudent.health && (
                     <span className={`px-2.5 py-0.5 rounded-full font-semibold text-[11px] border flex items-center gap-1 ${
@@ -394,7 +394,7 @@ const CoachStudents = () => {
                         ? 'bg-teal-500/20 text-teal-300 border-teal-500/30'
                         : 'bg-slate-500/20 text-slate-400 border-slate-500/30'
                     }`}>
-                      {healthBadge(selectedStudent.health).label}
+                      {healthBadge(selectedStudent.health, currentLang).label}
                     </span>
                   )}
                 </div>
@@ -402,28 +402,28 @@ const CoachStudents = () => {
                 {selectedStudent.health?.clearanceRecommended && (
                   <div className="p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[11px] flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
-                    <span>{t("Cảnh báo: PAR-Q cờ đỏ — Cần tư vấn bác sĩ trước khi tập nặng.")}</span>
+                    <span>{t("Warning: Red-flag PAR-Q — Medical consultation advised before vigorous training.")}</span>
                   </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <div>
-                    <span className="text-[var(--text-muted)] block">{t("Giới tính:")}</span>
+                    <span className="text-[var(--text-muted)] block">{t("Gender:")}</span>
                     <strong className="text-[var(--text)]">
-                      {selectedStudent.health?.gender === 'MALE' ? t('Nam') : selectedStudent.health?.gender === 'FEMALE' ? t('Nữ') : selectedStudent.health?.gender || t('Chưa khai báo')}
+                      {selectedStudent.health?.gender === 'MALE' ? t('Male') : selectedStudent.health?.gender === 'FEMALE' ? t('Female') : selectedStudent.health?.gender ? t('Other') : t('Not declared')}
                     </strong>
                   </div>
                   <div>
-                    <span className="text-[var(--text-muted)] block">{t("Độ tuổi:")}</span>
+                    <span className="text-[var(--text-muted)] block">{t("Age:")}</span>
                     <strong className="text-[var(--text)]">
-                      {selectedStudent.health?.age != null ? `${selectedStudent.health.age} tuổi` : t('Chưa khai báo')}
+                      {selectedStudent.health?.age != null ? t('{0} years old', [selectedStudent.health.age]) : t('Not declared')}
                     </strong>
                   </div>
                 </div>
 
                 {selectedStudent.health?.conditions && selectedStudent.health.conditions.length > 0 && (
                   <div>
-                    <span className="text-[11px] text-[var(--text-muted)] block mb-1">{t("Tiền sử bệnh lý / Chấn thương:")}</span>
+                    <span className="text-[11px] text-[var(--text-muted)] block mb-1">{t("Pre-existing conditions / Injuries:")}</span>
                     <div className="flex flex-wrap gap-1.5">
                       {selectedStudent.health.conditions.map((cCode, cIdx) => (
                         <span key={cIdx} className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-semibold border border-amber-500/30">

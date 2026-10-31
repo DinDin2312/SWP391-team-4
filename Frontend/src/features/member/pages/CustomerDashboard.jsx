@@ -267,7 +267,7 @@ const CustomerDashboard = () => {
             </div>
             <div>
               <h4 className="text-sm font-bold text-slate-800 dark:text-white">
-                {t('Hoàn thiện hồ sơ sức khỏe & thể trạng')}
+                {t('Complete Health & Physiology Profile')}
               </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {t('Complete your health profile so Coaches and AI can tailor safe workouts for you.')}
@@ -283,14 +283,14 @@ const CustomerDashboard = () => {
               }}
               className="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-all"
             >
-              {t('Để sau')}
+              {t('Remind me later')}
             </button>
             <button
               type="button"
               onClick={() => navigate('/member/settings?tab=health')}
               className="px-4 py-1.5 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95"
             >
-              {t('Cập nhật ngay')}
+              {t('Update Now')}
             </button>
           </div>
         </div>
