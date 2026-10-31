@@ -4,6 +4,7 @@ import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import CancelClassPolicyModal from '../components/CancelClassPolicyModal';
 import MemberAssessmentsModal from '../components/MemberAssessmentsModal';
 import SelfAssessmentModal from '../components/SelfAssessmentModal';
+import BodyTransformationModal from '../components/BodyTransformationModal';
 import { formatDate } from '../../../utils/displayFormat';
 import React, { useState, useContext } from 'react';
 import MemberTierAvatar from '../../../components/MemberTierAvatar';
@@ -60,6 +61,7 @@ const CustomerDashboard = () => {
   const [loadingAssessment, setLoadingAssessment] = useState(true);
   const [assessmentModalOpen, setAssessmentModalOpen] = useState(false);
   const [selfModalOpen, setSelfModalOpen] = useState(false);
+  const [transformationModalOpen, setTransformationModalOpen] = useState(false);
 
 // Status for Membership Card
   const [membership, setMembership] = useState(null);
@@ -424,6 +426,14 @@ const CustomerDashboard = () => {
                 </div>
 
                 <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setTransformationModalOpen(true)}
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <TrendingUp className="w-3.5 h-3.5" />
+                    <span>{t("Biểu đồ thể trạng (FPS)")}</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => setSelfModalOpen(true)}
@@ -1176,6 +1186,14 @@ const CustomerDashboard = () => {
         isOpen={assessmentModalOpen}
         onClose={() => setAssessmentModalOpen(false)}
         initialClassId="ALL"
+      />
+
+      {/* Modal Biểu đồ biến đổi thể trạng & Điểm FPS */}
+      <BodyTransformationModal
+        isOpen={transformationModalOpen}
+        onClose={() => setTransformationModalOpen(false)}
+        trainee={userInfo}
+        isCoachView={false}
       />
 
       <CancelClassPolicyModal

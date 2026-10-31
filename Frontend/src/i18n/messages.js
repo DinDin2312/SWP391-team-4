@@ -3967,3 +3967,62 @@ for (const [en, vi] of managerSettingsTranslations) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }
+
+const bodyTransformationTranslations = [
+  ["Body Transformation Visualizer & FPS Score", "Biểu Đồ Tiến Trình Thể Trạng & Điểm FPS"],
+  ["Body Visualizer", "Biểu đồ thể trạng"],
+  ["Fitness Progress Score (FPS)", "Chỉ Số Cải Thiện Thể Chất (Fitness Progress Score)"],
+  ["Body Progress (FPS)", "Biểu đồ thể trạng (FPS)"],
+  ["Body Visualizer & FPS", "Biểu Đồ Thể Trạng & FPS"],
+  ["Progress", "Tiến độ"],
+  ["View body transformation progress & FPS", "Xem biểu đồ tiến trình thể trạng & FPS"],
+  ["View Chart", "Xem Biểu Đồ"],
+  ["Visually inspect muscle, fat, weight changes, and physical improvement index.", "Xem trực quan biến đổi cơ mỡ, cân nặng và chỉ số cải thiện thể chất."],
+  ["Body Transformation Progress Chart (FPS)", "Biểu Đồ Tiến Trình Thể Trạng (FPS)"],
+  ["InBody Periodic Measurement Logs", "Nhật Ký Các Đợt Đo InBody Định Kỳ"],
+  ["Transformation Progress Over Time", "Tiến Trình Biến Đổi Theo Thời Gian"],
+  ["Hover or tap on any point on the chart to inspect measurement details.", "Rê chuột hoặc chạm vào từng điểm trên đường biểu đồ để xem chi tiết mốc đo."],
+  ["No InBody Measurement Data Yet", "Chưa Có Dữ Liệu Đo InBody"],
+  ["Body Recomposition (Muscle & Fat)", "Tái cấu trúc (Cơ & Mỡ)"],
+  ["Muscle & Fat", "Cơ & Mỡ"],
+  ["InBody measurements", "lần đo InBody"],
+  ["measurement milestones", "mốc đo đạc"],
+  ["Change:", "Biến đổi:"],
+  ["Growth:", "Tăng trưởng:"],
+  ["Vs baseline:", "So với mốc đầu:"],
+  ["points", "điểm"],
+  ["Trainee:", "Học viên:"],
+  ["Track muscle growth, fat reduction, and evaluate overall physical progress.", "Trực quan hóa quá trình tăng cơ, giảm mỡ và đánh giá mức độ cải thiện thể chất."],
+  ["Loading fitness data and InBody chart...", "Đang tải dữ liệu thể trạng và biểu đồ InBody..."],
+  ["Trainee does not have any InBody assessment records (Weight, Body Fat, Muscle Mass). Coaches can submit an evaluation to activate the progress chart.", "Học viên chưa có lượt đánh giá nào kèm chỉ số InBody (Cân nặng, Tỷ lệ mỡ, Khối lượng cơ). HLV hãy thực hiện đánh giá để kích hoạt biểu đồ tiến độ."],
+  ["Weight", "Cân nặng"],
+  ["Body Fat (Fat %)", "Tỷ lệ mỡ (Fat)"],
+  ["Muscle Mass", "Khối lượng cơ"],
+  ["BMI Index", "Chỉ số BMI"],
+  ["Height required", "Cần chiều cao"],
+  ["All", "Tất cả"],
+  ["Body Fat (%)", "Tỷ lệ mỡ (%)"],
+  ["Muscle Mass (kg)", "Khối lượng cơ (kg)"],
+  ["Weight (kg)", "Cân nặng (kg)"],
+  ["Body Fat:", "Tỷ lệ mỡ:"],
+  ["Muscle Mass:", "Khối lượng cơ:"],
+  ["Weight:", "Cân nặng:"],
+  ["records", "bản ghi"],
+  ["Date", "Ngày đo"],
+  ["Coach Rating", "Đánh giá HLV"],
+  ["Note", "Ghi chú"],
+  ["Data updates automatically after each measurement session by the Coach.", "Dữ liệu được cập nhật tự động sau mỗi lần đo của Huấn luyện viên."],
+  ["Elite Transformation", "Bứt Phá Thần Tốc"],
+  ["Strong Progress", "Tiến Bộ Vượt Bậc"],
+  ["Steady Improver", "Kiên Trì Bền Bỉ"],
+  ["Journey Started", "Khởi Động Nền Tảng"],
+  ["No Data", "Chưa có dữ liệu"],
+  ["Export PDF Report", "Xuất Báo Cáo PDF"],
+  ["Send via Zalo / Email", "Gửi Zalo / Email"],
+  ["Copied!", "Đã sao chép!"]
+];
+
+for (const [en, vi] of bodyTransformationTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}

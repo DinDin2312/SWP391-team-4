@@ -111,7 +111,15 @@ const LandingPage = () => {
   // Helper to provide realistic rich benefits if backend benefits list is empty
   const getPackagePerks = (pkg) => {
     if (Array.isArray(pkg.benefits) && pkg.benefits.length > 0) {
-      return pkg.benefits;
+      return pkg.benefits.map((b) => {
+        if (typeof b === 'string') return b;
+        if (b && typeof b === 'object') {
+          const name = b.subjectName || t('Bộ môn');
+          const quota = b.sessionLimit ? `${b.sessionLimit} ${t('buổi')}` : t('Không giới hạn');
+          return `${name}: ${quota}`;
+        }
+        return String(b || '');
+      });
     }
     const name = (pkg.packageName || '').toLowerCase();
     const type = pkg.packageType || '';
@@ -680,7 +688,7 @@ const LandingPage = () => {
                       {perks.slice(0, 4).map((benefit, bIdx) => (
                         <li key={bIdx} className="flex items-start gap-2.5 text-xs text-slate-300">
                           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                          <span>{t(benefit)}</span>
+                          <span>{typeof benefit === 'string' ? t(benefit) : String(benefit?.subjectName || benefit || '')}</span>
                         </li>
                       ))}
                     </ul>

@@ -67,3 +67,19 @@ test('VietQR payment and checkout strings translate correctly for EN and VI with
   assert.equal(t('Phiên thanh toán đang chờ xử lý'), 'Pending Checkout Session');
 });
 
+test('Body transformation visualizer strings translate correctly for EN and VI without inversion', () => {
+  setLanguage('vi');
+  assert.equal(t('Biểu Đồ Tiến Trình Thể Trạng & Điểm FPS'), 'Biểu Đồ Tiến Trình Thể Trạng & Điểm FPS');
+  assert.equal(t('Body Transformation Visualizer & FPS Score'), 'Biểu Đồ Tiến Trình Thể Trạng & Điểm FPS');
+  assert.equal(t('Body Progress (FPS)'), 'Biểu đồ thể trạng (FPS)');
+  assert.equal(t('View Chart'), 'Xem Biểu Đồ');
+  assert.equal(t('Progress'), 'Tiến độ');
+
+  setLanguage('en');
+  assert.equal(t('Biểu Đồ Tiến Trình Thể Trạng & Điểm FPS'), 'Body Transformation Visualizer & FPS Score');
+  assert.equal(t('Body Transformation Visualizer & FPS Score'), 'Body Transformation Visualizer & FPS Score');
+  assert.equal(t('Biểu đồ thể trạng (FPS)'), 'Body Progress (FPS)');
+  assert.equal(t('Xem Biểu Đồ'), 'View Chart');
+  assert.equal(t('Tiến độ'), 'Progress');
+});
+
