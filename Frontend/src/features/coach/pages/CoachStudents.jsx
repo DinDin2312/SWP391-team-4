@@ -30,6 +30,15 @@ const CoachStudents = () => {
     fetchCoachStudents();
   }, []);
 
+  useEffect(() => {
+    if (!selectedStudent) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setSelectedStudent(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedStudent]);
+
   const fetchCoachStudents = async () => {
     try {
       setLoading(true);
@@ -303,28 +312,36 @@ const CoachStudents = () => {
 
       {/* Trainee Detail Modal Popup */}
       {selectedStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--overlay)] backdrop-blur-md animate-fade-in">
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl w-full max-w-lg overflow-hidden shadow-[var(--shadow)] flex flex-col">
-            <div className="p-6 bg-gradient-to-r from-[var(--surface)] via-[var(--surface)] to-[var(--surface)] border-b border-[var(--border)] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-extrabold text-sm flex items-center justify-center">
+        <div
+          onClick={() => setSelectedStudent(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-sm animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl flex flex-col my-auto"
+          >
+            <div className="shrink-0 p-5 sm:p-6 bg-gradient-to-r from-[var(--surface)] via-[var(--surface)] to-[var(--surface)] border-b border-[var(--border)] flex items-center justify-between sticky top-0 z-10">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-12 h-12 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-extrabold text-sm flex items-center justify-center shrink-0">
                   {selectedStudent.fullName ? selectedStudent.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : t('TR')}
                 </div>
-                <div className="flex flex-col">
-                  <h3 className="text-lg font-bold text-[var(--text)]">{selectedStudent.fullName}</h3>
+                <div className="flex flex-col min-w-0">
+                  <h3 className="text-lg font-bold text-[var(--text)] truncate">{selectedStudent.fullName}</h3>
                   <span className="text-xs text-[var(--primary)] font-medium">{t("Official Nexus Center Trainee")}</span>
                 </div>
               </div>
 
               <button
+                type="button"
                 onClick={() => setSelectedStudent(null)}
-                className="w-8 h-8 rounded-lg bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] flex items-center justify-center transition-all"
+                aria-label={t("Đóng")}
+                className="w-9 h-9 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] flex items-center justify-center transition-all cursor-pointer shrink-0 ml-2"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs">
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 text-xs">
               <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-2">
                 <h5 className="font-bold text-[var(--text)] text-xs uppercase tracking-wider text-[var(--text-muted)]">{t("Contact Information")}</h5>
                 <div className="grid grid-cols-1 gap-2 pt-1 text-[var(--text)]">
@@ -464,7 +481,7 @@ const CoachStudents = () => {
               )}
             </div>
 
-            <div className="p-4 bg-[var(--surface)] border-t border-[var(--border)] flex flex-wrap justify-between items-center gap-2">
+            <div className="shrink-0 p-4 bg-[var(--surface)] border-t border-[var(--border)] flex flex-wrap justify-between items-center gap-2">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
