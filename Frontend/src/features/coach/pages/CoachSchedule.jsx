@@ -411,7 +411,7 @@ const CoachSchedule = () => {
                 {selectedDateSchedules.length}{' '}{t("Sessions")}</span>
             </div>
 
-            <div className="flex flex-col gap-4 max-h-[550px] overflow-y-auto scrollbar-none pr-1">
+            <div className="flex flex-col gap-3.5 max-h-[620px] overflow-y-auto pr-1.5 custom-scrollbar">
               {loading ? (
                 <div className="text-center py-10 text-[var(--text-muted)]">{t("Loading class schedules...")}</div>
               ) : selectedDateSchedules.length === 0 ? (
@@ -494,7 +494,7 @@ const CoachSchedule = () => {
 
                       {/* Expandable Quick View */}
                       {isExpanded && (
-                        <div className="mt-2 space-y-2 max-h-48 overflow-y-auto scrollbar-none pr-1">
+                        <div className="mt-2 space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
                           {(!s.enrolledStudents || s.enrolledStudents.length === 0) ? (
                             <p className="text-[11px] text-[var(--text-muted)] italic py-2 text-center">{t("No trainees registered for this session yet")}</p>
                           ) : (
@@ -598,7 +598,7 @@ const CoachSchedule = () => {
             </div>
 
             {/* Trainees List Body */}
-            <div className="p-6 overflow-y-auto scrollbar-none flex flex-col gap-3 flex-1">
+            <div className="p-6 overflow-y-auto custom-scrollbar flex flex-col gap-3 flex-1">
               {modalTrainees.length === 0 ? (
                 <div className="py-12 flex flex-col items-center justify-center text-center">
                   <Users className="w-12 h-12 text-[var(--text-muted)] mb-2" />
