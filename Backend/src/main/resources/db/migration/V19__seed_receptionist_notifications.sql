@@ -1,5 +1,7 @@
 -- V19: Seed Realistic Operational Notifications for Receptionist (user_id = 2)
 
+SET FOREIGN_KEY_CHECKS = 0;
+
 INSERT INTO `NOTIFICATIONS` (user_id, title, message, type, is_read, created_at)
 VALUES 
 (
@@ -42,3 +44,6 @@ VALUES
   1,
   DATE_SUB(NOW(), INTERVAL 1 DAY)
 );
+
+SET FOREIGN_KEY_CHECKS = 1;
+

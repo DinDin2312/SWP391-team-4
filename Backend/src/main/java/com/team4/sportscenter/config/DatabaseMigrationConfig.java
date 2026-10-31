@@ -30,7 +30,7 @@ public class DatabaseMigrationConfig {
             } catch (SQLException error) {
                 throw new IllegalStateException("Cannot inspect database before Flyway migration", error);
             }
-            flyway.repair(); flyway.migrate();
+            flyway.migrate();
         };
     }
 }

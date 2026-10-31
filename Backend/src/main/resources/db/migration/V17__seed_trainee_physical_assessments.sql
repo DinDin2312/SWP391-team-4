@@ -1,6 +1,8 @@
 -- V17: Seed realistic multi-milestone physical progress & InBody transformation assessment data
 -- Serves the Body Transformation Visualizer, Fitness Progress Score (FPS), and Coach Assessment History.
 
+SET FOREIGN_KEY_CHECKS = 0;
+
 INSERT INTO `TRAINEE_ASSESSMENTS` 
     (`coach_id`, `user_id`, `schedule_id`, `booking_id`, `plan_id`, `assessment_title`, `weight`, `height`, `body_fat_percentage`, `muscle_mass`, `performance_rating`, `attendance_rating`, `feedback_note`, `recommendation`, `created_at`)
 VALUES
@@ -170,3 +172,6 @@ VALUES
  'Chuyển biến thể chất xuất sắc! Vóc dáng cân đối, năng lượng dồi dào trong mọi buổi tập. Mỡ giảm -3.3%, cơ tăng +1.5kg!', 
  'Tiếp tục duy trì lối sống lành mạnh và thực đơn dinh dưỡng khoa học.', 
  '2026-10-25 09:00:00');
+
+SET FOREIGN_KEY_CHECKS = 1;
+

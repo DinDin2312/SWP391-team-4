@@ -3,6 +3,8 @@
 -- Covers all valuation types: HIGH_VALUE, STANDARD, PERISHABLE
 -- Covers all categories: ELECTRONICS, DOCUMENTS_WALLET, ACCESSORIES, CLOTHING_SHOES, PERISHABLE, OTHER
 
+SET FOREIGN_KEY_CHECKS = 0;
+
 INSERT IGNORE INTO `LOST_AND_FOUND_ITEMS` (
     `item_code`, `item_name`, `category`, `valuation_type`, `color`,
     `found_location`, `found_date`, `found_by_name`, `storage_location`,
@@ -329,3 +331,6 @@ INSERT IGNORE INTO `LOST_AND_FOUND_ITEMS` (
     '2026-08-20 09:30:00', 1, 'Quyên góp từ thiện (Hội chữ thập đỏ / Quỹ từ thiện)',
     'Món đồ lưu kho quá 35 ngày không có người liên hệ nhận lại. Đã bàn giao cho đại diện Hội Chữ Thập Đỏ TP. Hà Nội trong đợt quyên góp Áo Ấm Mùa Đông 2026.'
 );
+
+SET FOREIGN_KEY_CHECKS = 1;
+
