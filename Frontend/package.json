@@ -12,7 +12,7 @@
     "test:i18n": "node --test src/i18n/languageStore.test.js src/i18n/adminLanguage.test.js",
     "test:images": "node --test src/components/resource-images/resourceImages.test.js",
     "test:benefits": "node --test src/features/member/packageBookingOptions.test.js",
-    "test:member": "node --test src/features/member/memberUtils.test.js src/features/member/bodyTransformationUtils.test.js src/features/member/healthProfileUtils.test.js src/features/member/bodyTransformationRendering.test.js src/layouts/MemberLayoutRendering.test.js",
+    "test:member": "node --test src/features/member/memberUtils.test.js src/features/member/bodyTransformationUtils.test.js src/features/member/healthProfileUtils.test.js src/features/member/healthProfileRendering.test.js src/features/member/bodyTransformationRendering.test.js src/layouts/MemberLayoutRendering.test.js",
     "test:coach": "node --test src/features/coach/coachNotificationUtils.test.js src/features/coach/coachNotificationsRendering.test.js src/features/coach/coachWorkoutPlansRendering.test.js",
     "test:receptionist": "node --test src/features/receptionist/receptionistUtils.test.js src/features/receptionist/receptionistNotificationUtils.test.js src/features/receptionist/receptionistNotificationsRendering.test.js",
     "test:contracts": "node --test src/services/apiContracts.test.js",

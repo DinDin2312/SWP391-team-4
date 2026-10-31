@@ -1,6 +1,8 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import MemberTierAvatar from '../../../components/MemberTierAvatar';
+import HealthProfileSection from '../components/HealthProfileSection';
 import axiosClient from '../../../services/axiosClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -33,7 +35,8 @@ import {
   CalendarCheck,
   Gift,
   FileCheck2,
-  ChevronRight
+  ChevronRight,
+  HeartPulse
 } from 'lucide-react';
 
 const EmvChipSvg = ({ variant = 'gold' }) => {
@@ -177,7 +180,8 @@ const TIER_CONFIG = {
 
 const Settings = () => {
   useLanguage();
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'membership' | 'security' | 'notifications'
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'health' ? 'health' : 'profile');
   
   // Profile State
   const [profile, setProfile] = useState({
@@ -518,6 +522,7 @@ const Settings = () => {
 
   const SIDEBAR_TABS = [
     { id: 'profile', label: t('Personal Profile'), icon: User, tileColor: 'bg-[#0071E3]' },
+    { id: 'health', label: t('Health & Physiology'), icon: HeartPulse, tileColor: 'bg-teal-500' },
     { id: 'membership', label: t('Membership & QR Pass'), icon: Crown, tileColor: 'bg-gradient-to-tr from-amber-500 to-yellow-400' },
     { id: 'security', label: t('Security & Password'), icon: Lock, tileColor: 'bg-emerald-500' },
     { id: 'notifications', label: t('Notification Preferences'), icon: Bell, tileColor: 'bg-rose-500' }
@@ -898,6 +903,19 @@ const Settings = () => {
                     </p>
                   </div>
                 </div>
+              </motion.div>
+            )}
+
+            {/* TAB: HEALTH & PHYSIOLOGY */}
+            {activeTab === 'health' && (
+              <motion.div
+                key="tab-health"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <HealthProfileSection />
               </motion.div>
             )}
 
