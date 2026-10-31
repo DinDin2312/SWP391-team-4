@@ -3959,7 +3959,8 @@ const managerSettingsTranslations = [
   ["Immutable change tracking recording timestamped IP addresses, user actions, and security state modifications.", "Truy vết thay đổi bất biến ghi nhận mốc thời gian, địa chỉ IP, hành động người dùng và thay đổi bảo mật."],
   ["Read & Audit", "Đọc & Kiểm toán"],
   ["Refresh Profile", "Tải lại hồ sơ"],
-  ["requests", "phiếu yêu cầu"]
+  ["requests", "phiếu yêu cầu"],
+  ["Lost & Found", "Đồ thất lạc & Bỏ quên"]
 ];
 
 for (const [en, vi] of managerSettingsTranslations) {
