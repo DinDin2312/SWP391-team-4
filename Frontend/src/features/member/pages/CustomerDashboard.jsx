@@ -429,7 +429,7 @@ const CustomerDashboard = () => {
                   <button
                     type="button"
                     onClick={() => setTransformationModalOpen(true)}
-                    className="px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 dark:border-emerald-500/35 hover:bg-emerald-500/20 dark:hover:bg-emerald-500/25 hover:border-emerald-500/45 dark:hover:border-emerald-400/50 hover:text-emerald-800 dark:hover:text-emerald-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                   >
                     <TrendingUp className="w-3.5 h-3.5" />
                     <span>{t("Biểu đồ thể trạng (FPS)")}</span>
@@ -437,7 +437,7 @@ const CustomerDashboard = () => {
                   <button
                     type="button"
                     onClick={() => setSelfModalOpen(true)}
-                    className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25 dark:border-amber-500/35 hover:bg-amber-500/20 dark:hover:bg-amber-500/25 hover:border-amber-500/45 dark:hover:border-amber-400/50 hover:text-amber-800 dark:hover:text-amber-200 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                   >
                     <PlusCircle className="w-3.5 h-3.5" />
                     <span>{t("Update Metrics")}</span>
@@ -445,7 +445,7 @@ const CustomerDashboard = () => {
                   <button
                     type="button"
                     onClick={() => setAssessmentModalOpen(true)}
-                    className="px-3.5 py-1.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] hover:border-amber-500/40 hover:text-amber-500 text-xs font-semibold text-[var(--text)] transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] hover:border-amber-500/40 hover:text-amber-500 text-xs font-semibold text-[var(--text)] transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                   >
                     <Award className="w-3.5 h-3.5 text-amber-500" />
                     <span>{t("View All Assessments")}</span>
