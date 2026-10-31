@@ -294,27 +294,27 @@ const CoachStudents = () => {
                               setIsTransformationModalOpen(true);
                             }}
                             title={t("Xem biểu đồ tiến trình thể trạng & FPS")}
-                            className="px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 dark:hover:text-white text-emerald-800 dark:text-emerald-300 font-bold text-xs border border-emerald-300 dark:border-emerald-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs group"
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 dark:hover:text-white text-emerald-800 dark:text-emerald-300 font-bold text-xs border border-emerald-300 dark:border-emerald-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
                           >
-                            <TrendingUp className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 group-hover:text-white" />
+                            <TrendingUp className="w-3.5 h-3.5 shrink-0" />
                             <span>{t("Tiến độ")}</span>
                           </button>
 
                           <button
                             onClick={() => navigate('/coach/workouts')}
                             title={t("Giao bài tập")}
-                            className="px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white text-blue-800 dark:text-blue-300 font-bold text-xs border border-blue-300 dark:border-blue-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs group"
+                            className="px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white text-blue-800 dark:text-blue-300 font-bold text-xs border border-blue-300 dark:border-blue-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
                           >
-                            <Dumbbell className="w-3.5 h-3.5 text-blue-700 dark:text-blue-400 group-hover:text-white" />
+                            <Dumbbell className="w-3.5 h-3.5 shrink-0" />
                             <span>{t("Giao bài")}</span>
                           </button>
 
                           <button
                             onClick={() => handleOpenIndividualNotif(st)}
                             title={t("Gửi thông báo riêng")}
-                            className="px-2.5 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/60 hover:bg-purple-600 hover:text-white dark:hover:bg-purple-600 dark:hover:text-white text-purple-800 dark:text-purple-300 font-bold text-xs border border-purple-300 dark:border-purple-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs group"
+                            className="px-2.5 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/60 hover:bg-purple-600 hover:text-white dark:hover:bg-purple-600 dark:hover:text-white text-purple-800 dark:text-purple-300 font-bold text-xs border border-purple-300 dark:border-purple-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
                           >
-                            <Send className="w-3.5 h-3.5 text-purple-700 dark:text-purple-400 group-hover:text-white" />
+                            <Send className="w-3.5 h-3.5 shrink-0" />
                             <span>{t("Gửi tin")}</span>
                           </button>
 
