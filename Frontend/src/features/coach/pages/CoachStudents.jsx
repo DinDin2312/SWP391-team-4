@@ -279,8 +279,8 @@ const CoachStudents = () => {
 
                       {/* 4. Booked Sessions */}
                       <td className="px-4 py-3.5 text-center whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold text-xs shadow-xs">
-                          <Activity className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/60 font-bold text-xs shadow-xs">
+                          <Activity className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
                           <span>{st.totalBookings || 0} {t("sessions")}</span>
                         </span>
                       </td>
@@ -294,34 +294,34 @@ const CoachStudents = () => {
                               setIsTransformationModalOpen(true);
                             }}
                             title={t("Xem biểu đồ tiến trình thể trạng & FPS")}
-                            className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-600 text-emerald-600 dark:text-emerald-400 hover:text-white dark:hover:text-white border border-emerald-500/20 transition-all font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs group"
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 dark:hover:text-white text-emerald-800 dark:text-emerald-300 font-bold text-xs border border-emerald-300 dark:border-emerald-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs group"
                           >
-                            <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:text-white" />
+                            <TrendingUp className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 group-hover:text-white" />
                             <span>{t("Tiến độ")}</span>
                           </button>
 
                           <button
                             onClick={() => navigate('/coach/workouts')}
                             title={t("Giao bài tập")}
-                            className="px-2.5 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-600 text-blue-600 dark:text-blue-400 hover:text-white dark:hover:text-white border border-blue-500/20 transition-all font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs group"
+                            className="px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white text-blue-800 dark:text-blue-300 font-bold text-xs border border-blue-300 dark:border-blue-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs group"
                           >
-                            <Dumbbell className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 group-hover:text-white" />
+                            <Dumbbell className="w-3.5 h-3.5 text-blue-700 dark:text-blue-400 group-hover:text-white" />
                             <span>{t("Giao bài")}</span>
                           </button>
 
                           <button
                             onClick={() => handleOpenIndividualNotif(st)}
                             title={t("Gửi thông báo riêng")}
-                            className="px-2.5 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-600 text-purple-600 dark:text-purple-400 hover:text-white dark:hover:text-white border border-purple-500/20 transition-all font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs group"
+                            className="px-2.5 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/60 hover:bg-purple-600 hover:text-white dark:hover:bg-purple-600 dark:hover:text-white text-purple-800 dark:text-purple-300 font-bold text-xs border border-purple-300 dark:border-purple-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs group"
                           >
-                            <Send className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 group-hover:text-white" />
+                            <Send className="w-3.5 h-3.5 text-purple-700 dark:text-purple-400 group-hover:text-white" />
                             <span>{t("Gửi tin")}</span>
                           </button>
 
                           <button
                             onClick={() => setSelectedStudent(st)}
                             title={t("Xem hồ sơ chi tiết")}
-                            className="px-3 py-1.5 rounded-lg bg-[var(--surface-hover)] hover:bg-[var(--primary)] text-[var(--text)] hover:text-white border border-[var(--border)] transition-all font-bold text-xs flex items-center gap-1 cursor-pointer shadow-xs"
+                            className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[var(--primary)] hover:text-white text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-300 dark:border-slate-700 transition-all cursor-pointer shadow-xs"
                           >
                             <span>{t("Chi tiết")}</span>
                           </button>
