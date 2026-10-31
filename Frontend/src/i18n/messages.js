@@ -4543,6 +4543,8 @@ const memberHealthTranslations = [
   ["Unable to save health profile. Please try again.", "Không thể lưu hồ sơ sức khỏe. Vui lòng thử lại."],
   ["Error withdrawing data.", "Lỗi khi rút lại dữ liệu."],
   ["Not declared", "Chưa khai báo"],
+  ["lớp khác", "other classes"],
+  ["+{0} more classes", "+{0} lớp khác"],
   ["Stable health", "Sức khỏe ổn định"],
   ["Medical contraindication", "Chống chỉ định y tế"],
   ["Medical contraindication: ", "Chống chỉ định y tế: "],
