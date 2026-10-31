@@ -3,10 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
-  Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send, Dumbbell, Target, Trophy, Activity, TrendingUp
+  Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send, Dumbbell, Target, Trophy, Activity, TrendingUp, HeartPulse, AlertTriangle
 } from 'lucide-react';
 import SendNotificationModal from '../components/SendNotificationModal';
 import BodyTransformationModal from '../../member/components/BodyTransformationModal';
+import { healthBadge } from '../../member/healthProfileUtils';
 
 const CoachStudents = () => {
   const navigate = useNavigate();
@@ -187,7 +188,29 @@ const CoachStudents = () => {
                             {initials}
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-bold text-[var(--text)] text-sm group-hover:text-[var(--primary)] transition-colors">{st.fullName}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-[var(--text)] text-sm group-hover:text-[var(--primary)] transition-colors">{st.fullName}</span>
+                              {(() => {
+                                const hBadge = healthBadge(st.health);
+                                return (
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                      hBadge.variant === 'danger'
+                                        ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                                        : hBadge.variant === 'warning'
+                                        ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                                        : hBadge.variant === 'success'
+                                        ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                                        : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                                    }`}
+                                    title={hBadge.tooltip}
+                                  >
+                                    <HeartPulse className="w-2.5 h-2.5" />
+                                    <span>{hBadge.label}</span>
+                                  </span>
+                                );
+                              })()}
+                            </div>
                             <span className="text-[10px] text-[var(--text-muted)]">{t("Trainee ID: #")}{st.userId}</span>
                           </div>
                         </div>
@@ -356,7 +379,69 @@ const CoachStudents = () => {
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-2">
+                            {/* Health Profile & Medical Alert Section */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-teal-900/30 via-[var(--surface)] to-blue-900/20 border border-teal-500/30 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between border-b border-teal-500/20 pb-2">
+                  <div className="flex items-center gap-2">
+                    <HeartPulse className="w-4 h-4 text-teal-400" />
+                    <h5 className="font-bold text-teal-300 text-xs uppercase tracking-wider">{t("Hồ sơ Sức khỏe & Thể trạng")}</h5>
+                  </div>
+                  {selectedStudent.health && (
+                    <span className={`px-2.5 py-0.5 rounded-full font-semibold text-[11px] border flex items-center gap-1 ${
+                      selectedStudent.health.clearanceRecommended
+                        ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                        : selectedStudent.health.completed
+                        ? 'bg-teal-500/20 text-teal-300 border-teal-500/30'
+                        : 'bg-slate-500/20 text-slate-400 border-slate-500/30'
+                    }`}>
+                      {healthBadge(selectedStudent.health).label}
+                    </span>
+                  )}
+                </div>
+
+                {selectedStudent.health?.clearanceRecommended && (
+                  <div className="p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[11px] flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>{t("Cảnh báo: PAR-Q cờ đỏ — Cần tư vấn bác sĩ trước khi tập nặng.")}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <span className="text-[var(--text-muted)] block">{t("Giới tính:")}</span>
+                    <strong className="text-[var(--text)]">
+                      {selectedStudent.health?.gender === 'MALE' ? t('Nam') : selectedStudent.health?.gender === 'FEMALE' ? t('Nữ') : selectedStudent.health?.gender || t('Chưa khai báo')}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-muted)] block">{t("Độ tuổi:")}</span>
+                    <strong className="text-[var(--text)]">
+                      {selectedStudent.health?.age != null ? `${selectedStudent.health.age} tuổi` : t('Chưa khai báo')}
+                    </strong>
+                  </div>
+                </div>
+
+                {selectedStudent.health?.conditions && selectedStudent.health.conditions.length > 0 && (
+                  <div>
+                    <span className="text-[11px] text-[var(--text-muted)] block mb-1">{t("Tiền sử bệnh lý / Chấn thương:")}</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedStudent.health.conditions.map((cCode, cIdx) => (
+                        <span key={cIdx} className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-semibold border border-amber-500/30">
+                          {cCode}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedStudent.health?.notes && (
+                  <div className="p-2 rounded-lg bg-black/10 dark:bg-white/5 text-[11px] text-[var(--text-muted)] italic">
+                    "{selectedStudent.health.notes}"
+                  </div>
+                )}
+              </div>
+
+<div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-2">
                 <h5 className="font-bold text-[var(--text)] text-xs uppercase tracking-wider text-[var(--text-muted)]">{t("Enrolled Classes Taught By You")}</h5>
                 <div className="flex flex-wrap gap-2 pt-1">
                   {selectedStudent.enrolledClasses && selectedStudent.enrolledClasses.length > 0 ? (

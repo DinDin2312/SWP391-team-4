@@ -1,10 +1,11 @@
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { locale } from '../../../i18n/languageStore.js';
+import { exerciseConflicts } from '../../member/healthProfileUtils';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Dumbbell, Users, Plus, Trash2, Send, CheckCircle2, AlertCircle,
+  Dumbbell, Users, Plus, Trash2, Send, CheckCircle2, AlertCircle, AlertTriangle,
   Clock, Play, ShieldAlert, Sparkles, Filter, RefreshCw, X, ChevronRight,
   BookOpen, Layers, Calendar, Copy, Target, Check, ChevronDown, Award, TrendingUp,
   ChevronLeft, Eye, List
@@ -76,6 +77,7 @@ const CoachWorkoutPlans = () => {
   // Main Data States
   const [exercises, setExercises] = useState([]);
   const [students, setStudents] = useState([]);
+
   const [classes, setClasses] = useState([]);
   const [assignedPlans, setAssignedPlans] = useState([]);
 
@@ -122,6 +124,14 @@ const CoachWorkoutPlans = () => {
   const [tpWeeks, setTpWeeks] = useState({});
   const [tpSelectedDayKey, setTpSelectedDayKey] = useState('MONDAY');
   const [tpViewMode, setTpViewMode] = useState('FOCUS'); // 'FOCUS' (tập trung 1 ngày) | 'ALL' (xem tất cả ngày)
+
+  // Targeted student for health & contraindication checking
+  const targetedSingleStudent = targetType === 'INDIVIDUAL'
+    ? students.find(s => String(s.userId) === String(selectedStudentUserId))
+    : null;
+  const targetedTpStudent = tpTargetType === 'INDIVIDUAL'
+    ? students.find(s => String(s.userId) === String(tpStudentUserId))
+    : null;
 
   const fetchStudentsForClass = async (classId) => {
     if (!classId) return [];
@@ -1649,11 +1659,19 @@ const CoachWorkoutPlans = () => {
                                       className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] font-semibold"
                                     >
                                       <option value="">{t("-- Chọn bài tập --")}</option>
-                                      {exercises.map((eItem) => (
-                                        <option key={eItem.exerciseId} value={eItem.exerciseId}>
-                                          {eItem.exerciseName} [{t(eItem.muscleGroup || 'Chung')}]
-                                        </option>
-                                      ))}
+                                      {exercises.map((eItem) => {
+                                        const isConflict = targetedTpStudent?.health?.conditions
+                                          ? exerciseConflicts(targetedTpStudent.health.conditions, eItem.contraindications || []).length > 0
+                                          : false;
+                                        const contraTag = eItem.contraindications && eItem.contraindications.length > 0
+                                          ? ` [Tránh: ${eItem.contraindications.join(',')}]`
+                                          : '';
+                                        return (
+                                          <option key={eItem.exerciseId} value={eItem.exerciseId}>
+                                            {isConflict ? '⚠ ' : ''}{eItem.exerciseName} [{t(eItem.muscleGroup || 'Chung')}]{contraTag}
+                                          </option>
+                                        );
+                                      })}
                                     </select>
                                     {exInfo && exInfo.videoUrl && (
                                       <a
@@ -2308,12 +2326,31 @@ const CoachWorkoutPlans = () => {
                         className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] font-semibold"
                       >
                         <option value="">{t("-- Chọn bài tập từ thư viện --")}</option>
-                        {exercises.map((ex) => (
-                          <option key={ex.exerciseId} value={ex.exerciseId}>
-                            {ex.exerciseName} [{t(ex.muscleGroup || 'Chung')}]
-                          </option>
-                        ))}
+                        {exercises.map((ex) => {
+                          const isConflict = targetedSingleStudent?.health?.conditions
+                            ? exerciseConflicts(targetedSingleStudent.health.conditions, ex.contraindications || []).length > 0
+                            : false;
+                          const contraTag = ex.contraindications && ex.contraindications.length > 0
+                            ? ` [Tránh: ${ex.contraindications.join(',')}]`
+                            : '';
+                          return (
+                            <option key={ex.exerciseId} value={ex.exerciseId}>
+                              {isConflict ? '⚠ ' : ''}{ex.exerciseName} [{t(ex.muscleGroup || 'Chung')}]{contraTag}
+                            </option>
+                          );
+                        })}
                       </select>
+                      {(() => {
+                        const sConflicts = (targetedSingleStudent?.health?.conditions && currentExObj?.contraindications)
+                          ? exerciseConflicts(targetedSingleStudent.health.conditions, currentExObj.contraindications)
+                          : [];
+                        return sConflicts.length > 0 ? (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-500 text-[11px] font-semibold mt-1 animate-pulse">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                            <span>{t('Chống chỉ định y tế: ')}{sConflicts.join(', ')}</span>
+                          </div>
+                        ) : null;
+                      })()}
                       {currentExObj && currentExObj.videoUrl && (
                         <a href={currentExObj.videoUrl} target="_blank" rel="noreferrer" className="text-[10px] text-blue-400 hover:underline flex items-center gap-1 mt-0.5">
                           <Play className="w-3 h-3" /> {t("Xem video hướng dẫn mẫu")}
