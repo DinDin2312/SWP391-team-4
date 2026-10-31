@@ -7,11 +7,22 @@
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
 }
 
+/* 1. FPS Hero Banner - Light Mode (Default) */
 .fps-hero-banner {
-  background: linear-gradient(135deg, #090d16 0%, #0f172a 40%, #1e293b 100%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 50%, #f8fafc 100%);
+  border: 1px solid #bae6fd;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 14px -2px rgba(37, 99, 235, 0.08);
+}
+
+/* 1. FPS Hero Banner - Dark Mode */
+html.dark .fps-hero-banner,
+[data-theme='dark'] .fps-hero-banner,
+.dark .fps-hero-banner {
+  background: linear-gradient(135deg, #090d16 0%, #0f172a 40%, #1e293b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
 }
 
 .fps-hero-banner::after {
@@ -26,40 +37,87 @@
   pointer-events: none;
 }
 
+/* Score Number Gradient */
 .fps-score-number {
+  background: linear-gradient(135deg, #0284c7 0%, #4f46e5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+html.dark .fps-score-number,
+[data-theme='dark'] .fps-score-number,
+.dark .fps-score-number {
   background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
+/* Tier Badges - Light Mode */
 .transformation-badge-diamond {
-  background: rgba(6, 182, 212, 0.25);
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.6);
-  box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
   font-weight: 800;
+  box-shadow: 0 1px 3px rgba(3, 105, 161, 0.1);
 }
 
 .transformation-badge-gold {
-  background: rgba(245, 158, 11, 0.25);
-  color: #fde047;
-  border: 1px solid rgba(253, 224, 71, 0.6);
-  box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fcd34d;
   font-weight: 800;
+  box-shadow: 0 1px 3px rgba(180, 83, 9, 0.1);
 }
 
 .transformation-badge-silver {
-  background: rgba(148, 163, 184, 0.25);
-  color: #f8fafc;
-  border: 1px solid rgba(226, 232, 240, 0.6);
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
   font-weight: 800;
 }
 
 .transformation-badge-bronze {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgba(146, 64, 14, 0.1);
+}
+
+/* Tier Badges - Dark Mode */
+html.dark .transformation-badge-diamond,
+[data-theme='dark'] .transformation-badge-diamond,
+.dark .transformation-badge-diamond {
+  background: rgba(6, 182, 212, 0.25);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+}
+
+html.dark .transformation-badge-gold,
+[data-theme='dark'] .transformation-badge-gold,
+.dark .transformation-badge-gold {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fde047;
+  border: 1px solid rgba(253, 224, 71, 0.6);
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+}
+
+html.dark .transformation-badge-silver,
+[data-theme='dark'] .transformation-badge-silver,
+.dark .transformation-badge-silver {
+  background: rgba(148, 163, 184, 0.25);
+  color: #f8fafc;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  box-shadow: none;
+}
+
+html.dark .transformation-badge-bronze,
+[data-theme='dark'] .transformation-badge-bronze,
+.dark .transformation-badge-bronze {
   background: rgba(245, 158, 11, 0.25);
   color: #fbbf24;
   border: 1px solid rgba(251, 191, 36, 0.6);
-  font-weight: 800;
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
 }
 

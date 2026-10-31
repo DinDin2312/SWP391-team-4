@@ -186,16 +186,16 @@ const BodyTransformationModal = ({
           ) : (
             <>
               {/* 1. FPS HERO SCORE BANNER */}
-              <div className="fps-hero-banner rounded-2xl p-5 sm:p-6 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="fps-hero-banner rounded-2xl p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5 transition-colors">
                 <div className="flex items-center gap-5">
-                  <div className="relative w-24 h-24 rounded-2xl bg-slate-900/80 border border-sky-500/30 flex flex-col items-center justify-center p-2 shadow-inner shrink-0">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-sky-400">
+                  <div className="relative w-24 h-24 rounded-2xl bg-white/95 dark:bg-slate-900/80 border border-sky-200 dark:border-sky-500/30 flex flex-col items-center justify-center p-2 shadow-sm dark:shadow-inner shrink-0">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-sky-600 dark:text-sky-400">
                       FPS
                     </span>
                     <span className="fps-score-number text-3xl sm:text-4xl font-black">
                       {scoreResult.score}
                     </span>
-                    <span className="text-[9px] text-slate-400 font-semibold">
+                    <span className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold">
                       / 100 {t('điểm')}
                     </span>
                   </div>
@@ -206,14 +206,14 @@ const BodyTransformationModal = ({
                         <Award className="w-3.5 h-3.5" />
                         {t(scoreResult.tierName)}
                       </span>
-                      <span className="text-xs text-slate-400 font-medium">
+                      <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
                         {scoreResult.totalAssessments} {t('mốc đo đạc')}
                       </span>
                     </div>
-                    <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
                       {t('Chỉ Số Cải Thiện Thể Chất (Fitness Progress Score)')}
                     </h3>
-                    <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl">
                       {t(scoreResult.message)}
                     </p>
                   </div>
