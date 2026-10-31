@@ -237,33 +237,33 @@ const CoachStudents = () => {
                               setIsTransformationModalOpen(true);
                             }}
                             title={t("Xem biểu đồ tiến trình thể trạng & FPS")}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 font-semibold text-xs border border-emerald-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                            className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 dark:hover:text-white text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-300 dark:border-emerald-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs group"
                           >
-                            <TrendingUp className="w-3.5 h-3.5" />
+                            <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:text-white" />
                             <span>{t("Tiến độ")}</span>
                           </button>
 
                           <button
                             onClick={() => navigate('/coach/workouts')}
                             title={t("Giao bài tập")}
-                            className="px-3 py-1.5 rounded-lg bg-[var(--primary-soft)] hover:bg-[var(--primary)] hover:text-[color:var(--on-primary)] text-[var(--primary)] font-semibold text-xs border border-[var(--primary-soft)] flex items-center gap-1.5 transition-all cursor-pointer"
+                            className="px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white text-blue-700 dark:text-blue-300 font-bold text-xs border border-blue-300 dark:border-blue-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs group"
                           >
-                            <Dumbbell className="w-3.5 h-3.5" />
+                            <Dumbbell className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 group-hover:text-white" />
                             <span>{t("Giao bài")}</span>
                           </button>
 
                           <button
                             onClick={() => handleOpenIndividualNotif(st)}
                             title={t("Gửi thông báo riêng")}
-                            className="px-3 py-1.5 rounded-lg bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 hover:text-[var(--text)] font-semibold text-xs border border-blue-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                            className="px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/60 hover:bg-purple-600 hover:text-white dark:hover:bg-purple-600 dark:hover:text-white text-purple-700 dark:text-purple-300 font-bold text-xs border border-purple-300 dark:border-purple-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs group"
                           >
-                            <Send className="w-3.5 h-3.5 text-[var(--primary)]" />
+                            <Send className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 group-hover:text-white" />
                             <span>{t("Gửi tin")}</span>
                           </button>
 
                           <button
                             onClick={() => setSelectedStudent(st)}
-                            className="px-3.5 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text)] hover:text-[var(--text)] font-semibold text-xs border border-[var(--border)] transition-all cursor-pointer"
+                            className="px-3.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs border border-slate-300 dark:border-slate-700 transition-all cursor-pointer shadow-xs"
                           >
                             {t("Chi tiết")}
                           </button>
@@ -400,7 +400,7 @@ const CoachStudents = () => {
                     setSelectedStudent(null);
                     handleOpenIndividualNotif(current);
                   }}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-[var(--text)] font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
                   <span>{t("Gửi thông báo")}</span>

@@ -429,7 +429,7 @@ const CustomerDashboard = () => {
                   <button
                     type="button"
                     onClick={() => setTransformationModalOpen(true)}
-                    className="px-3.5 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <TrendingUp className="w-3.5 h-3.5" />
                     <span>{t("Biểu đồ thể trạng (FPS)")}</span>

@@ -4061,6 +4061,8 @@ const managerSettingsTranslations = [
   ["Preferences Updated", "Đã cập nhật tùy chọn"],
   ["Notification preferences saved successfully!", "Đã lưu tùy chọn nhận thông báo thành công!"],
   ["Configure how you receive session alerts, check-in updates, and evaluation notices.", "Cấu hình phương thức nhận cảnh báo buổi tập, cập nhật check-in và nhắc nhở đánh giá."],
+  ["Mốc đo đạc khởi đầu (Baseline). Biểu đồ xu hướng tăng/giảm đường kẻ sẽ tự động vẽ liên tục từ lần đo thứ 2 trở đi.", "Mốc đo đạc khởi đầu (Baseline). Biểu đồ xu hướng tăng/giảm đường kẻ sẽ tự động vẽ liên tục từ lần đo thứ 2 trở đi."],
+  ["Initial baseline assessment. Multi-point trend lines will automatically connect starting from your 2nd measurement.", "Mốc đo đạc khởi đầu (Baseline). Biểu đồ xu hướng tăng/giảm đường kẻ sẽ tự động vẽ liên tục từ lần đo thứ 2 trở đi."],
   // Receptionist Settings (Apple macOS Sequoia HIG)
   ["Front Desk Control", "Kiểm soát Quầy Lễ Tân"],
   ["Receptionist Settings", "Cài đặt Lễ tân"],

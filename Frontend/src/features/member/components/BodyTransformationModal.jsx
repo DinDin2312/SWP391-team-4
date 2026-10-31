@@ -602,10 +602,10 @@ const BodyTransformationModal = ({
                             <td className="px-3.5 py-3 font-bold text-[var(--text)]">
                               {a.weight ? `${a.weight} kg` : '--'}
                             </td>
-                            <td className="px-3.5 py-3 font-bold text-amber-500">
+                            <td className="px-3.5 py-3 font-bold text-amber-700 dark:text-amber-400">
                               {a.bodyFatPercentage ? `${a.bodyFatPercentage}%` : '--'}
                             </td>
-                            <td className="px-3.5 py-3 font-bold text-emerald-500">
+                            <td className="px-3.5 py-3 font-bold text-emerald-700 dark:text-emerald-400">
                               {a.muscleMass ? `${a.muscleMass} kg` : '--'}
                             </td>
                             <td className="px-3.5 py-3">
