@@ -98,8 +98,22 @@ export function filterNotifications(notifications, filter = 'ALL', preferences =
 
   if (filter === 'ALL') return allowed;
 
-  if (filter === 'BOOKING') {
+  if (filter === 'BOOKING' || filter === 'SCHEDULE') {
     return allowed.filter(n => n.type === 'BOOKING' || n.type === 'CLASS');
+  }
+
+  if (filter === 'TRAINEES') {
+    return allowed.filter(n => {
+      const text = `${n.title || ''} ${n.message || ''}`.toLowerCase();
+      return (
+        text.includes('học viên') ||
+        text.includes('trainee') ||
+        text.includes('tiến độ') ||
+        text.includes('đánh giá') ||
+        text.includes('workout') ||
+        text.includes('bài tập')
+      );
+    });
   }
 
   if (filter === 'SYSTEM') {
@@ -147,7 +161,6 @@ export function formatNotificationTime(dateString, locale = 'vi') {
   const year = d.getFullYear();
   const hours = String(d.getHours()).padStart(2, '0');
   const minutes = String(d.getMinutes()).padStart(2, '0');
-
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
@@ -174,4 +187,71 @@ export function getNotificationMeta(type) {
         iconType: 'shield'
       };
   }
+}
+
+export function getNotificationAction(item) {
+  if (!item) return null;
+  const type = (item.type || '').toUpperCase();
+  const text = `${item.title || ''} ${item.message || ''}`.toLowerCase();
+
+  // 1. Workout & Assessment (specific domain actions)
+  if (
+    text.includes('bài tập') ||
+    text.includes('workout') ||
+    text.includes('kế hoạch') ||
+    text.includes('plan') ||
+    text.includes('đánh giá') ||
+    text.includes('assessment') ||
+    text.includes('fps') ||
+    text.includes('thể trạng') ||
+    text.includes('progress')
+  ) {
+    return {
+      label: 'Manage Workout Plans',
+      path: '/coach/workouts',
+      iconType: 'workout'
+    };
+  }
+
+  // 2. Trainee check-in, attendance, assigned trainee
+  if (
+    text.includes('học viên') ||
+    text.includes('trainee') ||
+    text.includes('điểm danh') ||
+    text.includes('attendance') ||
+    text.includes('check-in') ||
+    text.includes('assigned')
+  ) {
+    return {
+      label: 'View Assigned Trainees',
+      path: '/coach/students',
+      iconType: 'trainee'
+    };
+  }
+
+  // 3. Class & Schedule
+  if (
+    type === 'BOOKING' ||
+    type === 'CLASS' ||
+    text.includes('lớp') ||
+    text.includes('class') ||
+    text.includes('lịch') ||
+    text.includes('schedule') ||
+    text.includes('booking') ||
+    text.includes('ca dạy') ||
+    text.includes('ca học')
+  ) {
+    return {
+      label: 'View Teaching Schedule',
+      path: '/coach/schedule',
+      iconType: 'schedule'
+    };
+  }
+
+  // 4. Default / Settings
+  return {
+    label: 'Notification Settings',
+    path: '/coach/settings',
+    iconType: 'settings'
+  };
 }

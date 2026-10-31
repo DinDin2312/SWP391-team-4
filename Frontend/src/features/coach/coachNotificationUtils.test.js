@@ -5,6 +5,7 @@ import {
   getUnreadCount,
   formatNotificationTime,
   getNotificationMeta,
+  getNotificationAction,
   isNotificationAllowedByPreferences,
   getSavedCoachPreferences
 } from './coachNotificationUtils.js';
@@ -73,28 +74,37 @@ test('filterNotifications: filters accurately by category and preferences', () =
     { id: 1, type: 'BOOKING', title: 'New trainee', isRead: false },
     { id: 2, type: 'SYSTEM', title: 'Profile updated', isRead: true },
     { id: 3, type: 'CLASS', title: 'Schedule moved', isRead: false },
-    { id: 4, type: 'PAYMENT', title: 'Payment info', isRead: false }
+    { id: 4, type: 'PAYMENT', title: 'Payment info', isRead: false },
+    { id: 5, type: 'SYSTEM', title: 'Đánh giá tiến độ học viên', isRead: false }
   ];
 
   assert.equal(filterNotifications(null, 'ALL').length, 0);
-  assert.equal(filterNotifications(notifs, 'ALL').length, 4);
+  assert.equal(filterNotifications(notifs, 'ALL').length, 5);
 
   const bookings = filterNotifications(notifs, 'BOOKING');
   assert.equal(bookings.length, 2);
   assert.equal(bookings[0].id, 1);
   assert.equal(bookings[1].id, 3);
 
+  const scheduleFilter = filterNotifications(notifs, 'SCHEDULE');
+  assert.equal(scheduleFilter.length, 2);
+
+  const trainees = filterNotifications(notifs, 'TRAINEES');
+  assert.equal(trainees.length, 2);
+  assert.equal(trainees[0].id, 1); // "New trainee"
+  assert.equal(trainees[1].id, 5); // "Đánh giá tiến độ học viên"
+
   const system = filterNotifications(notifs, 'SYSTEM');
-  assert.equal(system.length, 2);
+  assert.equal(system.length, 3);
   assert.equal(system[0].id, 2);
   assert.equal(system[1].id, 4);
 
   const unknown = filterNotifications(notifs, 'UNKNOWN_FILTER');
-  assert.equal(unknown.length, 4);
+  assert.equal(unknown.length, 5);
 
   // When scheduleReminders is false, bookings are filtered out completely
   const withoutBookings = filterNotifications(notifs, 'ALL', { scheduleReminders: false });
-  assert.equal(withoutBookings.length, 2);
+  assert.equal(withoutBookings.length, 3);
   assert.equal(withoutBookings.some(n => n.type === 'BOOKING' || n.type === 'CLASS'), false);
 });
 
@@ -158,4 +168,28 @@ test('getNotificationMeta: returns appropriate style descriptors', () => {
 
   const defaultMeta = getNotificationMeta(null);
   assert.equal(defaultMeta.badgeColor, 'slate');
+});
+
+test('getNotificationAction: returns contextual routes and action labels', () => {
+  assert.equal(getNotificationAction(null), null);
+
+  // Trainee & Attendance
+  const traineeAction = getNotificationAction({ title: 'Học viên Mai Tiến Dũng đăng ký lớp' });
+  assert.equal(traineeAction.path, '/coach/students');
+  assert.equal(traineeAction.iconType, 'trainee');
+
+  // Workout & Assessment
+  const workoutAction = getNotificationAction({ title: 'Kế hoạch bài tập mới cho học viên' });
+  assert.equal(workoutAction.path, '/coach/workouts');
+  assert.equal(workoutAction.iconType, 'workout');
+
+  // Class & Schedule
+  const classAction = getNotificationAction({ type: 'BOOKING', title: 'Lịch dạy lớp Yoga sáng' });
+  assert.equal(classAction.path, '/coach/schedule');
+  assert.equal(classAction.iconType, 'schedule');
+
+  // System & Settings fallback
+  const sysAction = getNotificationAction({ type: 'SYSTEM', title: 'Đổi mật khẩu thành công' });
+  assert.equal(sysAction.path, '/coach/settings');
+  assert.equal(sysAction.iconType, 'settings');
 });

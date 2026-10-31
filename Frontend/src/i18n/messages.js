@@ -3861,6 +3861,46 @@ const notificationRedesignTranslations = [
   [
     "Billing",
     "Thanh toán"
+  ],
+  [
+    "Coach Notification Center Digest",
+    "Tổng quan thông báo HLV"
+  ],
+  [
+    "Coach Notification Digest",
+    "Tổng quan thông báo HLV"
+  ],
+  [
+    "Unread Alerts",
+    "Thông báo chưa đọc"
+  ],
+  [
+    "View Assigned Trainees",
+    "Xem học viên phụ trách"
+  ],
+  [
+    "Manage Workout Plans",
+    "Quản lý bài tập"
+  ],
+  [
+    "Notification Settings",
+    "Cài đặt thông báo"
+  ],
+  [
+    "Trainees & Progress",
+    "Học viên & Tiến độ"
+  ],
+  [
+    "Only Unread",
+    "Chỉ chưa đọc"
+  ],
+  [
+    "Coach Alert Preferences",
+    "Cài đặt cảnh báo HLV"
+  ],
+  [
+    "Configure push alerts for attendance, assessments and schedule updates.",
+    "Cấu hình thông báo đẩy về điểm danh, đánh giá và cập nhật lịch dạy."
   ]
 ];
 
