@@ -30,7 +30,6 @@ const MemberLayout = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasAiAccess, setHasAiAccess] = useState(false);
   const [aiNoticeVisible, setAiNoticeVisible] = useState(false);
-  const [aiNoticeKey, setAiNoticeKey] = useState(0);
   const aiPopoverRef = useRef(null);
   const aiNoticeTimerRef = useRef(null);
 
@@ -39,12 +38,16 @@ const MemberLayout = () => {
       setIsChatOpen(prev => !prev);
       setAiNoticeVisible(false);
     } else {
-      setAiNoticeKey(Date.now());
-      setAiNoticeVisible(true);
-      if (aiNoticeTimerRef.current) clearTimeout(aiNoticeTimerRef.current);
-      aiNoticeTimerRef.current = setTimeout(() => {
-        setAiNoticeVisible(false);
-      }, 5000);
+      setAiNoticeVisible(prev => {
+        const next = !prev;
+        if (aiNoticeTimerRef.current) clearTimeout(aiNoticeTimerRef.current);
+        if (next) {
+          aiNoticeTimerRef.current = setTimeout(() => {
+            setAiNoticeVisible(false);
+          }, 5000);
+        }
+        return next;
+      });
     }
   };
 
@@ -305,7 +308,7 @@ const MemberLayout = () => {
           <nav className="role-breadcrumb" aria-label={t("Breadcrumb")}><span>{t("Member portal")}</span><span aria-hidden="true">/</span><strong>{t(getPageTitle())}</strong></nav>
 
           <div className="role-header-actions">
-            <div className="relative" ref={aiPopoverRef}>
+            <div className="relative inline-block shrink-0" ref={aiPopoverRef}>
               <button
                 type="button"
                 onClick={handleAskNexusAi}
@@ -315,27 +318,23 @@ const MemberLayout = () => {
                 <span>{t("Ask NEXUS AI")}</span>
               </button>
 
-              {/* Animated Popover Jumping Down Directly Under Button */}
+              {/* Animated Popover Jumping Down Directly Under Ask NEXUS AI Button */}
               <AnimatePresence>
                 {aiNoticeVisible && (
                   <motion.div
-                    key={aiNoticeKey}
-                    initial={{ opacity: 0, y: -14, scale: 0.9 }}
-                    animate={{
-                      opacity: 1,
-                      y: [-14, 4, -2, 0],
-                      scale: [0.9, 1.02, 0.99, 1]
-                    }}
-                    exit={{ opacity: 0, y: -10, scale: 0.92 }}
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
                     transition={{
-                      duration: 0.35,
-                      times: [0, 0.55, 0.8, 1],
-                      ease: "easeOut"
+                      type: "spring",
+                      stiffness: 450,
+                      damping: 26,
+                      mass: 0.8
                     }}
-                    className="absolute top-full mt-2.5 right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-blue-500/30 dark:border-blue-400/30 shadow-[0_16px_40px_rgba(0,113,227,0.18)] p-3.5 z-50 text-slate-800 dark:text-slate-100"
+                    className="absolute top-full mt-2.5 left-0 max-sm:left-auto max-sm:right-0 w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-blue-500/30 dark:border-blue-400/30 shadow-[0_16px_40px_rgba(0,113,227,0.18)] p-3.5 z-50 text-slate-800 dark:text-slate-100"
                   >
-                    {/* Beak / Triangle pointing up to the Ask NEXUS AI button */}
-                    <div className="absolute -top-1.5 right-12 sm:left-1/2 sm:-translate-x-1/2 w-3 h-3 bg-white dark:bg-slate-900 border-t border-l border-blue-500/30 dark:border-blue-400/30 rotate-45 z-10" />
+                    {/* Beak / Triangle pointing up into the Ask NEXUS AI button */}
+                    <div className="absolute -top-1.5 left-8 max-sm:left-auto max-sm:right-8 w-3 h-3 bg-white dark:bg-slate-900 border-t border-l border-blue-500/30 dark:border-blue-400/30 rotate-45 z-10" />
 
                     <div className="relative z-20">
                       <div className="flex items-start justify-between gap-2.5">
