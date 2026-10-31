@@ -168,11 +168,11 @@ const CoachStudents = () => {
             <table className="w-full text-left text-xs text-[var(--text)]">
               <thead className="bg-[var(--surface)] text-[var(--text-muted)] font-bold uppercase tracking-wider text-[10px] border-b border-[var(--border)]">
                 <tr>
-                  <th className="px-4 py-3.5 rounded-l-xl">{t("Trainee")}</th>
-                  <th className="px-4 py-3.5">{t("Contact Details")}</th>
-                  <th className="px-4 py-3.5">{t("Enrolled Classes")}</th>
-                  <th className="px-4 py-3.5 text-center">{t("Booked Sessions")}</th>
-                  <th className="px-4 py-3.5 text-right rounded-r-xl">{t("Actions")}</th>
+                  <th className="px-4 py-3.5 rounded-l-xl whitespace-nowrap">{t("Trainee")}</th>
+                  <th className="px-4 py-3.5 whitespace-nowrap">{t("Contact Details")}</th>
+                  <th className="px-4 py-3.5 whitespace-nowrap">{t("Enrolled Classes")}</th>
+                  <th className="px-4 py-3.5 text-center whitespace-nowrap">{t("Booked Sessions")}</th>
+                  <th className="px-4 py-3.5 text-right rounded-r-xl whitespace-nowrap">{t("Actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
@@ -224,12 +224,12 @@ const CoachStudents = () => {
                         </div>
                       </td>
 
-                      <td className="px-4 py-4 text-center">
-                        <span className="px-3 py-1 rounded-full bg-[var(--success-soft)] border border-[var(--success-soft)] text-[var(--success-text)] font-bold text-xs">
+                      <td className="px-4 py-4 text-center whitespace-nowrap">
+                        <span className="px-3 py-1 rounded-full bg-[var(--success-soft)] border border-[var(--success-soft)] text-[var(--success-text)] font-bold text-xs inline-flex items-center justify-center whitespace-nowrap">
                           {st.totalBookings || 0}{' '}{t("sessions")}</span>
                       </td>
 
-                      <td className="px-4 py-4 text-right">
+                      <td className="px-4 py-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => {
