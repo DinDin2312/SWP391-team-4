@@ -628,6 +628,7 @@ public class MemberServiceImpl implements MemberService {
                         .weightKg(d.getWeightKg())
                         .coachNote(d.getCoachNote())
                         .sortOrder(d.getSortOrder() != null ? d.getSortOrder() : 0)
+                        .contraindications(com.team4.sportscenter.modules.member.health.ExerciseSafetyRules.contraindicationCodesFor(d.getExercise() != null ? d.getExercise().getExerciseName() : "", d.getExercise() != null ? d.getExercise().getMuscleGroup() : ""))
                         .build()).collect(Collectors.toList())
                 : Collections.emptyList();
 
@@ -673,6 +674,7 @@ public class MemberServiceImpl implements MemberService {
                                     .weightKg(d.getWeightKg())
                                     .coachNote(d.getCoachNote())
                                     .sortOrder(d.getSortOrder() != null ? d.getSortOrder() : 0)
+                        .contraindications(com.team4.sportscenter.modules.member.health.ExerciseSafetyRules.contraindicationCodesFor(d.getExercise() != null ? d.getExercise().getExerciseName() : "", d.getExercise() != null ? d.getExercise().getMuscleGroup() : ""))
                                     .build())
                             .collect(Collectors.toList());
 

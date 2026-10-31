@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -25,4 +27,5 @@ public class MemberWorkoutExerciseResponse {
     private java.math.BigDecimal weightKg;
     private String coachNote;
     private Integer sortOrder;
+    private List<String> contraindications;
 }

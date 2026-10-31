@@ -32,6 +32,7 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
     private final com.team4.sportscenter.modules.auth.repositories.UserRepository userRepository;
     private final AiWorkoutPlanRepository aiWorkoutPlanRepository;
     private final CoachWorkoutPlanRepository coachWorkoutPlanRepository;
+    private final com.team4.sportscenter.modules.member.health.MemberHealthService memberHealthService;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     private final com.fasterxml.jackson.databind.ObjectMapper jsonMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
@@ -114,6 +115,7 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                         .checkedInAtFrontDesk(fd != null && fd.isCheckedIn())
                         .frontDeskCheckInTime(fd != null ? fd.getCheckInTime() : null)
                         .frontDeskCheckInType(fd != null ? fd.getCheckInType() : null)
+                        .health(memberHealthService.summaryFor(b.getUser()))
                         .build();
             }).collect(Collectors.toList());
 
@@ -172,6 +174,7 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                     .workoutGoal(workoutGoal)
                     .fitnessLevel(fitnessLevel)
                     .assignedPlans(assignedPlans)
+                    .health(memberHealthService.summaryFor(user))
                     .build());
         }
 
@@ -195,6 +198,7 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                     .checkedInAtFrontDesk(fd != null && fd.isCheckedIn())
                     .frontDeskCheckInTime(fd != null ? fd.getCheckInTime() : null)
                     .frontDeskCheckInType(fd != null ? fd.getCheckInType() : null)
+                    .health(memberHealthService.summaryFor(b.getUser()))
                     .build();
         }).collect(Collectors.toList());
     }

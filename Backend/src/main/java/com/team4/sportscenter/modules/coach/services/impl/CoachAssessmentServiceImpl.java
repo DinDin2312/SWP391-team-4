@@ -36,6 +36,7 @@ public class CoachAssessmentServiceImpl implements CoachAssessmentService {
     private final CoachWorkoutPlanRepository coachWorkoutPlanRepository;
     private final BookingRepository bookingRepository;
     private final NotificationRepository notificationRepository;
+    private final com.team4.sportscenter.modules.member.health.MemberHealthService memberHealthService;
 
     @Override
     @Transactional
@@ -157,6 +158,7 @@ public class CoachAssessmentServiceImpl implements CoachAssessmentService {
                 .phone(st.getPhone())
                 .bookingStatus("CONFIRMED")
                 .attendanceStatus("NOT_YET")
+                .health(memberHealthService.summaryFor(st))
                 .build()).collect(Collectors.toList());
     }
 

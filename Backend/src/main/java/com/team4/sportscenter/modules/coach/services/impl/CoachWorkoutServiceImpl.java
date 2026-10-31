@@ -278,6 +278,7 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
                 .exerciseName(exercise.getExerciseName())
                 .muscleGroup(exercise.getMuscleGroup())
                 .videoUrl(exercise.getVideoUrl())
+                .contraindications(com.team4.sportscenter.modules.member.health.ExerciseSafetyRules.contraindicationCodesFor(exercise.getExerciseName(), exercise.getMuscleGroup()))
                 .build();
     }
 

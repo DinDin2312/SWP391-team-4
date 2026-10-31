@@ -365,7 +365,7 @@ class SystemComprehensiveUnitTests {
         CoachWorkoutPlanRepository planRepo = mock(CoachWorkoutPlanRepository.class);
         BookingRepository bookingRepo = mock(BookingRepository.class);
         CoachAssessmentServiceImpl assessService = new CoachAssessmentServiceImpl(
-                assessRepo, userRepo, classRepo, schedRepo, planRepo, bookingRepo, notifRepo);
+                assessRepo, userRepo, classRepo, schedRepo, planRepo, bookingRepo, notifRepo, mock(com.team4.sportscenter.modules.member.health.MemberHealthService.class));
 
         assertThrows(RuntimeException.class, () -> assessService.createAssessment(null, "coach@gym.vn"));
         assertThrows(RuntimeException.class, () -> assessService.createAssessment(CreateTraineeAssessmentRequest.builder().build(), "coach@gym.vn"));

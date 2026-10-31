@@ -1,5 +1,6 @@
 package com.team4.sportscenter.modules.coach.dtos.response;
 
+import com.team4.sportscenter.modules.member.health.MemberHealthSummary;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,4 +23,5 @@ public class CoachStudentResponse {
     private String workoutGoal;
     private String fitnessLevel;
     private List<String> assignedPlans;
+    private MemberHealthSummary health;
 }

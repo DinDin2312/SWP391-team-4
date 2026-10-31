@@ -1,5 +1,6 @@
 package com.team4.sportscenter.modules.coach.dtos.response;
 
+import com.team4.sportscenter.modules.member.health.MemberHealthSummary;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,4 +21,5 @@ public class EnrolledStudentResponse {
     private Boolean checkedInAtFrontDesk;
     private java.time.LocalDateTime frontDeskCheckInTime;
     private String frontDeskCheckInType;
+    private MemberHealthSummary health;
 }
