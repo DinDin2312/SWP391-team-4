@@ -25,14 +25,10 @@ import {
   Bell,
   Volume2,
   Clock,
-  QrCode,
   Check,
   Copy,
   Laptop,
-  HelpCircle,
-  Activity,
   Layers,
-  Radio
 } from 'lucide-react';
 
 const ReceptionistSettingsView = () => {
