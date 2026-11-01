@@ -2,25 +2,28 @@ package com.team4.sportscenter.modules.coach.services.impl;
 
 import com.team4.sportscenter.modules.coach.dtos.response.*;
 import com.team4.sportscenter.modules.coach.services.*;
+import com.team4.sportscenter.modules.rag.dtos.AiChatResponse;
+import com.team4.sportscenter.modules.rag.dtos.RetrievedChunk;
+import com.team4.sportscenter.modules.rag.entities.Audience;
+import com.team4.sportscenter.modules.rag.gemini.GeminiClient;
+import com.team4.sportscenter.modules.rag.gemini.Turn;
+import com.team4.sportscenter.modules.rag.services.PromptAssembler;
+import com.team4.sportscenter.modules.rag.services.RetrievalService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
 public class CoachAiChatServiceImpl implements CoachAiChatService {
 
-    @Value("${gemini.api.key}")
-    private String apiKey;
+    private static final Logger log = LoggerFactory.getLogger(CoachAiChatServiceImpl.class);
 
     @Autowired
     private CoachWorkoutService coachWorkoutService;
@@ -34,28 +37,130 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
     @Autowired
     private CoachAssessmentService coachAssessmentService;
 
+    @Autowired
+    private GeminiClient geminiClient;
+    @Autowired
+    private RetrievalService retrievalService;
+
     @Override
     public String chat(String userMessage, String coachEmail) {
-        if (apiKey == null || apiKey.trim().isEmpty() || apiKey.equals("YOUR_GEMINI_API_KEY_HERE")) {
-            return "Sorry, the Google Gemini API Key is not configured. Please add the Key to application.properties!";
+        return chat(userMessage, Collections.emptyList(), coachEmail);
+    }
+
+    @Override
+    public AiChatResponse chatDetailed(String userMessage, List<Turn> history, String coachEmail) {
+        if (!geminiClient.isConfigured()) {
+            return new AiChatResponse("Sorry, the Google Gemini API Key is not configured. Please add the Key to application.properties!", Collections.emptyList());
         }
 
         if (userMessage == null || userMessage.trim().isEmpty()) {
-            return "Xin chào Coach! Mình là NEXUS COACH AI - trợ lý chuyên môn của bạn. Bạn muốn mình hỗ trợ soạn giáo án, giao bài tập cho học viên/lớp, hay phân tích thể trạng học viên nào hôm nay? 🏋️‍♂️";
+            return new AiChatResponse("Xin chào Coach! Mình là NEXUS COACH AI - trợ lý chuyên môn của bạn. Bạn muốn mình hỗ trợ soạn giáo án, giao bài tập cho học viên/lớp, hay phân tích thể trạng học viên nào hôm nay? 🏋️‍♂️", Collections.emptyList());
         }
 
-        // ==================== 1. FETCH DATA FOR RAG ====================
-        
-        // 1.1 Thư viện bài tập trong hệ thống
-        List<ExerciseResponse> exercises = coachWorkoutService.getAllExercises();
-        String exercisesListString = exercises.stream()
-            .map(e -> {
-                String avoid = (e.getContraindications() != null && !e.getContraindications().isEmpty())
-                    ? " {avoid: " + String.join(",", e.getContraindications()) + "}"
-                    : "";
-                return "[" + e.getExerciseId() + "] " + e.getExerciseName() + " (" + e.getMuscleGroup() + ")" + avoid;
-            })
-            .collect(Collectors.joining(", "));
+        CoachPromptContext ctx = buildCoachPromptContext(userMessage, coachEmail);
+
+        long geminiStart = System.currentTimeMillis();
+        List<Turn> sanitizedHistory = sanitizeHistory(history);
+        Optional<String> answer = geminiClient.generate(sanitizedHistory, ctx.systemPrompt() + userMessage, 3000);
+        long geminiMs = System.currentTimeMillis() - geminiStart;
+
+        log.info("CoachAiChat timing: geminiMs={}, success={}", geminiMs, answer.isPresent());
+
+        List<AiChatResponse.SourceCitation> citations = new ArrayList<>();
+        for (int i = 0; i < ctx.knowledgeChunks().size(); i++) {
+            RetrievedChunk c = ctx.knowledgeChunks().get(i);
+            citations.add(new AiChatResponse.SourceCitation(i + 1, c.documentTitle(), c.category()));
+        }
+
+        String finalText = answer.orElse("Xin lỗi Coach, hệ thống AI hiện đang bận do lượng truy cập cao. Vui lòng thử lại sau giây lát! 💪");
+        return new AiChatResponse(finalText, citations);
+    }
+
+    @Override
+    public SseEmitter chatStream(String userMessage, List<Turn> history, String coachEmail) {
+        SseEmitter emitter = new SseEmitter(120_000L);
+        if (!geminiClient.isConfigured()) {
+            try {
+                emitter.send(SseEmitter.event().name("delta").data("Sorry, the Google Gemini API Key is not configured. Please add the Key to application.properties!"));
+                emitter.send(SseEmitter.event().name("done").data(Map.of("sources", Collections.emptyList())));
+                emitter.complete();
+            } catch (Exception ignored) {}
+            return emitter;
+        }
+
+        if (userMessage == null || userMessage.trim().isEmpty()) {
+            try {
+                emitter.send(SseEmitter.event().name("delta").data("Xin chào Coach! Mình là NEXUS COACH AI - trợ lý chuyên môn của bạn. Bạn muốn mình hỗ trợ soạn giáo án, giao bài tập cho học viên/lớp, hay phân tích thể trạng học viên nào hôm nay? 🏋️‍♂️"));
+                emitter.send(SseEmitter.event().name("done").data(Map.of("sources", Collections.emptyList())));
+                emitter.complete();
+            } catch (Exception ignored) {}
+            return emitter;
+        }
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                CoachPromptContext ctx = buildCoachPromptContext(userMessage, coachEmail);
+                List<Turn> sanitizedHistory = sanitizeHistory(history);
+                List<AiChatResponse.SourceCitation> citations = new ArrayList<>();
+                for (int i = 0; i < ctx.knowledgeChunks().size(); i++) {
+                    RetrievedChunk c = ctx.knowledgeChunks().get(i);
+                    citations.add(new AiChatResponse.SourceCitation(i + 1, c.documentTitle(), c.category()));
+                }
+
+                Optional<String> fullText = geminiClient.stream(
+                        sanitizedHistory,
+                        ctx.systemPrompt() + userMessage,
+                        3000,
+                        delta -> {
+                            try {
+                                emitter.send(SseEmitter.event().name("delta").data(delta));
+                            } catch (Exception e) {
+                                log.warn("Failed to send SSE delta to coach: {}", e.getMessage());
+                            }
+                        }
+                );
+
+                if (fullText.isPresent()) {
+                    emitter.send(SseEmitter.event().name("done").data(Map.of("sources", citations, "fullText", fullText.get())));
+                    emitter.complete();
+                } else {
+                    emitter.send(SseEmitter.event().name("delta").data("Xin lỗi Coach, hệ thống AI hiện đang bận do lượng truy cập cao. Vui lòng thử lại sau giây lát! 💪"));
+                    emitter.send(SseEmitter.event().name("done").data(Map.of("sources", Collections.emptyList())));
+                    emitter.complete();
+                }
+            } catch (Exception e) {
+                log.error("Error during Coach AI chat streaming: {}", e.getMessage(), e);
+                try {
+                    emitter.send(SseEmitter.event().name("error").data(e.getMessage()));
+                    emitter.completeWithError(e);
+                } catch (Exception ignored) {}
+            }
+        });
+
+        return emitter;
+    }
+
+    private record CoachPromptContext(String systemPrompt, List<RetrievedChunk> knowledgeChunks) {}
+
+    private CoachPromptContext buildCoachPromptContext(String userMessage, String coachEmail) {
+        long contextStart = System.currentTimeMillis();
+
+        // 1.1 Thư viện bài tập trong hệ thống (chỉ nạp đầy đủ khi Coach đề cập đến bài tập/giáo án)
+        boolean needsExerciseList = userMessage != null && userMessage.matches("(?i).*(giáo án|bài tập|giao bài|plan|workout|tập|exercise|buổi tập).*");
+        String exercisesListString;
+        if (needsExerciseList) {
+            List<ExerciseResponse> exercises = coachWorkoutService.getAllExercises();
+            exercisesListString = exercises.stream()
+                .map(e -> {
+                    String avoid = (e.getContraindications() != null && !e.getContraindications().isEmpty())
+                        ? " {avoid: " + String.join(",", e.getContraindications()) + "}"
+                        : "";
+                    return "[" + e.getExerciseId() + "] " + e.getExerciseName() + " (" + e.getMuscleGroup() + ")" + avoid;
+                })
+                .collect(Collectors.joining(", "));
+        } else {
+            exercisesListString = "(Hơn 20 bài tập compound & isolate có sẵn trong hệ thống. Chỉ tải chi tiết khi Coach yêu cầu soạn bài tập/giáo án).";
+        }
 
         // 1.2 Danh sách lớp học Coach đang phụ trách
         List<CoachClassResponse> classes = coachNotificationService.getCoachClasses(coachEmail);
@@ -117,8 +222,14 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
             }
         }
 
-        // ==================== 2. PROMPT ENGINEERING ====================
+        List<RetrievedChunk> knowledgeChunks = retrievalService.retrieve(userMessage, Audience.COACH);
+        String knowledgeBlock = PromptAssembler.knowledgeBlock(knowledgeChunks);
+
+        long contextMs = System.currentTimeMillis() - contextStart;
+        log.info("CoachAiChat context timing: {}ms", contextMs);
+
         String systemPrompt = "You are NEXUS COACH AI, an elite Master Strength & Conditioning Specialist, Exercise Physiologist, and Senior Training Assistant exclusively for Coaches at NEXUS Sports Lab.\n" +
+                knowledgeBlock +
                 "Your tone is professional, collegial, energetic, and scientifically sound. Always respond in the exact same language the coach uses (Vietnamese or English).\n\n" +
                 "=== CORE MISSION ===\n" +
                 "Assist the coach in designing highly effective, personalized, and safe workout routines or multi-week training plans for their trainees or classes.\n\n" +
@@ -156,57 +267,24 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
                 "- Always provide a clear, concise, supportive explanation in your conversational text before the action tag.\n\n" +
                 "Coach's message: ";
 
-        // ==================== 3. CALL GEMINI API ====================
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(5000);
-        factory.setReadTimeout(15000);
-        RestTemplate restTemplate = new RestTemplate(factory);
+        return new CoachPromptContext(systemPrompt, knowledgeChunks);
+    }
 
-        Map<String, Object> requestBody = new HashMap<>();
-        Map<String, Object> part = new HashMap<>();
-        part.put("text", systemPrompt + userMessage);
-
-        Map<String, Object> content = new HashMap<>();
-        content.put("parts", List.of(part));
-
-        requestBody.put("contents", List.of(content));
-
-        Map<String, Object> generationConfig = new HashMap<>();
-        generationConfig.put("maxOutputTokens", 3000);
-        generationConfig.put("temperature", 0.7);
-        Map<String, Object> thinkingConfig = new HashMap<>();
-        thinkingConfig.put("thinkingBudget", 0);
-        generationConfig.put("thinkingConfig", thinkingConfig);
-        requestBody.put("generationConfig", generationConfig);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-        String[] models = {"gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"};
-
-        for (String model : models) {
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
-            try {
-                ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-                Map<String, Object> responseBody = response.getBody();
-                if (responseBody != null && responseBody.containsKey("candidates")) {
-                    List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
-                    if (!candidates.isEmpty()) {
-                        Map<String, Object> firstCandidate = candidates.get(0);
-                        Map<String, Object> contentMap = (Map<String, Object>) firstCandidate.get("content");
-                        List<Map<String, Object>> parts = (List<Map<String, Object>>) contentMap.get("parts");
-                        if (!parts.isEmpty()) {
-                            return (String) parts.get(0).get("text");
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                // Ignore and try next model
+    private List<Turn> sanitizeHistory(List<Turn> raw) {
+        if (raw == null || raw.isEmpty()) return Collections.emptyList();
+        List<Turn> valid = new ArrayList<>();
+        for (Turn turn : raw) {
+            if (turn == null || turn.text() == null || turn.text().trim().isEmpty()) continue;
+            String role = "user".equalsIgnoreCase(turn.role()) ? "user" : "model";
+            String text = turn.text().trim();
+            if (text.length() > 500) {
+                text = text.substring(0, 500);
             }
+            valid.add(new Turn(role, text));
         }
-
-        return "Xin lỗi Coach, hệ thống AI hiện đang bận do lượng truy cập cao. Vui lòng thử lại sau giây lát! 💪";
+        if (valid.size() > 6) {
+            valid = valid.subList(valid.size() - 6, valid.size());
+        }
+        return valid;
     }
 }

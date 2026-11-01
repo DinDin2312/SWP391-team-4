@@ -287,7 +287,7 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional
     public void bookClassUsingPackage(String email, Integer classId, Integer membershipId) {
-        bookCourse(email, classId, membershipId);
+        throw new IllegalArgumentException("Membership packages cannot be used to book courses. Courses are enrolled and paid separately.");
     }
 
     private void bookCourse(String email, Integer classId, Integer membershipId) {

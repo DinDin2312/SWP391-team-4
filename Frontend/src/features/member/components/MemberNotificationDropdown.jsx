@@ -19,6 +19,7 @@ export default function MemberNotificationDropdown({ isOpen, onClose, onUnreadCh
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actionBusyId, setActionBusyId] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
   const dropdownRef = useRef(null);
 
   const fetchData = async () => {
@@ -93,7 +94,8 @@ export default function MemberNotificationDropdown({ isOpen, onClose, onUnreadCh
       // Refresh to update state
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.message || err.message || t('Action failed.'));
+      setErrorMessage(err.response?.data?.message || err.message || t('Action failed.'));
+      setTimeout(() => setErrorMessage(''), 4500);
     } finally {
       setActionBusyId(null);
     }
@@ -149,17 +151,25 @@ export default function MemberNotificationDropdown({ isOpen, onClose, onUnreadCh
         </div>
       </div>
 
+      {/* Error alert if any */}
+      {errorMessage && (
+        <div className="p-2.5 bg-rose-500/10 border-b border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-1.5">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       <div className="overflow-y-auto divide-y divide-[var(--border)] flex-1">
-        {/* RESCHEDULE ACTION CARDS */}
-        {reschedules.length > 0 && (
+        {/* RESCHEDULE ACTION CARDS (Chỉ hiện khi có ca chờ phản hồi) */}
+        {pendingReschedules.length > 0 && (
           <div className="p-3 bg-amber-500/5 space-y-2.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
               <Clock className="w-3 h-3" />
               <span>{t('Make-up Session Requests')}</span>
             </p>
 
-            {reschedules.map((req) => {
-              const isPending = req.responseStatus === 'PENDING' && !req.isExpired;
+            {pendingReschedules.map((req) => {
+              const isPending = true;
               const isBusy = actionBusyId === req.requestId;
 
               return (
@@ -173,7 +183,7 @@ export default function MemberNotificationDropdown({ isOpen, onClose, onUnreadCh
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">
                         {t('Confirmed')}
                       </span>
-                    ) : req.responseStatus === 'DECLINED' ? (
+                    ) : (req.responseStatus === 'DECLINED' || req.responseStatus === 'DECLINED_REFUNDED') ? (
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-600 border border-blue-500/30">
                         {t('Refunded')}
                       </span>
@@ -232,10 +242,10 @@ export default function MemberNotificationDropdown({ isOpen, onClose, onUnreadCh
                   )}
 
                   {/* Voucher code display if refunded */}
-                  {req.creditVoucherCode && (
+                  {(req.creditVoucherCode || req.creditCode) && (
                     <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-600 font-semibold flex items-center justify-between">
-                      <span>{t('Credit Voucher')}: <strong>{req.creditVoucherCode}</strong></span>
-                      <span>+100%</span>
+                      <span>{t('Credit Voucher')}: <strong>{req.creditVoucherCode || req.creditCode}</strong></span>
+                      <span>{req.creditAmount ? `+${Number(req.creditAmount).toLocaleString('vi-VN')}đ (1 buổi)` : '+100% 1 buổi'}</span>
                     </div>
                   )}
                 </div>

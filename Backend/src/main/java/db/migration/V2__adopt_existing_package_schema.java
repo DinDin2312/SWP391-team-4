@@ -67,7 +67,7 @@ public class V2__adopt_existing_package_schema extends BaseJavaMigration {
             }
         }
         String[][] types = {{"GYM_ACCESS","Gym access","0"},{"AI_ACCESS","AI access","0"},
-            {"PREMIUM","Premium","0"},{"COMBO","Combo (Gym + AI)","0"},{"SUBJECT_ACCESS","Subject package","1"}};
+            {"PREMIUM","Premium","0"},{"COMBO","Combo (Gym + AI)","0"}};
         for (var type : types) {
             try (var statement = connection.prepareStatement("INSERT INTO PACKAGE_TYPES(type_code,type_name,requires_subjects) SELECT ?,?,? WHERE NOT EXISTS (SELECT 1 FROM PACKAGE_TYPES WHERE type_code=? OR type_name=?)")) {
                 statement.setString(1,type[0]); statement.setString(2,type[1]); statement.setBoolean(3,type[2].equals("1"));

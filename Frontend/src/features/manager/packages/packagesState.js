@@ -31,8 +31,6 @@ export function searchText(value) {
   return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().trim();
 }
 
-// Interim: the API returns the entire array. Client paging reduces DOM work only,
-// not the response size or database work; server filtering/paging remains needed.
 export function selectPackages(records, state, language = 'en') {
   const keyword = searchText(state.search);
   const matchingSearch = records.filter(row => searchText(row.packageName).includes(keyword)&&(!state.selling||(row.sellingStatus||'SELLING')===state.selling));
@@ -52,27 +50,28 @@ export function selectPackages(records, state, language = 'en') {
 }
 
 export function packageForm(item = {}) {
-  return { description:item.description||'',terms:item.terms||'',purchaseLimitPerMember:String(item.purchaseLimitPerMember??''),packageName: item.packageName || '', packageType: item.packageType || 'GYM_ACCESS',
-    durationDays: String(item.durationDays ?? ''), price: String(item.price ?? ''),
-    benefits: (item.benefits || []).map(row=>({subjectId:Number(row.subjectId),subjectName:row.subjectName,sessionLimit:String(row.sessionLimit),roomIds:[...(row.roomIds||[])]})) };
+  return {
+    description: item.description || '',
+    terms: item.terms || '',
+    purchaseLimitPerMember: String(item.purchaseLimitPerMember ?? ''),
+    packageName: item.packageName || '',
+    packageType: item.packageType || 'GYM_ACCESS',
+    durationDays: String(item.durationDays ?? ''),
+    price: String(item.price ?? ''),
+    benefits: [],
+  };
 }
 
 export function validatePackage(form,types=null) {
-  // Mirrors PackageRequest: NotBlank/Size(255), enum Pattern, Integer/Min(1),
-  // DecimalMin(0), Digits(integer=8,fraction=2). No duplicate-name assumption.
   const errors = {};
   if((form.description||'').length>1000)errors.description='Description must be at most 1,000 characters.';
   if((form.terms||'').length>10000)errors.terms='Terms must be at most 10,000 characters.';
   if(form.purchaseLimitPerMember&&!/^[1-9]\d*$/.test(form.purchaseLimitPerMember)||Number(form.purchaseLimitPerMember)>2147483647)errors.purchaseLimitPerMember='Enter a positive whole number or leave blank for unlimited.';
-  if(types?.find(type=>type.typeCode===form.packageType)?.requiresSubjects && !form.benefits?.length) errors.benefits='Select at least one subject for a subject package.';
-  const benefits=form.benefits||[];
-  if(benefits.length>100 || new Set(benefits.map(row=>row.subjectId)).size!==benefits.length || benefits.some(row=>!Number.isInteger(Number(row.subjectId)) || Number(row.subjectId)<1 || !/^\d+$/.test(String(row.sessionLimit)) || Number(row.sessionLimit)<1 || Number(row.sessionLimit)>10000)) errors.benefits='Each subject needs a unique selection and 1 to 10,000 sessions.';
   if (!form.packageName.trim()) errors.packageName = 'Package name is required.';
   else if (form.packageName.length > 255) errors.packageName = 'Package name must be at most 255 characters.';
-  if(!form.packageType || form.packageType.length>100 || (types && !types.some(type=>type.typeCode===form.packageType))) errors.packageType='Select a valid package type.';
+  if(!form.packageType || form.packageType.length>100 || form.packageType === 'SUBJECT_ACCESS' || (types && !types.some(type=>type.typeCode===form.packageType))) errors.packageType='Select a valid package type.';
   if (!/^\d+$/.test(form.durationDays) || Number(form.durationDays) < 1 || Number(form.durationDays) > 2147483647) errors.durationDays = 'Enter a whole number of days from 1 to 2,147,483,647.';
   if (!/^\d+(?:\.\d{1,2})?$/.test(form.price) || form.price.split('.')[0].replace(/^0+/, '').length > 8) errors.price = 'Enter a price from 0 to 99,999,999.99 with up to two decimal places.';
-  if(benefits.some(row=>row.roomIds?.length>100 || new Set(row.roomIds||[]).size!==(row.roomIds||[]).length)) errors.benefits='Select at most 100 unique locations per subject.';
   return errors;
 }
 

@@ -54,4 +54,12 @@ public class RescheduleRequestResponseDto {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    public Integer getAcceptedMembersCount() {
+        return acceptedCount != null ? acceptedCount : 0;
+    }
+
+    public Integer getMinAttendeesRequired() {
+        return minAttendees != null ? minAttendees : 1;
+    }
 }

@@ -265,8 +265,7 @@ CREATE TABLE PACKAGE_TYPES (
 );
 INSERT INTO PACKAGE_TYPES VALUES
  ('GYM_ACCESS','Gym access',FALSE),('AI_ACCESS','AI access',FALSE),
- ('PREMIUM','Premium',FALSE),('COMBO','Combo (Gym + AI)',FALSE),
- ('SUBJECT_ACCESS','Subject package',TRUE);
+ ('PREMIUM','Premium',FALSE),('COMBO','Combo (Gym + AI)',FALSE);
 INSERT IGNORE INTO PACKAGE_TYPES(type_code,type_name,requires_subjects)
  SELECT DISTINCT package_type,package_type,FALSE FROM PACKAGES WHERE package_type IS NOT NULL;
 ALTER TABLE USER_MEMBERSHIPS ADD COLUMN type_name_snapshot varchar(255);
@@ -432,4 +431,28 @@ CREATE TABLE IF NOT EXISTS `MEMBER_HEALTH_PROFILES` (
     `consent_at` DATETIME NOT NULL,
     `updated_at` DATETIME NOT NULL,
     CONSTRAINT `fk_health_user` FOREIGN KEY (`user_id`) REFERENCES `USERS`(`user_id`) ON DELETE CASCADE
+);
+
+-- ================== 8. TRI THỨC RAG & VECTOR EMBEDDING (KNOWLEDGE DOCUMENTS & CHUNKS) ==================
+CREATE TABLE IF NOT EXISTS `KNOWLEDGE_DOCUMENTS` (
+    `document_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `source_key` VARCHAR(150) NOT NULL UNIQUE,
+    `title` VARCHAR(255) NOT NULL,
+    `category` VARCHAR(40) NOT NULL,
+    `audience` ENUM('MEMBER', 'COACH', 'ALL') NOT NULL,
+    `content_hash` CHAR(64) NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY `idx_kd_audience` (`audience`),
+    KEY `idx_kd_category` (`category`)
+);
+
+CREATE TABLE IF NOT EXISTS `DOCUMENT_CHUNKS` (
+    `chunk_id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `document_id` INT NOT NULL,
+    `chunk_index` INT NOT NULL,
+    `content_text` TEXT NOT NULL,
+    `embedding` JSON NOT NULL,
+    KEY `idx_dc_document_id` (`document_id`),
+    CONSTRAINT `fk_dc_document` FOREIGN KEY (`document_id`) REFERENCES `KNOWLEDGE_DOCUMENTS` (`document_id`) ON DELETE CASCADE
 );

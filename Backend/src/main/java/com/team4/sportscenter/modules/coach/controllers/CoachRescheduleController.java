@@ -10,7 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/coach/reschedule-requests")
@@ -37,6 +39,19 @@ public class CoachRescheduleController {
     public ResponseEntity<List<UpcomingScheduleOptionDto>> getUpcomingSchedules(Authentication authentication) {
         String email = authentication.getName();
         return ResponseEntity.ok(scheduleRescheduleService.getCoachUpcomingSchedules(email));
+    }
+
+    @GetMapping("/check-availability")
+    public ResponseEntity<Map<String, Object>> checkAvailability(
+            @RequestParam Integer scheduleId,
+            @RequestParam String proposedStartTime,
+            @RequestParam String proposedEndTime,
+            @RequestParam(required = false) Integer proposedRoomId,
+            Authentication authentication) {
+        String email = authentication.getName();
+        LocalDateTime start = LocalDateTime.parse(proposedStartTime);
+        LocalDateTime end = LocalDateTime.parse(proposedEndTime);
+        return ResponseEntity.ok(scheduleRescheduleService.checkAvailability(scheduleId, start, end, proposedRoomId, email));
     }
 
     @PutMapping("/{requestId}/cancel")

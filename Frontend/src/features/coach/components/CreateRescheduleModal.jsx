@@ -20,17 +20,29 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
 
   // Form fields
   const [selectedScheduleId, setSelectedScheduleId] = useState('');
+  const [isSelectingSchedule, setIsSelectingSchedule] = useState(!initialScheduleId);
   const [actionType, setActionType] = useState('MAKE_UP_SESSION');
   const [reasonCategory, setReasonCategory] = useState('UNAVAILABLE_NO_SUB');
   const [reasonNote, setReasonNote] = useState('');
   const [proposedDate, setProposedDate] = useState('');
   const [proposedStartTime, setProposedStartTime] = useState('');
   const [proposedEndTime, setProposedEndTime] = useState('');
+  const [availability, setAvailability] = useState({
+    checking: false,
+    checked: false,
+    available: true,
+    hasCoachConflict: false,
+    coachConflictDetail: '',
+    hasRoomConflict: false,
+    roomConflictDetail: '',
+    suggestedSlots: []
+  });
 
   useEffect(() => {
     if (!isOpen) {
       // Reset form
       setSelectedScheduleId('');
+      setIsSelectingSchedule(false);
       setSearchScheduleQuery('');
       setActionType('MAKE_UP_SESSION');
       setReasonCategory('UNAVAILABLE_NO_SUB');
@@ -39,11 +51,24 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
       setProposedStartTime('');
       setProposedEndTime('');
       setErrorMsg('');
+      setAvailability({
+        checking: false,
+        checked: false,
+        available: true,
+        hasCoachConflict: false,
+        coachConflictDetail: '',
+        hasRoomConflict: false,
+        roomConflictDetail: '',
+        suggestedSlots: []
+      });
       return;
     }
 
     if (initialScheduleId) {
       setSelectedScheduleId(String(initialScheduleId));
+      setIsSelectingSchedule(false);
+    } else {
+      setIsSelectingSchedule(true);
     }
 
     const fetchUpcoming = async () => {
@@ -58,8 +83,9 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
         setUpcomingSchedules(list);
         if (initialScheduleId && list.some(s => String(s.scheduleId) === String(initialScheduleId))) {
           setSelectedScheduleId(String(initialScheduleId));
-        } else if (list.length > 0 && !selectedScheduleId) {
-          setSelectedScheduleId(String(list[0].scheduleId));
+          setIsSelectingSchedule(false);
+        } else if (!initialScheduleId && !selectedScheduleId) {
+          setIsSelectingSchedule(true);
         }
       } catch (err) {
         console.error('Failed to load upcoming schedules', err);
@@ -170,12 +196,72 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
     }
   }, [proposedDate, lang]);
 
+  // Real-time conflict pre-check (Debounced ~350ms)
+  useEffect(() => {
+    if (!isMakeupSession(actionType) || !selectedScheduleId || !proposedDate || !proposedStartTime || !proposedEndTime) {
+      setAvailability({
+        checking: false,
+        checked: false,
+        available: true,
+        hasCoachConflict: false,
+        coachConflictDetail: '',
+        hasRoomConflict: false,
+        roomConflictDetail: '',
+        suggestedSlots: []
+      });
+      return;
+    }
+
+    if (isProposedDateInPast || proposedStartTime >= proposedEndTime) {
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      const token = globalThis.localStorage?.getItem('token');
+      if (!token) return;
+
+      try {
+        setAvailability(prev => ({ ...prev, checking: true }));
+        const res = await axios.get('http://localhost:8080/api/v1/coach/reschedule-requests/check-availability', {
+          params: {
+            scheduleId: parseInt(selectedScheduleId, 10),
+            proposedStartTime: `${proposedDate}T${proposedStartTime}:00`,
+            proposedEndTime: `${proposedDate}T${proposedEndTime}:00`,
+            proposedRoomId: selectedSchedule?.roomId
+          },
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = res.data || {};
+        setAvailability({
+          checking: false,
+          checked: true,
+          available: Boolean(data.available),
+          hasCoachConflict: Boolean(data.hasCoachConflict),
+          coachConflictDetail: data.coachConflictDetail || '',
+          hasRoomConflict: Boolean(data.hasRoomConflict),
+          roomConflictDetail: data.roomConflictDetail || '',
+          suggestedSlots: Array.isArray(data.suggestedSlots) ? data.suggestedSlots : []
+        });
+      } catch (err) {
+        console.error('Failed to check availability', err);
+        setAvailability(prev => ({ ...prev, checking: false }));
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [actionType, selectedScheduleId, proposedDate, proposedStartTime, proposedEndTime, isProposedDateInPast, selectedSchedule]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
     if (!selectedScheduleId) {
       setErrorMsg(t('Please select a class session to reschedule.'));
+      return;
+    }
+
+    if (selectedSchedule?.hasPendingRequest) {
+      setErrorMsg(t('This session already has a reschedule request pending approval (#') + selectedSchedule.existingRequestId + t('. You cannot submit duplicate requests.'));
       return;
     }
 
@@ -191,6 +277,10 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
       const proposedDateTime = new Date(`${proposedDate}T${proposedStartTime}:00`);
       if (proposedDateTime <= new Date()) {
         setErrorMsg(t('Proposed make-up time must be in the future. (Please check whether browser input is MM/DD or DD/MM).'));
+        return;
+      }
+      if (availability.checked && !availability.available) {
+        setErrorMsg(t('Proposed slot is conflicted. Please choose a different time or pick a suggested slot.'));
         return;
       }
     }
@@ -276,11 +366,26 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-bold text-[var(--text)] uppercase tracking-wider">
-                  {t('1. Select Upcoming Class Session')} *
+                  {selectedSchedule && !isSelectingSchedule
+                    ? t('1. Selected Class Session')
+                    : t('1. Select Upcoming Class Session')} *
                 </label>
-                <span className="text-[11px] text-[var(--primary)] font-medium">
-                  {upcomingSchedules.length} {t('eligible sessions (>12h)')}
-                </span>
+                {(!selectedSchedule || isSelectingSchedule) && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-[var(--primary)] font-medium">
+                      {upcomingSchedules.length} {t('eligible sessions (>12h)')}
+                    </span>
+                    {selectedSchedule && (
+                      <button
+                        type="button"
+                        onClick={() => setIsSelectingSchedule(false)}
+                        className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer"
+                      >
+                        {t('Keep current class')}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {loadingSchedules ? (
@@ -292,9 +397,83 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
                 <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs">
                   {t('No eligible upcoming sessions found (>12 hours ahead). Only future classes with >12h notice can be requested.')}
                 </div>
+              ) : selectedSchedule && !isSelectingSchedule ? (
+                /* Compact Selected Class Card */
+                <div className="p-3 rounded-xl bg-[var(--surface-hover)] border border-[var(--primary)] ring-1 ring-[var(--primary-soft)] text-xs space-y-2">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-[var(--border)]">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-bold text-[var(--text)] text-sm truncate">{selectedSchedule.className}</span>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[var(--primary-soft)] text-[var(--primary)] shrink-0">
+                        ID #{selectedSchedule.scheduleId}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsSelectingSchedule(true)}
+                      className="text-xs font-semibold text-[var(--primary)] hover:underline shrink-0 flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>{t('Change class')}</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                    <div>
+                      <span className="text-[var(--text-muted)] block">{t('Date & Time')}:</span>
+                      <p className="font-semibold text-[var(--text)] flex items-center gap-1.5 mt-0.5">
+                        <Calendar className="w-3.5 h-3.5 text-[var(--primary)] shrink-0" />
+                        <span>{formatScheduleSlot(selectedSchedule.startTime, selectedSchedule.endTime, lang)}</span>
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[var(--text-muted)] block">{t('Class & Room')}:</span>
+                      <p className="font-semibold text-[var(--text)] flex items-center gap-1.5 mt-0.5 truncate">
+                        <MapPin className="w-3.5 h-3.5 text-[var(--primary)] shrink-0" />
+                        <span className="truncate">{selectedSchedule.roomName}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 text-[11px] text-[var(--text-muted)] border-t border-[var(--border)]">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <span>{t('Impacted Trainees')}:</span>
+                    </span>
+                    <strong className="text-emerald-600 dark:text-emerald-400 font-bold">
+                      {selectedSchedule.enrolledCount} {t('confirmed members enrolled')}
+                    </strong>
+                  </div>
+
+                  {/* Anti-spam / Duplicate Warning Banner */}
+                  {selectedSchedule.hasPendingRequest && (
+                    <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-xs">{t('Request already pending!')}</p>
+                        <p className="text-[11px] leading-relaxed mt-0.5 opacity-90">
+                          {t('This session already has a reschedule request pending approval (#')}
+                          {selectedSchedule.existingRequestId}
+                          {t('. You cannot submit duplicate requests.')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {(selectedSchedule.status === 'RESCHEDULED' || selectedSchedule.status === 'SUBSTITUTE_ASSIGNED') && (
+                    <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-xs flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-xs">{t('Session already processed!')}</p>
+                        <p className="text-[11px] leading-relaxed mt-0.5 opacity-90">
+                          {t('This session has already been rescheduled or assigned a substitute coach.')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
+                /* Search & Select List */
                 <div className="space-y-2">
-                  {/* Search box if more than 2 sessions */}
                   {upcomingSchedules.length > 2 && (
                     <div className="relative">
                       <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
@@ -304,11 +483,11 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
                         onChange={(e) => setSearchScheduleQuery(e.target.value)}
                         placeholder={t('Search class name, date (e.g. 03/11), room...')}
                         className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-hidden focus:border-[var(--primary)]"
+                        autoFocus
                       />
                     </div>
                   )}
 
-                  {/* Visual scrollable card list */}
                   <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
                     {filteredSchedules.map((s) => {
                       const isSelected = String(s.scheduleId) === String(selectedScheduleId);
@@ -319,7 +498,10 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
                         <div
                           key={s.scheduleId}
                           onClick={() => {
-                            if (!isPending) setSelectedScheduleId(String(s.scheduleId));
+                            if (!isPending) {
+                              setSelectedScheduleId(String(s.scheduleId));
+                              setIsSelectingSchedule(false);
+                            }
                           }}
                           className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2.5 ${
                             isPending
@@ -367,36 +549,6 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
                       );
                     })}
                   </div>
-
-                  {/* Selected Session Highlight Box */}
-                  {selectedSchedule && (
-                    <div className="p-3 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-xs space-y-1.5 mt-2">
-                      <div className="flex items-center justify-between pb-1.5 border-b border-[var(--border)]">
-                        <span className="font-bold text-[var(--text)] text-xs">{t('Selected Session to Reschedule')}:</span>
-                        <span className="text-[11px] font-bold text-[var(--primary)]">ID #{selectedSchedule.scheduleId}</span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-                        <div>
-                          <span className="text-[var(--text-muted)]">{t('Date & Time')}:</span>
-                          <p className="font-semibold text-[var(--text)]">
-                            {formatScheduleSlot(selectedSchedule.startTime, selectedSchedule.endTime, lang)}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-[var(--text-muted)]">{t('Class & Room')}:</span>
-                          <p className="font-semibold text-[var(--text)] truncate">
-                            {selectedSchedule.className} • {selectedSchedule.roomName}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-1 text-[11px] text-[var(--text-muted)]">
-                        <span>{t('Impacted Trainees')}:</span>
-                        <strong className="text-emerald-600 dark:text-emerald-400 font-bold">
-                          {selectedSchedule.enrolledCount} {t('confirmed members enrolled')}
-                        </strong>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -551,10 +703,80 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
                       </span>
                     </div>
                     {isProposedDateInPast && (
-                      <span className="font-bold shrink-0">
-                        {t('⚠️ Date is in the past! (Check MM/DD vs DD/MM)')}
+                      <span className="font-bold shrink-0 flex items-center gap-1 text-rose-500">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{t('Date is in the past! (Check MM/DD vs DD/MM)')}</span>
                       </span>
                     )}
+                  </div>
+                )}
+
+                {/* Live Availability Pre-Check Status */}
+                {isMakeupSession(actionType) && proposedDate && proposedStartTime && proposedEndTime && !isProposedDateInPast && proposedStartTime < proposedEndTime && (
+                  <div className="space-y-2">
+                    {availability.checking ? (
+                      <div className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-[var(--text-muted)] flex items-center gap-2 animate-pulse">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-[var(--primary)]" />
+                        <span>{t('Checking room and coach schedule availability...')}</span>
+                      </div>
+                    ) : availability.checked && availability.available ? (
+                      <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <div>
+                          <span className="font-bold">{t('Conflict-free slot!')}</span>
+                          <span className="ml-1 opacity-90">{t('Room is vacant and you have no conflicting classes at this time.')}</span>
+                        </div>
+                      </div>
+                    ) : availability.checked && !availability.available ? (
+                      <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-700 dark:text-rose-300 space-y-2.5">
+                        <div className="flex items-start gap-2.5">
+                          <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                          <div className="space-y-1.5 flex-1">
+                            <p className="font-bold text-rose-600 dark:text-rose-400">{t('Schedule conflict detected!')}</p>
+                            <div className="space-y-1 pt-0.5">
+                              {availability.coachConflictDetail && (
+                                <div className="flex items-start gap-2 text-[11px] leading-relaxed">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 mt-1.5" />
+                                  <span>{availability.coachConflictDetail}</span>
+                                </div>
+                              )}
+                              {availability.roomConflictDetail && (
+                                <div className="flex items-start gap-2 text-[11px] leading-relaxed">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 mt-1.5" />
+                                  <span>{availability.roomConflictDetail}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Suggested conflict-free slots on this day */}
+                        {availability.suggestedSlots && availability.suggestedSlots.length > 0 && (
+                          <div className="pt-2 border-t border-rose-500/20">
+                            <p className="text-[11px] font-bold text-[var(--text)] mb-2 flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
+                              <span>{t('Available slots for this room & you on')} {proposedDate}:</span>
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {availability.suggestedSlots.map((slot, sIdx) => (
+                                <button
+                                  key={sIdx}
+                                  type="button"
+                                  onClick={() => {
+                                    setProposedStartTime(slot.startTime);
+                                    setProposedEndTime(slot.endTime);
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] flex items-center gap-1 shadow-xs transition-all cursor-pointer"
+                                >
+                                  <Clock className="w-3 h-3" />
+                                  <span>{slot.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -573,11 +795,24 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
 
               <button
                 type="submit"
-                disabled={submitting || upcomingSchedules.length === 0}
-                className="px-5 py-2.5 rounded-xl bg-[var(--primary)] text-[color:var(--on-primary)] text-xs font-bold hover:brightness-105 active:scale-95 transition-all shadow-[var(--shadow)] disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                disabled={
+                  submitting ||
+                  !selectedScheduleId ||
+                  upcomingSchedules.length === 0 ||
+                  Boolean(selectedSchedule?.hasPendingRequest) ||
+                  selectedSchedule?.status === 'RESCHEDULED' ||
+                  selectedSchedule?.status === 'SUBSTITUTE_ASSIGNED' ||
+                  selectedSchedule?.status === 'CANCELLED' ||
+                  (isMakeupSession(actionType) && availability.checked && !availability.available)
+                }
+                className="px-5 py-2.5 rounded-xl bg-[var(--primary)] text-[color:var(--on-primary)] text-xs font-bold hover:brightness-105 active:scale-95 transition-all shadow-[var(--shadow)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
               >
                 {submitting && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                <span>{submitting ? t('Submitting...') : t('Submit to Manager')}</span>
+                <span>
+                  {selectedSchedule?.hasPendingRequest
+                    ? t('Request Already Pending')
+                    : (submitting ? t('Submitting...') : t('Submit to Manager'))}
+                </span>
               </button>
             </div>
           </form>

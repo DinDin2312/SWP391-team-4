@@ -10,6 +10,8 @@ import com.team4.sportscenter.modules.coach.entities.TraineeAssessment;
 import com.team4.sportscenter.modules.coach.repositories.AiWorkoutPlanRepository;
 import com.team4.sportscenter.modules.coach.repositories.CoachWorkoutPlanRepository;
 import com.team4.sportscenter.modules.coach.repositories.CoachScheduleRepository;
+import com.team4.sportscenter.modules.coach.repositories.ScheduleRescheduleRequestRepository;
+import com.team4.sportscenter.modules.coach.entities.ScheduleRescheduleRequest;
 import com.team4.sportscenter.modules.coach.repositories.TraineeAssessmentRepository;
 import com.team4.sportscenter.modules.coach.services.CoachScheduleService;
 import com.team4.sportscenter.modules.auth.entities.User;
@@ -37,6 +39,7 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
     private final AiWorkoutPlanRepository aiWorkoutPlanRepository;
     private final CoachWorkoutPlanRepository coachWorkoutPlanRepository;
     private final TraineeAssessmentRepository traineeAssessmentRepository;
+    private final ScheduleRescheduleRequestRepository rescheduleRequestRepository;
     private final com.team4.sportscenter.modules.member.health.MemberHealthService memberHealthService;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     private final com.fasterxml.jackson.databind.ObjectMapper jsonMapper = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -124,6 +127,12 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                         .build();
             }).collect(Collectors.toList());
 
+            boolean isSub = schedule.getSubstituteCoach() != null && schedule.getSubstituteCoach().getEmail().equalsIgnoreCase(coachEmail);
+            String primaryCoachName = schedule.getGymClass().getCoach() != null ? schedule.getGymClass().getCoach().getFullName() : null;
+
+            Optional<ScheduleRescheduleRequest> pendingReq = rescheduleRequestRepository
+                    .findFirstBySchedule_ScheduleIdAndStatusInOrderByCreatedAtDesc(schedule.getScheduleId(), List.of("PENDING"));
+
             return CoachScheduleResponse.builder()
                     .scheduleId(schedule.getScheduleId())
                     .classId(schedule.getGymClass().getClassId())
@@ -132,6 +141,11 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                     .startTime(schedule.getStartTime())
                     .endTime(schedule.getEndTime())
                     .status(schedule.getStatus())
+                    .coachName(primaryCoachName)
+                    .substituteCoachName(schedule.getSubstituteCoach() != null ? schedule.getSubstituteCoach().getFullName() : null)
+                    .isSubstituteForCurrentCoach(isSub)
+                    .hasPendingReschedule(pendingReq.isPresent())
+                    .pendingRescheduleRequestId(pendingReq.map(ScheduleRescheduleRequest::getRequestId).orElse(null))
                     .maxSlots(schedule.getGymClass().getMaxSlots())
                     .enrolledCount(students.size())
                     .enrolledStudents(students)
@@ -252,7 +266,10 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
         Schedule schedule = coachScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch học với ID: " + scheduleId));
 
-        if (!schedule.getGymClass().getCoach().getEmail().equalsIgnoreCase(coachEmail)) {
+        boolean isMainCoach = schedule.getGymClass().getCoach() != null && schedule.getGymClass().getCoach().getEmail().equalsIgnoreCase(coachEmail);
+        boolean isSubCoach = schedule.getSubstituteCoach() != null && schedule.getSubstituteCoach().getEmail().equalsIgnoreCase(coachEmail);
+
+        if (!isMainCoach && !isSubCoach) {
             throw new RuntimeException("Bạn không có quyền điểm danh cho lịch học này.");
         }
 

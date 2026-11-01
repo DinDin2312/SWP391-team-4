@@ -11,38 +11,39 @@ const records = [
 ];
 const state = readPackagesState(new URLSearchParams());
 
-test('editing and duplicating a package preserves independent location scopes per subject',()=>{
- const form=packageForm({...records[0],benefits:[{subjectId:2,subjectName:'Bơi',sessionLimit:8,roomIds:[11,12]}]});
- const copy=duplicatePackage(form,'(copy)');
- assert.deepEqual(copy.benefits[0].roomIds,[11,12]);
- copy.benefits[0].roomIds.push(13);
- assert.deepEqual(form.benefits[0].roomIds,[11,12]);
- assert.equal(validatePackage({...form,benefits:[{...form.benefits[0],roomIds:[11,11]}]}).benefits,'Select at most 100 unique locations per subject.');
+test('packageForm strips subject benefits and rejects SUBJECT_ACCESS packageType', () => {
+  const form = packageForm({ ...records[0], benefits: [{ subjectId: 2, subjectName: 'Bơi', sessionLimit: 8, roomIds: [11, 12] }] });
+  assert.deepEqual(form.benefits, []);
+  assert.equal(validatePackage({ ...form, packageType: 'SUBJECT_ACCESS' }).packageType, 'Select a valid package type.');
 });
 
-test('selling status roundtrips and filters before pagination, preserving legacy selling packages',()=>{
-  const query=patchPackagesQuery(new URLSearchParams('pkg=3'),{selling:'STOPPED'});
-  assert.equal(query.get('pkg'),'3');assert.equal(readPackagesState(query).selling,'STOPPED');
-  const rows=records.map(row=>({...row,sellingStatus:row.packageId===3?'STOPPED':'SELLING'}));
-  assert.deepEqual(selectPackages(rows,{...state,selling:'STOPPED'}).items.map(row=>row.packageId),[3]);
-  assert.equal(selectPackages(records,{...state,selling:'SELLING'}).total,records.length);
+test('selling status roundtrips and filters before pagination, preserving legacy selling packages', () => {
+  const query = patchPackagesQuery(new URLSearchParams('pkg=3'), { selling: 'STOPPED' });
+  assert.equal(query.get('pkg'), '3');
+  assert.equal(readPackagesState(query).selling, 'STOPPED');
+  const rows = records.map(row => ({ ...row, sellingStatus: row.packageId === 3 ? 'STOPPED' : 'SELLING' }));
+  assert.deepEqual(selectPackages(rows, { ...state, selling: 'STOPPED' }).items.map(row => row.packageId), [3]);
+  assert.equal(selectPackages(records, { ...state, selling: 'SELLING' }).total, records.length);
 });
 
-test('description terms and purchase limits validate and duplicate without losing plain text',()=>{
-  const form=packageForm({packageName:'Trial',packageType:'GYM_ACCESS',durationDays:7,price:0,description:'<b>Plain</b>',terms:'First\nSecond',purchaseLimitPerMember:1});
-  assert.deepEqual(validatePackage(form),{});
-  assert.equal(validatePackage({...form,description:'a'.repeat(1001)}).description,'Description must be at most 1,000 characters.');
-  assert.ok(validatePackage({...form,terms:'a'.repeat(10001)}).terms);
-  for(const limit of ['0','-1','1.5','2147483648'])assert.ok(validatePackage({...form,purchaseLimitPerMember:limit}).purchaseLimitPerMember);
-  assert.deepEqual(validatePackage({...form,purchaseLimitPerMember:''}),{});
-  const duplicate=duplicatePackage({...form,packageId:1},'(copy)');assert.equal(duplicate.terms,'First\nSecond');assert.equal(duplicate.purchaseLimitPerMember,'1');assert.equal(duplicate.packageId,undefined);
+test('description terms and purchase limits validate and duplicate without losing plain text', () => {
+  const form = packageForm({ packageName: 'Trial', packageType: 'GYM_ACCESS', durationDays: 7, price: 0, description: '<b>Plain</b>', terms: 'First\nSecond', purchaseLimitPerMember: 1 });
+  assert.deepEqual(validatePackage(form), {});
+  assert.equal(validatePackage({ ...form, description: 'a'.repeat(1001) }).description, 'Description must be at most 1,000 characters.');
+  assert.ok(validatePackage({ ...form, terms: 'a'.repeat(10001) }).terms);
+  for (const limit of ['0', '-1', '1.5', '2147483648']) assert.ok(validatePackage({ ...form, purchaseLimitPerMember: limit }).purchaseLimitPerMember);
+  assert.deepEqual(validatePackage({ ...form, purchaseLimitPerMember: '' }), {});
+  const duplicate = duplicatePackage({ ...form, packageId: 1 }, '(copy)');
+  assert.equal(duplicate.terms, 'First\nSecond');
+  assert.equal(duplicate.purchaseLimitPerMember, '1');
+  assert.equal(duplicate.packageId, undefined);
 });
 
 test('URL roundtrip preserves role view and unrelated parameters; invalid values get safe defaults', () => {
-  const query = patchPackagesQuery(new URLSearchParams('view=operations&from=2026-10-08'), { display: 'cards', search: 'thẻ gym', selling:'', type: 'PREMIUM', sort: 'price', direction: 'desc', page: 5, size: 50 });
+  const query = patchPackagesQuery(new URLSearchParams('view=operations&from=2026-10-08'), { display: 'cards', search: 'thẻ gym', selling: '', type: 'PREMIUM', sort: 'price', direction: 'desc', page: 5, size: 50 });
   assert.equal(query.get('view'), 'packages');
   assert.equal(query.get('from'), '2026-10-08');
-  assert.deepEqual(readPackagesState(new URLSearchParams(query.toString())), { display: 'cards', search: 'thẻ gym', selling:'', type: 'PREMIUM', sort: 'price', direction: 'desc', page: 5, size: 50 });
+  assert.deepEqual(readPackagesState(new URLSearchParams(query.toString())), { display: 'cards', search: 'thẻ gym', selling: '', type: 'PREMIUM', sort: 'price', direction: 'desc', page: 5, size: 50 });
   assert.deepEqual(readPackagesState(new URLSearchParams('pkgView=bad&pkgSize=12&pkgSort=bad&pkgType=invalid%20type&pkgPage=-2&pkgDir=bad')), state);
   assert.equal(readPackagesState(new URLSearchParams(), 'cards').display, 'cards');
   assert.equal(readPackagesState(new URLSearchParams('pkgView=table'), 'cards').display, 'table');
@@ -82,7 +83,7 @@ test('form validates DTO boundaries and permits free and fractional prices witho
   for (const durationDays of ['0', '-3', '1.5', '2147483648', '']) assert.ok(validatePackage({ ...valid, durationDays }).durationDays);
   assert.ok(validatePackage({ ...valid, packageName: ' ' }).packageName);
   assert.ok(validatePackage({ ...valid, packageName: 'x'.repeat(256) }).packageName);
-  assert.ok(validatePackage({ ...valid, packageType: 'LEGACY' },[{typeCode:'COMBO'}]).packageType);
+  assert.ok(validatePackage({ ...valid, packageType: 'LEGACY' }, [{ typeCode: 'COMBO' }]).packageType);
   assert.equal(parsePriceInput(priceInput('1234567.50')), '1234567.50');
   assert.equal(priceInput('0'), '0');
 });
@@ -97,26 +98,14 @@ test('duplicate drops id and counts, preserves editable values and keeps name wi
   assert.equal(packageForm({ price: 0 }).price, '0');
 });
 
-test('subject packages require unique subjects and bounded per-subject quotas, preserved when duplicated',()=>{
-  const form=packageForm({packageName:'Yoga + Swim',packageType:'SUBJECT_ACCESS',durationDays:60,price:1200000,benefits:[{subjectId:1,subjectName:'Yoga',sessionLimit:8},{subjectId:2,subjectName:'Swim',sessionLimit:4}]});
-  assert.deepEqual(validatePackage(form),{});
-  assert.ok(validatePackage({...form,benefits:[]},[{typeCode:'SUBJECT_ACCESS',requiresSubjects:true}]).benefits);
-  assert.ok(validatePackage({...form,benefits:[form.benefits[0],form.benefits[0]]}).benefits);
-  for(const quota of ['0','1.5','10001','']) assert.ok(validatePackage({...form,benefits:[{subjectId:1,sessionLimit:quota}]}).benefits);
-  const copy=duplicatePackage(form,'(copy)');
-  assert.deepEqual(copy.benefits,form.benefits);
-  copy.benefits[0].sessionLimit='3';
-  assert.equal(form.benefits[0].sessionLimit,'8');
-});
-
-test('a database-defined type is accepted, counted and survives filter URLs without a frontend enum',()=>{
- const type='CUSTOM_qa-123',catalog=[{typeCode:type,typeName:'Swimming',requiresSubjects:true}];
- const form=packageForm({packageName:'Swim 8 sessions',packageType:type,durationDays:30,price:500000,benefits:[{subjectId:1,sessionLimit:8}]});
- assert.deepEqual(validatePackage(form,catalog),{});
- assert.ok(validatePackage({...form,benefits:[]},catalog).benefits);
- assert.ok(validatePackage({...form,packageType:'UNKNOWN'},catalog).packageType);
- const query=patchPackagesQuery(new URLSearchParams(),{type});
- assert.equal(readPackagesState(query).type,type);
- const block=selectPackages([{...form,packageId:1}],readPackagesState(query));
- assert.equal(block.total,1);assert.equal(block.counts[type],1);
+test('a database-defined type is accepted, counted and survives filter URLs without a frontend enum', () => {
+  const type = 'CUSTOM_qa-123', catalog = [{ typeCode: type, typeName: 'Custom Plan', requiresSubjects: false }];
+  const form = packageForm({ packageName: 'Custom 30 days', packageType: type, durationDays: 30, price: 500000 });
+  assert.deepEqual(validatePackage(form, catalog), {});
+  assert.ok(validatePackage({ ...form, packageType: 'UNKNOWN' }, catalog).packageType);
+  const query = patchPackagesQuery(new URLSearchParams(), { type });
+  assert.equal(readPackagesState(query).type, type);
+  const block = selectPackages([{ ...form, packageId: 1 }], readPackagesState(query));
+  assert.equal(block.total, 1);
+  assert.equal(block.counts[type], 1);
 });

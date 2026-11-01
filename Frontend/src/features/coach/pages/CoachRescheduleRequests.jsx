@@ -8,6 +8,7 @@ import {
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import CreateRescheduleModal from '../components/CreateRescheduleModal';
 import CoachToast from '../components/CoachToast';
+import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import {
   getReasonLabel,
   getStatusMeta,
@@ -27,6 +28,7 @@ const CoachRescheduleRequests = () => {
   const [filterTab, setFilterTab] = useState('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [cancellingId, setCancellingId] = useState(null);
+  const [requestToCancel, setRequestToCancel] = useState(null);
   const [toastState, setToastState] = useState({
     isOpen: false,
     type: 'success',
@@ -65,10 +67,6 @@ const CoachRescheduleRequests = () => {
   };
 
   const handleCancelRequest = async (requestId) => {
-    if (!window.confirm(t('Are you sure you want to cancel this reschedule request?'))) {
-      return;
-    }
-
     const token = globalThis.localStorage?.getItem('token');
     if (!token) return;
 
@@ -78,10 +76,11 @@ const CoachRescheduleRequests = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       showToast(t('Request cancelled successfully.'));
+      setRequestToCancel(null);
       fetchRequests();
     } catch (err) {
       const msg = err.response?.data?.message || err.message;
-      alert(msg || t('Failed to cancel request.'));
+      showToast(msg || t('Failed to cancel request.'), 'error');
     } finally {
       setCancellingId(null);
     }
@@ -310,11 +309,12 @@ const CoachRescheduleRequests = () => {
                             </div>
                           </div>
                         ) : (
-                          <div className="w-full lg:w-48 p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs space-y-1.5">
+                          <div className="w-full lg:w-56 p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs space-y-1.5">
                             <div className="flex items-center justify-between text-[11px] font-semibold">
                               <span className="text-[var(--text-muted)]">{t('Confirmations')}:</span>
                               <span className="text-[var(--primary)] font-bold">
-                                {req.acceptedMembersCount || 0} / {req.totalEnrolledMembers || 0}
+                                {req.acceptedCount ?? req.acceptedMembersCount ?? 0}
+                                <span className="text-[var(--text-muted)] font-normal text-[10px]"> / {req.totalEnrolledMembers || 0}</span>
                               </span>
                             </div>
 
@@ -323,24 +323,41 @@ const CoachRescheduleRequests = () => {
                               <div
                                 className="h-full bg-[var(--primary)] transition-all duration-300"
                                 style={{
-                                  width: `${req.totalEnrolledMembers > 0 ? ((req.acceptedMembersCount || 0) / req.totalEnrolledMembers) * 100 : 0}%`
+                                  width: `${req.totalEnrolledMembers > 0 ? (((req.acceptedCount ?? req.acceptedMembersCount ?? 0)) / req.totalEnrolledMembers) * 100 : 0}%`
                                 }}
                               />
                             </div>
 
                             <div className="text-[10px] text-[var(--text-muted)] flex items-center justify-between">
-                              <span>{t('Min Quorum')}: {req.minAttendeesRequired || 1}</span>
-                              <span className={isExpired ? 'text-rose-500 font-bold' : ''}>
+                              <span>{t('Min Quorum')}:</span>
+                              <span className="font-semibold text-[var(--text)]">
+                                {req.minAttendees ?? req.minAttendeesRequired ?? 1} {t('members')}
+                              </span>
+                            </div>
+
+                            <div className="text-[10px] text-[var(--text-muted)] flex items-center justify-between pt-1 border-t border-[var(--border)]/40">
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
+                                <span>{t('Deadline')}:</span>
+                              </span>
+                              <span className={isExpired ? 'text-rose-500 font-bold' : 'font-medium text-[var(--text)]'}>
                                 {isExpired ? t('Deadline expired') : formatDateTime(req.confirmationDeadline)}
                               </span>
                             </div>
+
+                            {Number(req.declinedCount) > 0 && (
+                              <div className="text-[10px] text-amber-500 flex justify-between font-medium pt-1 border-t border-[var(--border)]/40">
+                                <span>{t('Declined')}:</span>
+                                <span className="font-bold">{req.declinedCount}</span>
+                              </div>
+                            )}
                           </div>
                         )
                       )}
 
                       {req.status === 'PENDING' && (
                         <button
-                          onClick={() => handleCancelRequest(req.requestId)}
+                          onClick={() => setRequestToCancel(req)}
                           disabled={cancellingId === req.requestId}
                           className="px-3.5 py-1.5 rounded-xl border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-semibold hover:bg-rose-500/10 transition-colors cursor-pointer flex items-center gap-1.5"
                         >
@@ -369,6 +386,22 @@ const CoachRescheduleRequests = () => {
           showToast(t('Reschedule request created successfully!'));
           fetchRequests();
         }}
+      />
+
+      {/* Modern Confirm Cancel Modal */}
+      <ConfirmModal
+        isOpen={Boolean(requestToCancel)}
+        onClose={() => setRequestToCancel(null)}
+        onConfirm={() => {
+          if (requestToCancel) {
+            handleCancelRequest(requestToCancel.requestId);
+          }
+        }}
+        title={t('Cancel Reschedule Request')}
+        message={t('Are you sure you want to cancel this reschedule request?')}
+        confirmText={t('Cancel Request')}
+        cancelText={t('Keep Request')}
+        isDestructive={true}
       />
     </div>
   );

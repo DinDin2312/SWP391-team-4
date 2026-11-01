@@ -1,12 +1,17 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, X, Bot, User, Minus, Mic, MicOff, Sparkles } from 'lucide-react';
+import { Send, X, User, Minus, Mic, MicOff, Sparkles, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { renderChatMarkdown } from '../chatMarkdown.jsx';
+import { normalizeChatResponse } from '../chatSources.js';
+import { parseSseChunk, stripPartialActionTag } from '../chatStream.js';
+import { CyberFoxAvatar } from '../../../components/CyberFoxMascot';
 
-const NexusAiChat = ({ isOpen, onClose }) => {
+const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
   const lang = useLanguage();
+  const [exitMode, setExitMode] = useState('fox');
   const [messages, setMessages] = useState([
     { id: 1, sender: 'bot', text: t('Hello! I am NEXUS AI. How can I assist you with your fitness journey today? (e.g. "I want to lose 5kg", "Which yoga class is good?")') }
   ]);
@@ -214,6 +219,7 @@ const NexusAiChat = ({ isOpen, onClose }) => {
   };
 
   const handleMouseDown = (e) => {
+    if (e.target.closest('button')) return;
     setIsDragging(true);
     offset.current = {
       x: e.clientX - position.x,
@@ -223,14 +229,48 @@ const NexusAiChat = ({ isOpen, onClose }) => {
 
   const handleMouseMove = (e) => {
     if (!isDragging) return;
+    const nextX = e.clientX - offset.current.x;
+    const nextY = e.clientY - offset.current.y;
+    const maxLeft = -(window.innerWidth - 160);
+    const maxRight = 16;
+    const maxUp = -68;
+    const maxDown = Math.max(0, window.innerHeight - 160);
     setPosition({
-      x: e.clientX - offset.current.x,
-      y: e.clientY - offset.current.y
+      x: Math.min(maxRight, Math.max(maxLeft, nextX)),
+      y: Math.min(maxDown, Math.max(maxUp, nextY))
     });
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
+  };
+
+  const handleMinimizeClick = (e) => {
+    e.stopPropagation();
+    setIsDragging(false);
+    setExitMode('fox');
+    if (onMinimize) {
+      onMinimize();
+    } else if (onClose) {
+      onClose();
+    }
+  };
+
+  const handleCloseSessionClick = (e) => {
+    e.stopPropagation();
+    setIsDragging(false);
+    setExitMode('topbar');
+    if (isListening && recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+      setIsListening(false);
+    }
+    setMessages([
+      { id: 1, sender: "bot", text: t("Hello! I am NEXUS AI. How can I assist you with your fitness journey today? (e.g. \"I want to lose 5kg\", \"Which yoga class is good?\")") }
+    ]);
+    setPosition({ x: 0, y: 0 });
+    if (onClose) {
+      onClose();
+    }
   };
 
   useEffect(() => {
@@ -340,18 +380,71 @@ const NexusAiChat = ({ isOpen, onClose }) => {
     setInput('');
     setIsLoading(true);
 
+    const botMsgId = Date.now() + 1;
+    const token = localStorage.getItem('token');
+    const history = messages
+      .slice(-6)
+      .map((m) => ({
+        role: m.sender === 'user' ? 'user' : 'model',
+        text: m.text
+      }));
+
+    let streamedAnyChunk = false;
+    let accumulatedText = '';
+
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post('http://localhost:8080/api/v1/member/ai/chat', { message: userMsg.text }, {
-        headers: { Authorization: "Bearer " + token }
+      const response = await fetch('http://localhost:8080/api/v1/member/ai/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + token
+        },
+        body: JSON.stringify({ message: userMsg.text, history })
       });
 
-      let rawText = typeof res.data === 'string' ? res.data : String(res.data || '');
-      const actionMatches = [...rawText.matchAll(/\[ACTION:(.*?)\]/g)];
+      if (!response.ok || !response.body) {
+        throw new Error('Stream request not ok: ' + response.status);
+      }
 
+      setMessages((prev) => [...prev, { id: botMsgId, sender: 'bot', text: '', isStreaming: true }]);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let streamBuffer = '';
+      let donePayload = null;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        streamBuffer += decoder.decode(value, { stream: true });
+        const parsed = parseSseChunk(streamBuffer);
+        streamBuffer = parsed.rest;
+
+        for (const evt of parsed.events) {
+          if (evt.event === 'delta') {
+            streamedAnyChunk = true;
+            accumulatedText += evt.data;
+            const visibleText = stripPartialActionTag(accumulatedText);
+            setMessages((prev) =>
+              prev.map((m) => (m.id === botMsgId ? { ...m, text: visibleText } : m))
+            );
+          } else if (evt.event === 'done') {
+            try {
+              donePayload = JSON.parse(evt.data);
+            } catch {}
+          }
+        }
+      }
+
+      const fullText = (donePayload && donePayload.fullText) || accumulatedText;
+      const sources = (donePayload && donePayload.sources) || [];
+
+      let cleanedText = fullText;
+      const actionMatches = [...fullText.matchAll(/\[ACTION:(.*?)\]/g)];
       if (actionMatches.length > 0) {
-        rawText = rawText.replace(/\[ACTION:(.*?)\]/g, '').trim();
-        const hasCartAction = actionMatches.some(m =>
+        cleanedText = fullText.replace(/\[ACTION:(.*?)\]/g, '').trim();
+        const hasCartAction = actionMatches.some((m) =>
           /^(ADD_CART|BOOK_CLASS):/i.test(m[1].trim())
         );
         for (const match of actionMatches) {
@@ -359,9 +452,64 @@ const NexusAiChat = ({ isOpen, onClose }) => {
         }
       }
 
-      setMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'bot', text: rawText }]);
-    } catch {
-      setMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'bot', text: t('Sorry, the AI system is currently busy. Please try again later.') }]);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === botMsgId ? { ...m, text: cleanedText, sources, isStreaming: false } : m
+        )
+      );
+    } catch (streamErr) {
+      console.warn('Streaming failed, falling back to REST endpoint:', streamErr);
+
+      if (!streamedAnyChunk) {
+        try {
+          const res = await axios.post(
+            'http://localhost:8080/api/v1/member/ai/chat',
+            { message: userMsg.text, history },
+            { headers: { Authorization: 'Bearer ' + token } }
+          );
+
+          const normalized = normalizeChatResponse(res.data);
+          let rawText = normalized.text;
+          const sources = normalized.sources;
+          const actionMatches = [...rawText.matchAll(/\[ACTION:(.*?)\]/g)];
+
+          if (actionMatches.length > 0) {
+            rawText = rawText.replace(/\[ACTION:(.*?)\]/g, '').trim();
+            const hasCartAction = actionMatches.some((m) =>
+              /^(ADD_CART|BOOK_CLASS):/i.test(m[1].trim())
+            );
+            for (const match of actionMatches) {
+              await executeAction(match[1], hasCartAction);
+            }
+          }
+
+          setMessages((prev) => {
+            const exists = prev.some((m) => m.id === botMsgId);
+            if (exists) {
+              return prev.map((m) =>
+                m.id === botMsgId ? { ...m, text: rawText, sources, isStreaming: false } : m
+              );
+            }
+            return [...prev, { id: botMsgId, sender: 'bot', text: rawText, sources }];
+          });
+        } catch {
+          setMessages((prev) => [
+            ...prev.filter((m) => m.id !== botMsgId),
+            {
+              id: botMsgId,
+              sender: 'bot',
+              text: t('Sorry, the AI system is currently busy. Please try again later.')
+            }
+          ]);
+        }
+      } else {
+        const cleanedText = stripPartialActionTag(accumulatedText);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === botMsgId ? { ...m, text: cleanedText, isStreaming: false } : m
+          )
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -371,40 +519,59 @@ const NexusAiChat = ({ isOpen, onClose }) => {
     <AnimatePresence>
       {isOpen && (
         <div 
-          className="fixed z-[9999]" 
+          className="fixed z-[9999] pointer-events-none" 
           style={{ top: "80px", right: "24px", transform: `translate(${position.x}px, ${position.y}px)` }}
         >
           <motion.div 
-            initial={{ opacity: 0, y: -40, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 350, damping: 25 }}
-            className="flex flex-col bg-[var(--surface)] backdrop-blur-xl border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden w-[340px] sm:w-[390px]"
+            initial={
+              openOrigin === 'topbar'
+                ? { opacity: 0, x: -60 - position.x, y: -45 - position.y, scale: 0.35 }
+                : { opacity: 0, x: 110 - position.x, y: 360 - position.y, scale: 0.2 }
+            }
+            animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+            exit={
+              exitMode === 'topbar'
+                ? { opacity: 0, x: -85 - position.x, y: -60 - position.y, scale: 0.14 }
+                : { opacity: 0, x: 110 - position.x, y: 360 - position.y, scale: 0.18 }
+            }
+            transition={{ type: "spring", stiffness: 360, damping: 26 }}
+            className="pointer-events-auto flex flex-col bg-[var(--surface)] backdrop-blur-xl border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden w-[340px] sm:w-[390px]"
             style={{ height: "540px" }}
           >
             {/* HEADER */}
             <div 
               ref={dragRef}
               onMouseDown={handleMouseDown}
-              className="bg-[var(--primary)] p-3.5 flex items-center justify-between cursor-move select-none"
+              className="bg-gradient-to-r from-[#0071E3] via-blue-700 to-indigo-800 p-3.5 flex items-center justify-between cursor-move select-none"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md">
-                  <Bot className="w-4 h-4 text-white" />
+                <div className="w-9 h-9 rounded-full bg-slate-950/80 border border-cyan-400/50 flex items-center justify-center backdrop-blur-md shadow-inner">
+                  <CyberFoxAvatar direction="DIRECT_HOVER" className="w-8 h-8" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white leading-tight">{t("NEXUS AI")}</h3>
-                  <p className="text-[10px] text-blue-100 font-medium">{t("Agentic Assistant")}</p>
+                  <p className="text-[10px] text-cyan-200 font-medium">{t("Agentic Assistant")}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
-                <button onClick={onClose} className="p-1.5 text-blue-100 hover:text-white transition-colors" title={t("Minimize (Keep history)")} aria-label={t("Minimize (Keep history)")}>
+              <div className="flex items-center gap-1" onMouseDown={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={handleMinimizeClick}
+                  className="p-1.5 text-blue-100 hover:bg-white/10 rounded-lg hover:text-white transition-colors cursor-pointer"
+                  title={t("Minimize (Keep history)")}
+                  aria-label={t("Minimize (Keep history)")}
+                >
                   <Minus className="w-4 h-4" />
                 </button>
-                <button onClick={() => {
-                  setMessages([{ id: 1, sender: "bot", text: t("Hello! I am NEXUS AI. How can I assist you with your fitness journey today? (e.g. \"I want to lose 5kg\", \"Which yoga class is good?\")") }]);
-                  onClose();
-                }} className="p-1.5 text-blue-100 hover:bg-white/10 rounded-lg hover:text-white transition-colors" title={t("Close (Clear history)")} aria-label={t("Close (Clear history)")}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={handleCloseSessionClick}
+                  className="p-1.5 text-blue-100 hover:bg-white/10 rounded-lg hover:text-white transition-colors cursor-pointer"
+                  title={t("Close (Clear history)")}
+                  aria-label={t("Close (Clear history)")}
+                >
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -415,26 +582,46 @@ const NexusAiChat = ({ isOpen, onClose }) => {
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`flex gap-2 max-w-[85%] ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center mt-1 shadow-sm ${msg.sender === 'user' ? 'bg-[var(--primary)] text-white' : 'bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 border border-blue-100'}`}>
-                      {msg.sender === 'user' ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
+                    <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center mt-1 shadow-sm ${msg.sender === 'user' ? 'bg-[var(--primary)] text-white' : 'bg-slate-900 border border-cyan-400/50'}`}>
+                      {msg.sender === 'user' ? <User className="w-3.5 h-3.5" /> : <CyberFoxAvatar direction="DIRECT_HOVER" className="w-6 h-6" />}
                     </div>
-                    <div className={`p-3 text-[13.5px] leading-relaxed whitespace-pre-wrap shadow-sm ${
-                      msg.sender === 'user'
-                        ? 'bg-[var(--primary)] text-white rounded-2xl rounded-tr-sm'
-                        : 'bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--border)] rounded-2xl rounded-tl-sm'
-                    }`}>
-                      {msg.text}
+                    <div className="space-y-1">
+                      <div className={`p-3 text-[13.5px] leading-relaxed shadow-sm ${
+                        msg.sender === 'user'
+                          ? 'bg-[var(--primary)] text-white rounded-2xl rounded-tr-sm whitespace-pre-wrap'
+                          : 'bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--border)] rounded-2xl rounded-tl-sm'
+                      }`}>
+                        {msg.sender === 'user' ? msg.text : renderChatMarkdown(msg.text)}
+                        {msg.isStreaming && <span className="inline-block w-1.5 h-3.5 ml-1 bg-blue-500 animate-pulse align-middle" />}
+                      </div>
+
+                      {msg.sender === 'bot' && msg.sources && msg.sources.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5 pl-1">
+                          <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">
+                            <BookOpen className="w-3 h-3 text-blue-500" />
+                            {t("Nguồn tham khảo")}:
+                          </span>
+                          {msg.sources.map((s, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800"
+                            >
+                              [{s.index}] {s.title}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               ))}
               
               {/* TYPING INDICATOR */}
-              {isLoading && (
+              {isLoading && !messages.some((m) => m.isStreaming) && (
                 <div className="flex justify-start">
                   <div className="flex gap-2 max-w-[85%] flex-row">
-                    <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center mt-1 bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 border border-blue-100 shadow-sm">
-                      <Bot className="w-3.5 h-3.5 animate-pulse" />
+                    <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center mt-1 bg-slate-900 border border-cyan-400/50 shadow-sm">
+                      <CyberFoxAvatar direction="DIRECT_HOVER" className="w-6 h-6 animate-pulse" />
                     </div>
                     <div className="p-4 bg-[var(--surface-hover)] border border-[var(--border)] rounded-2xl rounded-tl-sm flex items-center gap-1.5 shadow-sm">
                       <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></span>

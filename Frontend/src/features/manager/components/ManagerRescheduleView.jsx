@@ -426,17 +426,35 @@ export default function ManagerRescheduleView() {
                             </div>
                           </div>
                         ) : (
-                          <div className="w-full lg:w-48 p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs space-y-1">
-                            <div className="flex justify-between text-[11px] font-semibold">
+                          <div className="w-full lg:w-56 p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs space-y-1.5">
+                            <div className="flex justify-between items-center text-[11px] font-semibold">
                               <span className="text-[var(--text-muted)]">{t('Confirmed')}:</span>
-                              <span className="text-[var(--primary)] font-bold">{req.acceptedMembersCount || 0} / {req.totalEnrolledMembers || 0}</span>
+                              <span className="text-[var(--primary)] font-bold">
+                                {req.acceptedCount ?? req.acceptedMembersCount ?? 0}
+                                <span className="text-[var(--text-muted)] font-normal text-[10px]"> / {req.totalEnrolledMembers || 0}</span>
+                              </span>
                             </div>
-                            <div className="text-[10px] text-[var(--text-muted)] flex justify-between">
-                              <span>{t('Min Quorum')}: {req.minAttendeesRequired || 1}</span>
-                              <span className={isExpired ? 'text-rose-500 font-bold' : ''}>
+                            <div className="text-[10px] text-[var(--text-muted)] flex justify-between items-center">
+                              <span>{t('Min Quorum')}:</span>
+                              <span className="font-semibold text-[var(--text)]">
+                                {req.minAttendees ?? req.minAttendeesRequired ?? 1} {t('members')}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-[var(--text-muted)] flex justify-between items-center pt-1 border-t border-[var(--border)]/40">
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
+                                <span>{t('Deadline')}:</span>
+                              </span>
+                              <span className={isExpired ? 'text-rose-500 font-bold' : 'font-medium text-[var(--text)]'}>
                                 {isExpired ? t('Expired') : formatDateTime(req.confirmationDeadline)}
                               </span>
                             </div>
+                            {Number(req.declinedCount) > 0 && (
+                              <div className="text-[10px] text-amber-500 flex justify-between font-medium pt-1 border-t border-[var(--border)]/40">
+                                <span>{t('Declined')}:</span>
+                                <span className="font-bold">{req.declinedCount}</span>
+                              </div>
+                            )}
                           </div>
                         )
                       )}

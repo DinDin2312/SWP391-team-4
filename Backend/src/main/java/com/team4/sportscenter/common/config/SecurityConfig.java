@@ -2,6 +2,7 @@ package com.team4.sportscenter.common.config;
 
 import com.team4.sportscenter.security.jwt.JwtAuthenticationFilter;
 import com.team4.sportscenter.security.auth.UserDetailsServiceImpl;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,8 +40,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults()) // SÄ‚Â¡Ă‚Â»Ă‚Â­ dÄ‚Â¡Ă‚Â»Ă‚Â¥ng cÄ‚Â¡Ă‚ÂºĂ‚Â¥u hĂ„â€Ă‚Â¬nh corsConfigurationSource bĂ„â€Ă‚Âªn dÄ‚â€ Ă‚Â°Ä‚Â¡Ă‚Â»Ă¢â‚¬Âºi
+                .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
+                        // Allow async/error dispatches (e.g., SseEmitter streaming completion)
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
+
                         // Preflight OPTIONS
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
@@ -50,18 +54,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/resource-images/**").permitAll()
                         .requestMatchers("/api/v1/payment/payos-webhook", "/api/v1/payment/payos-callback", "/api/v1/payment/vietqr-info/**", "/api/v1/payment/vietqr-confirm/**").permitAll()
 
-                        // Cho phĂ„â€Ă‚Â©p truy cÄ‚Â¡Ă‚ÂºĂ‚Â­p cĂ„â€Ă‚Â¡c API cÄ‚Â¡Ă‚Â»Ă‚Â§a Receptionist
+                        // Receptionist APIs
                         .requestMatchers("/api/receptionist/**", "/receptionist/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
-
-
-                  
-
 
                         // Manager operations are restricted to the Center Manager authority.
                         .requestMatchers("/api/manager/**").hasRole("CENTER_MANAGER")
                         .requestMatchers("/api/v1/coach/**", "/api/coach/**").hasAnyRole("COACH", "CENTER_MANAGER")
 
-                        .requestMatchers(HttpMethod.POST,"/api/v1/member/book-class/*/with-package/*").hasRole("MEMBER")
                         .requestMatchers("/api/v1/member/health-profile", "/api/v1/member/health-profile/**").hasRole("MEMBER")
                         .anyRequest().authenticated()
                 )
@@ -83,11 +82,9 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // Bean cÄ‚Â¡Ă‚ÂºĂ‚Â¥u hĂ„â€Ă‚Â¬nh chi tiÄ‚Â¡Ă‚ÂºĂ‚Â¿t CORS cho toĂ„â€Ă‚Â n bÄ‚Â¡Ă‚Â»Ă¢â€Â¢ Ä‚Â¡Ă‚Â»Ă‚Â©ng dÄ‚Â¡Ă‚Â»Ă‚Â¥ng
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Cho phĂ„â€Ă‚Â©p nguÄ‚Â¡Ă‚Â»Ă¢â‚¬Å“n Front-end (Vite/React thÄ‚â€ Ă‚Â°Ä‚Â¡Ă‚Â»Ă‚Âng chÄ‚Â¡Ă‚ÂºĂ‚Â¡y 5173 hoÄ‚Â¡Ă‚ÂºĂ‚Â·c 3000)
         configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin"));
@@ -116,6 +113,3 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
-
-
-

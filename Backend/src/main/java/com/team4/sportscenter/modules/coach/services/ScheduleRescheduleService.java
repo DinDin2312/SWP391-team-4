@@ -4,6 +4,7 @@ import com.team4.sportscenter.modules.coach.dtos.CreateRescheduleRequestDto;
 import com.team4.sportscenter.modules.coach.dtos.RescheduleRequestResponseDto;
 import com.team4.sportscenter.modules.coach.dtos.UpcomingScheduleOptionDto;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -15,6 +16,8 @@ public interface ScheduleRescheduleService {
     List<RescheduleRequestResponseDto> getCoachRequests(String coachEmail);
 
     List<UpcomingScheduleOptionDto> getCoachUpcomingSchedules(String coachEmail);
+
+    Map<String, Object> checkAvailability(Integer scheduleId, LocalDateTime proposedStartTime, LocalDateTime proposedEndTime, Integer proposedRoomId, String coachEmail);
 
     RescheduleRequestResponseDto cancelCoachRequest(Integer requestId, String coachEmail);
 
@@ -38,4 +41,6 @@ public interface ScheduleRescheduleService {
 
     // === BACKGROUND TASK ===
     void processExpiredRescheduleDeadlines();
+
+    RescheduleRequestResponseDto simulateDeadlineExpiration(Integer requestId);
 }

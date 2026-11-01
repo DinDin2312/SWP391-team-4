@@ -9,8 +9,9 @@ import { useNavigate, useLocation, useOutlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-import { Bot, Sparkles, X, ArrowRight } from 'lucide-react';
+import { Sparkles, X, ArrowRight } from 'lucide-react';
 import NexusAiChat from '../features/member/components/NexusAiChat';
+import CyberFoxMascot, { CyberFoxAvatar } from '../components/CyberFoxMascot';
 import MemberNotificationDropdown from '../features/member/components/MemberNotificationDropdown';
 import { getSavedMemberNotificationPreferences, getMemberUnreadCount } from '../features/member/memberUtils';
 import {
@@ -27,7 +28,10 @@ const MemberLayout = () => {
   const { userInfo, logout = () => {}, updateUserInfo } = auth;
   const [cartCount, setCartCount] = useState(0);
   const [isCartHighlighted, setIsCartHighlighted] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  // 3-state AI lifecycle: 'minimized' (default Fox at bottom-right) | 'open' | 'docked' (hidden in topbar after [x])
+  const [chatMode, setChatMode] = useState('minimized');
+  const [chatOrigin, setChatOrigin] = useState('fox');
+  const [isTopbarDockGlow, setIsTopbarDockGlow] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
   const [hasAiAccess, setHasAiAccess] = useState(false);
@@ -35,9 +39,10 @@ const MemberLayout = () => {
   const aiPopoverRef = useRef(null);
   const aiNoticeTimerRef = useRef(null);
 
-  const handleAskNexusAi = () => {
+  const handleAskNexusAi = (origin = 'topbar') => {
     if (hasAiAccess) {
-      setIsChatOpen(prev => !prev);
+      setChatOrigin(origin);
+      setChatMode(prev => (prev === 'open' ? 'minimized' : 'open'));
       setAiNoticeVisible(false);
     } else {
       setAiNoticeVisible(prev => {
@@ -313,10 +318,12 @@ const MemberLayout = () => {
             <div className="relative inline-block shrink-0" ref={aiPopoverRef}>
               <button
                 type="button"
-                onClick={handleAskNexusAi}
-                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--primary-hover)] to-[var(--primary-hover)] hover:from-[var(--primary-hover)] hover:to-[var(--primary-hover)] text-[color:var(--on-primary)] font-semibold text-xs flex items-center gap-2 shadow-[var(--shadow)] transition-all cursor-pointer active:scale-95"
+                onClick={() => handleAskNexusAi('topbar')}
+                className={`px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--primary-hover)] to-[var(--primary-hover)] hover:from-[var(--primary-hover)] hover:to-[var(--primary-hover)] text-[color:var(--on-primary)] font-semibold text-xs flex items-center gap-2 shadow-[var(--shadow)] transition-all cursor-pointer active:scale-95 ${
+                  isTopbarDockGlow ? 'ring-4 ring-cyan-400/75 scale-105 shadow-[0_0_24px_rgba(34,211,238,0.75)]' : ''
+                }`}
               >
-                <Bot className="w-4 h-4" />
+                <CyberFoxAvatar direction="DIRECT_HOVER" className="w-5 h-5 -my-0.5" />
                 <span>{t("Ask NEXUS AI")}</span>
               </button>
 
@@ -341,8 +348,8 @@ const MemberLayout = () => {
                     <div className="relative z-20">
                       <div className="flex items-start justify-between gap-2.5">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-xl bg-blue-500/10 text-[#0071E3] dark:text-[#0A84FF] border border-blue-500/20 flex items-center justify-center shrink-0">
-                            <Bot className="w-4 h-4" />
+                          <div className="w-7 h-7 rounded-xl bg-slate-900 border border-cyan-400/40 flex items-center justify-center shrink-0">
+                            <CyberFoxAvatar direction="DIRECT_HOVER" className="w-6 h-6" />
                           </div>
                           <div>
                             <span className="text-[11px] font-bold text-slate-900 dark:text-white flex items-center gap-1">
@@ -455,7 +462,21 @@ const MemberLayout = () => {
             </motion.div>
           </AnimatePresence>
         </div>
-      <NexusAiChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+        <NexusAiChat
+          isOpen={chatMode === 'open'}
+          openOrigin={chatOrigin}
+          onMinimize={() => setChatMode('minimized')}
+          onClose={() => {
+            setChatMode('docked');
+            setIsTopbarDockGlow(true);
+            setTimeout(() => setIsTopbarDockGlow(false), 1200);
+          }}
+        />
+        <CyberFoxMascot
+          isVisible={chatMode === 'minimized'}
+          onActivate={() => handleAskNexusAi('fox')}
+          label={t("Ask NEXUS AI")}
+        />
       </main>
     </div>
   );
