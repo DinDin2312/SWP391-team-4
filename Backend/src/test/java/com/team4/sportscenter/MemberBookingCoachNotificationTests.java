@@ -99,34 +99,12 @@ class MemberBookingCoachNotificationTests {
     }
 
     @Test
-    @DisplayName("Should send notification to coach when member books class using package benefits")
-    void testBookClassNotifiesCoach() {
-        when(bookingRepository.existsConfirmedByEmailAndClassId(trainee.getEmail(), 1)).thenReturn(false);
-        when(bookingRepository.existsPendingByEmailAndClassId(trainee.getEmail(), 1)).thenReturn(false);
-        when(scheduleRepository.findAvailableSchedulesByClassId(eq(1), any(LocalDateTime.class))).thenReturn(List.of(schedule));
-        when(userRepository.findByEmail(trainee.getEmail())).thenReturn(Optional.of(trainee));
-        when(packageBenefits.reserve(anyString(), anyInt(), anyInt(), anyInt(), anyList())).thenReturn(99);
-        when(bookingRepository.saveAllAndFlush(anyList())).thenAnswer(inv -> {
-            List<Booking> list = inv.getArgument(0);
-            for (int i = 0; i < list.size(); i++) {
-                list.get(i).setBookingId(2000 + i);
-            }
-            return list;
-        });
-
-        memberService.bookClassUsingPackage(trainee.getEmail(), 1, 10);
-
-        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
-        verify(notificationRepository, atLeastOnce()).save(notifCaptor.capture());
-
-        List<Notification> captured = notifCaptor.getAllValues();
-        boolean notifiedCoach = captured.stream().anyMatch(n ->
-                n.getUser() != null &&
-                "coach.tuan@gmail.com".equals(n.getUser().getEmail()) &&
-                n.getTitle().contains("Học viên mới đăng ký lớp")
+    @DisplayName("Should reject booking class using package because courses are enrolled separately")
+    void testBookClassUsingPackageRejected() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> memberService.bookClassUsingPackage(trainee.getEmail(), 1, 10)
         );
-
-        assertTrue(notifiedCoach, "Coach should receive a booking notification");
     }
 
     @Test

@@ -215,10 +215,18 @@ public class CoachController {
     // ==================== TRỢ LÝ AI HUẤN LUYỆN VIÊN (COACH AI) ====================
 
     @PostMapping("/ai/chat")
-    public ResponseEntity<String> chatWithAi(
+    public ResponseEntity<com.team4.sportscenter.modules.rag.dtos.AiChatResponse> chatWithAi(
             Authentication authentication,
             @RequestBody CoachAiMessageRequest request) {
         String coachEmail = authentication.getName();
-        return ResponseEntity.ok(coachAiChatService.chat(request.getMessage(), coachEmail));
+        return ResponseEntity.ok(coachAiChatService.chatDetailed(request.getMessage(), request.getHistory(), coachEmail));
+    }
+
+    @PostMapping(value = "/ai/chat/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter streamChatWithAi(
+            Authentication authentication,
+            @RequestBody CoachAiMessageRequest request) {
+        String coachEmail = authentication.getName();
+        return coachAiChatService.chatStream(request.getMessage(), request.getHistory(), coachEmail);
     }
 }

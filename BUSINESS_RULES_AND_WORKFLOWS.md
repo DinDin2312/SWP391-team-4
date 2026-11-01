@@ -16,7 +16,7 @@
 6. [Phân hệ 4: Đặt lịch Lớp học, Hủy lịch & Bảo lưu Hạn mức (`member/booking`, `receptionist/booking`)](#6-phân-hệ-4-đặt-lịch-lớp-học-hủy-lịch--bảo-lưu-hạn-mức)
 7. [Phân hệ 5: Giỏ hàng, Thanh toán (VNPay/MoMo/Tiền mặt), Đối soát & Sổ cái Giao dịch (`payment`, `transactions`)](#7-phân-hệ-5-giỏ-hàng-thanh-toán-vnpaymomotiền-mặt-đối-soát--sổ-cái-giao-dịch)
 8. [Phân hệ 6: Check-in Thông minh tại Quầy, Sức chứa Phòng & Đối soát chéo Lễ tân – Coach (`checkin`, `attendance`)](#8-phân-hệ-6-check-in-thông-minh-tại-quầy-sức-chứa-phòng--đối-soát-chéo-lễ-tân--coach)
-9. [Phân hệ 7: Nghiệp vụ Huấn luyện viên, Giáo án, Đánh giá, Cronjob & Trợ lý NEXUS AI (`coach`, `notification`, `ai-chat`)](#9-phân-hệ-7-nghiệp-vụ-huấn-luyện-viên-giáo-án-đánh-giá-cronjob--trợ-lý-nexus-ai)
+9. [Phân hệ 7: Nghiệp vụ Huấn luyện viên, Giáo án, Đánh giá InBody & Dời Lịch Dạy Bù (`coach`, `reschedule`, `health`, `notification`, `ai-chat`)](#9-phân-hệ-7-nghiệp-vụ-huấn-luyện-viên-giáo-án-đánh-giá-cronjob--trợ-lý-nexus-ai)
 10. [Bảng Tham chiếu Nhanh Mã lỗi & Ràng buộc Cốt lõi](#10-bảng-tham-chiếu-nhanh-mã-lỗi--ràng-buộc-cốt-lõi)
 
 ---
@@ -95,6 +95,37 @@ stateDiagram-v2
 - **Quy tắc Hiển thị Sổ cái (`TransactionService.PAYMENT_STATE`)**:
   - Nếu `INVOICES.status = 'REVIEW'` và `PAYMENTS.status IN ('SUCCESS', 'COMPLETED')` $\rightarrow$ Trạng thái giao dịch hiển thị là **`REVIEW`** (cần đối soát/hoàn tiền, **không** cộng vào doanh thu thực thu trên báo cáo Manager).
   - Nếu `PAYMENTS.status = 'COMPLETED'` và `INVOICES.status = 'PAID'` $\rightarrow$ Hiển thị là **`SUCCESS`**.
+
+### 2.5. Vòng đời Yêu cầu Dời lịch Dạy bù (`CLASS_RESCHEDULE_REQUESTS.status`)
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING_APPROVAL : HLV tạo đơn dời lịch bù (> 12h trước ca gốc)
+    PENDING_APPROVAL --> APPROVED : Quản lý thẩm định & duyệt ca dạy bù
+    PENDING_APPROVAL --> REJECTED : Quản lý từ chối (bắt buộc nhập lý do)
+    
+    state APPROVED {
+        [*] --> VOTING : Bắn thông báo chuông cho toàn bộ học viên lớp
+        VOTING --> CONFIRMED : Đủ sĩ số học viên đồng ý (>= min_students) trước hạn chót
+        VOTING --> CANCELLED : Không đủ sĩ số hoặc quá confirmation_deadline
+    }
+
+    CONFIRMED --> [*] : Ca học bù chính thức mở lịch & diễn ra
+    CANCELLED --> [*] : Tự động hoàn lại 1 lượt tập / 100% Credit cho tất cả học viên
+    REJECTED --> [*] : Giữ lịch gốc hoặc HLV/Quản lý xử lý theo quy chế vắng mặt
+```
+
+### 2.6. Vòng đời Đồ Thất Lạc (`LOST_AND_FOUND_ITEMS.status`)
+```mermaid
+stateDiagram-v2
+    [*] --> STORED : Lễ tân tiếp nhận & gán mã LF-YYYYMMDD-XXXX
+    STORED --> CLAIMED : Chủ nhân xác minh thông tin & nhận lại đồ
+    STORED --> OVERDUE : Quá hạn lưu kho (expiryDate < today)
+    OVERDUE --> CLAIMED : Khách đến chuộc/nhận muộn hợp lệ
+    OVERDUE --> DISPOSED : Lễ tân thanh lý / tiêu hủy / quyên góp
+    STORED --> DISPOSED : Thanh lý đồ đặc biệt (đồ tươi sống hỏng sớm)
+    CLAIMED --> [*] : Khóa lưu vết bàn giao
+    DISPOSED --> [*] : Khóa lưu vết thanh lý
+```
 
 ---
 
@@ -484,6 +515,41 @@ flowchart LR
     end
 ```
 
+### 8.4. Nghiệp vụ Quản lý Đồ Thất Lạc & Cơ chế Chống Nhận Vơ (Lost & Found Management)
+
+**Mã nguồn chính**: `LostAndFoundServiceImpl.java`, `LostAndFoundController.java`, `LostAndFoundRepository.java`, `LostAndFoundView.jsx`, `CreateLostItemModal.jsx`, `LostItemDetailModal.jsx`
+
+#### 8.4.1. Quy tắc Mã hóa & Định danh Độc bản (`generateItemCode`)
+- Tự động sinh mã định danh duy nhất theo định dạng `LF-YYYYMMDD-XXXX` (ví dụ: `LF-20261101-4521`), thuận tiện dán nhãn niêm phong và truy xuất nhanh trong kho Lễ tân.
+
+#### 8.4.2. Quy tắc Phân loại & Hạn Định Thời Gian Lưu Kho (`ValuationType` & `calculateExpiryDate`)
+Hệ thống tự động phân loại thời hạn lưu kho dựa trên danh mục đồ vật:
+1. **`HIGH_VALUE` (Đồ giá trị cao: Điện thoại, Máy tính bảng, Ví tiền, Trang sức, Giấy tờ tùy thân)**:
+   - Mặc định lưu trữ **90 ngày**.
+   - Bắt buộc lưu trữ tại vị trí an toàn đặc biệt (`storageLocation = 'Két sắt Lễ tân' / 'Tủ khóa số Lễ tân'`).
+2. **`STANDARD` (Đồ thông thường: Quần áo, Giày thể thao, Khăn tập, Bình nước, Phụ kiện tập)**:
+   - Mặc định lưu trữ **30 ngày** tại tủ lưu trữ Lost & Found sảnh.
+3. **`PERISHABLE` (Đồ tươi sống / Đồ ăn, nước uống dễ ôi thiu)**:
+   - Mặc định lưu trữ **02 ngày (48 giờ)**. Quá 48h tự động chuyển sang luồng thanh lý/tiêu hủy để bảo đảm vệ sinh môi trường tập luyện.
+4. **Tùy chỉnh thời hạn (`customRetentionDays`)**: Lễ tân có thể kéo dài ngày hết hạn nếu khách có liên hệ hẹn ngày đến nhận cụ thể.
+
+#### 8.4.3. Cơ chế Bảo Mật 2 Lớp Chống Nhận Vơ (`Secret Detail Verification Mechanism`)
+Để ngăn chặn tình trạng khách gian lận nhận nhầm đồ đắt tiền của người khác:
+- **Mô tả công khai (`publicDescription`)**: Hiển thị trên bảng tin công khai hoặc danh sách tìm đồ (ví dụ: *"Bình giữ nhiệt màu đen nhãn hiệu Hydro Flask nhặt được tại Phòng Gym Tầng 1 lúc 18h30"*).
+- **Chi tiết bí mật bảo mật (`secretDetails`)**: **TUYỆT ĐỐI ẨN đối với công chúng, CHỈ hiển thị trong Cổng Lễ tân** (ví dụ: *"Đáy bình có vết xước hình chữ V, bên trong nắp có dán nhãn tên 'Anh Tuấn', trong túi có 1 chìa khóa xe máy số 58"*).
+- **Quy tắc Kiểm chứng**: Khi người nhận đến quầy, Lễ tân phỏng vấn và yêu cầu mô tả các đặc điểm đặc biệt. Khớp đúng với `secretDetails` thì mới tiến hành thủ tục bàn giao.
+
+#### 8.4.4. Quy trình Bàn Giao Minh Bạch (`claimItem`) & Khóa Bất Biến
+- Khi bàn giao cho khách (`status = 'CLAIMED'`), hệ thống bắt buộc lưu vết:
+  - Họ tên người nhận (`claimantName`), Số điện thoại (`claimantPhone`), Số CCCD/CMND (`claimantIdCard`).
+  - Ghi chú nhận đồ (`claimNotes`), nhân viên lễ tân thực hiện bàn giao (`claimedByStaff`), thời điểm bàn giao (`claimedAt = NOW()`).
+  - Liên kết trực tiếp tài khoản hội viên (`claimedByUser`) nếu người nhận là hội viên của trung tâm.
+- **Ràng buộc Khóa Bất Biến**: Món đồ đã `CLAIMED` hoặc `DISPOSED` bị khóa tuyệt đối, **không cho phép sửa đổi hoặc xóa** để phục vụ đối soát, kiểm toán nội bộ.
+
+#### 8.4.5. Quy trình Thanh Lý & Xử Lý Quá Hạn (`disposeItem` & `syncOverdueItems`)
+- Mỗi khi Lễ tân tải trang, hệ thống tự động quét `syncOverdueItems()` để chuyển toàn bộ các món `STORED` có `expiryDate < TODAY` sang trạng thái **`OVERDUE` (Quá hạn)**.
+- Khi thanh lý (`DISPOSED`), Lễ tân bắt buộc chọn lý do thanh lý (`disposalReason`): Quyên góp từ thiện (`DONATION`), Tiêu hủy rác thải (`DESTROYED`), Tái chế (`RECYCLED`), v.v. và ghi nhận vào sổ nhật ký lưu trữ.
+
 ---
 
 ## 9. Phân hệ 7: Nghiệp vụ Huấn luyện viên, Giáo án, Đánh giá, Cronjob & Trợ lý NEXUS AI
@@ -500,17 +566,50 @@ flowchart LR
    - **Ràng buộc Đối soát Lễ tân**: Học viên bắt buộc phải có lượt Check-in tại quầy Lễ tân trong ngày hôm nay thì Coach mới có thể tích chọn `PRESENT`.
    - **Thưởng/Thu hồi Điểm tích lũy**: Khi chuyển sang `PRESENT`, học viên được cộng **+10 `loyaltyPoints`**; nếu đổi từ `PRESENT` sang `ABSENT`/`NOT_YET`, hệ thống thu hồi lại **-10 `loyaltyPoints`** (tối thiểu về `0`).
 
-### 9.2. Giao Giáo án Tập luyện & Đánh giá Tiến độ Học viên (`Workout Plans & Assessments`)
-1. **Giao Giáo án (`CoachWorkoutServiceImpl.assignWorkoutPlan`)**:
-   - Bắt buộc có tiêu đề (`title`) và ít nhất **01 bài tập** (`exerciseDetails`). Nếu không truyền thông số chi tiết thì mặc định `sets = 3`, `reps = 10`, `restSeconds = 60`.
-   - Hỗ trợ 2 chế độ giao bài (`targetType`):
-     - `INDIVIDUAL`: Giao cho 1 học viên cụ thể (`studentUserId`).
-     - `CLASS`: Giao hàng loạt cho tất cả học viên đã đăng ký (`CONFIRMED`) trong một lớp học (`classId`) do chính Coach đó phụ trách. Nếu lớp chưa có học viên nào $\rightarrow$ Báo lỗi.
-   - Tự động gửi thông báo loại `WORKOUT` đến từng học viên nhận giáo án.
-   - Chỉ Coach tạo giáo án mới có quyền xem chi tiết hoặc xóa giáo án đó.
-2. **Đánh giá Tiến độ Học viên (`CoachAssessmentServiceImpl.createAssessment`)**:
-   - Bắt buộc chọn học viên (`studentUserId`) và nhập nhận xét chuyên môn (`feedbackNote` không được rỗng).
-   - Lưu các chỉ số cơ thể (`weight`, `height`, `bodyFatPercentage`, `muscleMass`) và thang điểm (`performanceRating`, `attendanceRating`), tự động liên kết với `Schedule`, `Booking` hoặc `CoachWorkoutPlan` và bắn thông báo loại `COACH` cho học viên.
+### 9.2. Giao Giáo án Tập luyện & Quản lý Thể trạng Học viên (`Workout Plans, Health Profiles & Assessments`)
+
+#### 9.2.1. Giao Giáo án Tập luyện (`CoachWorkoutServiceImpl.assignWorkoutPlan`)
+- Bắt buộc có tiêu đề (`title`) và ít nhất **01 bài tập** (`exerciseDetails`). Nếu không truyền thông số chi tiết thì mặc định `sets = 3`, `reps = 10`, `restSeconds = 60`.
+- Hỗ trợ 2 chế độ giao bài (`targetType`):
+  - `INDIVIDUAL`: Giao cho 1 học viên cụ thể (`studentUserId`).
+  - `CLASS`: Giao hàng loạt cho tất cả học viên đã đăng ký (`CONFIRMED`) trong một lớp học (`classId`) do chính Coach đó phụ trách. Nếu lớp chưa có học viên nào $\rightarrow$ Báo lỗi.
+- Tự động gửi thông báo loại `WORKOUT` đến từng học viên nhận giáo án.
+- Chỉ Coach tạo giáo án mới có quyền xem chi tiết hoặc xóa giáo án đó.
+
+#### 9.2.2. Phân định Nghiệp vụ: Đánh giá Buổi học Hàng ngày vs. Đo chỉ số InBody Định kỳ
+Hệ thống thiết kế tách bạch rõ ràng giữa hai khái niệm thường bị nhầm lẫn trong phòng tập:
+1. **Đánh giá Buổi học Hàng ngày (Daily Session Log) — BẮT BUỘC sau mỗi ca dạy**:
+   - **Mục đích**: Ghi nhận mức độ hoàn thành bài tập, thái độ chuyên cần, đánh giá form kỹ thuật và dặn dò sau buổi tập.
+   - **Trường bắt buộc**: Thang điểm `performanceRating` (1 - 5 sao ⭐) và Nhận xét chuyên môn `feedbackNote` (không được để trống).
+   - **Tác động**: Học viên nhận thông báo phản hồi ngay khi ca học kết thúc; giúp HLV theo dõi sự tiến bộ qua từng buổi.
+2. **Đo đạc Chỉ số InBody (Milestone InBody Measurement) — TÙY CHỌN (OPTIONAL)**:
+   - **Nguyên lý Khoa học Thể thao**: Tuyệt đối **không bắt buộc** đo InBody sau mỗi buổi tập. Sau 60-90 phút tập luyện, cơ thể mất từ 0.5 - 1.5L nước qua mồ hôi và cạn kiệt glycogen. Đo InBody ngay lúc này sẽ bị sai lệch nghiêm trọng do máy BIA phụ thuộc nồng độ nước (dẫn đến sụt cơ ảo hoặc tăng mỡ ảo). Hơn nữa, mô mỡ và cơ bắp cần từ **2 đến 4 tuần** thâm hụt/dư thừa calo mới biến đổi rõ rệt.
+   - **Quy tắc Nghiệp vụ**: Các trường `weight`, `height`, `bodyFatPercentage`, `muscleMass` trong modal đánh giá của Coach là **hoàn toàn tùy chọn (Optional)**. HLV chỉ nhập khi lớp đến các **Cột mốc định kỳ (Milestones: Buổi 1 đầu khóa, Buổi giữa khóa, hoặc ngày kiểm tra thể lực định kỳ 2-4 tuần/lần)**.
+
+#### 9.2.3. Cơ chế Đồng bộ Dữ liệu Thể chất 2 Chiều (Bidirectional Health & InBody Sync)
+Hệ thống duy trì luồng dữ liệu thời gian thực giữa hai tác nhân Coach và Member:
+- **Chiều 1 (Coach $\rightarrow$ Member)**: Khi Coach nhập các chỉ số InBody trong buổi đánh giá định kỳ, hệ thống vừa lưu bản ghi lịch sử `INBODY_RECORDS`, vừa tự động cập nhật đè thông số mới nhất vào hồ sơ thể trạng `HEALTH_PROFILES` của học viên.
+- **Chiều 2 (Member $\rightarrow$ Coach)**: Hội viên tự đo InBody tại máy đo ở trung tâm và tự cập nhật tại trang cá nhân (`/member/profile/health` hoặc modal tự đo):
+  - Bản ghi được gắn nhãn `Tự cập nhật` (`coachId = null`).
+  - Dữ liệu này **lập tức đồng bộ và hiển thị trên Cổng Huấn luyện viên (`TraineeAssessmentModal`)**. Khi HLV mở hồ sơ học viên, HLV sẽ nhìn thấy ngay các chỉ số mới nhất do học viên tự cập nhật kèm nhãn xanh `Tự cập nhật` và ghi chú cá nhân của học viên, giúp HLV nắm bắt thể trạng thực tế để điều chỉnh giáo án mà không cần đo lại.
+
+#### 9.2.4. Thuật toán Tính Điểm Tiến Trình Thể Chất FPS (Fitness Progress Score) & Trực quan hóa
+- **Điểm số FPS (Thang điểm 100)**: Là thước đo trực quan phản ánh mức độ kiên trì và biến chuyển thể chất của học viên:
+  - **Khởi đầu (Baseline - 1 mốc đo)**: Mặc định 50/100 điểm (`JOURNEY STARTED`), khích lệ học viên tiếp tục hành trình.
+  - **Đa mốc đo ($\ge 2$ lần đo)**: Điểm FPS được tự động tính toán dựa trên tổng hòa:
+    1. *Số lượng cột mốc đo (Milestone Continuity)*: +5 điểm cho mỗi đợt đo định kỳ liên tục (tối đa +20 điểm).
+    2. *Độ chuyển dịch Tỷ lệ Mỡ (% Body Fat Delta)*: Giảm mỡ theo mục tiêu tăng từ +10 đến +30 điểm.
+    3. *Độ tăng trưởng Khối lượng Cơ (Muscle Mass Growth)*: Tăng cơ bắp nạc tăng từ +10 đến +30 điểm.
+    4. *Chỉ số BMI Chuẩn hóa*: Nằm trong vùng lý tưởng $18.5 - 24.9$ được cộng tối đa +10 điểm.
+    5. *Điểm đánh giá trung bình từ HLV*: Đóng góp tối đa 10 điểm vào chất lượng chuyên cần.
+- **Trực quan hóa Biểu đồ (Body Transformation Visualizer)**:
+  - Sử dụng biểu đồ đa trục thời gian thực (SVG Polyline) với các bộ lọc thông minh: `Tất cả`, `Cơ & Mỡ`, `Cân nặng`.
+  - **Khả năng chịu tải dữ liệu lớn (Scalability)**: Khi học viên có nhiều đợt đo sau nhiều tháng tập luyện:
+    - Bảng nhật ký định kỳ được trang bị **Phân trang thu gọn (Compact Pagination - 5 bản ghi/trang)**.
+    - Cố định dòng tiêu đề (**Sticky Header**) giúp cuộn mượt mà không mất ngữ cảnh các cột `Cân nặng`, `Tỷ lệ mỡ`, `Khối lượng cơ`, `Đánh giá HLV`, `Ghi chú`.
+  - **Chuẩn hiển thị Độ tương phản cao (High-Contrast Accessibility)**:
+    - Tối ưu hóa kép cho cả chế độ Sáng (Light Mode) và Tối (Dark Mode).
+    - Ở chế độ sáng: Các badge chỉ số sử dụng màu chữ đậm độ tương phản cao (`text-blue-800`, `text-purple-800`, `text-emerald-800`, `text-amber-800`) trên nền pastel sắc nét (`bg-blue-50 border-blue-200`, `bg-purple-50 border-purple-200`,...), triệt tiêu hoàn toàn hiện tượng chữ nhạt màu khó đọc.
 
 ### 9.3. Các Tiến trình Tự động Chạy Nền (`Spring @Scheduled` Cronjobs)
 | Tên Tiến trình | Lịch chạy (`Cron / FixedRate`) | Quy tắc Xử lý Nghiệp vụ |
@@ -536,6 +635,68 @@ flowchart LR
      - `[ACTION:BOOK_CLASS:<class_id>]`: Tự động đặt lớp học (AI bắt buộc phải kiểm tra chống trùng lịch với `USER'S CURRENT BOOKED SCHEDULE` trước khi phát lệnh này).
      - `[ACTION:HIGHLIGHT_PACKAGE:<package_id>]` & `[ACTION:HIGHLIGHT_CLASS:<class_id>]`: Tự động cuộn và làm nổi bật gói tập/lớp học được gợi ý trên màn hình.
 
+### 9.5. Nghiệp vụ Huấn luyện viên Dời Lịch Dạy Bù & Quản Lý Thẩm Định (Coach Reschedule & Makeup Workflow)
+
+**Mã nguồn quy hoạch**: `ClassRescheduleRequest.java`, `ClassRescheduleService.java`, `CoachReschedulePage.jsx`, `ManagerRescheduleView.jsx`, `MemberNotificationBell.jsx`
+
+#### 9.5.1. Ngữ cảnh & Điều kiện Kích hoạt
+Tính năng Dời ca dạy bù áp dụng khi Huấn luyện viên chính phụ trách lớp gặp sự cố bất khả kháng (ốm đau đột xuất, tai nạn, việc gia đình, công tác) và **KHÔNG tìm được HLV nào khác rảnh để đứng lớp dạy thay**.
+
+#### 9.5.2. Luồng Nghiệp vụ 4 Bước Khép Kín:
+```mermaid
+sequenceDiagram
+    autonumber
+    actor C as Huấn Luyện Viên (Coach)
+    actor M as Quản Lý (Manager)
+    actor MB as Toàn Bộ Học Viên (Members)
+    participant S as Hệ Thống (Backend)
+
+    Note over C,S: Bước 1: HLV tạo đơn dời lịch bù
+    C->>S: Gửi yêu cầu dời lịch (Chọn ca gốc >12h, chọn lý do, đề xuất giờ dạy bù & phòng)
+    S->>S: Kiểm tra tính hợp lệ (>12h, không trùng lịch HLV, phòng trống)
+    S-->>M: Bắn thông báo thẩm định đến Quản lý
+
+    Note over M,S: Bước 2: Quản lý Thẩm định & Phê duyệt
+    M->>S: Mở màn hình Thẩm định (Kiểm tra xung đột phòng & lịch)
+    alt Từ chối
+        M->>S: Bấm Từ chối (Bắt buộc nhập lý do) -> Bắn thông báo cho HLV
+    else Phê duyệt
+        M->>S: Bấm Duyệt ca bù -> Trạng thái chuyển APPROVED / VOTING
+        S-->>MB: Bắn thông báo Chuông Topbar đến từng học viên lớp
+    end
+
+    Note over MB,S: Bước 3: Học viên Biểu quyết Tự quyết
+    MB->>S: Nhận thông báo kèm 2 nút tự quyết:
+    alt Đồng ý tham gia ca bù
+        MB->>S: Bấm [Đồng ý ca bù] -> Xác nhận chỗ trong ca mới
+    else Bận không tham gia được
+        MB->>S: Bấm [Bận - Hoàn 1 lượt] -> Tự động hoàn lại 1 lượt tập / Credit 100%
+    end
+
+    Note over S: Bước 4: Hết hạn chót (Confirmation Deadline)
+    alt Số học viên đồng ý >= Sĩ số tối thiểu (min_students)
+        S->>S: Chốt ca dạy bù chính thức (CONFIRMED)
+        S-->>C: Báo HLV lịch dạy bù đã sẵn sàng
+    else Không đủ sĩ số tối thiểu HOẶC quá hạn chưa xác nhận
+        S->>S: Tự động Hủy ca dạy bù (CANCELLED)
+        S->>S: Tự động hoàn trả 100% lượt tập / Credit cho TẤT CẢ học viên chưa hoàn
+        S-->>C: Thông báo hủy ca bù do không đủ sĩ số
+    end
+```
+
+#### 9.5.3. Các Ràng buộc Cốt tử (Hard Constraints):
+1. **Thời hạn tạo đơn (> 12h)**: HLV chỉ được phép tạo đơn dời lịch trước giờ bắt đầu của ca học gốc tối thiểu **12 tiếng**. Dưới 12 tiếng, HLV phải liên hệ trực tiếp Quản lý trung tâm để xử lý khẩn cấp.
+2. **Chống Xung đột Không gian & Lịch dạy**:
+   - Phòng học đề xuất cho ca dạy bù phải ở trạng thái trống (`No overlap with other scheduled classes`).
+   - HLV không có lịch dạy lớp khác trùng vào khung giờ bù đề xuất.
+3. **Quyền Tự quyết & Bảo toàn Lợi ích Hội viên (Member Sovereignty)**:
+   - Ca học bù là sự thay đổi đơn phương từ phía trung tâm/HLV, do đó học viên **không bị ép buộc phải tham gia**.
+   - Học viên được toàn quyền bấm nút: `[Tham gia ca bù]` hoặc `[Bận - Tự động hoàn 1 lượt tập / Credit 100%]`.
+4. **Hạn chót Biểu quyết (`confirmation_deadline`) & Xử lý Tự động**:
+   - Hạn chót xác nhận được cấu hình trước giờ ca bù diễn ra ít nhất 6 tiếng.
+   - Nếu đến hạn chót mà học viên chưa bấm chọn $\rightarrow$ Hệ thống tự động chọn phương án an toàn nhất: **Hoàn lại 1 lượt tập / Credit 100%** cho học viên đó.
+   - Nếu tổng số học viên đồng ý tham gia nhỏ hơn sĩ số tối thiểu của lớp (`enrolledCount < min_capacity`) $\rightarrow$ Hệ thống tự động hủy ca bù và hoàn trả lượt tập cho tất cả học viên còn lại.
+
 ---
 
 ## 10. Bảng Tham chiếu Nhanh Mã lỗi & Ràng buộc Cốt lõi
@@ -554,3 +715,9 @@ Khi phát triển tính năng mới hoặc bảo trì hệ thống, cần tuân 
 | `PACKAGE_QUOTA_EXCEEDED` | Số buổi còn lại (`allocated - used`) của bộ môn trong gói `<` Số buổi của khóa học | Không đủ số buổi còn lại trong gói tập để đăng ký toàn khóa. |
 | **Chặn Điểm danh khi Chưa Check-in Quầy** | Coach tích `PRESENT` nhưng học viên chưa có bản ghi `MEMBER_CHECKIN` hôm nay | Ngăn chặn học viên đi thẳng lên lớp bỏ qua kiểm soát quầy Lễ tân. |
 | **Cảnh báo Trốn Lớp (`hasAnomaly = true`)** | Học viên Check-in có gắn `bookingId` lớp học nhưng Coach điểm danh `ABSENT` | Phát hiện học viên mượn cớ có lịch học để vào trung tâm rồi trốn lớp đi tập chui. |
+| `RESCHEDULE_WINDOW_INVALID` | HLV tạo đơn dời ca dạy bù khi giờ bắt đầu ca gốc $< 12\text{ tiếng}$ | Chặn tạo đơn gấp gáp; yêu cầu liên hệ trực tiếp Quản lý trung tâm để xử lý khẩn cấp. |
+| `RESCHEDULE_ROOM_CONFLICT` | Phòng học được chọn cho ca dạy bù đã bị lớp khác chiếm dụng | Ngăn chặn chồng chéo không gian phòng tập. |
+| `RESCHEDULE_COACH_CONFLICT` | HLV đã có lịch dạy lớp khác trùng vào khung giờ bù đề xuất | Ngăn chặn một HLV đứng lớp tại hai ca cùng thời điểm. |
+| `RESCHEDULE_DEADLINE_EXPIRED` | Quá `confirmation_deadline` mà sĩ số đồng ý $< \text{tối thiểu}$ | Hệ thống tự động kích hoạt hủy ca bù và bồi hoàn 100% lượt tập/Credit cho học viên. |
+| **Đồng bộ Thể chất 2 Chiều** | Hội viên tự cập nhật chỉ số InBody tại trang cá nhân | Tự động đồng bộ tức thì sang modal đánh giá của HLV kèm nhãn "Tự cập nhật". |
+| **Độ tương phản Cao Chế độ Sáng** | Hiển thị các badge, pill chỉ số thể chất và nút hành động | Sử dụng tone màu đậm `text-*-800` trên nền `bg-*-50 border-*-300` bảo đảm tương phản WCAG. |

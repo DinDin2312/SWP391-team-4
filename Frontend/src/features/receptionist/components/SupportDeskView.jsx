@@ -38,7 +38,16 @@ const SupportDeskView = (props) => {
   // Filters & Pagination
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState(props.initialKeyword || '');
+
+  useEffect(() => {
+    if (props.initialKeyword !== undefined && props.initialKeyword !== null) {
+      setSearchKeyword(props.initialKeyword);
+      setSelectedStatus('ALL');
+      setSelectedCategory('ALL');
+      setCurrentPage(0);
+    }
+  }, [props.initialKeyword]);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);

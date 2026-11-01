@@ -59,4 +59,8 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
 
     @Query("SELECT b FROM Booking b JOIN FETCH b.schedule s JOIN FETCH s.gymClass c JOIN FETCH b.user u WHERE b.status = 'CONFIRMED' AND (b.attendanceStatus IS NULL OR b.attendanceStatus = 'NOT_YET') AND s.endTime < :cutoffTime")
     List<Booking> findUnmarkedBookingsForCompletedSchedules(@Param("cutoffTime") LocalDateTime cutoffTime);
+
+    List<Booking> findBySchedule_ScheduleId(Integer scheduleId);
+
+    List<Booking> findBySchedule_ScheduleIdAndStatus(Integer scheduleId, String status);
 }

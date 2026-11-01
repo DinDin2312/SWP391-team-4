@@ -116,15 +116,15 @@ const CreateLostItemModal = ({ isOpen, onClose, onSuccess }) => {
     setErrorMsg('');
 
     if (!formData.itemName.trim()) {
-      setErrorMsg('Vui lòng nhập tên món đồ.');
+      setErrorMsg(t('Vui lòng nhập tên món đồ.'));
       return;
     }
     if (!formData.foundLocation.trim()) {
-      setErrorMsg('Vui lòng nhập khu vực nhặt được món đồ.');
+      setErrorMsg(t('Vui lòng nhập khu vực nhặt được món đồ.'));
       return;
     }
     if (!formData.storageLocation.trim()) {
-      setErrorMsg('Vui lòng chọn hoặc nhập vị trí cất giữ món đồ.');
+      setErrorMsg(t('Vui lòng chọn hoặc nhập vị trí cất giữ món đồ.'));
       return;
     }
 
@@ -139,7 +139,7 @@ const CreateLostItemModal = ({ isOpen, onClose, onSuccess }) => {
       onClose();
     } catch (err) {
       console.error(err);
-      setErrorMsg(err.response?.data?.message || err.message || 'Không thể tạo bản ghi món đồ.');
+      setErrorMsg(err.response?.data?.message || err.message || t('Không thể tạo bản ghi món đồ.'));
     } finally {
       setSubmitting(false);
     }
@@ -259,7 +259,7 @@ const CreateLostItemModal = ({ isOpen, onClose, onSuccess }) => {
               >
                 {CATEGORIES.map((cat) => (
                   <option key={cat.value} value={cat.value}>
-                    {cat.label}
+                    {t(cat.label)}
                   </option>
                 ))}
               </select>
@@ -276,9 +276,9 @@ const CreateLostItemModal = ({ isOpen, onClose, onSuccess }) => {
                 onChange={(e) => setFormData({ ...formData, valuationType: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] focus:border-[var(--primary)] outline-none text-sm cursor-pointer"
               >
-                <option value="HIGH_VALUE">💎 {t('Giá trị cao (Giữ 90 ngày - Bắt buộc Két sắt)')}</option>
-                <option value="STANDARD">📦 {t('Tiêu chuẩn (Giữ 30 ngày)')}</option>
-                <option value="PERISHABLE">🥗 {t('Đồ dễ hỏng / Đồ ăn (Giữ 48h)')}</option>
+                <option value="HIGH_VALUE">{t('Két sắt an toàn (Giữ 90 ngày - Bắt buộc két sắt)')}</option>
+                <option value="STANDARD">{t('Kho tiêu chuẩn (Giữ 30 ngày)')}</option>
+                <option value="PERISHABLE">{t('Đồ tươi / Dễ hỏng (Giữ 48h)')}</option>
               </select>
             </div>
 

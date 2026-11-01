@@ -149,13 +149,19 @@ const FALLBACK_MEMBERS = [
   },
 ];
 
-const MemberManagementView = ({ onQuickCheckIn }) => {
+const MemberManagementView = ({ onQuickCheckIn, initialKeyword = '' }) => {
   useLanguage();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
-  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState(initialKeyword || '');
+
+  useEffect(() => {
+    if (initialKeyword !== undefined && initialKeyword !== null) {
+      setSearchKeyword(initialKeyword);
+    }
+  }, [initialKeyword]);
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedPackageStatus, setSelectedPackageStatus] = useState('ALL');
 

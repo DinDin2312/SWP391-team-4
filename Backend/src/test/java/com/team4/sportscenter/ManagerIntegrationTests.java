@@ -414,51 +414,22 @@ class ManagerIntegrationTests {
     }
 
     @Test void packageTypesAreDynamicAndRenameDoesNotChangePurchasedLabels() throws Exception {
-        String name="QA swim type "+UUID.randomUUID();
-        var created=request("POST","/api/manager/package-types",token(admin),"{\"typeName\":\""+name+"\",\"requiresSubjects\":true}");
+        String name="QA gym type "+UUID.randomUUID();
+        var created=request("POST","/api/manager/package-types",token(admin),"{\"typeName\":\""+name+"\",\"requiresSubjects\":false}");
         assertEquals(200,created.statusCode());
         String code=new com.fasterxml.jackson.databind.ObjectMapper().readTree(created.body()).get("typeCode").asText();typeCodes.add(code);
         assertEquals(403,request("POST","/api/manager/package-types",token(coach),"{\"typeName\":\"Blocked\"}").statusCode());
         assertEquals(400,request("POST","/api/manager/package-types",token(admin),"{\"typeName\":\""+name+"\"}").statusCode());
-        int pkg=service.savePackage(null,new PackageRequest("Dynamic swimming package",code,30,BigDecimal.TEN,List.of(new SubjectBenefitRequest(subject,4))),actor);packageIds.add(pkg);
+        int pkg=service.savePackage(null,new PackageRequest("Dynamic gym package",code,30,BigDecimal.TEN,List.of()),actor);packageIds.add(pkg);
         int membership=purchasedPackage(pkg);
         assertTrue(service.packages().stream().anyMatch(p->p.get("packageType").equals(code)&&p.get("packageTypeName").equals(name)));
-        service.savePackageType(code,new PackageTypeRequest(name+" renamed",true),actor);
+        service.savePackageType(code,new PackageTypeRequest(name+" renamed",false),actor);
         assertEquals(name,members.getMyPackages("member"+actor).get(0).getPackageTypeName());
-        assertEquals(4,((Number)benefits.membershipBenefits(membership).get(0).get("remainingSessions")).intValue());
-        assertThrows(IllegalArgumentException.class,()->service.savePackage(pkg,new PackageRequest("Missing definition",code,30,BigDecimal.TEN,List.of()),actor));
+        assertTrue(benefits.membershipBenefits(membership).isEmpty());
+        assertThrows(IllegalArgumentException.class,()->service.savePackage(pkg,new PackageRequest("Subject access rejected","SUBJECT_ACCESS",30,BigDecimal.TEN,List.of()),actor));
         assertThrows(IllegalArgumentException.class,()->service.savePackage(pkg,new PackageRequest("Unknown type","CUSTOM_missing",30,BigDecimal.TEN,List.of()),actor));
     }
 
-    int subjectPackage(int quota) {
-        int id=service.savePackage(null,new PackageRequest("QA subject package","SUBJECT_ACCESS",30,new BigDecimal("200000"),List.of(new SubjectBenefitRequest(subject,quota))),actor);
-        packageIds.add(id);return id;
-    }
-
-    @Test void roomScopeIsSnapshottedAndEnforcedForBookingAndClassMoves() throws Exception {
-        int otherRoom=jdbc.queryForObject("SELECT room_id FROM ROOMS WHERE room_id<>? ORDER BY room_id LIMIT 1",Integer.class,room);
-        int pkg=service.savePackage(null,new PackageRequest("Pool A only","SUBJECT_ACCESS",30,BigDecimal.TEN,List.of(new SubjectBenefitRequest(subject,4,List.of(room)))),actor);
-        packageIds.add(pkg);
-        int membership=purchasedPackage(pkg);
-        assertEquals(List.of(room),benefits.membershipBenefits(membership).get(0).get("roomIds"));
-        service.savePackage(pkg,new PackageRequest("Pool B only","SUBJECT_ACCESS",30,BigDecimal.TEN,List.of(new SubjectBenefitRequest(subject,4,List.of(otherRoom)))),actor);
-        assertEquals(List.of(otherRoom),benefits.packageBenefits(pkg).get(0).get("roomIds"));
-        assertEquals(List.of(room),benefits.membershipBenefits(membership).get(0).get("roomIds"));
-        // An older client omitting roomIds must preserve the explicit scope.
-        service.savePackage(pkg,new PackageRequest("Old client edit","SUBJECT_ACCESS",30,BigDecimal.TEN,List.of(new SubjectBenefitRequest(subject,4))),actor);
-        assertEquals(List.of(otherRoom),benefits.packageBenefits(pkg).get(0).get("roomIds"));
-        assertThrows(IllegalArgumentException.class,()->service.savePackage(pkg,new PackageRequest("Invalid room","SUBJECT_ACCESS",30,BigDecimal.TEN,List.of(new SubjectBenefitRequest(subject,4,List.of(Integer.MAX_VALUE)))),actor));
-        schedule(LocalDateTime.now().plusDays(2).withHour(6).withMinute(0).withSecond(0).withNano(0));
-        jdbc.update("UPDATE CLASSES SET room_id=? WHERE class_id=?",otherRoom,course);
-        assertThrows(IllegalArgumentException.class,()->members.bookClassUsingPackage("member"+actor,course,membership));
-        assertEquals(0,count("SELECT COUNT(*) FROM BOOKINGS WHERE user_id=?",member));
-        jdbc.update("UPDATE CLASSES SET room_id=? WHERE class_id=?",room,course);
-        members.bookClassUsingPackage("member"+actor,course,membership);
-        assertEquals(3,((Number)benefits.membershipBenefits(membership).get(0).get("remainingSessions")).intValue());
-        assertThrows(IllegalArgumentException.class,()->benefits.validateClassRoom(course,otherRoom));
-        assertThrows(IllegalArgumentException.class,()->service.saveClass(course,new ClassRequest("Move pool",subject,coach,otherRoom,BigDecimal.TEN,5,"ACTIVE"),actor));
-        assertEquals(room,jdbc.queryForObject("SELECT room_id FROM CLASSES WHERE class_id=?",Integer.class,course));
-    }
     int purchasedPackage(int pkg) {
         members.addPackageToCart("member"+actor,pkg);
         int id=jdbc.queryForObject("SELECT membership_id FROM USER_MEMBERSHIPS WHERE user_id=? AND package_id=? AND status='PENDING'",Integer.class,member,pkg);
@@ -466,88 +437,37 @@ class ManagerIntegrationTests {
         return id;
     }
 
-    @Test void subjectPackagesValidateDefinitionsAndKeepPurchaseSnapshots() throws Exception {
+    @Test void subjectPackagesAndPackageCourseBookingAreRejectedAndPurchaseSnapshotsPreserved() throws Exception {
         int before=count("SELECT COUNT(*) FROM PACKAGES");
         String payload="{\"packageName\":\"QA\",\"packageType\":\"SUBJECT_ACCESS\",\"durationDays\":30,\"price\":200000,\"benefits\":[]}";
         assertEquals(400,request("POST","/api/manager/packages",token(admin),payload).statusCode());
         assertEquals(before,count("SELECT COUNT(*) FROM PACKAGES"));
-        int pkg=subjectPackage(12);
+        int pkg=service.savePackage(null,new PackageRequest("QA gym package","GYM_ACCESS",30,new BigDecimal("200000"),List.of()),actor);
+        packageIds.add(pkg);
         members.addPackageToCart("member"+actor,pkg);
         int membership=jdbc.queryForObject("SELECT membership_id FROM USER_MEMBERSHIPS WHERE user_id=? AND package_id=?",Integer.class,member,pkg);
-        service.savePackage(pkg,new PackageRequest("Changed package","SUBJECT_ACCESS",90,new BigDecimal("900000"),List.of(new SubjectBenefitRequest(subject,3))),actor);
+        service.savePackage(pkg,new PackageRequest("Changed package","GYM_ACCESS",90,new BigDecimal("900000"),List.of()),actor);
         var cart=payments.getCartItems("member"+actor);
         assertEquals(new BigDecimal("200000.00"),cart.getTotalPrice());
         assertEquals(30,cart.getItems().get(0).getDurationDays());
-        assertEquals(12,((Number)benefits.membershipBenefits(membership).get(0).get("sessionLimit")).intValue());
-        assertEquals(3,((Number)benefits.packageBenefits(pkg).get(0).get("sessionLimit")).intValue());
-        assertThrows(IllegalArgumentException.class,()->service.savePackage(pkg,new PackageRequest("Broken","SUBJECT_ACCESS",30,BigDecimal.ZERO,List.of(new SubjectBenefitRequest(subject,2),new SubjectBenefitRequest(subject,3))),actor));
-        assertEquals("Changed package",jdbc.queryForObject("SELECT package_name FROM PACKAGES WHERE package_id=?",String.class,pkg));
-    }
-
-    @Test void packageCourseBookingReservesQuotaRejectsInvalidUseAndRefundsOnlyFutureCancellation() throws Exception {
-        var time=LocalDateTime.now().plusDays(2).withHour(6).withMinute(0).withSecond(0).withNano(0);
-        int first=schedule(time),second=schedule(time.plusDays(1));
-        int pkg=subjectPackage(2),membership=purchasedPackage(pkg);
-        assertEquals(403,request("POST","/api/v1/member/book-class/"+course+"/with-package/"+membership,token(coach),"{}").statusCode());
-        assertThrows(IllegalArgumentException.class,()->members.bookClassUsingPackage("admin"+actor,course,membership));
-        jdbc.update("UPDATE USER_MEMBERSHIPS SET end_date=CURDATE() WHERE membership_id=?",membership);
+        assertTrue(benefits.membershipBenefits(membership).isEmpty());
+        assertTrue(benefits.packageBenefits(pkg).isEmpty());
         assertThrows(IllegalArgumentException.class,()->members.bookClassUsingPackage("member"+actor,course,membership));
-        jdbc.update("UPDATE USER_MEMBERSHIPS SET end_date=DATE_ADD(CURDATE(),INTERVAL 29 DAY) WHERE membership_id=?",membership);
-        assertEquals(200,request("POST","/api/v1/member/book-class/"+course+"/with-package/"+membership,token(member),"{}").statusCode());
-        assertEquals(2,count("SELECT COUNT(*) FROM BOOKINGS WHERE user_id=? AND status='CONFIRMED'",member));
-        assertEquals(0,((Number)benefits.membershipBenefits(membership).get(0).get("remainingSessions")).intValue());
-        assertEquals(0,payments.getCartItems("member"+actor).getItems().size());
-        int other=newClass("Another course",5);
-        service.saveSchedule(null,new ScheduleRequest(other,time.plusDays(4),time.plusDays(4).plusMinutes(90),"SCHEDULED"),actor);
-        assertThrows(IllegalArgumentException.class,()->members.bookClassUsingPackage("member"+actor,other,membership));
-        assertThrows(IllegalArgumentException.class,()->service.saveSchedule(second,new ScheduleRequest(course,time.plusDays(40),time.plusDays(40).plusMinutes(90),"SCHEDULED"),actor));
-        jdbc.update("UPDATE SCHEDULES SET start_time=DATE_SUB(NOW(),INTERVAL 2 HOUR),end_time=DATE_SUB(NOW(),INTERVAL 1 HOUR) WHERE schedule_id=?",first);
-        jdbc.update("UPDATE BOOKINGS SET attendance_status='PRESENT' WHERE schedule_id=? AND user_id=?",first,member);
-        members.cancelClass("member"+actor,course);
-        assertEquals(1,((Number)benefits.membershipBenefits(membership).get(0).get("remainingSessions")).intValue());
-        jdbc.update("UPDATE BOOKINGS SET status='CANCELLED' WHERE schedule_id=? AND user_id=?",first,member);
-        assertEquals(1,((Number)benefits.membershipBenefits(membership).get(0).get("remainingSessions")).intValue());
-        members.bookClassUsingPackage("member"+actor,other,membership);
-        assertEquals(0,((Number)benefits.membershipBenefits(membership).get(0).get("remainingSessions")).intValue());
-        int otherSchedule=jdbc.queryForObject("SELECT schedule_id FROM SCHEDULES WHERE class_id=?",Integer.class,other);
-        service.saveSchedule(otherSchedule,new ScheduleRequest(other,time.plusDays(4),time.plusDays(4).plusMinutes(90),"CANCELLED"),actor);
-        assertEquals(1,((Number)benefits.membershipBenefits(membership).get(0).get("remainingSessions")).intValue());
     }
 
-    @Test void receptionSubscriptionsSnapshotBenefitsAndRemainSeparateOnMemberScreens() {
-        int pkg=subjectPackage(8);
+    @Test void receptionSubscriptionsSnapshotPackageDetailsAndRemainSeparateOnMemberScreens() {
+        int pkg=service.savePackage(null,new PackageRequest("QA gym package","GYM_ACCESS",30,new BigDecimal("200000"),List.of()),actor);
+        packageIds.add(pkg);
         for(int i=0;i<2;i++) reception.subscribePackageForMember(new com.team4.sportscenter.modules.receptionist.dtos.request.SubscribePackageRequest(member,pkg,java.time.LocalDate.now()));
-        service.savePackage(pkg,new PackageRequest("Changed","SUBJECT_ACCESS",90,new BigDecimal("900000"),List.of(new SubjectBenefitRequest(subject,2))),actor);
+        service.savePackage(pkg,new PackageRequest("Changed","GYM_ACCESS",90,new BigDecimal("900000"),List.of()),actor);
         var owned=members.getMyPackages("member"+actor);
         assertEquals(2,owned.size());
         for(var purchase:owned) {
-            assertEquals("QA subject package",purchase.getPackageName());
+            assertEquals("QA gym package",purchase.getPackageName());
             assertEquals(30,purchase.getDurationDays());
             assertEquals(java.time.LocalDate.now().plusDays(29),purchase.getEndDate());
-            assertEquals(8,((Number)purchase.getBenefits().get(0).get("remainingSessions")).intValue());
+            assertTrue(purchase.getBenefits().isEmpty());
         }
-    }
-
-    @Test void simultaneousBookingsCannotSpendTheLastSessionTwice() throws Exception {
-        int pkg=subjectPackage(1),membership=purchasedPackage(pkg),other=newClass("Other course",5);
-        var time=LocalDateTime.now().plusDays(2).withHour(6).withMinute(0).withSecond(0).withNano(0);
-        schedule(time);
-        service.saveSchedule(null,new ScheduleRequest(other,time.plusDays(1),time.plusDays(1).plusMinutes(90),"SCHEDULED"),actor);
-        var gate=new java.util.concurrent.CountDownLatch(1);
-        var pool=java.util.concurrent.Executors.newFixedThreadPool(2);
-        try {
-            List<java.util.concurrent.Future<Boolean>> calls=new ArrayList<>();
-            for(int classId:List.of(course,other)) calls.add(pool.submit(()->{
-                gate.await();
-                try {members.bookClassUsingPackage("member"+actor,classId,membership);return true;}
-                catch(IllegalArgumentException failure){assertTrue(failure.getMessage().contains("Not enough"));return false;}
-            }));
-            gate.countDown();int successes=0;
-            for(var call:calls)if(call.get(15,java.util.concurrent.TimeUnit.SECONDS))successes++;
-            assertEquals(1,successes);
-        } finally {pool.shutdownNow();}
-        assertEquals(1,count("SELECT COUNT(*) FROM BOOKINGS WHERE user_id=? AND status='CONFIRMED'",member));
-        assertEquals(0,((Number)benefits.membershipBenefits(membership).get(0).get("remainingSessions")).intValue());
     }
 
     @Test void overviewDoesNotCapTotalsOrDropUrgentItemsAndFiltersMatch() {

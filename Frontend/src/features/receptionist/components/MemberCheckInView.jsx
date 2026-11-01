@@ -44,7 +44,13 @@ const getTodayDateString = () => {
   return `${year}-${month}-${day}`;
 };
 
-const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
+const MemberCheckInView = ({
+  initialMemberId = null,
+  initialHistoryKeyword = '',
+  initialHistoryFilter = 'ALL',
+  onNavigateFeature,
+  onSwitchToRenew
+}) => {
   useLanguage();
   const { userInfo } = useContext(AuthContext);
   const [checkInSubTab, setCheckInSubTab] = useState('member');
@@ -72,8 +78,17 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
   // Facility rooms & Check-in history state
   const [rooms, setRooms] = useState([]);
   const [historyDate, setHistoryDate] = useState(getTodayDateString());
-  const [historyKeyword, setHistoryKeyword] = useState('');
-  const [historyStatus, setHistoryStatus] = useState('ALL');
+  const [historyKeyword, setHistoryKeyword] = useState(initialHistoryKeyword || '');
+  const [historyStatus, setHistoryStatus] = useState(initialHistoryFilter || 'ALL');
+
+  useEffect(() => {
+    if (initialHistoryKeyword) {
+      setHistoryKeyword(initialHistoryKeyword);
+    }
+    if (initialHistoryFilter && initialHistoryFilter !== 'ALL') {
+      setHistoryStatus(initialHistoryFilter);
+    }
+  }, [initialHistoryKeyword, initialHistoryFilter]);
   const [allDayRecords, setAllDayRecords] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [checkingOutId, setCheckingOutId] = useState(null);
@@ -1580,23 +1595,31 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
           </div>
 
           {/* Check-in History Table */}
-          <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '0.85rem' }}>
+          <div
+            style={{
+              overflowX: 'auto',
+              overflowY: 'auto',
+              maxHeight: '480px',
+              border: '1px solid var(--border)',
+              borderRadius: '0.85rem',
+            }}
+          >
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
-              <thead>
+              <thead style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--bg)' }}>
                 <tr style={{ backgroundColor: 'var(--bg)', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '130px' }}>
+                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '130px', backgroundColor: 'var(--bg)' }}>
                     {t('Member')}
                   </th>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '180px' }}>
+                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '180px', backgroundColor: 'var(--bg)' }}>
                     {t('Package & Facility')}
                   </th>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '140px', whiteSpace: 'nowrap' }}>
+                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '140px', whiteSpace: 'nowrap', backgroundColor: 'var(--bg)' }}>
                     {t('Check-in / Out Time')}
                   </th>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '120px', whiteSpace: 'nowrap' }}>
+                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '120px', whiteSpace: 'nowrap', backgroundColor: 'var(--bg)' }}>
                     {t('Status')}
                   </th>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', textAlign: 'right', minWidth: '135px', whiteSpace: 'nowrap' }}>
+                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', textAlign: 'right', minWidth: '135px', whiteSpace: 'nowrap', backgroundColor: 'var(--bg)' }}>
                     {t('Action')}
                   </th>
                 </tr>

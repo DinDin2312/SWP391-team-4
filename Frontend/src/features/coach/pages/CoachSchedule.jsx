@@ -1,17 +1,21 @@
 import { locale } from '../../../i18n/languageStore.js';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   ChevronLeft, ChevronRight, MapPin,
   Clock, Users, BookOpen, Phone, Mail, ChevronDown, ChevronUp,
-  X, Search, Sparkles, Save, Check, AlertCircle, Bell, Star
+  X, Search, Sparkles, Save, Check, AlertCircle, Bell, Star, CalendarSync, UserCheck
 } from 'lucide-react';
 import SendNotificationModal from '../components/SendNotificationModal';
 import TraineeAssessmentModal from '../components/TraineeAssessmentModal';
+import CreateRescheduleModal from '../components/CreateRescheduleModal';
+import CoachToast from '../components/CoachToast';
 
 const CoachSchedule = () => {
   useLanguage();
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [schedules, setSchedules] = useState([]);
@@ -37,6 +41,30 @@ const CoachSchedule = () => {
   const [assessmentInitialClassId, setAssessmentInitialClassId] = useState(null);
   const [assessmentInitialScheduleId, setAssessmentInitialScheduleId] = useState(null);
   const [assessmentInitialStudent, setAssessmentInitialStudent] = useState(null);
+
+  // Reschedule Modal States
+  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+  const [rescheduleScheduleId, setRescheduleScheduleId] = useState(null);
+
+  // Apple Dynamic Island Coach Toast State
+  const [toastState, setToastState] = useState({
+    isOpen: false,
+    type: 'success',
+    title: '',
+    message: '',
+    actionLabel: '',
+    onAction: null,
+    duration: 5000,
+  });
+
+  const showToast = ({ type = 'success', title = '', message = '', actionLabel = '', onAction = null, duration = 5000 }) => {
+    setToastState({ isOpen: true, type, title, message, actionLabel, onAction, duration });
+  };
+
+  const handleOpenReschedule = (scheduleId) => {
+    setRescheduleScheduleId(scheduleId);
+    setIsRescheduleModalOpen(true);
+  };
 
   const handleOpenGeneralAssessment = () => {
     setAssessmentInitialClassId(null);
@@ -177,6 +205,12 @@ const CoachSchedule = () => {
       );
 
       setSaveSuccessMsg(t('Attendance saved successfully!'));
+      showToast({
+        type: 'success',
+        title: t('Attendance Saved'),
+        message: t('Class roster attendance has been synced successfully.'),
+        duration: 4000,
+      });
 
       // Re-fetch fresh schedule data from backend
       await fetchCoachSchedules();
@@ -383,9 +417,34 @@ const CoachSchedule = () => {
                     <div className="flex flex-col gap-1 mt-1 overflow-y-auto scrollbar-none">
                       {daySchedules.map((s, sIdx) => {
                         const time = new Date(s.startTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
+                        const isSubstituted = s.status === 'SUBSTITUTE_ASSIGNED';
+                        const isRescheduled = s.status === 'RESCHEDULED';
+                        const isCancelled = s.status === 'CANCELLED' || s.status?.startsWith('CANCELLED');
+                        const isPendingReschedule = !!s.hasPendingReschedule;
+
+                        let pillClass = "bg-[var(--primary-soft)] border-[var(--primary-soft)] text-[var(--primary)]";
+                        let statusPrefix = "";
+                        if (isPendingReschedule) {
+                          pillClass = "bg-amber-500/15 border-amber-500/35 text-amber-700 dark:text-amber-300 font-bold";
+                          statusPrefix = `[${t("Pending Move")}] `;
+                        } else if (isSubstituted) {
+                          pillClass = "bg-blue-500/15 border-blue-500/30 text-blue-600 dark:text-blue-400 font-bold";
+                          statusPrefix = `[${t("Dạy thay")}] `;
+                        } else if (isRescheduled) {
+                          pillClass = "bg-purple-500/15 border-purple-500/30 text-purple-600 dark:text-purple-400 font-bold";
+                          statusPrefix = `[${t("Dạy bù")}] `;
+                        } else if (isCancelled) {
+                          pillClass = "bg-rose-500/10 border-rose-500/25 text-rose-500 line-through";
+                          statusPrefix = `[${t("Đã hủy")}] `;
+                        }
+
                         return (
-                          <div key={sIdx} className="w-full text-left truncate px-1.5 py-1 rounded bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] text-[9px] font-semibold">
-                            {time} - {s.className}
+                          <div
+                            key={sIdx}
+                            title={`${s.className} (${codeLabel(s.status)})`}
+                            className={`w-full text-left truncate px-1.5 py-1 rounded border text-[9px] font-semibold transition-all ${pillClass}`}
+                          >
+                            {statusPrefix}{time} - {s.className}
                           </div>
                         );
                       })}
@@ -426,6 +485,9 @@ const CoachSchedule = () => {
                   const startTime = new Date(s.startTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
                   const endTime = new Date(s.endTime).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
                   const isExpanded = expandedScheduleId === s.scheduleId;
+                  const isSubstituted = s.status === 'SUBSTITUTE_ASSIGNED';
+                  const isRescheduled = s.status === 'RESCHEDULED';
+                  const isCancelled = s.status === 'CANCELLED' || s.status?.startsWith('CANCELLED');
 
                   return (
                     <div key={idx} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-3 relative shrink-0 overflow-hidden group hover:border-[var(--primary-soft)] transition-all">
@@ -434,8 +496,23 @@ const CoachSchedule = () => {
                           <Clock className="w-3.5 h-3.5" />
                           <span>{startTime} - {endTime}</span>
                         </div>
-                        <span className="px-2 py-0.5 rounded bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] text-[10px] font-bold">
-                          {codeLabel(s.status)}
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                          s.hasPendingReschedule
+                            ? 'bg-amber-500/15 border-amber-500/35 text-amber-700 dark:text-amber-300 flex items-center gap-1'
+                            : isSubstituted
+                            ? (s.isSubstituteForCurrentCoach
+                                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center gap-1'
+                                : 'bg-blue-500/15 border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center gap-1')
+                            : isRescheduled
+                            ? 'bg-purple-500/15 border-purple-500/30 text-purple-600 dark:text-purple-400 flex items-center gap-1'
+                            : isCancelled
+                            ? 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400'
+                            : 'bg-[var(--primary-soft)] border-[var(--primary-soft)] text-[var(--primary)]'
+                        }`}>
+                          {s.hasPendingReschedule && <Clock className="w-3 h-3" />}
+                          {!s.hasPendingReschedule && isSubstituted && <UserCheck className="w-3 h-3" />}
+                          {!s.hasPendingReschedule && isRescheduled && <Clock className="w-3 h-3" />}
+                          <span>{s.hasPendingReschedule ? t('Pending Reschedule') : (isSubstituted && s.isSubstituteForCurrentCoach ? t('Substitute') : codeLabel(s.status))}</span>
                         </span>
                       </div>
 
@@ -446,13 +523,65 @@ const CoachSchedule = () => {
                       <div className="grid grid-cols-1 gap-2 text-xs text-[var(--text-muted)] mt-1">
                         <div className="flex items-center gap-2">
                           <MapPin className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                          <span className="truncate">{t("Room:")}<strong className="text-[var(--text)]">{s.roomName}</strong></span>
+                          <span className="truncate">{t("Room:")}{' '}<strong className="text-[var(--text)]">{s.roomName}</strong></span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Users className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                          <span className="font-medium text-[var(--text)]">{t("Enrolled:")}<strong className="text-[var(--success-text)]">{s.enrolledCount}</strong> / {s.maxSlots}{' '}{t("Trainees")}</span>
+                          <span className="font-medium text-[var(--text)]">{t("Enrolled:")}{' '}<strong className="text-[var(--success-text)]">{s.enrolledCount}</strong> / {s.maxSlots}{' '}{t("Trainees")}</span>
                         </div>
                       </div>
+
+                      {/* Informative banner if reschedule request is pending */}
+                      {s.hasPendingReschedule && (
+                        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                          <Clock className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                          <div>
+                            <p className="font-bold text-xs">{t('Reschedule request submitted and pending manager review')}</p>
+                            <p className="text-[11px] opacity-85 mt-0.5">
+                              {t('Pending reschedule approval')} #{s.pendingRescheduleRequestId}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Informative banners for substituted or rescheduled sessions */}
+                      {isSubstituted && (
+                        s.isSubstituteForCurrentCoach ? (
+                          <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-300 flex items-start gap-2">
+                            <UserCheck className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                            <div>
+                              <p className="font-bold text-xs">{t('You are assigned to teach this class')}</p>
+                              <p className="text-[11px] opacity-90 mt-0.5">
+                                {s.coachName ? `${t('Original Coach:')} ${s.coachName}. ` : ''}
+                                {t('You are standing in to teach this session at regular schedule.')}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2">
+                            <UserCheck className="w-4 h-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+                            <div>
+                              <p className="font-bold text-xs">{t('Substitute Coach Assigned')}</p>
+                              <p className="text-[11px] opacity-90 mt-0.5">
+                                {s.substituteCoachName ? `${t('Substitute Coach:')} ${s.substituteCoachName}. ` : ''}
+                                {t('Assigned substitute coach is teaching this class. You do not need to attend.')}
+                              </p>
+                            </div>
+                          </div>
+                        )
+                      )}
+
+                      {isRescheduled && (
+                        <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-700 dark:text-purple-300 flex items-start gap-2">
+                          <Clock className="w-4 h-4 shrink-0 mt-0.5 text-purple-600 dark:text-purple-400" />
+                          <div>
+                            <p className="font-bold text-xs">{t('This is an approved make-up session.')}</p>
+                            <p className="text-[11px] opacity-90 mt-0.5">
+                              {t('Class taught at rescheduled time based on your approved request.')}
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Main Action Button: View registered trainees modal */}
                       <div className="mt-3 pt-3 border-t border-[var(--border)] flex flex-col gap-2">
@@ -467,20 +596,31 @@ const CoachSchedule = () => {
 
                           <button
                             onClick={() => handleOpenScheduleAssessment(s)}
-                            className="py-2 px-2 rounded-xl bg-amber-50 dark:bg-amber-500/15 hover:bg-amber-100 dark:hover:bg-amber-500/30 text-amber-800 dark:text-amber-300 font-bold text-[11px] border border-amber-300 dark:border-amber-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
+                            className="py-2 px-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-md shadow-amber-500/25 transition-all cursor-pointer"
                           >
-                            <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 dark:fill-amber-400 dark:text-amber-400" />
+                            <Star className="w-3.5 h-3.5 fill-white text-white" />
                             <span>{t("Đánh giá")}</span>
                           </button>
 
                           <button
                             onClick={() => handleOpenClassNotification(s.classId)}
-                            className="py-2 px-2 rounded-xl bg-blue-50 dark:bg-blue-600/15 hover:bg-blue-100 dark:hover:bg-blue-600/30 text-blue-800 dark:text-blue-300 font-bold text-[11px] border border-blue-300 dark:border-blue-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
+                            className="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-[11px] border border-slate-300 dark:border-slate-600 flex items-center justify-center gap-1 shadow-xs transition-all cursor-pointer"
                           >
-                            <Bell className="w-3.5 h-3.5 text-blue-700 dark:text-[var(--primary)]" />
+                            <Bell className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                             <span>{t("Báo tin")}</span>
                           </button>
                         </div>
+
+                        {/* Request Reschedule Button if future >12h AND not already rescheduled/substituted/pending */}
+                        {!s.hasPendingReschedule && new Date(s.startTime) > new Date(Date.now() + 12 * 3600 * 1000) && !isCancelled && s.status !== 'SUBSTITUTE_ASSIGNED' && s.status !== 'RESCHEDULED' && (
+                          <button
+                            onClick={() => handleOpenReschedule(s.scheduleId)}
+                            className="w-full py-1.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-500/30 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                          >
+                            <CalendarSync className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                            <span>{t("Xin dời ca / Dạy bù")}</span>
+                          </button>
+                        )}
 
                         <button
                           onClick={() => toggleExpandSchedule(s.scheduleId)}
@@ -593,7 +733,16 @@ const CoachSchedule = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1.5 rounded-lg bg-[var(--success-soft)] border border-[var(--success-soft)] text-[var(--success-text)] text-xs font-bold">{t("Capacity:")}{' '}{activeModalSchedule.enrolledCount} / {activeModalSchedule.maxSlots}{' '}{t("Trainees")}</span>
+                <span className={`px-3 py-1.5 rounded-lg border text-xs font-bold ${
+                  (activeModalSchedule.enrolledCount || 0) > (activeModalSchedule.maxSlots || 0)
+                    ? 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400'
+                    : (activeModalSchedule.enrolledCount || 0) === (activeModalSchedule.maxSlots || 0)
+                      ? 'bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400'
+                      : 'bg-[var(--success-soft)] border-[var(--success-soft)] text-[var(--success-text)]'
+                }`}>
+                  {(activeModalSchedule.enrolledCount || 0) > (activeModalSchedule.maxSlots || 0) ? t("Overloaded:") : t("Capacity:")}{' '}
+                  {activeModalSchedule.enrolledCount} / {activeModalSchedule.maxSlots}{' '}{t("Trainees")}
+                </span>
               </div>
             </div>
 
@@ -784,6 +933,14 @@ const CoachSchedule = () => {
         onClose={() => setIsNotifModalOpen(false)}
         initialTargetType={notifTargetType}
         initialClassId={notifClassId}
+        onSuccess={() => {
+          showToast({
+            type: 'info',
+            title: t('Announcement Sent'),
+            message: t('Class notification broadcasted to enrolled trainees successfully.'),
+            duration: 4500,
+          });
+        }}
       />
 
       {/* Trainee Assessment Modal */}
@@ -794,8 +951,47 @@ const CoachSchedule = () => {
         initialScheduleId={assessmentInitialScheduleId}
         initialStudent={assessmentInitialStudent}
         onSuccess={() => {
+          showToast({
+            type: 'success',
+            title: t('Trainee Assessment Saved'),
+            message: t('Trainee performance assessment recorded successfully.'),
+            duration: 4000,
+          });
           fetchCoachSchedules();
         }}
+      />
+
+      {/* Create Reschedule Modal */}
+      <CreateRescheduleModal
+        isOpen={isRescheduleModalOpen}
+        onClose={() => setIsRescheduleModalOpen(false)}
+        initialScheduleId={rescheduleScheduleId}
+        onSuccess={() => {
+          showToast({
+            type: 'reschedule',
+            title: t('Reschedule Request Submitted'),
+            message: t('Your reschedule proposal has been sent to Management for room verification & review.'),
+            actionLabel: t('View Requests'),
+            onAction: () => navigate('/coach/reschedule'),
+            duration: 6500,
+          });
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('notificationUpdated'));
+          }
+          fetchCoachSchedules();
+        }}
+      />
+
+      {/* Apple Dynamic Island Toast Notification */}
+      <CoachToast
+        isOpen={toastState.isOpen}
+        onClose={() => setToastState(prev => ({ ...prev, isOpen: false }))}
+        type={toastState.type}
+        title={toastState.title}
+        message={toastState.message}
+        actionLabel={toastState.actionLabel}
+        onAction={toastState.onAction}
+        duration={toastState.duration}
       />
     </div>
   );

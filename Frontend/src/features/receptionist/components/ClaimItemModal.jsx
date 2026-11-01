@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, User, Phone, CreditCard, ShieldCheck, AlertCircle, FileText } from 'lucide-react';
+import { X, CheckCircle2, User, Phone, CreditCard, ShieldCheck, AlertCircle, FileText, Package, MapPin, Clock, Tag } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import lostAndFoundService from '../services/lostAndFoundService';
 import receptionistService from '../services/receptionistService';
@@ -52,11 +52,11 @@ const ClaimItemModal = ({ isOpen, item, onClose, onSuccess }) => {
     setErrorMsg('');
 
     if (!claimantName.trim()) {
-      setErrorMsg('Vui lòng nhập tên người nhận.');
+      setErrorMsg(t('Vui lòng nhập họ tên người nhận đồ.'));
       return;
     }
     if (!claimantPhone.trim()) {
-      setErrorMsg('Vui lòng nhập số điện thoại người nhận.');
+      setErrorMsg(t('Vui lòng nhập số điện thoại liên hệ.'));
       return;
     }
 
@@ -75,7 +75,7 @@ const ClaimItemModal = ({ isOpen, item, onClose, onSuccess }) => {
       onClose();
     } catch (err) {
       console.error(err);
-      setErrorMsg(err.response?.data?.message || err.message || 'Không thể xác nhận bàn giao đồ.');
+      setErrorMsg(err.response?.data?.message || err.message || t('Không thể bàn giao món đồ.'));
     } finally {
       setSubmitting(false);
     }
@@ -122,17 +122,19 @@ const ClaimItemModal = ({ isOpen, item, onClose, onSuccess }) => {
                 className="w-16 h-16 rounded-xl object-cover bg-black/20 shrink-0 border border-[var(--border)]"
               />
             ) : (
-              <div className="w-16 h-16 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center font-bold text-lg shrink-0">
-                📦
+              <div className="w-16 h-16 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
+                <Package className="w-7 h-7 stroke-[1.75]" />
               </div>
             )}
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-sm text-[var(--text)] truncate">{item.itemName}</h3>
-              <p className="text-xs text-[var(--text-muted)]">
-                📍 {t('Vị trí cất:')} <span className="font-semibold text-[var(--text)]">{item.storageLocation}</span>
+              <p className="text-xs text-[var(--text-muted)] flex items-center gap-1.5 mt-0.5">
+                <MapPin className="w-3.5 h-3.5 text-[var(--primary)] shrink-0" />
+                <span>{t('Vị trí cất:')} <strong className="font-semibold text-[var(--text)]">{item.storageLocation}</strong></span>
               </p>
-              <p className="text-xs text-[var(--text-muted)]">
-                🕒 {t('Nơi nhặt:')} {item.foundLocation} {item.color ? `• Màu: ${item.color}` : ''}
+              <p className="text-xs text-[var(--text-muted)] flex items-center gap-1.5 mt-0.5">
+                <Clock className="w-3.5 h-3.5 shrink-0" />
+                <span>{t('Nơi nhặt:')} {item.foundLocation} {item.color ? `• Màu: ${item.color}` : ''}</span>
               </p>
             </div>
           </div>
@@ -155,13 +157,14 @@ const ClaimItemModal = ({ isOpen, item, onClose, onSuccess }) => {
             <button
               type="button"
               onClick={() => setIsMember(true)}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
                 isMember
                   ? 'bg-[var(--surface)] text-[var(--primary)] shadow-xs'
                   : 'text-[var(--text-muted)] hover:text-[var(--text)]'
               }`}
             >
-              👤 {t('Hội viên trung tâm')}
+              <User className="w-3.5 h-3.5" />
+              <span>{t('Hội viên trung tâm')}</span>
             </button>
             <button
               type="button"
@@ -169,13 +172,14 @@ const ClaimItemModal = ({ isOpen, item, onClose, onSuccess }) => {
                 setIsMember(false);
                 setSelectedMember(null);
               }}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
                 !isMember
                   ? 'bg-[var(--surface)] text-[var(--primary)] shadow-xs'
                   : 'text-[var(--text-muted)] hover:text-[var(--text)]'
               }`}
             >
-              🏷️ {t('Khách ngoài / Khách vãng lai')}
+              <Tag className="w-3.5 h-3.5" />
+              <span>{t('Khách ngoài / Khách vãng lai')}</span>
             </button>
           </div>
 

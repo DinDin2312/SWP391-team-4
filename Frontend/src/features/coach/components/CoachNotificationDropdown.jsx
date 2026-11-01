@@ -6,6 +6,7 @@ import {
   Receipt, X, RefreshCw, ExternalLink, Dumbbell
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
+import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import {
   filterNotifications,
   getUnreadCount,
@@ -20,6 +21,7 @@ const CoachNotificationDropdown = ({ isOpen, onClose, onUnreadChange }) => {
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('ALL');
   const [actionLoading, setActionLoading] = useState(false);
+  const [showConfirmClear, setShowConfirmClear] = useState(false);
 
   const dropdownRef = useRef(null);
 
@@ -128,8 +130,7 @@ const CoachNotificationDropdown = ({ isOpen, onClose, onUnreadChange }) => {
   };
 
   // Delete all notifications
-  const handleDeleteAll = async () => {
-    if (!window.confirm(t('Are you sure you want to clear all notifications?'))) return;
+  const executeDeleteAll = async () => {
     const token = localStorage.getItem('token');
     try {
       setActionLoading(true);
@@ -142,6 +143,7 @@ const CoachNotificationDropdown = ({ isOpen, onClose, onUnreadChange }) => {
       console.error('Failed to clear notifications', err);
     } finally {
       setActionLoading(false);
+      setShowConfirmClear(false);
     }
   };
 
@@ -220,7 +222,7 @@ const CoachNotificationDropdown = ({ isOpen, onClose, onUnreadChange }) => {
             {notifications.length > 0 && (
               <button
                 type="button"
-                onClick={handleDeleteAll}
+                onClick={() => setShowConfirmClear(true)}
                 disabled={actionLoading}
                 className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
                 title={t('Clear all')}
@@ -357,6 +359,17 @@ const CoachNotificationDropdown = ({ isOpen, onClose, onUnreadChange }) => {
           </span>
         </div>
       </motion.div>
+
+      <ConfirmModal
+        isOpen={showConfirmClear}
+        onClose={() => setShowConfirmClear(false)}
+        onConfirm={executeDeleteAll}
+        title={t('Clear All')}
+        message={t('Are you sure you want to clear all notifications?')}
+        confirmText={t('Clear All')}
+        cancelText={t('Cancel')}
+        isDestructive={true}
+      />
     </AnimatePresence>
   );
 };

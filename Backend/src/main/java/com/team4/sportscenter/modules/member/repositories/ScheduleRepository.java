@@ -23,4 +23,6 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
            "WHERE c.classId = :classId AND s.startTime >= :currentTime AND s.status='SCHEDULED' AND c.status='ACTIVE' " +
            "ORDER BY s.startTime ASC")
     List<Schedule> findAvailableSchedulesByClassId(@Param("classId") Integer classId, @Param("currentTime") LocalDateTime currentTime);
+
+    long countByGymClass_ClassId(Integer classId);
 }

@@ -8,13 +8,14 @@ import { useOutlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
 import {
-  LayoutDashboard, CalendarDays, Users, Dumbbell,
+  LayoutDashboard, CalendarDays, CalendarSync, Users, Dumbbell,
   Settings, LogOut, Award, Bell, Sparkles, Megaphone
 } from 'lucide-react';
 import SendNotificationModal from '../features/coach/components/SendNotificationModal';
 import CoachNexusAiChat from '../features/coach/components/CoachNexusAiChat';
 import CoachNotificationDropdown from '../features/coach/components/CoachNotificationDropdown';
 import { getUnreadCount, getSavedCoachPreferences } from '../features/coach/coachNotificationUtils';
+import CyberFoxMascot, { CyberFoxAvatar } from '../components/CyberFoxMascot';
 
 const CoachLayout = () => {
   useLanguage();
@@ -64,7 +65,9 @@ const CoachLayout = () => {
     window.addEventListener('notificationUpdated', handleUpdate);
     return () => window.removeEventListener('notificationUpdated', handleUpdate);
   }, []);
-  const [isAiChatOpen, setIsAiChatOpen] = useState(false);
+  const [chatMode, setChatMode] = useState('minimized');
+  const [chatOrigin, setChatOrigin] = useState('fox');
+  const [isTopbarDockGlow, setIsTopbarDockGlow] = useState(false);
 
 
 
@@ -82,6 +85,7 @@ const CoachLayout = () => {
     switch(location.pathname) {
       case '/coach/dashboard': return 'Coach Dashboard';
       case '/coach/schedule': return 'Teaching Schedule & Trainees';
+      case '/coach/reschedule': return 'Reschedule & Make-up';
       case '/coach/students': return 'Assigned Trainees';
       case '/coach/workouts': return 'Workout Plans';
       case '/coach/notifications': return 'Notifications';
@@ -133,6 +137,18 @@ const CoachLayout = () => {
             >
               <CalendarDays className="w-4 h-4" />
               <span>{t("Teaching Schedule")}</span>
+            </button>
+
+            <button
+              onClick={() => navigate("/coach/reschedule")}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                isActive('/coach/reschedule')
+                  ? 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+              }`}
+            >
+              <CalendarSync className="w-4 h-4" />
+              <span>{t("Reschedule & Make-up")}</span>
             </button>
 
             <button
@@ -238,12 +254,22 @@ const CoachLayout = () => {
 
           <div className="role-header-actions">
             <button
-              onClick={() => setIsAiChatOpen(!isAiChatOpen)}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2 cursor-pointer"
+              onClick={() => {
+                setChatOrigin('topbar');
+                setChatMode((prev) => (prev === 'open' ? 'minimized' : 'open'));
+              }}
+              className={`px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2 cursor-pointer ${
+                isTopbarDockGlow ? 'ring-2 ring-sky-400 scale-105 shadow-sky-400/40' : ''
+              }`}
               title={t("Mở trợ lý NEXUS Coach AI")}
             >
-              <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
+              <span className="w-5 h-5 rounded-full bg-slate-900/50 border border-sky-300/40 flex items-center justify-center overflow-hidden">
+                <CyberFoxAvatar direction="DIRECT_HOVER" className="w-4 h-4" />
+              </span>
               <span>{t("NEXUS Coach AI")}</span>
+              {chatMode === 'docked' && (
+                <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
+              )}
             </button>
             <button
               onClick={() => setIsNotifModalOpen(true)}
@@ -320,8 +346,24 @@ const CoachLayout = () => {
 
       {/* Coach AI Assistant Floating Chat */}
       <CoachNexusAiChat
-        isOpen={isAiChatOpen}
-        onClose={() => setIsAiChatOpen(false)}
+        isOpen={chatMode === 'open'}
+        openOrigin={chatOrigin}
+        onMinimize={() => setChatMode('minimized')}
+        onClose={() => {
+          setChatMode('docked');
+          setIsTopbarDockGlow(true);
+          setTimeout(() => setIsTopbarDockGlow(false), 900);
+        }}
+      />
+
+      {/* Cyber Fox AI Mascot at bottom-right when minimized */}
+      <CyberFoxMascot
+        isVisible={chatMode === 'minimized'}
+        onActivate={() => {
+          setChatOrigin('fox');
+          setChatMode('open');
+        }}
+        label={t("NEXUS Coach AI")}
       />
     </div>
   );

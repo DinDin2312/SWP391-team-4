@@ -114,7 +114,10 @@ $\rightarrow$ **Ý nghĩa:** Nếu sau này Quản lý tăng giá gói hoặc c�
 | **Check-in / Chấm Công Cho HLV** | I (Theo dõi chuyên cần) | **A / R** (Xác nhận) | C (Có mặt) | - |
 | **Điểm Danh Học Viên Trong Lớp** | I | - | **A / R** (Xác nhận) | I |
 | **Soạn Giáo Án & Bài Tập Thể Lực** | - | - | **A / R** (Chuyên môn) | I (Nhận bài tập) |
-| **Đo & Đánh Giá Chỉ Số InBody** | - | - | **A / R** (Chấm điểm) | **R** (Tự ghi nhận) |
+| **Đo & Đánh Giá Chỉ Số InBody Định Kỳ** | I (Theo dõi chất lượng) | - | **A / R** (Đánh giá mốc) | **R** (Tự ghi nhận) |
+| **Đánh Giá Buổi Học Hàng Ngày (Kỹ thuật & Chuyên cần)** | I | - | **A / R** (Bắt buộc sau ca) | I (Nhận phản hồi) |
+| **Đề Xuất Dời Lịch Dạy Bù (Không có HLV thay thế)** | **A** (Thẩm định & Duyệt) | I (Nắm lịch vận hành) | **R** (Tạo đơn >12h) | **C / R** (Biểu quyết tự quyết) |
+| **Tiếp Nhận & Xử Lý Đồ Thất Lạc (Lost & Found)** | I (Giám sát tài sản) | **A / R** (Toàn quyền quản lý) | - | C (Khai báo / Nhận đồ) |
 | **Hủy Lớp / Đổi Lớp Hạn Chế** | A (Duyệt ca đặc biệt) | **R** (Xử lý tại quầy) | I (Nhận thông báo) | **R** (Gửi yêu cầu) |
 
 *Ghi chú RACI:* **A** (Accountable - Chịu trách nhiệm chính), **R** (Responsible - Trực tiếp thực hiện), **C** (Consulted - Tham vấn/Phối hợp), **I** (Informed - Nhận thông tin/Xem).
@@ -176,15 +179,23 @@ sequenceDiagram
 
 ---
 
-### 5.2. Luồng 2: Đo Đạc InBody & Phân Tách Quyền Đánh Giá
+### 5.2. Luồng 2: Đo Đạc InBody Định Kỳ & Đánh Giá Buổi Học Hàng Ngày
 
-* **Tình huống 1: Hội viên tự đo (Self-Log):**
-  * Hội viên vào Dashboard $\rightarrow$ bấm **[Tự cập nhật chỉ số]** $\rightarrow$ nhập Cân nặng, Chiều cao, % Mỡ, Cơ bắp và Ghi chú cá nhân.
-  * Backend lưu với `coach = user`, `performanceRating = null`, `recommendation = null`.
-  * Dashboard hiển thị: **Người ghi nhận: Chính bạn (Tự đo)**, tiêu đề **Ghi chú & Mục tiêu cá nhân**. Ẩn toàn bộ sao đánh giá và mục tiêu giả.
-* **Tình huống 2: HLV đo và đánh giá sau buổi học (Coach Assessment):**
-  * HLV mở danh sách học viên $\rightarrow$ bấm **[Đánh giá buổi tập]** $\rightarrow$ nhập điểm Kỹ thuật (1-5 sao), Chuyên cần (1-5 sao), số đo thể chất và Lời khuyên/Mục tiêu cho buổi tới.
-  * Dashboard hội viên hiển thị: Tên HLV, tên lớp, số sao thực tế và phác đồ rèn luyện chuyên môn.
+* **Phân định rõ ràng giữa hai khái niệm**:
+  1. **Đánh giá Buổi học Hàng ngày (Daily Session Feedback - Bắt buộc)**:
+     - Sau mỗi ca dạy, HLV chấm sao thể lực/chuyên cần (1-5 sao) và ghi nhận xét kỹ thuật, dặn dò phục hồi cho học viên.
+     - **Không bắt buộc nhập InBody**: Sau 1 buổi tập cơ thể mất nước, cơ mỏi, đo InBody sẽ bị sai lệch sinh học (BIA mất nước) và cơ mỡ không biến đổi sau 1 giờ tập.
+  2. **Đo đạc Chỉ số InBody (Milestone InBody - Tùy chọn định kỳ 2-4 tuần/lần)**:
+     - Nhập khi đến cột mốc (buổi đầu, giữa, cuối khóa) hoặc kiểm tra thể lực định kỳ.
+
+* **Cơ chế Đồng bộ Thể chất 2 Chiều (Bidirectional Sync)**:
+  * **Hội viên tự đo (Self-Log)**: Hội viên tự đo máy tại sảnh, tự cập nhật trên App $\rightarrow$ Bản ghi lưu với nhãn **Tự cập nhật**. Dữ liệu này **tự động đồng bộ và hiển thị ngay trên Cổng HLV (`TraineeAssessmentModal`)**, giúp HLV nắm bắt số đo mới nhất của học viên trước khi soạn giáo án.
+  * **HLV đo và đánh giá (Coach Assessment)**: HLV nhập số đo định kỳ $\rightarrow$ Tự động lưu lịch sử `INBODY_RECORDS` và cập nhật hồ sơ thể trạng `HEALTH_PROFILES` của học viên.
+
+* **Trực quan hóa & Điểm số Thể chất FPS (Fitness Progress Score)**:
+  * Tự động tính điểm FPS (thang 100) phản ánh độ kiên trì, xu hướng giảm mỡ, tăng cơ nạc và chỉ số BMI lý tưởng ($18.5 - 24.9$).
+  * Biểu đồ tiến trình đa trục (SVG Polyline) kèm bảng lịch sử có **Sticky Header** và **Phân trang thu gọn (5 bản ghi/trang)** chống tràn modal khi có nhiều dữ liệu đo.
+  * Tối ưu độ tương phản cao (High-Contrast WCAG) ở cả chế độ Sáng và Tối.
 
 ---
 
@@ -233,6 +244,90 @@ sequenceDiagram
 2. **Cơ chế Kép của Thẻ Gym Pass (`GYMPASS-`)**: Vừa dùng để nhập pass tại cửa ra vào tập Gym tự do, vừa có thể sử dụng như một Voucher giảm trừ trong Giỏ hàng khi mua gói tập/lớp học khác.
 3. **Prorated Credit Engine**: Tính tiền bồi hoàn chính xác theo số buổi thực tế chưa học ($Price \times Remaining / Total$), làm tròn đến hàng nghìn đồng.
 4. **Bảo toàn dòng tiền (Cash Retention Defense)**: Tiền đã vào trung tâm được ưu tiên giữ lại bằng Store Credit hoặc Gym Pass. Cửa xuất tiền mặt chỉ mở duy nhất qua thẩm quyền Quản lý.
+
+---
+
+### 5.4. Luồng 4: Huấn Luyện Viên Dời Lịch Dạy Bù & Quản Lý Thẩm Định (Coach Reschedule & Makeup Plan)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor C as Huấn Luyện Viên (Coach)
+    actor CM as Quản Lý (Center Manager)
+    actor M as Hội Viên (Members)
+    participant S as Reschedule Engine & DB
+
+    Note over C,S: 1. HLV gặp sự cố đột xuất & không có người dạy thay
+    C->>S: Tạo đơn dời lịch bù tại [/coach/reschedule] (>12h trước ca gốc)
+    S->>S: Hậu kiểm: >12h, phòng bù trống, HLV không trùng lịch
+    S-->>CM: Thông báo thẩm định đơn dời lịch tới Quản lý
+
+    Note over CM,S: 2. Quản lý Thẩm định & Phê duyệt
+    CM->>S: Mở Admin Dashboard thẩm định xung đột phòng & giáo viên
+    alt Từ chối
+        CM->>S: Bấm Từ chối kèm lý do -> Bắn thông báo cho HLV
+    else Phê duyệt
+        CM->>S: Bấm Phê duyệt ca dạy bù -> Mở giai đoạn VOTING
+        S-->>M: Bắn chuông thông báo Topbar tới toàn bộ học viên trong lớp
+    end
+
+    Note over M,S: 3. Hội viên Tự quyết Tham gia hay Hoàn lượt
+    M->>S: Mở thông báo dời lịch, tự do chọn 1 trong 2 nút:
+    alt Đồng ý học bù
+        M->>S: Bấm [Đồng ý ca bù] -> Chuyển giữ chỗ sang ca học bù
+    else Bận lịch cá nhân
+        M->>S: Bấm [Bận - Hoàn 1 lượt] -> Tự động hoàn lại 1 lượt tập / Credit 100%
+    end
+
+    Note over S: 4. Quá hạn chót xác nhận (Confirmation Deadline)
+    alt Sĩ số đồng ý >= Sĩ số tối thiểu (min_students)
+        S->>S: Ca dạy bù chính thức CONFIRMED -> Diễn ra bình thường
+    else Sĩ số < tối thiểu HOẶC học viên chưa kịp xác nhận
+        S->>S: Tự động HỦY ca dạy bù (CANCELLED)
+        S->>S: Tự động hoàn trả 100% lượt tập / Credit cho toàn bộ học viên
+        S-->>C: Thông báo hủy ca bù do không đủ sĩ số
+    end
+```
+
+#### Nguyên tắc cốt lõi của Ca Dạy Bù:
+1. **Chỉ áp dụng khi không có HLV dạy thay**: Tránh lạm dụng dời lịch làm gián đoạn kế hoạch tập luyện của khách hàng.
+2. **Nguyên tắc Tự quyết (Member Sovereignty)**: Ca bù do trung tâm dời lịch nên khách hàng không bao giờ bị ép phải theo giờ mới; luôn có nút nhận hoàn 1 lượt tập tức thì.
+3. **Cơ chế Hạn chót & An toàn Tuyệt đối**: Quá hạn chót mà khách chưa kịp chọn, hệ thống luôn ưu tiên phương án bảo vệ khách hàng: tự động hoàn trả 1 lượt tập vào tài khoản.
+
+---
+
+### 5.5. Luồng 5: Quản Lý Đồ Thất Lạc & Kiểm Chứng Nhận Đồ (Lost & Found Protocol)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor F as Người Nhặt Được (Học viên / Tạp vụ)
+    actor R as Lễ Tân (Receptionist)
+    actor M as Người Mất Đồ (Claimant)
+    participant S as Lost & Found Service & DB
+
+    Note over F,R: Bước 1: Tiếp nhận đồ thất lạc tại quầy
+    F->>R: Bàn giao vật phẩm nhặt được tại sảnh/phòng tập
+    R->>S: Tạo món đồ: Tên, Phân loại (High Value / Standard / Perishable),<br/>Vị trí lưu kho, Ảnh, Mô tả công khai & CHI TIẾT ẨN BẢO MẬT (secretDetails)
+    S->>S: Tự động gán mã LF-YYYYMMDD-XXXX + Tính hạn lưu kho (2/30/90 ngày)
+    S-->>R: Lưu trữ thành công (Trạng thái: STORED)
+
+    Note over M,R: Bước 2: Khách đến quầy báo mất & nhận lại
+    M->>R: Khai báo mất đồ & mô tả vật phẩm
+    R->>S: Tra cứu danh sách đồ đang lưu kho
+    R->>R: Đối chiếu câu trả lời của khách với [secretDetails] ẩn
+    alt Thông tin kiểm chứng KHÔNG KHỚP
+        R-->>M: Từ chối bàn giao (Ngăn chặn hành vi nhận vơ đồ đắt tiền)
+    else Thông tin kiểm chứng HOÀN TOÀN TRÙNG KHỚP
+        R->>S: Bấm [Bàn Giao]: Nhập Tên, SĐT, Số CCCD/CMND người nhận
+        S->>S: Cập nhật status = CLAIMED, thời điểm bàn giao, nhân viên phụ trách
+        S-->>R: Xuất biên bản bàn giao & Khóa vĩnh viễn bản ghi (Bất biến)
+    end
+
+    Note over R,S: Bước 3: Đồ quá hạn lưu kho (OVERDUE)
+    S->>S: Quét tự động đồ quá hạn lưu kho (expiryDate < Today) -> Chuyển OVERDUE
+    R->>S: Lễ tân làm thủ tục thanh lý (DISPOSED): Nhập lý do (Quyên góp / Tiêu hủy)
+```
 
 ---
 

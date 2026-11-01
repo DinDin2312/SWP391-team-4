@@ -140,7 +140,16 @@ public class MemberController {
     }
 
     @PostMapping("/ai/chat")
-    public ResponseEntity<String> chatWithAi(Authentication authentication, @RequestBody com.team4.sportscenter.modules.member.dtos.AiMessageRequest request) {
-        return ResponseEntity.ok(aiChatService.chat(request.getMessage(), authentication.getName()));
+    public ResponseEntity<com.team4.sportscenter.modules.rag.dtos.AiChatResponse> chatWithAi(
+            Authentication authentication,
+            @RequestBody com.team4.sportscenter.modules.member.dtos.AiMessageRequest request) {
+        return ResponseEntity.ok(aiChatService.chatDetailed(request.getMessage(), request.getHistory(), authentication.getName()));
+    }
+
+    @PostMapping(value = "/ai/chat/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter streamChatWithAi(
+            Authentication authentication,
+            @RequestBody com.team4.sportscenter.modules.member.dtos.AiMessageRequest request) {
+        return aiChatService.chatStream(request.getMessage(), request.getHistory(), authentication.getName());
     }
 }

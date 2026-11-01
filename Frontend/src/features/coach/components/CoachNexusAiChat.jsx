@@ -1,9 +1,13 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, X, Bot, User, Minus, Sparkles, Dumbbell, Calendar, CheckCircle2, ArrowRight, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+import { Send, X, User, Minus, Sparkles, Dumbbell, Calendar, CheckCircle2, ArrowRight, Mic, MicOff, Volume2, VolumeX, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { renderChatMarkdown } from '../../member/chatMarkdown.jsx';
+import { normalizeChatResponse } from '../../member/chatSources.js';
+import { parseSseChunk, stripPartialActionTag } from '../../member/chatStream.js';
+import { CyberFoxAvatar } from '../../../components/CyberFoxMascot';
 
 const SUGGESTIONS = [
   "Lên 1 buổi tập ngực & tay sau hôm nay",
@@ -12,8 +16,9 @@ const SUGGESTIONS = [
   "Phân tích thể trạng và nhận xét học viên"
 ];
 
-const CoachNexusAiChat = ({ isOpen, onClose }) => {
+const CoachNexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
   const lang = useLanguage();
+  const [exitMode, setExitMode] = useState('fox');
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -61,6 +66,7 @@ const CoachNexusAiChat = ({ isOpen, onClose }) => {
   }, [messages]);
 
   const handleMouseDown = (e) => {
+    if (e.target.closest('button')) return;
     setIsDragging(true);
     offset.current = {
       x: e.clientX - position.x,
@@ -70,9 +76,15 @@ const CoachNexusAiChat = ({ isOpen, onClose }) => {
 
   const handleMouseMove = (e) => {
     if (!isDragging) return;
+    const nextX = e.clientX - offset.current.x;
+    const nextY = e.clientY - offset.current.y;
+    const maxLeft = -(window.innerWidth - 160);
+    const maxRight = 16;
+    const maxUp = -68;
+    const maxDown = Math.max(0, window.innerHeight - 160);
     setPosition({
-      x: e.clientX - offset.current.x,
-      y: e.clientY - offset.current.y
+      x: Math.min(maxRight, Math.max(maxLeft, nextX)),
+      y: Math.min(maxDown, Math.max(maxUp, nextY))
     });
   };
 
@@ -209,7 +221,7 @@ const CoachNexusAiChat = ({ isOpen, onClose }) => {
     window.speechSynthesis.speak(utterance);
   };
 
-  const handleClose = () => {
+  const stopVoiceActivities = () => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       setSpeakingMsgId(null);
@@ -218,7 +230,34 @@ const CoachNexusAiChat = ({ isOpen, onClose }) => {
       try { recognitionRef.current.stop(); } catch {}
       setIsListening(false);
     }
-    onClose();
+  };
+
+  const handleMinimizeClick = (e) => {
+    if (e) e.stopPropagation();
+    setIsDragging(false);
+    setExitMode('fox');
+    stopVoiceActivities();
+    if (onMinimize) {
+      onMinimize();
+    } else if (onClose) {
+      onClose();
+    }
+  };
+
+  const handleCloseSessionClick = (e) => {
+    if (e) e.stopPropagation();
+    setIsDragging(false);
+    setExitMode('topbar');
+    stopVoiceActivities();
+    setMessages([{
+      id: 1,
+      sender: "bot",
+      text: t("Xin chào Coach! Mình là NEXUS COACH AI - trợ lý chuyên môn của bạn. Hãy nói cho mình biết bạn muốn giao bài tập gì, cho học viên nào, hoặc cần tư vấn kế hoạch huấn luyện theo thể trạng nhé! 💪")
+    }]);
+    setPosition({ x: 0, y: 0 });
+    if (onClose) {
+      onClose();
+    }
   };
 
   const dispatchCoachAction = (payload) => {
@@ -356,18 +395,72 @@ const CoachNexusAiChat = ({ isOpen, onClose }) => {
     setInput('');
     setIsLoading(true);
 
+    const botMsgId = Date.now() + 1;
+    const token = localStorage.getItem('token');
+    const history = messages
+      .slice(-6)
+      .map((m) => ({
+        role: m.sender === 'user' ? 'user' : 'model',
+        text: m.text
+      }));
+
+    let streamedAnyChunk = false;
+    let accumulatedText = '';
+
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post('http://localhost:8080/api/v1/coach/ai/chat', { message: userMsg.text }, {
-        headers: { Authorization: "Bearer " + token }
+      const response = await fetch('http://localhost:8080/api/v1/coach/ai/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + token
+        },
+        body: JSON.stringify({ message: userMsg.text, history })
       });
 
-      let rawText = typeof res.data === 'string' ? res.data : String(res.data || '');
-      const actionResult = extractActionPayload(rawText);
+      if (!response.ok || !response.body) {
+        throw new Error('Coach stream request not ok: ' + response.status);
+      }
 
+      setMessages((prev) => [...prev, { id: botMsgId, sender: 'bot', text: '', isStreaming: true }]);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let streamBuffer = '';
+      let donePayload = null;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        streamBuffer += decoder.decode(value, { stream: true });
+        const parsed = parseSseChunk(streamBuffer);
+        streamBuffer = parsed.rest;
+
+        for (const evt of parsed.events) {
+          if (evt.event === 'delta') {
+            streamedAnyChunk = true;
+            accumulatedText += evt.data;
+            const visibleText = stripPartialActionTag(accumulatedText);
+            setMessages((prev) =>
+              prev.map((m) => (m.id === botMsgId ? { ...m, text: visibleText } : m))
+            );
+          } else if (evt.event === 'done') {
+            try {
+              donePayload = JSON.parse(evt.data);
+            } catch {}
+          }
+        }
+      }
+
+      const fullText = (donePayload && donePayload.fullText) || accumulatedText;
+      const sources = (donePayload && donePayload.sources) || [];
+      const actionResult = extractActionPayload(fullText);
+
+      let rawText = fullText;
       let hadPrefill = false;
       let prefillType = null;
       let prefillData = null;
+
       if (actionResult) {
         rawText = actionResult.cleanText;
         if (actionResult.type.includes('PREFILL_')) {
@@ -382,27 +475,102 @@ const CoachNexusAiChat = ({ isOpen, onClose }) => {
         await executeAction(`${actionResult.type}:${actionResult.rawJson}`);
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          sender: 'bot',
-          text: rawText,
-          hasActionBadge: hadPrefill,
-          actionType: prefillType,
-          actionData: prefillData
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === botMsgId
+            ? {
+                ...m,
+                text: rawText,
+                sources,
+                hasActionBadge: hadPrefill,
+                actionType: prefillType,
+                actionData: prefillData,
+                isStreaming: false
+              }
+            : m
+        )
+      );
+    } catch (streamErr) {
+      console.warn('Coach streaming error, falling back to REST:', streamErr);
+
+      if (!streamedAnyChunk) {
+        try {
+          const res = await axios.post(
+            'http://localhost:8080/api/v1/coach/ai/chat',
+            { message: userMsg.text, history },
+            { headers: { Authorization: 'Bearer ' + token } }
+          );
+
+          const normalized = normalizeChatResponse(res.data);
+          let rawText = normalized.text;
+          const sources = normalized.sources;
+          const actionResult = extractActionPayload(rawText);
+
+          let hadPrefill = false;
+          let prefillType = null;
+          let prefillData = null;
+          if (actionResult) {
+            rawText = actionResult.cleanText;
+            if (actionResult.type.includes('PREFILL_')) {
+              hadPrefill = true;
+              prefillType = actionResult.type;
+              try {
+                prefillData = JSON.parse(actionResult.rawJson);
+              } catch (jsonErr) {
+                console.warn('Could not parse AI JSON action payload:', jsonErr, actionResult.rawJson);
+              }
+            }
+            await executeAction(`${actionResult.type}:${actionResult.rawJson}`);
+          }
+
+          setMessages((prev) => {
+            const exists = prev.some((m) => m.id === botMsgId);
+            if (exists) {
+              return prev.map((m) =>
+                m.id === botMsgId
+                  ? {
+                      ...m,
+                      text: rawText,
+                      sources,
+                      hasActionBadge: hadPrefill,
+                      actionType: prefillType,
+                      actionData: prefillData,
+                      isStreaming: false
+                    }
+                  : m
+              );
+            }
+            return [
+              ...prev,
+              {
+                id: botMsgId,
+                sender: 'bot',
+                text: rawText,
+                sources,
+                hasActionBadge: hadPrefill,
+                actionType: prefillType,
+                actionData: prefillData
+              }
+            ];
+          });
+        } catch {
+          setMessages((prev) => [
+            ...prev.filter((m) => m.id !== botMsgId),
+            {
+              id: botMsgId,
+              sender: 'bot',
+              text: t('Xin lỗi Coach, hệ thống AI hiện đang bận hoặc quá tải. Vui lòng thử lại sau giây lát!')
+            }
+          ]);
         }
-      ]);
-    } catch (error) {
-      console.error('Coach AI chat error:', error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          sender: 'bot',
-          text: t('Xin lỗi Coach, hệ thống AI hiện đang bận hoặc quá tải. Vui lòng thử lại sau giây lát!')
-        }
-      ]);
+      } else {
+        const cleanedText = stripPartialActionTag(accumulatedText);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === botMsgId ? { ...m, text: cleanedText, isStreaming: false } : m
+          )
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -416,15 +584,23 @@ const CoachNexusAiChat = ({ isOpen, onClose }) => {
     <AnimatePresence>
       {isOpen && (
         <div 
-          className="fixed z-[9999]" 
+          className="fixed z-[9999] pointer-events-none" 
           style={{ top: "80px", right: "24px", transform: `translate(${position.x}px, ${position.y}px)` }}
         >
           <motion.div 
-            initial={{ opacity: 0, y: -30, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 350, damping: 25 }}
-            className="flex flex-col bg-[var(--surface)] backdrop-blur-xl border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden w-[360px] sm:w-[420px]"
+            initial={
+              openOrigin === "topbar"
+                ? { opacity: 0, x: 40, y: -45, scale: 0.2 }
+                : { opacity: 0, x: 110, y: 360, scale: 0.16 }
+            }
+            animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+            exit={
+              exitMode === "topbar"
+                ? { opacity: 0, x: 40, y: -55, scale: 0.14 }
+                : { opacity: 0, x: 110, y: 360, scale: 0.14 }
+            }
+            transition={{ type: "spring", stiffness: 340, damping: 26 }}
+            className="pointer-events-auto flex flex-col bg-[var(--surface)] backdrop-blur-xl border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden w-[360px] sm:w-[420px]"
             style={{ height: "560px" }}
           >
             {/* HEADER */}
@@ -434,8 +610,8 @@ const CoachNexusAiChat = ({ isOpen, onClose }) => {
               className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 p-3.5 flex items-center justify-between cursor-move select-none"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md">
-                  <Dumbbell className="w-4 h-4 text-white" />
+                <div className="w-9 h-9 rounded-full bg-slate-900/50 border border-sky-300/40 flex items-center justify-center backdrop-blur-md shadow-inner overflow-hidden">
+                  <CyberFoxAvatar direction="DIRECT_HOVER" className="w-7 h-7" />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
@@ -446,17 +622,22 @@ const CoachNexusAiChat = ({ isOpen, onClose }) => {
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={handleClose} className="p-1.5 text-blue-100 hover:text-white transition-colors" title={t("Minimize (Keep history)")}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={handleMinimizeClick}
+                  className="p-1.5 text-blue-100 hover:bg-white/10 rounded-lg hover:text-white transition-colors cursor-pointer"
+                  title={t("Minimize (Keep history)")}
+                >
                   <Minus className="w-4 h-4" />
                 </button>
-                <button onClick={() => {
-                  setMessages([{
-                    id: 1,
-                    sender: "bot",
-                    text: t("Xin chào Coach! Mình là NEXUS COACH AI - trợ lý chuyên môn của bạn. Hãy nói cho mình biết bạn muốn giao bài tập gì, cho học viên nào, hoặc cần tư vấn kế hoạch huấn luyện theo thể trạng nhé! 💪")
-                  }]);
-                  handleClose();
-                }} className="p-1.5 text-blue-100 hover:bg-white/10 rounded-lg hover:text-white transition-colors" title={t("Close (Clear history)")}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={handleCloseSessionClick}
+                  className="p-1.5 text-blue-100 hover:bg-white/10 rounded-lg hover:text-white transition-colors cursor-pointer"
+                  title={t("Close (Clear history)")}
+                >
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -467,17 +648,36 @@ const CoachNexusAiChat = ({ isOpen, onClose }) => {
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`flex gap-2 max-w-[88%] ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center mt-1 shadow-sm ${msg.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-gradient-to-br from-indigo-100 to-blue-50 text-indigo-600 border border-indigo-100'}`}>
-                      {msg.sender === 'user' ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
+                    <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center mt-1 shadow-sm overflow-hidden ${msg.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-900 border border-sky-400/40'}`}>
+                      {msg.sender === 'user' ? <User className="w-3.5 h-3.5" /> : <CyberFoxAvatar direction="DIRECT_HOVER" className="w-5 h-5" />}
                     </div>
                     <div className="space-y-1.5">
-                      <div className={`p-3 text-[13px] leading-relaxed whitespace-pre-wrap shadow-sm ${
+                      <div className={`p-3 text-[13px] leading-relaxed shadow-sm ${
                         msg.sender === 'user'
-                          ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm'
+                          ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm whitespace-pre-wrap'
                           : 'bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--border)] rounded-2xl rounded-tl-sm'
                       }`}>
-                        {msg.text}
+                        {msg.sender === 'user' ? msg.text : renderChatMarkdown(msg.text)}
+                        {msg.isStreaming && <span className="inline-block w-1.5 h-3.5 ml-1 bg-indigo-500 animate-pulse align-middle" />}
                       </div>
+
+                      {/* Hiển thị Nguồn trích dẫn RAG */}
+                      {msg.sender === 'bot' && msg.sources && msg.sources.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5 pl-1">
+                          <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">
+                            <BookOpen className="w-3 h-3 text-blue-500" />
+                            {t("Nguồn tham khảo")}:
+                          </span>
+                          {msg.sources.map((s, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800"
+                            >
+                              [{s.index}] {s.title}
+                            </span>
+                          ))}
+                        </div>
+                      )}
 
                       {/* Loa phát giọng nói AI đọc câu trả lời */}
                       {msg.sender === 'bot' && (
@@ -549,11 +749,11 @@ const CoachNexusAiChat = ({ isOpen, onClose }) => {
               ))}
               
               {/* TYPING INDICATOR */}
-              {isLoading && (
+              {isLoading && !messages.some((m) => m.isStreaming) && (
                 <div className="flex justify-start">
                   <div className="flex gap-2 max-w-[85%] flex-row">
-                    <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center mt-1 bg-gradient-to-br from-indigo-100 to-blue-50 text-indigo-600 border border-indigo-100 shadow-sm">
-                      <Bot className="w-3.5 h-3.5 animate-pulse" />
+                    <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center mt-1 bg-slate-900 border border-sky-400/40 shadow-sm overflow-hidden">
+                      <CyberFoxAvatar direction="DIRECT_HOVER" className="w-5 h-5 animate-pulse" />
                     </div>
                     <div className="p-4 bg-[var(--surface-hover)] border border-[var(--border)] rounded-2xl rounded-tl-sm flex items-center gap-1.5 shadow-sm">
                       <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></span>

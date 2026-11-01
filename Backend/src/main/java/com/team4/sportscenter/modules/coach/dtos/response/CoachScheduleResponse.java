@@ -20,6 +20,11 @@ public class CoachScheduleResponse {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String status;
+    private String coachName;
+    private String substituteCoachName;
+    private Boolean isSubstituteForCurrentCoach;
+    private Boolean hasPendingReschedule;
+    private Integer pendingRescheduleRequestId;
     private Integer maxSlots;
     private Integer enrolledCount;
     private List<EnrolledStudentResponse> enrolledStudents;

@@ -7,9 +7,8 @@ import PackageTypeField from './PackageTypeField';
 import { packageForm, parsePriceInput, priceInput, validatePackage } from './packagesState';
 import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
 import { validateResourceImage } from '../../../components/resource-images/resourceImages';
-import PackageBenefitsEditor from './PackageBenefitsEditor';
 
-const fields = ['packageName', 'packageType', 'durationDays', 'price', 'benefits', 'description', 'terms', 'purchaseLimitPerMember'];
+const fields = ['packageName', 'packageType', 'durationDays', 'price', 'description', 'terms', 'purchaseLimitPerMember'];
 function trapTab(event, element) {
   if (event.key !== 'Tab') return;
   const controls = [...element.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled)')].filter(node=>node.getClientRects().length);
@@ -65,7 +64,7 @@ export default function PackageEditor({ item, initial, onClose, onSave, onSaved,
     if (!types || Object.keys(validatePackage(form,types)).length || photoError) return;
     setSaving(true); setError(''); setServerErrors({});
     try {
-      await onSave({ ...form, purchaseLimitPerMember:form.purchaseLimitPerMember?Number(form.purchaseLimitPerMember):null,updatePurchaseLimit:true, benefits:form.benefits.map(row=>({subjectId:Number(row.subjectId),sessionLimit:Number(row.sessionLimit),roomIds:row.roomIds||[]})), ...(editing ? { packageId: item.packageId } : {}), durationDays: Number(form.durationDays), price: Number(form.price) },{file:photoFile,remove:removePhoto});
+      await onSave({ ...form, purchaseLimitPerMember:form.purchaseLimitPerMember?Number(form.purchaseLimitPerMember):null,updatePurchaseLimit:true, benefits:[], ...(editing ? { packageId: item.packageId } : {}), durationDays: Number(form.durationDays), price: Number(form.price) },{file:photoFile,remove:removePhoto});
       onSaved();
     } catch (failure) {
       const response = failure.response?.data;
@@ -104,7 +103,7 @@ export default function PackageEditor({ item, initial, onClose, onSave, onSaved,
           <h3 className="admin-form-heading"><span>1</span>{t("Package information")}</h3>
           <div className="manager-form-grid">
             <div className="pkg-field wide"><label htmlFor={`${id}-packageName`}>{t('Package name')}<b aria-hidden="true"> *</b></label><input ref={nameInput} {...inputProps('packageName')} required value={form.packageName} placeholder={t('Enter package name')} onChange={event => change('packageName', event.target.value)} /><small id={`${id}-packageName-help`}>{t('Up to 255 characters.')}</small>{fieldError('packageName')}</div>
-            <div className="pkg-field wide"><label htmlFor={`${id}-packageType`}>{t('Package type')}<b aria-hidden="true"> *</b></label><PackageTypeField value={form.packageType} onChange={value=>change('packageType',value)} onCatalog={updateCatalog} inputProps={inputProps('packageType')} /><small id={`${id}-packageType-help`}>{t('Package types are shared categories. Benefits are configured separately for each package.')}</small>{fieldError('packageType')}</div>
+            <div className="pkg-field wide"><label htmlFor={`${id}-packageType`}>{t('Package type')}<b aria-hidden="true"> *</b></label><PackageTypeField value={form.packageType} onChange={value=>change('packageType',value)} onCatalog={updateCatalog} inputProps={inputProps('packageType')} /><small id={`${id}-packageType-help`}>{t('Package types are shared categories for gym and AI access plans.')}</small>{fieldError('packageType')}</div>
             <div className="pkg-field wide"><label htmlFor={`${id}-durationDays`}>{t('Duration (days)')}<b aria-hidden="true"> *</b></label><div className="pkg-duration-presets" role="group" aria-label={t('Quick duration choices')}>{[7, 30, 90, 180, 365].map(days => <button type="button" key={days} aria-pressed={Number(form.durationDays) === days} onClick={() => change('durationDays', String(days))}>{t('{0} days', [days])}</button>)}</div><input {...inputProps('durationDays')} required type="number" min="1" step="1" value={form.durationDays} placeholder={t('Enter number of days')} onChange={event => change('durationDays', event.target.value)} /><small id={`${id}-durationDays-help`}>{t('Enter a positive whole number of days.')}</small>{fieldError('durationDays')}</div>
             <div className="pkg-field wide"><label htmlFor={`${id}-price`}>{t('Price')}<b aria-hidden="true"> *</b></label><div className="pkg-price-input"><input {...inputProps('price')} required type="text" inputMode="decimal" value={priceInput(form.price)} placeholder="0" onChange={event => {
               const input = event.target, position = input.selectionStart || 0;
@@ -121,10 +120,6 @@ export default function PackageEditor({ item, initial, onClose, onSave, onSaved,
             <label htmlFor={id+'-terms'}>{t('Terms')}<textarea {...inputProps('terms')} maxLength={10000} rows={5} value={form.terms} onChange={e=>change('terms',e.target.value)}/><small id={`${id}-terms-help`}>{form.terms.length}/10000 · {t('Line breaks are preserved. Plain text, optional.')}</small>{fieldError('terms')}</label>
             <label htmlFor={id+'-purchaseLimitPerMember'}>{t('Purchase limit per member')}<input {...inputProps('purchaseLimitPerMember')} type="number" min="1" step="1" value={form.purchaseLimitPerMember} onChange={e=>change('purchaseLimitPerMember',e.target.value)}/><small id={`${id}-purchaseLimitPerMember-help`}>{t('Leave blank for unlimited. Set 1 for a one-time trial. Completed purchases count even after the package expires.')}</small>{fieldError('purchaseLimitPerMember')}</label>
           </div>
-          <h3 className="admin-form-heading"><span>3</span>{t("Usage benefits")}</h3>
-          <PackageBenefitsEditor value={form.benefits} onChange={benefits=>change('benefits',benefits)} />
-          {invalid('benefits') && <div role="alert">{fieldError('benefits')}</div>}
-
         </fieldset>
         <footer><button type="button" className="manager-secondary" disabled={saving} onClick={requestClose}>{t('Cancel')}</button><button className="manager-primary" disabled={saving}>{t(saving ? 'Saving...' : editing ? 'Save Changes' : 'Create package')}</button></footer>
       </form>

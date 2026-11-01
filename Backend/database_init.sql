@@ -58,8 +58,18 @@ INSERT INTO ROLES VALUES (1, 'Center Manager'), (2, 'Receptionist'), (3, 'Coach'
 
 -- Danh mục Phòng Tập (5 phòng)
 INSERT INTO ROOMS (room_id,room_name,capacity) VALUES
-                      (1, 'Phòng Gym Tầng 1', 50), (2, 'Phòng Yoga Tầng 2', 30),
-                      (3, 'Phòng Zumba Tầng 3', 40), (4, 'Bể Bơi Bốn Mùa', 100), (5, 'Phòng Đạp Xe', 20);
+                      (1, '[P101] Phòng Gym & Thể Hình Đa Năng', 50),
+                      (2, '[P201] Studio Yoga & Giãn Cơ Mặt Trời', 30),
+                      (3, '[P301] Studio Zumba & Vũ Đạo Latin', 40),
+                      (4, '[P102] Bể Bơi Bốn Mùa Tiêu Chuẩn Olympic', 100),
+                      (5, '[P202] Studio Đạp Xe RPM & Spinning', 20),
+                      (6, '[P103] Phòng Gym Free-Weight & Cử Tạ Powerlifting', 35),
+                      (7, '[P104] Bể Bơi Thủy Trị Liệu & Bơi Trẻ Em', 40),
+                      (8, '[P203] Studio Yoga Thiền Định & Trị Liệu Cột Sống', 25),
+                      (9, '[P204] Studio Đạp Xe Tương Tác Ảo (Virtual RPM)', 25),
+                      (10, '[P302] Studio Dance Fitness & Aerobic Hiện Đại', 35),
+                      (11, '[P303] Võ Đài Boxing & Kickfit Functional Arena', 20),
+                      (12, '[P205] Studio Pilates Reformer & Core VIP', 15);
 
 -- Danh mục Môn Học (5 môn)
 INSERT INTO SUBJECTS (subject_id,subject_name,description) VALUES
@@ -67,7 +77,9 @@ INSERT INTO SUBJECTS (subject_id,subject_name,description) VALUES
                          (2, 'Yoga Căn Bản', 'Yoga thư giãn và giãn cơ buổi sáng'),
                          (3, 'Zumba Dance', 'Nhảy theo nhạc Latin sôi động giảm mỡ'),
                          (4, 'Bơi Lội', 'Kỹ thuật bơi ếch, bơi sải chuyên nghiệp'),
-                         (5, 'Đạp Xe (Spinning)', 'Đạp xe cường độ cao trên nền nhạc');
+                         (5, 'Đạp Xe (Spinning)', 'Đạp xe cường độ cao trên nền nhạc'),
+                         (6, 'Boxing & Kickfit', 'Võ thuật đối kháng kết hợp rèn luyện sức bền, phản xạ và tự vệ thực chiến'),
+                         (7, 'Pilates Reformer', 'Tập luyện kiểm soát cơ lõi toàn thân và phục hồi vóc dáng trên thiết bị máy chuyên dụng');
 
 -- Danh mục Gói Tập (5 gói)
 INSERT INTO PACKAGES (package_id,package_name,package_type,duration_days,price) VALUES
@@ -101,7 +113,7 @@ INSERT INTO USERS (user_id, role_id, full_name, email, password_hash, status) VA
                                                                                   (20, 4, 'Nguyễn Tóc Tiên', 'tien@gmail.com', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE');
 
 -- Kỹ năng của HLV
-INSERT INTO USER_SUBJECTS VALUES (3, 1), (4, 2), (5, 3), (5, 4);
+INSERT INTO USER_SUBJECTS VALUES (3, 1), (3, 5), (3, 6), (4, 2), (4, 7), (5, 3), (5, 4), (5, 6);
 
 -- Thẻ Thành Viên
 
@@ -115,16 +127,31 @@ INSERT INTO USER_MEMBERSHIPS (membership_id,user_id,package_id,start_date,end_da
 
 -- Danh sách Lớp học
 INSERT INTO CLASSES (class_id,subject_id,coach_id,room_id,class_name,price,max_slots,status) VALUES
-                        (1, 2, 4, 2, 'Yoga Giãn Cơ Thứ 2-4-6', 600000, 20, 'ACTIVE'),
-                        (2, 2, 4, 2, 'Yoga Giảm Cân Thứ 3-5-7', 700000, 15, 'ACTIVE'),
-                        (3, 1, 3, 1, 'Gym Căn Bản Cho Nam', 800000, 10, 'ACTIVE'),
-                        (4, 1, 3, 1, 'Siết Cơ Cấp Tốc', 900000, 8, 'ACTIVE'),
-                        (5, 3, 5, 3, 'Zumba Đốt Mỡ Buổi Tối', 500000, 30, 'ACTIVE'),
-                        (6, 4, 5, 4, 'Lớp Học Bơi Sải', 1200000, 10, 'ACTIVE'),
-                        (7, 2, 4, 2, 'Yoga Trị Liệu Cột Sống', 850000, 15, 'ACTIVE'),
-                        (8, 3, 5, 3, 'Zumba Dance Chuyên Nghiệp', 750000, 25, 'ACTIVE'),
-                        (9, 1, 3, 1, 'Lớp Luyện Cử Tạ', 1000000, 5, 'ACTIVE'),
-                        (10, 4, 5, 4, 'Bơi Lội Trẻ Em', 1500000, 20, 'ACTIVE');
+                        (1, 2, 4, 2, '[YOGA-101] Yoga Giãn Cơ & Phục Hồi Khớp', 600000, 20, 'ACTIVE'),
+                        (2, 2, 4, 2, '[YOGA-102] Yoga Giảm Cân & Thon Gọn Vóc Dáng', 700000, 15, 'ACTIVE'),
+                        (3, 1, 3, 1, '[GYM-101] Gym Căn Bản & Tăng Cơ Cho Nam', 800000, 10, 'ACTIVE'),
+                        (4, 1, 3, 1, '[GYM-102] Siết Cơ Cấp Tốc (Cut & Shred)', 900000, 8, 'ACTIVE'),
+                        (5, 3, 5, 3, '[ZUMBA-101] Zumba Đốt Mỡ Buổi Tối Nhạc Latin', 500000, 30, 'ACTIVE'),
+                        (6, 4, 5, 4, '[SWIM-101] Lớp Học Bơi Sải Tiêu Chuẩn', 1200000, 10, 'ACTIVE'),
+                        (7, 2, 4, 2, '[YOGA-103] Yoga Trị Liệu Cột Sống & Cổ Vai Gáy', 850000, 15, 'ACTIVE'),
+                        (8, 3, 5, 3, '[ZUMBA-102] Zumba Dance Chuyên Nghiệp & Khỏe Đẹp', 750000, 25, 'ACTIVE'),
+                        (9, 1, 3, 1, '[GYM-103] Lớp Luyện Cử Tạ Powerlifting', 1000000, 5, 'ACTIVE'),
+                        (10, 4, 5, 4, '[SWIM-102] Bơi Lội Trẻ Em Cơ Bản & Sinh Tồn', 1500000, 20, 'ACTIVE'),
+                        (11, 5, 3, 5, '[SPIN-201] Đạp Xe Tốc Độ RPM Bứt Phá Calo', 650000, 20, 'ACTIVE'),
+                        (12, 5, 3, 9, '[SPIN-202] Đạp Xe Tour Ảo Khám Phá Địa Hình', 700000, 20, 'ACTIVE'),
+                        (13, 1, 3, 6, '[GYM-201] Thể Hình Free-Weight & Sức Mạnh Nặng', 950000, 15, 'ACTIVE'),
+                        (14, 4, 5, 7, '[SWIM-201] Bơi Thủy Liệu & Phục Hồi Thể Lực', 1100000, 12, 'ACTIVE'),
+                        (15, 2, 4, 8, '[YOGA-201] Yoga Thiền Định & Cân Bằng Năng Lượng', 750000, 18, 'ACTIVE'),
+                        (16, 3, 5, 10, '[DANCE-201] Aerobic Dance Bước Nhảy Năng Động', 550000, 25, 'ACTIVE'),
+                        (17, 6, 5, 11, '[BOX-201] Kickfit Đối Kháng & Tự Vệ Thực Chiến', 1200000, 12, 'ACTIVE'),
+                        (18, 6, 3, 11, '[BOX-202] Boxing Cardio Xả Stress & Đốt Calo', 900000, 15, 'ACTIVE'),
+                        (19, 7, 4, 12, '[PILATES-201] Pilates Reformer Giữ Dáng Toàn Thân', 1350000, 10, 'ACTIVE'),
+                        (20, 7, 4, 12, '[PILATES-202] Pilates Chỉnh Dáng & Cân Trục Cột Sống', 1500000, 8, 'ACTIVE'),
+                        (21, 1, 3, 6, '[GYM-202] Siết Cơ Thần Tốc & Xả Calo HIIT', 850000, 15, 'ACTIVE'),
+                        (22, 2, 4, 8, '[YOGA-202] Yoga Vinyasa Chào Ngày Mới Năng Lượng', 650000, 20, 'ACTIVE'),
+                        (23, 3, 5, 10, '[ZUMBA-201] Zumba Vũ Điệu Samba Cuồng Nhiệt', 600000, 25, 'ACTIVE'),
+                        (24, 4, 5, 4, '[SWIM-202] Bơi Bướm Nâng Cao Vượt Giới Hạn', 1400000, 10, 'ACTIVE'),
+                        (25, 5, 3, 5, '[SPIN-203] Đạp Xe Leo Dốc Đốt Mỡ Đêm', 680000, 18, 'ACTIVE');
 
 -- Lịch học của các Lớp
 INSERT INTO SCHEDULES VALUES
@@ -238,8 +265,7 @@ CREATE TABLE PACKAGE_TYPES (
 );
 INSERT INTO PACKAGE_TYPES VALUES
  ('GYM_ACCESS','Gym access',FALSE),('AI_ACCESS','AI access',FALSE),
- ('PREMIUM','Premium',FALSE),('COMBO','Combo (Gym + AI)',FALSE),
- ('SUBJECT_ACCESS','Subject package',TRUE);
+ ('PREMIUM','Premium',FALSE),('COMBO','Combo (Gym + AI)',FALSE);
 INSERT IGNORE INTO PACKAGE_TYPES(type_code,type_name,requires_subjects)
  SELECT DISTINCT package_type,package_type,FALSE FROM PACKAGES WHERE package_type IS NOT NULL;
 ALTER TABLE USER_MEMBERSHIPS ADD COLUMN type_name_snapshot varchar(255);
@@ -405,4 +431,28 @@ CREATE TABLE IF NOT EXISTS `MEMBER_HEALTH_PROFILES` (
     `consent_at` DATETIME NOT NULL,
     `updated_at` DATETIME NOT NULL,
     CONSTRAINT `fk_health_user` FOREIGN KEY (`user_id`) REFERENCES `USERS`(`user_id`) ON DELETE CASCADE
+);
+
+-- ================== 8. TRI THỨC RAG & VECTOR EMBEDDING (KNOWLEDGE DOCUMENTS & CHUNKS) ==================
+CREATE TABLE IF NOT EXISTS `KNOWLEDGE_DOCUMENTS` (
+    `document_id` INT PRIMARY KEY AUTO_INCREMENT,
+    `source_key` VARCHAR(150) NOT NULL UNIQUE,
+    `title` VARCHAR(255) NOT NULL,
+    `category` VARCHAR(40) NOT NULL,
+    `audience` ENUM('MEMBER', 'COACH', 'ALL') NOT NULL,
+    `content_hash` CHAR(64) NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY `idx_kd_audience` (`audience`),
+    KEY `idx_kd_category` (`category`)
+);
+
+CREATE TABLE IF NOT EXISTS `DOCUMENT_CHUNKS` (
+    `chunk_id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `document_id` INT NOT NULL,
+    `chunk_index` INT NOT NULL,
+    `content_text` TEXT NOT NULL,
+    `embedding` JSON NOT NULL,
+    KEY `idx_dc_document_id` (`document_id`),
+    CONSTRAINT `fk_dc_document` FOREIGN KEY (`document_id`) REFERENCES `KNOWLEDGE_DOCUMENTS` (`document_id`) ON DELETE CASCADE
 );

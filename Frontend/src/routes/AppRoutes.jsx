@@ -32,6 +32,7 @@ const MemberSupportView = lazy(() => import('../features/member/pages/MemberSupp
 import CoachLayout from '../layouts/CoachLayout';
 const CoachDashboard = lazy(() => import('../features/coach/pages/CoachDashboard'));
 const CoachSchedule = lazy(() => import('../features/coach/pages/CoachSchedule'));
+const CoachRescheduleRequests = lazy(() => import('../features/coach/pages/CoachRescheduleRequests'));
 const CoachStudents = lazy(() => import('../features/coach/pages/CoachStudents'));
 const CoachWorkoutPlans = lazy(() => import('../features/coach/pages/CoachWorkoutPlans'));
 const CoachSettings = lazy(() => import('../features/coach/pages/CoachSettings'));
@@ -82,6 +83,7 @@ function AppRoutes() {
       }>
         <Route path="dashboard" element={<CoachDashboard />} />
         <Route path="schedule" element={<CoachSchedule />} />
+        <Route path="reschedule" element={<CoachRescheduleRequests />} />
         <Route path="students" element={<CoachStudents />} />
         <Route path="workouts" element={<CoachWorkoutPlans />} />
         <Route path="notifications" element={<CoachNotifications />} />

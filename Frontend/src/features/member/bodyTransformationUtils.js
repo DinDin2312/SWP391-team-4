@@ -18,20 +18,20 @@ export const getBmiInfo = (weight, height) => {
 
   let statusKey = 'NORMAL';
   let label = 'Bình thường (Chuẩn)';
-  let color = 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+  let color = 'text-emerald-900 dark:text-emerald-200 bg-emerald-100 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/30';
 
   if (bmi < 18.5) {
     statusKey = 'UNDERWEIGHT';
     label = 'Hơi gầy';
-    color = 'text-blue-500 bg-blue-500/10 border-blue-500/20';
+    color = 'text-blue-900 dark:text-blue-200 bg-blue-100 dark:bg-blue-500/15 border-blue-300 dark:border-blue-500/30';
   } else if (bmi >= 23 && bmi < 25) {
     statusKey = 'OVERWEIGHT';
     label = 'Thừa cân nhẹ';
-    color = 'text-amber-500 bg-amber-500/10 border-amber-500/20';
+    color = 'text-amber-950 dark:text-amber-200 bg-amber-100 dark:bg-amber-500/15 border-amber-300 dark:border-amber-500/30';
   } else if (bmi >= 25) {
     statusKey = 'OBESE';
     label = 'Cần giảm cân';
-    color = 'text-rose-500 bg-rose-500/10 border-rose-500/20';
+    color = 'text-rose-900 dark:text-rose-200 bg-rose-100 dark:bg-rose-500/15 border-rose-300 dark:border-rose-500/30';
   }
 
   return { bmi, statusKey, label, color };
@@ -166,23 +166,23 @@ export const calculateFitnessProgressScore = (assessments) => {
   // Determine Tier and Badge
   let tier = 'BRONZE';
   let tierName = 'Khởi Động Nền Tảng';
-  let badgeColor = 'text-amber-600 bg-amber-600/10 border-amber-600/30';
+  let badgeColor = 'text-amber-950 dark:text-amber-300 bg-amber-100 dark:bg-amber-600/15 border-amber-300 dark:border-amber-600/30';
   let message = 'Bạn đang giữ nhịp độ ổn định. Hãy kiên trì theo giáo án của HLV để tạo bước nhảy vọt!';
 
   if (score >= 85) {
     tier = 'DIAMOND';
     tierName = 'Bứt Phá Thần Tốc';
-    badgeColor = 'text-cyan-400 bg-cyan-500/15 border-cyan-500/30';
+    badgeColor = 'text-sky-900 dark:text-cyan-300 bg-sky-100 dark:bg-cyan-500/15 border-sky-300 dark:border-cyan-500/30';
     message = 'Xuất sắc! Cơ thể bạn đang chuyển biến ngoạn mục với tỷ lệ giảm mỡ và tăng cơ cực kỳ ấn tượng!';
   } else if (score >= 70) {
     tier = 'GOLD';
     tierName = 'Tiến Bộ Vượt Bậc';
-    badgeColor = 'text-amber-400 bg-amber-500/15 border-amber-500/30';
+    badgeColor = 'text-amber-950 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/15 border-amber-300 dark:border-amber-500/30';
     message = 'Tiến độ rất tốt! Bạn đã có sự cải thiện rõ rệt về thể chất và chỉ số cơ mỡ.';
   } else if (score >= 55) {
     tier = 'SILVER';
     tierName = 'Kiên Trì Bền Bỉ';
-    badgeColor = 'text-slate-300 bg-slate-400/15 border-slate-400/30';
+    badgeColor = 'text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-700/30 border-slate-300 dark:border-slate-600/40';
     message = 'Duy trì rất đều đặn! Tiếp tục siết chặt dinh dưỡng và tăng cường bài tập để nâng cao thể lực.';
   }
 

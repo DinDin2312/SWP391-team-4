@@ -228,6 +228,15 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                 .build();
         notificationRepository.save(notif);
 
+        // Notify receptionists about direct cancellation and voucher
+        String cancelMemberName = user.getFullName() != null ? user.getFullName() : "Hội viên";
+        notifyReceptionists(
+                "Hội viên hủy lớp trực tiếp #" + savedTicket.getRequestId(),
+                "Hội viên " + cancelMemberName + " (#" + user.getUserId() + ") vừa hoàn tất hủy lớp "
+                        + gymClass.getClassName() + " và nhận credit bảo lưu " + creditAmount.longValue() + "đ (Mã: " + creditCode + ").",
+                "SUPPORT"
+        );
+
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
         result.put("classId", classId);
@@ -698,6 +707,14 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                 .isRead(false)
                 .build();
         notificationRepository.save(notif);
+
+        // Notify receptionists about new member support ticket
+        String memberName = user.getFullName() != null ? user.getFullName() : "Hội viên";
+        notifyReceptionists(
+                "Yêu cầu hỗ trợ mới #" + saved.getRequestId(),
+                "Hội viên " + memberName + " (#" + user.getUserId() + ") vừa gửi yêu cầu: \"" + saved.getTitle() + "\". Vui lòng kiểm tra và xử lý tại Bàn hỗ trợ.",
+                "SUPPORT"
+        );
 
         return mapToResponse(saved);
     }
@@ -1196,7 +1213,34 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                 .build();
         notificationRepository.save(notif);
 
+        // Notify receptionists about withdrawn request
+        String withdrawMemberName = request.getUser() != null && request.getUser().getFullName() != null ? request.getUser().getFullName() : "Hội viên";
+        Integer withdrawMemberId = request.getUser() != null ? request.getUser().getUserId() : 0;
+        notifyReceptionists(
+                "Hội viên rút yêu cầu hỗ trợ #" + requestId,
+                "Hội viên " + withdrawMemberName + " (#" + withdrawMemberId + ") đã chủ động rút yêu cầu #" + requestId + " (\"" + request.getTitle() + "\").",
+                "SUPPORT"
+        );
+
         return mapToResponse(saved);
+    }
+
+    private void notifyReceptionists(String title, String message, String type) {
+        try {
+            List<User> receptionists = userRepository.findByRoleNameIgnoreCase("Receptionist");
+            for (User receptionist : receptionists) {
+                Notification staffNotif = Notification.builder()
+                        .user(receptionist)
+                        .title(title)
+                        .message(message)
+                        .type(type)
+                        .isRead(false)
+                        .build();
+                notificationRepository.save(staffNotif);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to notify receptionists: " + e.getMessage());
+        }
     }
 
     private SupportRequestResponse mapToResponse(SupportRequest r) {

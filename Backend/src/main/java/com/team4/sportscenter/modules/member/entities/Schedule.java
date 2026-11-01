@@ -1,5 +1,6 @@
 package com.team4.sportscenter.modules.member.entities;
 
+import com.team4.sportscenter.modules.auth.entities.User;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -29,4 +30,8 @@ public class Schedule {
 
     @Column(name = "status")
     private String status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "substitute_coach_id")
+    private User substituteCoach;
 }

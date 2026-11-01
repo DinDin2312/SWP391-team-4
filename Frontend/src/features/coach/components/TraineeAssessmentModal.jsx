@@ -411,13 +411,13 @@ const TraineeAssessmentModal = ({
 
             {/* Selected Trainee Profile Summary Card */}
             {selectedStudent && (
-              <div className="p-3.5 rounded-xl bg-gradient-to-br from-indigo-50/90 to-[var(--surface-hover)] dark:from-indigo-950/30 dark:to-[var(--surface-hover)] border border-indigo-200 dark:border-indigo-500/30 text-xs shrink-0 flex items-center justify-between shadow-xs">
+              <div className="p-3.5 rounded-xl bg-indigo-50/90 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-500/30 text-xs shrink-0 flex items-center justify-between shadow-xs">
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-indigo-700 dark:text-indigo-300 font-bold uppercase tracking-wider">{t("Học viên mục tiêu")}</span>
-                  <span className="font-extrabold text-sm text-[var(--text)]">{selectedStudent.fullName}</span>
-                  <span className="text-[10px] text-[var(--text-muted)]">{selectedStudent.email}</span>
+                  <span className="text-[10px] text-indigo-800 dark:text-indigo-300 font-extrabold uppercase tracking-wider">{t("Học viên mục tiêu")}</span>
+                  <span className="font-extrabold text-sm text-slate-900 dark:text-[var(--text)]">{selectedStudent.fullName}</span>
+                  <span className="text-[10px] text-slate-600 dark:text-[var(--text-muted)]">{selectedStudent.email}</span>
                 </div>
-                <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-xs border border-indigo-200 dark:border-indigo-500/30">
+                <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 flex items-center justify-center font-bold text-xs border border-indigo-300 dark:border-indigo-500/30">
                   <Activity className="w-4 h-4" />
                 </div>
               </div>
@@ -507,20 +507,20 @@ const TraineeAssessmentModal = ({
                           <Star
                             className={`w-6 h-6 ${
                               star <= performanceRating
-                                ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]'
-                                : 'text-slate-600'
+                                ? 'text-amber-500 fill-amber-500 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]'
+                                : 'text-slate-300 dark:text-slate-600'
                             }`}
                           />
                         </button>
                       ))}
-                      <span className="font-extrabold text-amber-400 ml-2 text-sm">{performanceRating} / 5</span>
+                      <span className="font-extrabold text-amber-600 dark:text-amber-400 ml-2 text-sm">{performanceRating} / 5</span>
                     </div>
                   </div>
 
                   {/* Attendance & Attitude Rating */}
                   <div className="space-y-1.5">
                     <label className="font-bold text-[var(--text-muted)] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                      <Heart className="w-3.5 h-3.5 text-rose-400" />
+                      <Heart className="w-3.5 h-3.5 text-rose-500" />
                       <span>{t("Chuyên cần & Tinh thần")}</span>
                     </label>
                     <div className="flex items-center gap-1.5 pt-1">
@@ -534,13 +534,13 @@ const TraineeAssessmentModal = ({
                           <Star
                             className={`w-6 h-6 ${
                               star <= attendanceRating
-                                ? 'text-emerald-400 fill-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]'
-                                : 'text-slate-600'
+                                ? 'text-emerald-500 fill-emerald-500 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]'
+                                : 'text-slate-300 dark:text-slate-600'
                             }`}
                           />
                         </button>
                       ))}
-                      <span className="font-extrabold text-emerald-400 ml-2 text-sm">{attendanceRating} / 5</span>
+                      <span className="font-extrabold text-emerald-600 dark:text-emerald-400 ml-2 text-sm">{attendanceRating} / 5</span>
                     </div>
                   </div>
                 </div>
@@ -739,14 +739,14 @@ const TraineeAssessmentModal = ({
 
                           <div className="flex items-center gap-3">
                             {item.isSelfRecorded || (item.assessmentTitle && item.assessmentTitle.includes('tự')) || (item.coachId && item.userId && item.coachId === item.userId) ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 font-bold text-xs">
-                                <User className="w-3.5 h-3.5" />
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-100 dark:bg-sky-950/60 text-sky-950 dark:text-sky-200 border border-sky-300 dark:border-sky-700/60 font-bold text-xs shadow-xs">
+                                <User className="w-3.5 h-3.5 text-sky-700 dark:text-sky-300" />
                                 <span>{t("Hội viên tự ghi nhận")}</span>
                               </span>
                             ) : (
                               <>
-                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/20 text-amber-800 dark:text-amber-400 font-extrabold text-xs">
-                                  <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 dark:fill-amber-400 dark:text-amber-400" />
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700/60 text-amber-950 dark:text-amber-200 font-extrabold text-xs shadow-xs">
+                                  <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-600 dark:fill-amber-400 dark:text-amber-400" />
                                   <span>{item.performanceRating || 5}/5</span>
                                 </div>
 
@@ -767,34 +767,34 @@ const TraineeAssessmentModal = ({
                         {(item.weight || item.height || item.bodyFatPercentage || item.muscleMass) && (
                           <div className="flex flex-wrap gap-2 pt-1 border-t border-[var(--border)]">
                             {item.weight && (
-                              <span className="px-2.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-800 dark:text-blue-300 text-[10px] font-semibold">
-                                {t("Cân nặng:")} <strong className="text-blue-900 dark:text-blue-200">{item.weight} kg</strong>
+                              <span className="px-2.5 py-1 rounded-lg bg-blue-100/90 dark:bg-blue-950/60 border border-blue-300 dark:border-blue-800/60 text-blue-950 dark:text-blue-200 text-[11px] font-medium shadow-xs">
+                                {t("Cân nặng:")} <strong className="font-bold text-blue-950 dark:text-blue-100">{item.weight} kg</strong>
                               </span>
                             )}
                             {item.height && (
-                              <span className="px-2.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-800 dark:text-blue-300 text-[10px] font-semibold">
-                                {t("Chiều cao:")} <strong className="text-blue-900 dark:text-blue-200">{item.height} cm</strong>
+                              <span className="px-2.5 py-1 rounded-lg bg-sky-100/90 dark:bg-sky-950/60 border border-sky-300 dark:border-sky-800/60 text-sky-950 dark:text-sky-200 text-[11px] font-medium shadow-xs">
+                                {t("Chiều cao:")} <strong className="font-bold text-sky-950 dark:text-sky-100">{item.height} cm</strong>
                               </span>
                             )}
                             {item.bodyFatPercentage && (
-                              <span className="px-2.5 py-0.5 rounded-md bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 text-purple-800 dark:text-purple-300 text-[10px] font-semibold">
-                                {t("Body Fat:")} <strong className="text-purple-900 dark:text-purple-200">{item.bodyFatPercentage}%</strong>
+                              <span className="px-2.5 py-1 rounded-lg bg-purple-100/90 dark:bg-purple-950/60 border border-purple-300 dark:border-purple-800/60 text-purple-950 dark:text-purple-200 text-[11px] font-medium shadow-xs">
+                                {t("Body Fat:")} <strong className="font-bold text-purple-950 dark:text-purple-100">{item.bodyFatPercentage}%</strong>
                               </span>
                             )}
                             {item.muscleMass && (
-                              <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-[10px] font-semibold">
-                                {t("Khối lượng cơ:")} <strong className="text-emerald-900 dark:text-emerald-200">{item.muscleMass} kg</strong>
+                              <span className="px-2.5 py-1 rounded-lg bg-emerald-100/90 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800/60 text-emerald-950 dark:text-emerald-200 text-[11px] font-medium shadow-xs">
+                                {t("Khối lượng cơ:")} <strong className="font-bold text-emerald-950 dark:text-emerald-100">{item.muscleMass} kg</strong>
                               </span>
                             )}
                           </div>
                         )}
 
                         {/* Feedback Note Content */}
-                        <div className="p-3 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] text-xs space-y-1">
-                          <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[var(--surface-hover)] border border-slate-200 dark:border-[var(--border)] text-xs space-y-1.5">
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-[var(--text-muted)] uppercase tracking-wider block">
                             {(item.isSelfRecorded || (item.assessmentTitle && item.assessmentTitle.includes('tự')) || (item.coachId && item.userId && item.coachId === item.userId)) ? t("Ghi chú của học viên:") : t("Nhận xét của Huấn Luyện Viên:")}
                           </span>
-                          <p className="text-[var(--text)] italic leading-relaxed">
+                          <p className="text-slate-900 dark:text-[var(--text)] font-medium italic leading-relaxed">
                             "{item.feedbackNote}"
                           </p>
                         </div>

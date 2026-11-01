@@ -8,10 +8,11 @@ import ReportsPage from '../reports/ReportsPage';
 import TransactionsPage from '../transactions/TransactionsPage';
 import AuditPage from '../audit/AuditPage';
 import ManagerSettingsView from '../components/ManagerSettingsView';
+import ManagerRescheduleView from '../components/ManagerRescheduleView';
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  BarChart3, CalendarDays, Camera,
+  BarChart3, CalendarDays, CalendarSync, Camera,
   ClipboardList, Dumbbell, LayoutDashboard, LogOut,
   Menu, Package, RefreshCw, ShieldCheck, Users, X, Wallet, LifeBuoy, Settings,
 } from 'lucide-react';
@@ -42,6 +43,7 @@ const adminPages = [
   { id: 'dashboard', title: 'Overview', description: 'Monitor center performance and recent operational activity.', icon: LayoutDashboard },
   { id: 'people', title: 'Staff & Permissions', description: 'Manage account access, roles, and status in one place.', icon: Users },
   { id: 'operations', title: 'Center Operations', description: 'Coordinate classes, schedules, subjects, and rooms.', icon: CalendarDays },
+  { id: 'reschedule', title: 'Reschedule Approvals', description: 'Review coach schedule change requests, collision checks & substitute coach assignments.', icon: CalendarSync },
   { id: 'packages', title: 'Membership Packages', description: 'Manage membership plans, pricing, and availability.', icon: Package },
   { id: 'reports', title: 'Reports', description: 'Review financial and operational performance by date range.', icon: BarChart3 },
   { id: 'transactions', title: 'Transactions', description: 'Monitor system-wide invoices and payment history.', icon: Wallet },
@@ -235,7 +237,7 @@ function ManagerDashboard() {
 
         <section className="manager-content">
           {error && active !== 'packages' && <div className="manager-alert" role="alert"><span>{t(error)}</span><button onClick={load}>{t("Retry")}</button></div>}
-          {initialLoading && !['dashboard', 'packages', 'transactions', 'support', 'settings'].includes(active) ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={dataView === active ? data : null} filters={filters} appliedFilters={active === 'operations' ? operationFilters : appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={refreshAll} loading={loading || dataView !== active} loadError={error} updatedAt={updatedAt} openTransactions={openTransactions} />}
+          {initialLoading && !['dashboard', 'packages', 'transactions', 'support', 'settings', 'reschedule'].includes(active) ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={dataView === active ? data : null} filters={filters} appliedFilters={active === 'operations' ? operationFilters : appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={refreshAll} loading={loading || dataView !== active} loadError={error} updatedAt={updatedAt} openTransactions={openTransactions} />}
         </section>
       </main>
       <ManagerToast message={t(notice)} onClose={() => setNotice('')} />
@@ -250,6 +252,7 @@ function ManagerView(props) {
   if (props.active === 'dashboard') return <OperationalOverview {...props} />;
   if (props.active === 'people') return <StaffPage {...props} />;
   if (props.active === 'operations') return <OperationsPage {...props} />;
+  if (props.active === 'reschedule') return <ManagerRescheduleView {...props} />;
   if (props.active === 'packages') return <PackagesPage {...props} />;
   if (props.active === 'reports') return <ReportsPage {...props} />;
   if (props.active === 'transactions') return <TransactionsPage {...props} />;

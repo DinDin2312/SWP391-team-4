@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { CalendarDays, ChevronDown, History, MapPin, Package, Pencil, ShieldCheck, Users, X } from 'lucide-react';
+import { CalendarDays, ChevronDown, History, Package, Pencil, ShieldCheck, Users, X } from 'lucide-react';
 import { codeLabel, t, useLanguage } from '../../i18n/useLanguage';
 import { formatDate, formatDateTime, formatMoney } from '../../utils/displayFormat';
 import ResourcePhoto from './ResourcePhoto';
@@ -41,8 +41,6 @@ export default function PackageDetailDialog({ id, load, loadHistory, onClose, on
       else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog.current)) { event.preventDefault(); first?.focus(); }
     }
   };
-  const benefits = data?.benefits || [];
-  const remaining = Boolean(data?.membershipId);
   const typeName = data?.packageTypeName ? t(data.packageTypeName) : codeLabel(data?.packageType || '');
   return <div className="package-detail-overlay" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }} onKeyDown={keyDown}>
     <section className="package-detail-panel" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={dialog} tabIndex={-1}>
@@ -68,11 +66,6 @@ export default function PackageDetailDialog({ id, load, loadHistory, onClose, on
             <div><dt><ShieldCheck size={17} aria-hidden="true" />{t('Purchase limit per member')}</dt><dd>{data.purchaseLimitPerMember ?? t('Unlimited')}</dd></div>
             {data.endDate ? <div><dt><CalendarDays size={17} aria-hidden="true" />{t('End Date')}</dt><dd>{formatDate(data.endDate)}</dd></div> : data.activeSubscribers != null ? <div><dt><Users size={17} aria-hidden="true" />{t('Active registrations')}</dt><dd>{new Intl.NumberFormat().format(data.activeSubscribers)}</dd></div> : <div><dt><Package size={17} aria-hidden="true" />{t('Package type')}</dt><dd>{typeName}</dd></div>}
           </dl>
-          {benefits.length > 0 && <section className="package-detail-section"><h3>{t('Subject benefits')}</h3><ul className="package-detail-benefits">{benefits.map(benefit => <li key={benefit.subjectId}>
-            <div className="package-detail-benefit-top"><strong>{benefit.subjectName}</strong><span>{remaining ? t('{0} / {1} sessions available', [benefit.remainingSessions, benefit.sessionLimit]) : t('{0} sessions', [benefit.sessionLimit])}</span></div>
-            {remaining && <progress max={Math.max(1, Number(benefit.sessionLimit))} value={Math.max(0, Number(benefit.remainingSessions) || 0)} aria-label={benefit.subjectName} />}
-            <p><MapPin size={15} aria-hidden="true" /><span><span className="package-detail-location-label">{t('Applicable locations')}: </span>{benefit.rooms?.length ? benefit.rooms.map(room => room.roomName).join(' · ') : t('All locations')}</span></p>
-          </li>)}</ul></section>}
           <div className="package-detail-copy-grid">
             <section className="package-detail-section"><h3>{t('Description')}</h3><p className={`package-detail-text${data.description ? '' : ' is-empty'}`}>{data.description || t('No description provided.')}</p></section>
             <section className="package-detail-section"><h3>{t('Terms')}</h3><p className={`package-detail-text${data.terms ? '' : ' is-empty'}`}>{data.terms || t('No terms provided.')}</p></section>
