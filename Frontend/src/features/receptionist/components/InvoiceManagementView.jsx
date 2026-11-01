@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import axios from 'axios';
 import {
   Receipt,
   Search,
@@ -12,7 +13,12 @@ import {
   ArrowUpDown,
   RotateCw,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CheckCircle2,
+  XCircle,
+  Phone,
+  Clock,
+  AlertCircle
 } from 'lucide-react';
 import { receptionistService } from '../services/receptionistService';
 import InvoiceReceiptModal from './InvoiceReceiptModal';
@@ -47,10 +53,12 @@ export default function InvoiceManagementView(props) {
     }
   }, [initialKeyword]);
   const [paymentFilter, setPaymentFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('ALL');
   const [sortOrder, setSortOrder] = useState('DESC');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
+  const [processingId, setProcessingId] = useState(null);
 
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
@@ -105,6 +113,16 @@ export default function InvoiceManagementView(props) {
       });
     }
 
+    // Status filter
+    if (statusFilter !== 'ALL') {
+      result = result.filter((inv) => {
+        if (statusFilter === 'AWAITING_CONFIRMATION') return inv.status === 'AWAITING_CONFIRMATION';
+        if (statusFilter === 'PAID') return inv.status === 'PAID';
+        if (statusFilter === 'CANCELLED') return inv.status === 'CANCELLED' || inv.status === 'FAILED';
+        return true;
+      });
+    }
+
     // Date range filter
     if (dateFilter !== 'ALL') {
       const now = new Date();
@@ -140,12 +158,16 @@ export default function InvoiceManagementView(props) {
     });
 
     return result;
-  }, [invoices, searchKeyword, paymentFilter, dateFilter, sortOrder]);
+  }, [invoices, searchKeyword, paymentFilter, statusFilter, dateFilter, sortOrder]);
+
+  const awaitingCount = useMemo(() => {
+    return invoices.filter((i) => i.status === 'AWAITING_CONFIRMATION').length;
+  }, [invoices]);
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchKeyword, paymentFilter, dateFilter, sortOrder]);
+  }, [searchKeyword, paymentFilter, statusFilter, dateFilter, sortOrder]);
 
   const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / pageSize));
   const validPage = Math.min(Math.max(1, currentPage), totalPages);
@@ -161,6 +183,38 @@ export default function InvoiceManagementView(props) {
   const handleOpenReceipt = (invoice) => {
     setSelectedReceipt(invoice);
     setIsReceiptModalOpen(true);
+  };
+
+  const handleApprove = async (invoiceId) => {
+    if (!window.confirm(t('Are you sure you want to approve this invoice? The member packages/classes will be activated immediately.'))) return;
+    try {
+      setProcessingId(invoiceId);
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:8080/api/v1/payment/vietqr-confirm/${invoiceId}`, {}, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      await fetchInvoices();
+    } catch (err) {
+      alert(err.response?.data?.message || err.response?.data || t('Failed to approve invoice.'));
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleReject = async (invoiceId) => {
+    if (!window.confirm(t('Are you sure you want to cancel/reject this invoice? The held spots will be released.'))) return;
+    try {
+      setProcessingId(invoiceId);
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:8080/api/v1/payment/vietqr-reject/${invoiceId}`, {}, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      await fetchInvoices();
+    } catch (err) {
+      alert(err.response?.data?.message || err.response?.data || t('Failed to cancel invoice.'));
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   return (
@@ -211,6 +265,23 @@ export default function InvoiceManagementView(props) {
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Status Filter */}
+          <div className="flex items-center gap-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg p-1 text-xs">
+            <Filter className="w-3.5 h-3.5 text-[var(--text-muted)] ml-1" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-transparent border-none text-[var(--text)] text-xs font-semibold focus:outline-none pr-2 cursor-pointer"
+            >
+              <option value="ALL">{t('All Statuses')}</option>
+              <option value="AWAITING_CONFIRMATION">
+                {t('Awaiting Confirmation')} {awaitingCount > 0 ? `(${awaitingCount})` : ''}
+              </option>
+              <option value="PAID">{t('Paid')}</option>
+              <option value="CANCELLED">{t('Cancelled')}</option>
+            </select>
+          </div>
+
           {/* Payment Method Filter */}
           <div className="flex items-center gap-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg p-1 text-xs">
             <Filter className="w-3.5 h-3.5 text-[var(--text-muted)] ml-1" />
@@ -318,8 +389,11 @@ export default function InvoiceManagementView(props) {
                           {inv.memberName || t('Walk-in Guest')}
                         </div>
                         {inv.memberPhone && (
-                          <div className="text-[11px] text-[var(--text-muted)]">
-                            {inv.memberPhone}
+                          <div className="text-[11px] text-[var(--text-muted)] font-mono flex items-center gap-1 mt-0.5">
+                            <Phone className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <a href={`tel:${inv.memberPhone}`} className="hover:underline text-[var(--text)] font-semibold">
+                              {inv.memberPhone}
+                            </a>
                           </div>
                         )}
                       </td>
@@ -362,20 +436,56 @@ export default function InvoiceManagementView(props) {
                         </div>
                       </td>
                       <td className="py-3 px-3 text-center whitespace-nowrap">
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--success-soft)] text-[var(--success-text)] border border-[var(--border)]">
-                          {inv.status === 'PAID' ? t('PAID') : (inv.status || t('COMPLETED'))}
-                        </span>
+                        {inv.status === 'AWAITING_CONFIRMATION' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 animate-pulse">
+                            <Clock className="w-3 h-3" />
+                            {t('Awaiting Confirmation')}
+                          </span>
+                        ) : inv.status === 'PAID' ? (
+                          <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--success-soft)] text-[var(--success-text)] border border-[var(--border)]">
+                            {t('PAID')}
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                            {inv.status || t('CANCELLED')}
+                          </span>
+                        )}
                       </td>
-                      <td className="py-3 px-4 text-center whitespace-nowrap min-w-[130px]">
-                        <button
-                          onClick={() => handleOpenReceipt(inv)}
-                          type="button"
-                          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[var(--surface-hover)] text-[var(--primary)] border border-[var(--border)] hover:bg-[var(--primary-soft)] transition-colors shadow-sm whitespace-nowrap shrink-0"
-                          title={t('Print Receipt')}
-                        >
-                          <Printer className="w-3.5 h-3.5 shrink-0" />
-                          <span className="whitespace-nowrap">{t('Print Receipt')}</span>
-                        </button>
+                      <td className="py-3 px-4 text-center whitespace-nowrap min-w-[140px]">
+                        {inv.status === 'AWAITING_CONFIRMATION' ? (
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleApprove(inv.invoiceId)}
+                              disabled={processingId === inv.invoiceId}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+                              title={t('Approve Payment')}
+                            >
+                              {processingId === inv.invoiceId ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                              <span>{t('Approve')}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleReject(inv.invoiceId)}
+                              disabled={processingId === inv.invoiceId}
+                              className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/20 transition-all disabled:opacity-50 cursor-pointer"
+                              title={t('Reject / Cancel Order')}
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              <span>{t('Reject')}</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleOpenReceipt(inv)}
+                            type="button"
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[var(--surface-hover)] text-[var(--primary)] border border-[var(--border)] hover:bg-[var(--primary-soft)] transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer"
+                            title={t('Print Receipt')}
+                          >
+                            <Printer className="w-3.5 h-3.5 shrink-0" />
+                            <span className="whitespace-nowrap">{t('Print Receipt')}</span>
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

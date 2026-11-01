@@ -19,4 +19,6 @@ public interface PaymentService {
     void handlePayOSWebhook(Map<String, Object> webhookBody);
     Map<String, Object> getVietQRInfo(Integer invoiceId, String userEmail);
     Map<String, Object> confirmVietQRPayment(Integer invoiceId, String userEmail);
+    Map<String, Object> submitVietQRTransfer(Integer invoiceId, String userEmail);
+    Map<String, Object> rejectVietQRPayment(Integer invoiceId, String cashierEmail);
 }

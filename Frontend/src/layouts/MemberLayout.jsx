@@ -16,7 +16,8 @@ import MemberNotificationDropdown from '../features/member/components/MemberNoti
 import { getSavedMemberNotificationPreferences, getMemberUnreadCount } from '../features/member/memberUtils';
 import {
   LayoutDashboard, CalendarDays, CreditCard, Dumbbell,
-  Bell, Settings, LogOut, ShoppingCart, Receipt, ClipboardList, HelpCircle
+  Bell, Settings, LogOut, ShoppingCart, Receipt, ClipboardList, HelpCircle,
+  CheckCircle2, AlertCircle
 } from 'lucide-react';
 
 const MemberLayout = () => {
@@ -38,6 +39,55 @@ const MemberLayout = () => {
   const [aiNoticeVisible, setAiNoticeVisible] = useState(false);
   const aiPopoverRef = useRef(null);
   const aiNoticeTimerRef = useRef(null);
+  const [receptionModal, setReceptionModal] = useState({
+    visible: false,
+    type: 'success',
+    invoiceId: null,
+    title: '',
+    message: ''
+  });
+
+  useEffect(() => {
+    const checkAwaitingInvoice = async () => {
+      const invId = sessionStorage.getItem('awaitingInvoiceId');
+      if (!invId) return;
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await axios.get(`http://localhost:8080/api/v1/payment/vietqr-info/${invId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const status = res.data?.status;
+        if (status === 'PAID') {
+          sessionStorage.removeItem('awaitingInvoiceId');
+          setReceptionModal({
+            visible: true,
+            type: 'success',
+            invoiceId: invId,
+            title: t('Payment Approved!'),
+            message: t('Your order #{id} has been approved by the Receptionist. Your memberships and classes are now active!').replace('{id}', `#INV-${invId}`)
+          });
+          window.dispatchEvent(new Event('cartUpdated'));
+          window.dispatchEvent(new Event('notificationUpdated'));
+        } else if (status === 'CANCELLED' || status === 'FAILED') {
+          sessionStorage.removeItem('awaitingInvoiceId');
+          setReceptionModal({
+            visible: true,
+            type: 'cancelled',
+            invoiceId: invId,
+            title: t('Order Cancelled'),
+            message: t('Your order #{id} was cancelled by Reception. Please contact the front desk if you have already transferred.').replace('{id}', `#INV-${invId}`)
+          });
+          window.dispatchEvent(new Event('cartUpdated'));
+        }
+      } catch (e) {
+        // Ignore background polling errors
+      }
+    };
+
+    const interval = setInterval(checkAwaitingInvoice, 3500);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleAskNexusAi = (origin = 'topbar') => {
     if (hasAiAccess) {
@@ -477,6 +527,47 @@ const MemberLayout = () => {
           onActivate={() => handleAskNexusAi('fox')}
           label={t("Ask NEXUS AI")}
         />
+
+      {/* Global Reception Approval / Rejection Pop-up Modal */}
+      {receptionModal.visible && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl relative">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border-2 ${
+              receptionModal.type === 'success' 
+                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' 
+                : 'bg-rose-500/10 text-rose-500 border-rose-500/30'
+            }`}>
+              {receptionModal.type === 'success' ? (
+                <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+              ) : (
+                <AlertCircle className="w-10 h-10 text-rose-500" />
+              )}
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--surface-hover)] border border-[var(--border)] text-xs font-mono font-bold mb-3">
+              #{receptionModal.invoiceId ? `INV-${receptionModal.invoiceId}` : 'INVOICE'}
+            </div>
+            <h3 className="text-xl font-black text-[var(--text)] mb-2">
+              {receptionModal.title}
+            </h3>
+            <p className="text-xs sm:text-sm text-[var(--text-muted)] mb-6 leading-relaxed">
+              {receptionModal.message}
+            </p>
+            <button
+              onClick={() => {
+                setReceptionModal(prev => ({ ...prev, visible: false }));
+                window.dispatchEvent(new Event('cartUpdated'));
+              }}
+              className={`w-full py-3 px-6 rounded-xl font-bold text-white transition-all shadow-md cursor-pointer ${
+                receptionModal.type === 'success'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-emerald-500/20'
+                  : 'bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 shadow-rose-500/20'
+              }`}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
       </main>
     </div>
   );

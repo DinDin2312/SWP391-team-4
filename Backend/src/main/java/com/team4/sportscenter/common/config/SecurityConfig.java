@@ -40,7 +40,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults())
+                .cors(Customizer.withDefaults()) // Sử dụng cấu hình corsConfigurationSource bên dưới
                 .authorizeHttpRequests(auth -> auth
                         // Allow async/error dispatches (e.g., SseEmitter streaming completion)
                         .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
@@ -52,9 +52,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**", "/api/auth/**", "/auth/**", "/api/guest/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/avatars/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/resource-images/**").permitAll()
-                        .requestMatchers("/api/v1/payment/payos-webhook", "/api/v1/payment/payos-callback", "/api/v1/payment/vietqr-info/**", "/api/v1/payment/vietqr-confirm/**").permitAll()
+                        .requestMatchers("/api/v1/payment/payos-webhook", "/api/v1/payment/payos-callback", "/api/v1/payment/vietqr-info/**").permitAll()
+                        .requestMatchers("/api/v1/payment/vietqr-submit-transfer/**").authenticated()
+                        .requestMatchers("/api/v1/payment/vietqr-confirm/**", "/api/v1/payment/vietqr-reject/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
 
-                        // Receptionist APIs
+                        // Cho phép truy cập các API của Receptionist
                         .requestMatchers("/api/receptionist/**", "/receptionist/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
 
                         // Manager operations are restricted to the Center Manager authority.
