@@ -96,13 +96,14 @@ public class PaymentServiceImpl implements PaymentService {
         Integer pendingInvId = null;
         String pendingUrl = null;
         String pendingMethod = null;
+        String pendingStatus = null;
         boolean hasPending = false;
         try {
             List<Map<String, Object>> pendingInvoices = jdbc.queryForList(
-                "SELECT i.invoice_id, p.payment_method FROM INVOICES i " +
+                "SELECT i.invoice_id, i.status, p.payment_method FROM INVOICES i " +
                 "JOIN USERS u ON u.user_id = i.user_id " +
                 "LEFT JOIN PAYMENTS p ON p.invoice_id = i.invoice_id " +
-                "WHERE u.email = ? AND i.status = 'PENDING' AND i.created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE) " +
+                "WHERE u.email = ? AND i.status IN ('PENDING', 'AWAITING_CONFIRMATION') AND i.created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR) " +
                 "ORDER BY i.invoice_id DESC LIMIT 1",
                 email
             );
@@ -110,6 +111,7 @@ public class PaymentServiceImpl implements PaymentService {
                 hasPending = true;
                 Map<String, Object> row = pendingInvoices.get(0);
                 pendingInvId = ((Number) row.get("invoice_id")).intValue();
+                pendingStatus = row.get("status") != null ? String.valueOf(row.get("status")) : "PENDING";
                 pendingMethod = row.get("payment_method") != null ? String.valueOf(row.get("payment_method")) : "PAYOS";
                 if ("PAYOS".equalsIgnoreCase(pendingMethod) || "VIETQR".equalsIgnoreCase(pendingMethod)) {
                     pendingUrl = "/member/vietqr-pay?invoiceId=" + pendingInvId;
@@ -122,6 +124,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .pendingInvoiceId(pendingInvId)
                 .pendingPaymentUrl(pendingUrl)
                 .pendingPaymentMethod(pendingMethod)
+                .pendingInvoiceStatus(pendingStatus)
                 .items(items)
                 .totalPrice(totalPrice)
                 .build();
@@ -431,10 +434,37 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Map<String, Object> getVietQRInfo(Integer invoiceId, String userEmail) {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hóa đơn / Invoice not found: " + invoiceId));
+
+        if ("PENDING".equals(invoice.getStatus()) && payOSConfig.isConfigured()) {
+            try {
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("x-client-id", payOSConfig.clientId);
+                headers.set("x-api-key", payOSConfig.apiKey);
+                HttpEntity<?> entity = new HttpEntity<>(headers);
+                RestTemplate restTemplate = new RestTemplate();
+                String endpoint = payOSConfig.endpoint + "/v2/payment-requests/" + invoiceId;
+                @SuppressWarnings("unchecked")
+                Map<String, Object> resp = restTemplate.exchange(endpoint, org.springframework.http.HttpMethod.GET, entity, Map.class).getBody();
+                if (resp != null && ("00".equals(resp.get("code")) || "0".equals(resp.get("code")))) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> data = (Map<String, Object>) resp.get("data");
+                    if (data != null) {
+                        String payStatus = String.valueOf(data.get("status"));
+                        if ("PAID".equalsIgnoreCase(payStatus)) {
+                            finishPayment(invoice, true, "PAYOS-" + invoiceId);
+                        } else if ("CANCELLED".equalsIgnoreCase(payStatus) || "EXPIRED".equalsIgnoreCase(payStatus)) {
+                            finishPayment(invoice, false, "PAYOS-CANCEL-" + invoiceId);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+                // Ignore query error, wait for webhook or next poll
+            }
+        }
 
         long amount = invoice.getTotalAmount() != null ? invoice.getTotalAmount().longValue() : 0L;
         String desc = "HD " + invoiceId;
@@ -463,13 +493,103 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
             return Map.of("success", true, "status", "PAID", "message", "Hóa đơn đã được thanh toán thành công.");
         }
 
-        finishPayment(invoice, true, "VIETQR-HD" + invoiceId);
+        if (userEmail != null) {
+            var currentUser = userRepository.findByEmail(userEmail).orElse(null);
+            if (currentUser != null && currentUser.getRole() != null && "MEMBER".equalsIgnoreCase(currentUser.getRole().getRoleName())) {
+                throw new org.springframework.security.access.AccessDeniedException("Thành viên không được phép tự xác nhận thanh toán thủ công. Vui lòng chuyển khoản và chờ hệ thống tự động xác nhận qua ngân hàng.");
+            }
+        }
+
+        finishPayment(invoice, true, "VIETQR-MANUAL-HD" + invoiceId);
 
         return Map.of(
                 "success", true,
                 "status", "PAID",
                 "message", "Thanh toán thành công! Khóa học/gói tập của bạn đã được kích hoạt."
         );
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> submitVietQRTransfer(Integer invoiceId, String userEmail) {
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hóa đơn / Invoice not found: " + invoiceId));
+
+        if ("PAID".equals(invoice.getStatus())) {
+            return Map.of("success", true, "status", "PAID", "message", "Hóa đơn đã được thanh toán thành công.");
+        }
+
+        if (userEmail != null && invoice.getUser() != null) {
+            if (!userEmail.equalsIgnoreCase(invoice.getUser().getEmail())) {
+                throw new org.springframework.security.access.AccessDeniedException("Bạn không có quyền thao tác trên hóa đơn này.");
+            }
+        }
+
+        invoice.setStatus("AWAITING_CONFIRMATION");
+        invoiceRepository.save(invoice);
+
+        paymentRepository.findByInvoice_InvoiceId(invoice.getInvoiceId()).ifPresent(p -> {
+            p.setStatus("AWAITING_CONFIRMATION");
+            paymentRepository.save(p);
+        });
+
+        try {
+            notificationService.createNotification(
+                "receptionist@sportscenter.com",
+                "Đơn hàng mới chờ xác nhận",
+                "Hội viên " + (invoice.getUser() != null ? invoice.getUser().getFullName() : "") + " đã xác nhận chuyển khoản cho đơn hàng #INV-" + invoiceId,
+                "PAYMENT"
+            );
+        } catch (Exception ignored) {}
+
+        return Map.of(
+            "success", true,
+            "status", "AWAITING_CONFIRMATION",
+            "message", "Đã gửi thông báo chuyển khoản thành công. Vui lòng chờ Lễ tân xác nhận."
+        );
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> rejectVietQRPayment(Integer invoiceId, String cashierEmail) {
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hóa đơn / Invoice not found: " + invoiceId));
+
+        if ("PAID".equals(invoice.getStatus())) {
+            throw new IllegalStateException("Hóa đơn đã được thanh toán, không thể hủy.");
+        }
+
+        invoice.setStatus("CANCELLED");
+        invoiceRepository.save(invoice);
+
+        paymentRepository.findByInvoice_InvoiceId(invoice.getInvoiceId()).ifPresent(p -> {
+            p.setStatus("CANCELLED");
+            paymentRepository.save(p);
+        });
+
+        userCreditRepository.findByUsedInvoiceId(invoice.getInvoiceId()).ifPresent(credit -> {
+            credit.setUsedInvoiceId(null);
+            userCreditRepository.save(credit);
+        });
+
+        List<UserMembership> memberships = userMembershipRepository.findByCheckoutInvoiceId(invoice.getInvoiceId());
+        for (UserMembership m : memberships) {
+            m.setCheckoutInvoiceId(null);
+            userMembershipRepository.save(m);
+        }
+
+        if (invoice.getUser() != null && invoice.getUser().getEmail() != null) {
+            try {
+                notificationService.createNotification(
+                    invoice.getUser().getEmail(),
+                    "Đơn hàng #" + invoiceId + " đã bị hủy",
+                    "Đơn hàng #INV-" + invoiceId + " đã bị Lễ tân từ chối/hủy vì chưa nhận được tiền. Vui lòng kiểm tra lại giao dịch hoặc liên hệ quầy.",
+                    "PAYMENT"
+                );
+            } catch (Exception ignored) {}
+        }
+
+        return Map.of("success", true, "message", "Đã từ chối/hủy đơn hàng thành công.");
     }
 
     private String createVNPayUrl(Integer invoiceId, BigDecimal amount, String ipAddress) {
@@ -606,6 +726,9 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         }
 
         if (invoice == null || !"PENDING".equals(invoice.getStatus())) {
+            if (invoice != null && "AWAITING_CONFIRMATION".equals(invoice.getStatus())) {
+                throw new IllegalStateException("Đơn hàng đang chờ lễ tân xác nhận chuyển khoản. Quý khách không thể tự hủy.");
+            }
             return;
         }
 
@@ -727,7 +850,8 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
             return;
         }
         var invoice = maybeInvoice.get();
-        if (!"PAYOS".equals(paymentMethod(invoice))) {
+        String method = paymentMethod(invoice);
+        if (!"PAYOS".equalsIgnoreCase(method) && !"VIETQR".equalsIgnoreCase(method)) {
             return;
         }
 
@@ -766,7 +890,7 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         List<Integer> bookingIds=jdbc.queryForList("SELECT booking_id FROM INVOICE_BOOKINGS WHERE invoice_id=?",Integer.class,invoice.getInvoiceId());
         var booked=bookingRepository.findAllById(bookingIds);
         try{
-            if(!"PENDING".equals(invoice.getStatus())||invoice.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(15)))throw new IllegalArgumentException("Checkout expired or previously failed");
+            if((!"PENDING".equals(invoice.getStatus()) && !"AWAITING_CONFIRMATION".equals(invoice.getStatus()))||invoice.getCreatedAt().isBefore(LocalDateTime.now().minusHours(24)))throw new IllegalArgumentException("Checkout expired or previously failed");
             Integer expected=jdbc.queryForObject("SELECT COUNT(*) FROM INVOICE_DETAILS WHERE invoice_id=? AND package_id IS NOT NULL",Integer.class,invoice.getInvoiceId());
             if(expected != null && expected != purchased.size())throw new IllegalArgumentException("Invoice membership association missing");
             Integer expectedClasses=jdbc.queryForObject("SELECT COUNT(*) FROM INVOICE_DETAILS WHERE invoice_id=? AND class_id IS NOT NULL",Integer.class,invoice.getInvoiceId());

@@ -1881,7 +1881,10 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
     @Override
     public List<ReceiptResponse> getAllInvoices() {
         List<com.team4.sportscenter.modules.payment.entities.Invoice> invoices = invoiceRepository.findAllByOrderByCreatedAtDesc();
-        return invoices.stream().map(this::buildReceiptResponse).toList();
+        return invoices.stream()
+                .filter(inv -> !"PENDING".equals(inv.getStatus()))
+                .map(this::buildReceiptResponse)
+                .toList();
     }
 
     private ReceiptResponse buildReceiptResponse(com.team4.sportscenter.modules.payment.entities.Invoice invoice) {

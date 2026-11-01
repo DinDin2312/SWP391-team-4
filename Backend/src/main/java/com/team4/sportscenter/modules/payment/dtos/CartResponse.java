@@ -19,4 +19,5 @@ public class CartResponse {
     private Integer pendingInvoiceId;
     private String pendingPaymentUrl;
     private String pendingPaymentMethod;
+    private String pendingInvoiceStatus;
 }
