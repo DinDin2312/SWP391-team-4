@@ -738,20 +738,28 @@ const TraineeAssessmentModal = ({
                           </div>
 
                           <div className="flex items-center gap-3">
-                            {/* Stars badge */}
-                            <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 font-extrabold text-xs">
-                              <Star className="w-3.5 h-3.5 fill-amber-400" />
-                              <span>{item.performanceRating || 5}/5</span>
-                            </div>
+                            {item.isSelfRecorded || (item.assessmentTitle && item.assessmentTitle.includes('tự')) || (item.coachId && item.userId && item.coachId === item.userId) ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 font-bold text-xs">
+                                <User className="w-3.5 h-3.5" />
+                                <span>{t("Hội viên tự ghi nhận")}</span>
+                              </span>
+                            ) : (
+                              <>
+                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 font-extrabold text-xs">
+                                  <Star className="w-3.5 h-3.5 fill-amber-400" />
+                                  <span>{item.performanceRating || 5}/5</span>
+                                </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteAssessment(item.assessmentId)}
-                              title={t("Xóa đánh giá này")}
-                              className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/20 transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteAssessment(item.assessmentId)}
+                                  title={t("Xóa đánh giá này")}
+                                  className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/20 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
 
@@ -784,7 +792,7 @@ const TraineeAssessmentModal = ({
                         {/* Feedback Note Content */}
                         <div className="p-3 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] text-xs space-y-1">
                           <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
-                            {t("Nhận xét của Huấn Luyện Viên:")}
+                            {(item.isSelfRecorded || (item.assessmentTitle && item.assessmentTitle.includes('tự')) || (item.coachId && item.userId && item.coachId === item.userId)) ? t("Ghi chú của học viên:") : t("Nhận xét của Huấn Luyện Viên:")}
                           </span>
                           <p className="text-[var(--text)] italic leading-relaxed">
                             "{item.feedbackNote}"

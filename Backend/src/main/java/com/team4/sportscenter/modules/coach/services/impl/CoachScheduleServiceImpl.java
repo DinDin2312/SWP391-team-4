@@ -6,9 +6,11 @@ import com.team4.sportscenter.modules.coach.dtos.response.CoachStudentResponse;
 import com.team4.sportscenter.modules.coach.dtos.response.EnrolledStudentResponse;
 import com.team4.sportscenter.modules.coach.entities.AiWorkoutPlan;
 import com.team4.sportscenter.modules.coach.entities.CoachWorkoutPlan;
+import com.team4.sportscenter.modules.coach.entities.TraineeAssessment;
 import com.team4.sportscenter.modules.coach.repositories.AiWorkoutPlanRepository;
 import com.team4.sportscenter.modules.coach.repositories.CoachWorkoutPlanRepository;
 import com.team4.sportscenter.modules.coach.repositories.CoachScheduleRepository;
+import com.team4.sportscenter.modules.coach.repositories.TraineeAssessmentRepository;
 import com.team4.sportscenter.modules.coach.services.CoachScheduleService;
 import com.team4.sportscenter.modules.auth.entities.User;
 import com.team4.sportscenter.modules.member.entities.Booking;
@@ -18,6 +20,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -32,6 +36,7 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
     private final com.team4.sportscenter.modules.auth.repositories.UserRepository userRepository;
     private final AiWorkoutPlanRepository aiWorkoutPlanRepository;
     private final CoachWorkoutPlanRepository coachWorkoutPlanRepository;
+    private final TraineeAssessmentRepository traineeAssessmentRepository;
     private final com.team4.sportscenter.modules.member.health.MemberHealthService memberHealthService;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     private final com.fasterxml.jackson.databind.ObjectMapper jsonMapper = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -163,6 +168,36 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                     .map(CoachWorkoutPlan::getTitle)
                     .collect(Collectors.toList()) : Collections.emptyList();
 
+            // Fetch latest physical & InBody metrics (including member self-assessments)
+            List<TraineeAssessment> assessments = traineeAssessmentRepository.findByUserIdOrderByCreatedAtDesc(user.getUserId());
+            TraineeAssessment latestAssessment = (assessments != null && !assessments.isEmpty()) ? assessments.get(0) : null;
+
+            BigDecimal weight = null;
+            BigDecimal height = null;
+            BigDecimal bodyFatPercentage = null;
+            BigDecimal muscleMass = null;
+            BigDecimal bmi = null;
+            String latestAssessmentTitle = null;
+            LocalDateTime metricsUpdatedAt = null;
+            Boolean isSelfRecorded = null;
+
+            if (latestAssessment != null) {
+                weight = latestAssessment.getWeight();
+                height = latestAssessment.getHeight();
+                bodyFatPercentage = latestAssessment.getBodyFatPercentage();
+                muscleMass = latestAssessment.getMuscleMass();
+                latestAssessmentTitle = latestAssessment.getAssessmentTitle();
+                metricsUpdatedAt = latestAssessment.getCreatedAt();
+                isSelfRecorded = latestAssessment.getCoach() != null && latestAssessment.getCoach().getUserId().equals(user.getUserId());
+                if (weight != null && height != null && height.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal heightMeters = height.divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
+                    BigDecimal heightSquared = heightMeters.multiply(heightMeters);
+                    if (heightSquared.compareTo(BigDecimal.ZERO) > 0) {
+                        bmi = weight.divide(heightSquared, 1, RoundingMode.HALF_UP);
+                    }
+                }
+            }
+
             result.add(CoachStudentResponse.builder()
                     .userId(user.getUserId())
                     .fullName(user.getFullName())
@@ -175,6 +210,14 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                     .fitnessLevel(fitnessLevel)
                     .assignedPlans(assignedPlans)
                     .health(memberHealthService.summaryFor(user))
+                    .weight(weight)
+                    .height(height)
+                    .bodyFatPercentage(bodyFatPercentage)
+                    .muscleMass(muscleMass)
+                    .bmi(bmi)
+                    .latestAssessmentTitle(latestAssessmentTitle)
+                    .metricsUpdatedAt(metricsUpdatedAt)
+                    .isSelfRecorded(isSelfRecorded)
                     .build());
         }
 
@@ -207,10 +250,10 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
     @Override
     public void updateAttendance(Integer scheduleId, UpdateAttendanceRequest request, String coachEmail) {
         Schedule schedule = coachScheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new RuntimeException("KhĂ´ng tĂ¬m tháº¥y lá»‹ch há»c vá»›i ID: " + scheduleId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch học với ID: " + scheduleId));
 
         if (!schedule.getGymClass().getCoach().getEmail().equalsIgnoreCase(coachEmail)) {
-            throw new RuntimeException("Báº¡n khĂ´ng cĂ³ quyá»n Ä‘iá»ƒm danh cho lá»‹ch há»c nĂ y.");
+            throw new RuntimeException("Bạn không có quyền điểm danh cho lịch học này.");
         }
 
         // Validate date: allow attendance on session date OR within 24 hours after session ends

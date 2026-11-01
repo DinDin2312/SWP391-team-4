@@ -134,7 +134,7 @@ public class CoachAssessmentServiceImpl implements CoachAssessmentService {
     public List<TraineeAssessmentResponse> getCoachAssessments(String coachEmail, Integer studentUserId) {
         List<TraineeAssessment> list;
         if (studentUserId != null) {
-            list = traineeAssessmentRepository.findByCoachEmailAndUserIdOrderByCreatedAtDesc(coachEmail, studentUserId);
+            list = traineeAssessmentRepository.findByUserIdOrderByCreatedAtDesc(studentUserId);
         } else {
             list = traineeAssessmentRepository.findByCoachEmailOrderByCreatedAtDesc(coachEmail);
         }
@@ -143,8 +143,10 @@ public class CoachAssessmentServiceImpl implements CoachAssessmentService {
 
     @Override
     public List<TraineeAssessmentResponse> getStudentAssessmentHistory(Integer studentUserId, String coachEmail) {
+        // Return full trainee assessment history (including member self-assessments)
+        // so the coach can inspect updated physical metrics (weight, height, body fat, muscle)
         List<TraineeAssessment> list = traineeAssessmentRepository
-                .findByCoachEmailAndUserIdOrderByCreatedAtDesc(coachEmail, studentUserId);
+                .findByUserIdOrderByCreatedAtDesc(studentUserId);
         return list.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
@@ -191,10 +193,16 @@ public class CoachAssessmentServiceImpl implements CoachAssessmentService {
             className = a.getWorkoutPlan().getGymClass().getClassName();
         }
 
+        boolean isSelfAssessment = (a.getCoach() != null && a.getUser() != null
+                && a.getCoach().getUserId().equals(a.getUser().getUserId()));
+        String coachName = a.getCoach() != null
+                ? (isSelfAssessment ? "Hội viên tự ghi nhận" : a.getCoach().getFullName())
+                : null;
+
         return TraineeAssessmentResponse.builder()
                 .assessmentId(a.getAssessmentId())
                 .coachId(a.getCoach() != null ? a.getCoach().getUserId() : null)
-                .coachName(a.getCoach() != null ? a.getCoach().getFullName() : null)
+                .coachName(coachName)
                 .coachEmail(a.getCoach() != null ? a.getCoach().getEmail() : null)
                 .userId(a.getUser() != null ? a.getUser().getUserId() : null)
                 .fullName(a.getUser() != null ? a.getUser().getFullName() : null)
@@ -215,6 +223,7 @@ public class CoachAssessmentServiceImpl implements CoachAssessmentService {
                 .attendanceRating(a.getAttendanceRating())
                 .feedbackNote(a.getFeedbackNote())
                 .recommendation(a.getRecommendation())
+                .isSelfRecorded(isSelfAssessment)
                 .createdAt(a.getCreatedAt())
                 .build();
     }

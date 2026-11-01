@@ -626,9 +626,15 @@ const BodyTransformationModal = ({
                               {a.muscleMass ? `${a.muscleMass} kg` : '--'}
                             </td>
                             <td className="px-3.5 py-3">
-                              <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold text-[10px]">
-                                {a.performanceRating ? `${a.performanceRating}/5 ⭐` : '--'}
-                              </span>
+                              {a.isSelfRecorded || (a.assessmentTitle && a.assessmentTitle.includes('tự')) || (a.coachId && a.userId && a.coachId === a.userId) ? (
+                                <span className="px-2 py-0.5 rounded-md bg-sky-50 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 font-bold text-[10px]">
+                                  {t("Tự cập nhật")}
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold text-[10px]">
+                                  {a.performanceRating ? `${a.performanceRating}/5 ⭐` : '--'}
+                                </span>
+                              )}
                             </td>
                             <td className="px-3.5 py-3 text-[var(--text-muted)] max-w-xs truncate">
                               {a.feedbackNote || a.recommendation || '--'}
@@ -648,7 +654,7 @@ const BodyTransformationModal = ({
         <div className="px-6 py-4 bg-[var(--surface)] border-t border-[var(--border)] flex items-center justify-between sticky bottom-0 z-20">
           <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-amber-500" />
-            <span>{t('Dữ liệu được cập nhật tự động sau mỗi lần đo của Huấn luyện viên.')}</span>
+            <span>{t('Dữ liệu được cập nhật tự động sau mỗi lần đo của Huấn luyện viên hoặc do Hội viên tự cập nhật.')}</span>
           </div>
 
           <div className="flex items-center gap-2">

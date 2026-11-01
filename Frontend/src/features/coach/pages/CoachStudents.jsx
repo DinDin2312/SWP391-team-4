@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
-  Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send, Dumbbell, Target, Trophy, Activity, TrendingUp, HeartPulse, AlertTriangle
+  Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send, Dumbbell, Target, Trophy, Activity, TrendingUp, HeartPulse, AlertTriangle, Scale
 } from 'lucide-react';
 import SendNotificationModal from '../components/SendNotificationModal';
 import BodyTransformationModal from '../../member/components/BodyTransformationModal';
@@ -229,6 +229,14 @@ const CoachStudents = () => {
                                 <span>{t(hBadge.label)}</span>
                               </span>
                             </div>
+                            {(st.weight || st.height || st.bodyFatPercentage) && (
+                              <div className="flex items-center gap-1.5 mt-1 text-[10px] text-[var(--text-muted)] flex-wrap">
+                                <Scale className="w-3 h-3 text-[var(--primary)] shrink-0" />
+                                {st.weight && <span className="font-semibold text-[var(--text)]">{st.weight}kg</span>}
+                                {st.height && <span>• {st.height}cm</span>}
+                                {st.bodyFatPercentage && <span className="text-amber-600 dark:text-amber-400">• {st.bodyFatPercentage}% {t('fat')}</span>}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -491,7 +499,58 @@ const CoachStudents = () => {
                 )}
               </div>
 
-<div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-2">
+{/* Latest Physical & InBody Metrics Section */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50/80 via-[var(--surface)] to-emerald-50/50 dark:from-blue-950/40 dark:via-[var(--surface)] dark:to-emerald-950/20 border border-blue-200/80 dark:border-blue-500/30 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between border-b border-blue-200/80 dark:border-blue-500/20 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Scale className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <h5 className="font-bold text-blue-700 dark:text-blue-300 text-xs uppercase tracking-wider">{t("Chỉ số thể trạng InBody gần nhất")}</h5>
+                  </div>
+                  {selectedStudent.metricsUpdatedAt && (
+                    <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-semibold text-[10px] border border-blue-200 dark:border-blue-500/30">
+                      {selectedStudent.isSelfRecorded ? t("Học viên tự cập nhật") : t("HLV đo định kỳ")}
+                    </span>
+                  )}
+                </div>
+
+                {selectedStudent.weight || selectedStudent.height || selectedStudent.bodyFatPercentage || selectedStudent.muscleMass ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    <div className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex flex-col">
+                      <span className="text-[10px] text-[var(--text-muted)] font-medium">{t("Cân nặng")}</span>
+                      <strong className="text-sm font-bold text-[var(--text)] mt-0.5">
+                        {selectedStudent.weight ? `${selectedStudent.weight} kg` : '--'}
+                      </strong>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex flex-col">
+                      <span className="text-[10px] text-[var(--text-muted)] font-medium">{t("Chiều cao")}</span>
+                      <strong className="text-sm font-bold text-[var(--text)] mt-0.5">
+                        {selectedStudent.height ? `${selectedStudent.height} cm` : '--'}
+                      </strong>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex flex-col">
+                      <span className="text-[10px] text-[var(--text-muted)] font-medium">{t("Tỉ lệ mỡ")}</span>
+                      <strong className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5">
+                        {selectedStudent.bodyFatPercentage ? `${selectedStudent.bodyFatPercentage}%` : '--'}
+                      </strong>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex flex-col">
+                      <span className="text-[10px] text-[var(--text-muted)] font-medium">{t("Khối lượng cơ")}</span>
+                      <strong className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                        {selectedStudent.muscleMass ? `${selectedStudent.muscleMass} kg` : '--'}
+                      </strong>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-[var(--text-muted)] italic py-1">
+                    {t("Chưa có số đo thể trạng InBody nào được ghi nhận.")}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-2">
                 <h5 className="font-bold text-[var(--text)] text-xs uppercase tracking-wider text-[var(--text-muted)]">{t("Enrolled Classes Taught By You")}</h5>
                 <div className="flex flex-wrap gap-2 pt-1">
                   {selectedStudent.enrolledClasses && selectedStudent.enrolledClasses.length > 0 ? (
