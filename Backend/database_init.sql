@@ -4,7 +4,7 @@ USE SportCenter;
 
 -- ================== 1. TẠO BẢNG (ĐÃ FIX AUTO_INCREMENT) ==================
 CREATE TABLE `ROLES` (`role_id` int PRIMARY KEY AUTO_INCREMENT, `role_name` varchar(255));
-CREATE TABLE `USERS` (`user_id` int PRIMARY KEY AUTO_INCREMENT, `role_id` int, `full_name` varchar(255), `email` varchar(255), `phone` varchar(255), `password_hash` varchar(255), `status` varchar(255), `bio` text, `avatar_path` varchar(255), `force_password_change` boolean NOT NULL DEFAULT false, `created_at` datetime DEFAULT CURRENT_TIMESTAMP, `loyalty_points` int DEFAULT 0, KEY `idx_users_created_at` (`created_at`));
+CREATE TABLE `USERS` (`user_id` int PRIMARY KEY AUTO_INCREMENT, `role_id` int, `full_name` varchar(255), `email` varchar(255), `phone` varchar(255), `password_hash` varchar(255), `status` varchar(255), `bio` text, `avatar_path` varchar(255), `force_password_change` boolean NOT NULL DEFAULT false, `created_at` datetime DEFAULT CURRENT_TIMESTAMP, `loyalty_points` int DEFAULT 0, `gender` varchar(10) NULL, `date_of_birth` date NULL, KEY `idx_users_created_at` (`created_at`));
 CREATE TABLE `SUBJECTS` (`subject_id` int PRIMARY KEY AUTO_INCREMENT, `subject_name` varchar(255), `description` text, `image_path` varchar(255));
 CREATE TABLE `USER_SUBJECTS` (`user_id` int, `subject_id` int, PRIMARY KEY (`user_id`, `subject_id`));
 CREATE TABLE `ROOMS` (`room_id` int PRIMARY KEY AUTO_INCREMENT, `room_name` varchar(255), `capacity` int, `image_path` varchar(255));
@@ -394,3 +394,15 @@ ALTER TABLE `LOST_AND_FOUND_ITEMS` ADD CONSTRAINT `fk_lf_created_by` FOREIGN KEY
 ALTER TABLE `LOST_AND_FOUND_ITEMS` ADD CONSTRAINT `fk_lf_claimed_staff` FOREIGN KEY (`claimed_by_staff_id`) REFERENCES `USERS` (`user_id`) ON DELETE SET NULL;
 ALTER TABLE `LOST_AND_FOUND_ITEMS` ADD CONSTRAINT `fk_lf_claimed_user` FOREIGN KEY (`claimed_by_user_id`) REFERENCES `USERS` (`user_id`) ON DELETE SET NULL;
 ALTER TABLE `LOST_AND_FOUND_ITEMS` ADD CONSTRAINT `fk_lf_disposed_staff` FOREIGN KEY (`disposed_by_staff_id`) REFERENCES `USERS` (`user_id`) ON DELETE SET NULL;
+
+
+-- ================== 7. HỒ SƠ SỨC KHỎE HỘI VIÊN (MEMBER HEALTH PROFILES) ==================
+CREATE TABLE IF NOT EXISTS `MEMBER_HEALTH_PROFILES` (
+    `user_id` INT PRIMARY KEY,
+    `parq_answers` CHAR(7) NULL,
+    `conditions` VARCHAR(255) NULL,
+    `notes` VARCHAR(500) NULL,
+    `consent_at` DATETIME NOT NULL,
+    `updated_at` DATETIME NOT NULL,
+    CONSTRAINT `fk_health_user` FOREIGN KEY (`user_id`) REFERENCES `USERS`(`user_id`) ON DELETE CASCADE
+);

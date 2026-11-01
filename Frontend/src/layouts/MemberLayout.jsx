@@ -4,13 +4,14 @@ import LanguageSwitcher from '../i18n/LanguageSwitcher';
 import ThemeToggle from '../components/ThemeToggle';
 import MemberTierAvatar from '../components/MemberTierAvatar';
 
-import React, { useContext, useState, useEffect, Suspense } from 'react';
+import React, { useContext, useState, useEffect, useRef, Suspense } from 'react';
 import { useNavigate, useLocation, useOutlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-import { Bot } from 'lucide-react';
+import { Bot, Sparkles, X, ArrowRight } from 'lucide-react';
 import NexusAiChat from '../features/member/components/NexusAiChat';
+import { getSavedMemberNotificationPreferences, getMemberUnreadCount } from '../features/member/memberUtils';
 import {
   LayoutDashboard, CalendarDays, CreditCard, Dumbbell,
   Bell, Settings, LogOut, ShoppingCart, Receipt, ClipboardList, HelpCircle
@@ -21,13 +22,54 @@ const MemberLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentOutlet = useOutlet();
-  const { userInfo, logout, updateUserInfo } = useContext(AuthContext);
+  const auth = useContext(AuthContext) || {};
+  const { userInfo, logout = () => {}, updateUserInfo } = auth;
   const [cartCount, setCartCount] = useState(0);
   const [isCartHighlighted, setIsCartHighlighted] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasAiAccess, setHasAiAccess] = useState(false);
-  const [toast, setToast] = useState({ visible: false, message: '' });
+  const [aiNoticeVisible, setAiNoticeVisible] = useState(false);
+  const aiPopoverRef = useRef(null);
+  const aiNoticeTimerRef = useRef(null);
+
+  const handleAskNexusAi = () => {
+    if (hasAiAccess) {
+      setIsChatOpen(prev => !prev);
+      setAiNoticeVisible(false);
+    } else {
+      setAiNoticeVisible(prev => {
+        const next = !prev;
+        if (aiNoticeTimerRef.current) clearTimeout(aiNoticeTimerRef.current);
+        if (next) {
+          aiNoticeTimerRef.current = setTimeout(() => {
+            setAiNoticeVisible(false);
+          }, 5000);
+        }
+        return next;
+      });
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (aiPopoverRef.current && !aiPopoverRef.current.contains(event.target)) {
+        setAiNoticeVisible(false);
+      }
+    };
+    if (aiNoticeVisible) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [aiNoticeVisible]);
+
+  useEffect(() => {
+    return () => {
+      if (aiNoticeTimerRef.current) clearTimeout(aiNoticeTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     let highlightTimer;
@@ -81,7 +123,8 @@ const MemberLayout = () => {
           ]);
 
           setCartCount(cartRes.data.items?.length || 0);
-          setUnreadCount(notifRes.data.filter(n => !n.read).length || 0);
+          const memberNotifPrefs = getSavedMemberNotificationPreferences();
+          setUnreadCount(getMemberUnreadCount(notifRes.data, memberNotifPrefs));
           const hasAi = myPkgsRes.data.some(p => (p.packageType === 'AI_ACCESS' || p.packageType === 'COMBO') && p.status === 'ACTIVE');
           setHasAiAccess(hasAi);
 
@@ -265,10 +308,77 @@ const MemberLayout = () => {
           <nav className="role-breadcrumb" aria-label={t("Breadcrumb")}><span>{t("Member portal")}</span><span aria-hidden="true">/</span><strong>{t(getPageTitle())}</strong></nav>
 
           <div className="role-header-actions">
-            <button onClick={() => { if (hasAiAccess) setIsChatOpen(!isChatOpen); else { setToast({ visible: true, message: t('Please purchase an AI package in the Package Store to unlock this feature.') }); setTimeout(() => setToast({ visible: false, message: '' }), 4000); } }} className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--primary-hover)] to-[var(--primary-hover)] hover:from-[var(--primary-hover)] hover:to-[var(--primary-hover)] text-[color:var(--on-primary)] font-semibold text-xs flex items-center gap-2 shadow-[var(--shadow)] transition-all">
+            <div className="relative inline-block shrink-0" ref={aiPopoverRef}>
+              <button
+                type="button"
+                onClick={handleAskNexusAi}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[var(--primary-hover)] to-[var(--primary-hover)] hover:from-[var(--primary-hover)] hover:to-[var(--primary-hover)] text-[color:var(--on-primary)] font-semibold text-xs flex items-center gap-2 shadow-[var(--shadow)] transition-all cursor-pointer active:scale-95"
+              >
                 <Bot className="w-4 h-4" />
                 <span>{t("Ask NEXUS AI")}</span>
               </button>
+
+              {/* Animated Popover Jumping Down Directly Under Ask NEXUS AI Button */}
+              <AnimatePresence>
+                {aiNoticeVisible && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 450,
+                      damping: 26,
+                      mass: 0.8
+                    }}
+                    className="absolute top-full mt-2.5 left-0 max-sm:left-auto max-sm:right-0 w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-blue-500/30 dark:border-blue-400/30 shadow-[0_16px_40px_rgba(0,113,227,0.18)] p-3.5 z-50 text-slate-800 dark:text-slate-100"
+                  >
+                    {/* Beak / Triangle pointing up into the Ask NEXUS AI button */}
+                    <div className="absolute -top-1.5 left-8 max-sm:left-auto max-sm:right-8 w-3 h-3 bg-white dark:bg-slate-900 border-t border-l border-blue-500/30 dark:border-blue-400/30 rotate-45 z-10" />
+
+                    <div className="relative z-20">
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-xl bg-blue-500/10 text-[#0071E3] dark:text-[#0A84FF] border border-blue-500/20 flex items-center justify-center shrink-0">
+                            <Bot className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-[11px] font-bold text-slate-900 dark:text-white flex items-center gap-1">
+                              <span>{t("NEXUS AI Assistant")}</span>
+                              <Sparkles className="w-3 h-3 text-amber-500" />
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAiNoticeVisible(false)}
+                          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-md transition-colors cursor-pointer"
+                          title={t("Close")}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+                        {t('Please purchase an AI package in the Package Store to unlock this feature.')}
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAiNoticeVisible(false);
+                          navigate('/member/package-store');
+                        }}
+                        className="mt-3 w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#0071E3] to-blue-700 hover:from-[#0077ED] hover:to-blue-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
+                      >
+                        <span>{t('Explore Package Store')}</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Shopping Cart Button */}
             <button
@@ -320,14 +430,6 @@ const MemberLayout = () => {
             </motion.div>
           </AnimatePresence>
         </div>
-      {toast.visible && (
-        <div className="fixed bottom-6 left-6 z-50 bg-[var(--surface)] text-[var(--text)] px-4 py-3 rounded-lg shadow-[var(--shadow)] border border-[var(--border)] flex items-center gap-3 animate-fade-in">
-          <div className="w-8 h-8 rounded-full bg-[var(--primary-soft)] flex items-center justify-center">
-            <Bot className="w-4 h-4 text-[var(--primary)]" />
-          </div>
-          <p className="text-sm font-medium">{t(toast.message)}</p>
-        </div>
-      )}
       <NexusAiChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
       </main>
     </div>

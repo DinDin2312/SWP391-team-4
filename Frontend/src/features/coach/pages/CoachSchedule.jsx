@@ -22,6 +22,7 @@ const CoachSchedule = () => {
   const [activeModalSchedule, setActiveModalSchedule] = useState(null);
   const [searchModalQuery, setSearchModalQuery] = useState('');
   const [attendanceMap, setAttendanceMap] = useState({});
+  const [overrideMap, setOverrideMap] = useState({});
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [saveErrorMsg, setSaveErrorMsg] = useState('');
@@ -85,17 +86,26 @@ const CoachSchedule = () => {
     fetchCoachSchedules();
   }, []);
 
-  // Helper function to check if attendance is allowed (session date must be EQUAL to today)
-  const canTakeAttendance = (startTime) => {
+  // Helper function to check if attendance is allowed (today or within 24 hours after session ends)
+  const canTakeAttendance = (startTime, endTime) => {
     if (!startTime) return false;
     const sessionDate = new Date(startTime);
     sessionDate.setHours(0, 0, 0, 0);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return sessionDate.getTime() === today.getTime();
+
+    // If future date: not yet allowed
+    if (sessionDate.getTime() > today.getTime()) return false;
+
+    // If session ended > 24 hours ago: expired
+    if (endTime) {
+      const endLimit = new Date(endTime).getTime() + 24 * 60 * 60 * 1000;
+      if (Date.now() > endLimit) return false;
+    }
+    return true;
   };
 
-  const getAttendanceRestrictionReason = (startTime) => {
+  const getAttendanceRestrictionReason = (startTime, endTime) => {
     if (!startTime) return null;
     const sessionDate = new Date(startTime);
     sessionDate.setHours(0, 0, 0, 0);
@@ -103,10 +113,10 @@ const CoachSchedule = () => {
     today.setHours(0, 0, 0, 0);
 
     if (sessionDate > today) {
-      return t("Chưa đến ngày học ({0}). Điểm danh chỉ được phép thực hiện vào đúng ngày học.", [sessionDate.toLocaleDateString(locale())]);
+      return t("Not session date yet ({0}). Attendance is only allowed during the session or within 24 hours after.", [sessionDate.toLocaleDateString(locale())]);
     }
-    if (sessionDate < today) {
-      return t("Buổi học đã trôi qua ({0}). Không thể điểm danh hoặc thay đổi điểm danh sau khi ngày học đã trôi qua.", [sessionDate.toLocaleDateString(locale())]);
+    if (endTime && Date.now() > new Date(endTime).getTime() + 24 * 60 * 60 * 1000) {
+      return t("Session ended over 24 hours ago. Attendance period has expired.");
     }
     return null;
   };
@@ -116,6 +126,7 @@ const CoachSchedule = () => {
     setSearchModalQuery('');
     setSaveSuccessMsg('');
     setSaveErrorMsg('');
+    setOverrideMap({});
 
     const initialMap = {};
     if (schedule.enrolledStudents) {
@@ -127,10 +138,14 @@ const CoachSchedule = () => {
     setAttendanceMap(initialMap);
   };
 
-  const handleStatusChange = (studentKey, status) => {
+  const handleStatusChange = (studentKey, status, isOverride = false) => {
     setAttendanceMap(prev => ({
       ...prev,
       [studentKey]: status
+    }));
+    setOverrideMap(prev => ({
+      ...prev,
+      [studentKey]: status === 'PRESENT' ? isOverride : false
     }));
   };
 
@@ -149,7 +164,8 @@ const CoachSchedule = () => {
           return {
             bookingId: st?.bookingId || (numId ? numId : null),
             userId: st?.userId || null,
-            attendanceStatus: status
+            attendanceStatus: status,
+            overrideFrontDeskCheckIn: Boolean(overrideMap[key])
           };
         })
       };
@@ -160,7 +176,7 @@ const CoachSchedule = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setSaveSuccessMsg(t('Điểm danh đã được lưu thành công!'));
+      setSaveSuccessMsg(t('Attendance saved successfully!'));
 
       // Re-fetch fresh schedule data from backend
       await fetchCoachSchedules();
@@ -181,8 +197,8 @@ const CoachSchedule = () => {
       setTimeout(() => setSaveSuccessMsg(''), 4000);
     } catch (error) {
       console.error('Error saving attendance:', error);
-      const msg = error.response?.data?.message || error.response?.data || t('Không thể lưu điểm danh');
-      setSaveErrorMsg(typeof msg === 'string' ? t(msg) : t('Lỗi khi lưu điểm danh'));
+      const msg = error.response?.data?.message || error.response?.data || t('Failed to save attendance');
+      setSaveErrorMsg(typeof msg === 'string' ? t(msg) : t('Failed to save attendance'));
       setTimeout(() => setSaveErrorMsg(''), 5000);
     } finally {
       setSavingAttendance(false);
@@ -383,7 +399,7 @@ const CoachSchedule = () => {
 
         {/* Agenda Column */}
         <div className="xl:col-span-4 flex flex-col gap-4">
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 shadow-[var(--shadow)] flex flex-col sticky top-28">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 shadow-[var(--shadow)] flex flex-col sticky top-28 max-h-[calc(100vh-140px)]">
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-[var(--border)]">
               <div className="flex flex-col">
                 <span className="font-bold text-[10px] text-[var(--text-muted)] uppercase tracking-widest">{t("Teaching Agenda")}</span>
@@ -395,7 +411,7 @@ const CoachSchedule = () => {
                 {selectedDateSchedules.length}{' '}{t("Sessions")}</span>
             </div>
 
-            <div className="flex flex-col gap-4 max-h-[550px] overflow-y-auto scrollbar-none pr-1">
+            <div className="flex flex-col gap-3.5 max-h-[460px] 2xl:max-h-[500px] overflow-y-auto pr-1.5 custom-scrollbar">
               {loading ? (
                 <div className="text-center py-10 text-[var(--text-muted)]">{t("Loading class schedules...")}</div>
               ) : selectedDateSchedules.length === 0 ? (
@@ -412,7 +428,7 @@ const CoachSchedule = () => {
                   const isExpanded = expandedScheduleId === s.scheduleId;
 
                   return (
-                    <div key={idx} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-3 relative overflow-hidden group hover:border-[var(--primary-soft)] transition-all">
+                    <div key={idx} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-3 relative shrink-0 overflow-hidden group hover:border-[var(--primary-soft)] transition-all">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--primary)]">
                           <Clock className="w-3.5 h-3.5" />
@@ -443,25 +459,25 @@ const CoachSchedule = () => {
                         <div className="grid grid-cols-3 gap-1.5">
                           <button
                             onClick={() => openTraineesModal(s)}
-                            className="py-2 px-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-[var(--text)] font-semibold text-[11px] flex items-center justify-center gap-1 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+                            className="py-2 px-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-[11px] flex items-center justify-center gap-1 shadow-md shadow-blue-600/20 transition-all cursor-pointer"
                           >
-                            <Users className="w-3.5 h-3.5" />
+                            <Users className="w-3.5 h-3.5 text-white" />
                             <span>{t("Học viên")}{' '}({s.enrolledCount})</span>
                           </button>
 
                           <button
                             onClick={() => handleOpenScheduleAssessment(s)}
-                            className="py-2 px-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 hover:text-white font-semibold text-[11px] border border-amber-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                            className="py-2 px-2 rounded-xl bg-amber-50 dark:bg-amber-500/15 hover:bg-amber-100 dark:hover:bg-amber-500/30 text-amber-800 dark:text-amber-300 font-bold text-[11px] border border-amber-300 dark:border-amber-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
                           >
-                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                            <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 dark:fill-amber-400 dark:text-amber-400" />
                             <span>{t("Đánh giá")}</span>
                           </button>
 
                           <button
                             onClick={() => handleOpenClassNotification(s.classId)}
-                            className="py-2 px-2 rounded-xl bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 hover:text-[var(--text)] font-semibold text-[11px] border border-blue-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                            className="py-2 px-2 rounded-xl bg-blue-50 dark:bg-blue-600/15 hover:bg-blue-100 dark:hover:bg-blue-600/30 text-blue-800 dark:text-blue-300 font-bold text-[11px] border border-blue-300 dark:border-blue-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
                           >
-                            <Bell className="w-3.5 h-3.5 text-[var(--primary)]" />
+                            <Bell className="w-3.5 h-3.5 text-blue-700 dark:text-[var(--primary)]" />
                             <span>{t("Báo tin")}</span>
                           </button>
                         </div>
@@ -478,7 +494,7 @@ const CoachSchedule = () => {
 
                       {/* Expandable Quick View */}
                       {isExpanded && (
-                        <div className="mt-2 space-y-2 max-h-48 overflow-y-auto scrollbar-none pr-1">
+                        <div className="mt-2 space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
                           {(!s.enrolledStudents || s.enrolledStudents.length === 0) ? (
                             <p className="text-[11px] text-[var(--text-muted)] italic py-2 text-center">{t("No trainees registered for this session yet")}</p>
                           ) : (
@@ -554,11 +570,11 @@ const CoachSchedule = () => {
             </div>
 
             {/* Attendance Restriction Notice */}
-            {!canTakeAttendance(activeModalSchedule.startTime) && (
+            {!canTakeAttendance(activeModalSchedule.startTime, activeModalSchedule.endTime) && (
               <div className="mx-6 mt-4 p-3.5 rounded-xl bg-[var(--warning-soft)] border border-[var(--warning-soft)] flex items-center gap-3 text-[var(--warning-text)] text-xs font-medium">
                 <AlertCircle className="w-4 h-4 shrink-0 text-[var(--warning-text)]" />
                 <span>
-                  {getAttendanceRestrictionReason(activeModalSchedule.startTime)}
+                  {getAttendanceRestrictionReason(activeModalSchedule.startTime, activeModalSchedule.endTime)}
                 </span>
               </div>
             )}
@@ -582,7 +598,7 @@ const CoachSchedule = () => {
             </div>
 
             {/* Trainees List Body */}
-            <div className="p-6 overflow-y-auto scrollbar-none flex flex-col gap-3 flex-1">
+            <div className="p-6 overflow-y-auto custom-scrollbar flex flex-col gap-3 flex-1">
               {modalTrainees.length === 0 ? (
                 <div className="py-12 flex flex-col items-center justify-center text-center">
                   <Users className="w-12 h-12 text-[var(--text-muted)] mb-2" />
@@ -594,45 +610,52 @@ const CoachSchedule = () => {
                   const initials = st.fullName ? st.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : t('TR');
                   const key = st.bookingId || st.userId;
                   const currentStatus = attendanceMap[key] || 'NOT_YET';
-                  const isAllowed = canTakeAttendance(activeModalSchedule.startTime);
+                  const isAllowed = canTakeAttendance(activeModalSchedule.startTime, activeModalSchedule.endTime);
+                  const isOverride = Boolean(overrideMap[key]);
 
                   return (
                     <div
                       key={stIdx}
                       className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary-soft)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="w-10 h-10 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center shrink-0">
                           {initials}
                         </div>
-                        <div className="flex flex-col gap-0.5">
+                        <div className="flex flex-col gap-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h5 className="font-bold text-[var(--text)] text-sm">{st.fullName}</h5>
+                            <h5 className="font-bold text-[var(--text)] text-sm truncate">{st.fullName}</h5>
                             <span className="px-2 py-0.5 rounded bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] text-[10px] font-semibold">
                               {t(st.bookingStatus || 'CONFIRMED')}
                             </span>
                             {st.checkedInAtFrontDesk ? (
-                              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1" title={st.frontDeskCheckInTime ? `Check-in lúc ${st.frontDeskCheckInTime.slice(11, 16)}` : 'Đã qua quầy lễ tân'}>
-                                <Check className="w-3 h-3" />
-                                {t('Đã qua lễ tân')}
+                              <span
+                                className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold flex items-center gap-1 shrink-0"
+                                title={st.frontDeskCheckInTime ? `Check-in: ${st.frontDeskCheckInTime.slice(11, 16)}` : t('Checked-in at front desk')}
+                              >
+                                <Check className="w-3 h-3 text-emerald-500" />
+                                {t('Checked-in at front desk')}
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-medium flex items-center gap-1" title="Học viên chưa thực hiện Check-in tại quầy lễ tân hôm nay">
-                                <AlertCircle className="w-3 h-3 text-amber-400" />
-                                {t('Chưa qua lễ tân')}
+                              <span
+                                className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-semibold flex items-center gap-1 shrink-0"
+                                title={t('Student has not checked in at front desk today')}
+                              >
+                                <AlertCircle className="w-3 h-3 text-amber-500" />
+                                {t('Unchecked at front desk')}
                               </span>
                             )}
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
                             {st.email && (
-                              <span className="flex items-center gap-1">
-                                <Mail className="w-3 h-3 text-[var(--text-muted)]" />
+                              <span className="flex items-center gap-1 truncate max-w-[220px]">
+                                <Mail className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
                                 {st.email}
                               </span>
                             )}
                             {st.phone && (
-                              <span className="flex items-center gap-1">
-                                <Phone className="w-3 h-3 text-[var(--text-muted)]" />
+                              <span className="flex items-center gap-1 shrink-0">
+                                <Phone className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
                                 {st.phone}
                               </span>
                             )}
@@ -640,53 +663,72 @@ const CoachSchedule = () => {
                         </div>
                       </div>
 
-                      {/* Attendance Selector Controls & Assessment Trigger */}
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-1 shrink-0">
-                          <button
-                            type="button"
-                            disabled={!isAllowed}
-                            onClick={() => handleStatusChange(key, 'NOT_YET')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${currentStatus === 'NOT_YET'
-                                ? t('bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--border)] shadow')
-                                : t('text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]')
-                              } ${!isAllowed ? t('opacity-50 cursor-not-allowed') : t('cursor-pointer')}`}
-                            title={t(!isAllowed ? t('Chưa đến ngày học') : t('Đặt trạng thái Chưa điểm danh'))}
-                          >{t("NOT YET")}</button>
-                          <button
-                            type="button"
-                            disabled={!isAllowed || !st.checkedInAtFrontDesk}
-                            onClick={() => handleStatusChange(key, 'PRESENT')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${currentStatus === 'PRESENT'
-                                ? t('bg-[var(--success-hover)] text-[color:var(--on-primary)] border border-[var(--success-soft)] shadow shadow-[var(--shadow)]')
-                                : t('text-[var(--text-muted)] hover:text-[var(--success-text)] hover:bg-[var(--success-soft)]')
-                              } ${(!isAllowed || !st.checkedInAtFrontDesk) ? t('opacity-40 cursor-not-allowed') : t('cursor-pointer')}`}
-                            title={!isAllowed ? t('Chưa đến ngày học') : !st.checkedInAtFrontDesk ? t('Chưa qua lễ tân Check-in. Vui lòng nhắc học viên qua quầy lễ tân trước.') : t('Điểm danh Có Mặt')}
-                          >
-                            <Check className="w-3.5 h-3.5" />{t("Present")}</button>
-                          <button
-                            type="button"
-                            disabled={!isAllowed}
-                            onClick={() => handleStatusChange(key, 'ABSENT')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${currentStatus === 'ABSENT'
-                                ? t('bg-[var(--rose)] text-[color:var(--on-primary)] border border-[var(--rose-soft)] shadow shadow-[var(--shadow)]')
-                                : t('text-[var(--text-muted)] hover:text-[var(--rose)] hover:bg-[var(--rose-soft)]')
-                              } ${!isAllowed ? t('opacity-50 cursor-not-allowed') : t('cursor-pointer')}`}
-                            title={t(!isAllowed ? t('Chưa đến ngày học') : t('Điểm danh Vắng Mặt'))}
-                          >
-                            <X className="w-3.5 h-3.5" />{t("Absent")}
-                          </button>
-                        </div>
+                      {/* Unified Attendance & Assessment Controls Bar */}
+                      <div className="flex items-center gap-1 bg-[var(--surface-hover)]/40 border border-[var(--border)] rounded-xl p-1 shrink-0">
+                        <button
+                          type="button"
+                          disabled={!isAllowed}
+                          onClick={() => handleStatusChange(key, 'NOT_YET')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                            currentStatus === 'NOT_YET'
+                              ? 'bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] shadow-xs'
+                              : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                          } ${!isAllowed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          title={!isAllowed ? t('Expired or not session date yet') : t('Set status to unmarked')}
+                        >
+                          {t('NOT YET')}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!isAllowed}
+                          onClick={() => handleStatusChange(key, 'PRESENT', !st.checkedInAtFrontDesk)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                            currentStatus === 'PRESENT'
+                              ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                              : 'text-[var(--text-muted)] hover:text-emerald-600 hover:bg-emerald-500/10'
+                          } ${!isAllowed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          title={
+                            !isAllowed
+                              ? t('Expired or not session date yet')
+                              : !st.checkedInAtFrontDesk
+                                ? t('Mark present (Classroom direct verification)')
+                                : t('Mark present')
+                          }
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>
+                            {currentStatus === 'PRESENT' && (!st.checkedInAtFrontDesk || isOverride)
+                              ? t('Present (Direct)')
+                              : t('Present')}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!isAllowed}
+                          onClick={() => handleStatusChange(key, 'ABSENT')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                            currentStatus === 'ABSENT'
+                              ? 'bg-rose-600 text-white shadow-xs font-bold'
+                              : 'text-[var(--text-muted)] hover:text-rose-600 hover:bg-rose-500/10'
+                          } ${!isAllowed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          title={!isAllowed ? t('Expired or not session date yet') : t('Mark absent')}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>{t('Absent')}</span>
+                        </button>
 
-                        {/* Assessment Quick Trigger */}
+                        {/* Divider */}
+                        <div className="w-[1px] h-4 bg-[var(--border)] mx-1 shrink-0" />
+
+                        {/* Assessment Trigger inside unified bar */}
                         <button
                           type="button"
                           onClick={() => handleOpenDirectStudentAssessment(st, activeModalSchedule)}
-                          title={t("Đánh giá tiến độ học viên này")}
-                          className="px-2.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer shrink-0"
+                          title={t('Assess trainee progress')}
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15 transition-all cursor-pointer shrink-0"
                         >
-                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                          <span className="hidden sm:inline">{t("Đánh giá")}</span>
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500 shrink-0" />
+                          <span>{t('Assessments')}</span>
                         </button>
                       </div>
                     </div>
@@ -708,7 +750,7 @@ const CoachSchedule = () => {
                   className="px-4 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 font-semibold text-xs border border-blue-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <Bell className="w-3.5 h-3.5 text-[var(--primary)]" />
-                  <span>{t("Gửi thông báo cho lớp này")}</span>
+                  <span>{t("Send notification to this class")}</span>
                 </button>
                 {saveSuccessMsg && <span className="text-[var(--success-text)] text-xs font-semibold">{saveSuccessMsg}</span>}
                 {saveErrorMsg && <span className="text-[var(--danger-text)] text-xs font-semibold">{saveErrorMsg}</span>}
@@ -720,15 +762,15 @@ const CoachSchedule = () => {
                   className="px-4 py-2 rounded-xl bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text)] hover:text-[var(--text)] font-semibold text-xs transition-all cursor-pointer"
                 >{t("Close")}</button>
                 <button
-                  disabled={!canTakeAttendance(activeModalSchedule.startTime) || savingAttendance}
+                  disabled={!canTakeAttendance(activeModalSchedule.startTime, activeModalSchedule.endTime) || savingAttendance}
                   onClick={handleSaveAttendance}
-                  className={`px-5 py-2 rounded-xl font-semibold text-xs flex items-center gap-2 transition-all shadow-[var(--shadow)] ${canTakeAttendance(activeModalSchedule.startTime) && !savingAttendance
+                  className={`px-5 py-2 rounded-xl font-semibold text-xs flex items-center gap-2 transition-all shadow-[var(--shadow)] ${canTakeAttendance(activeModalSchedule.startTime, activeModalSchedule.endTime) && !savingAttendance
                       ? 'bg-gradient-to-r from-[var(--success-hover)] to-[var(--success-hover)] hover:from-[var(--success-hover)] hover:to-[var(--success-hover)] text-[color:var(--on-primary)] shadow-[var(--shadow)] cursor-pointer'
                       : 'bg-[var(--surface)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border)]'
                     }`}
                 >
                   <Save className="w-4 h-4" />
-                  <span>{t(savingAttendance ? t('Saving...') : t('Save Attendance'))}</span>
+                  <span>{savingAttendance ? t('Saving...') : t('Save Attendance')}</span>
                 </button>
               </div>
             </div>

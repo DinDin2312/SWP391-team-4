@@ -49,7 +49,12 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
         // 1.1 Thư viện bài tập trong hệ thống
         List<ExerciseResponse> exercises = coachWorkoutService.getAllExercises();
         String exercisesListString = exercises.stream()
-            .map(e -> "[" + e.getExerciseId() + "] " + e.getExerciseName() + " (" + e.getMuscleGroup() + ")")
+            .map(e -> {
+                String avoid = (e.getContraindications() != null && !e.getContraindications().isEmpty())
+                    ? " {avoid: " + String.join(",", e.getContraindications()) + "}"
+                    : "";
+                return "[" + e.getExerciseId() + "] " + e.getExerciseName() + " (" + e.getMuscleGroup() + ")" + avoid;
+            })
             .collect(Collectors.joining(", "));
 
         // 1.2 Danh sách lớp học Coach đang phụ trách
@@ -82,6 +87,7 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
                 studentsInfoBuilder.append("• Student ID: ").append(s.getUserId())
                     .append(" | Tên: ").append(s.getFullName())
                     .append(" | Email: ").append(s.getEmail() != null ? s.getEmail() : "N/A")
+                    .append(com.team4.sportscenter.modules.member.health.HealthPromptBuilder.studentLine(s.getHealth()))
                     .append(" | Lớp đang theo học: ").append(s.getEnrolledClasses() != null && !s.getEnrolledClasses().isEmpty() ? String.join(", ", s.getEnrolledClasses()) : "Chưa có")
                     .append(" | Mục tiêu: ").append(s.getWorkoutGoal() != null ? s.getWorkoutGoal() : "Chưa xác định")
                     .append(" | Thể lực: ").append(s.getFitnessLevel() != null ? s.getFitnessLevel() : "Trung bình")
@@ -142,6 +148,8 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
                 "- The days of week keys must be standard English: MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY.\n\n" +
                 "RULE 3 - Navigation:\n" +
                 "To navigate the coach: Append [ACTION:NAVIGATE:/coach/workouts] or [ACTION:NAVIGATE:/coach/students] or [ACTION:NAVIGATE:/coach/schedule]\n\n" +
+                "RULE 4 - Medical Safety & Contraindications (BẮT BUỘC TUÂN THỦ):\n" +
+                "Never place an exercise whose {avoid: ...} tags intersect the student's conditions; if the coach insists, warn explicitly and suggest safe alternatives.\n\n" +
                 "CRITICAL FORMAT RULES:\n" +
                 "- NEVER put the [ACTION:...] inside markdown code blocks (no ```).\n" +
                 "- Put the [ACTION:...] at the VERY END of your response as a single compact line.\n" +

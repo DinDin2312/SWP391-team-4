@@ -55,6 +55,12 @@ public class User implements UserDetails {
     @Column(name = "loyalty_points")
     private Integer loyaltyPoints;
 
+    @Column(name = "gender", length = 10)
+    private String gender;
+
+    @Column(name = "date_of_birth")
+    private java.time.LocalDate dateOfBirth;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "USER_SUBJECTS",

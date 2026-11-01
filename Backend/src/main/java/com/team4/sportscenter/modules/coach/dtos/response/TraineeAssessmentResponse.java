@@ -45,5 +45,7 @@ public class TraineeAssessmentResponse {
     private String feedbackNote;
     private String recommendation;
 
+    private Boolean isSelfRecorded;
+
     private LocalDateTime createdAt;
 }

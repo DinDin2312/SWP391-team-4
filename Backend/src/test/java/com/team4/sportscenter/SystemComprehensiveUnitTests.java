@@ -365,7 +365,7 @@ class SystemComprehensiveUnitTests {
         CoachWorkoutPlanRepository planRepo = mock(CoachWorkoutPlanRepository.class);
         BookingRepository bookingRepo = mock(BookingRepository.class);
         CoachAssessmentServiceImpl assessService = new CoachAssessmentServiceImpl(
-                assessRepo, userRepo, classRepo, schedRepo, planRepo, bookingRepo, notifRepo);
+                assessRepo, userRepo, classRepo, schedRepo, planRepo, bookingRepo, notifRepo, mock(com.team4.sportscenter.modules.member.health.MemberHealthService.class));
 
         assertThrows(RuntimeException.class, () -> assessService.createAssessment(null, "coach@gym.vn"));
         assertThrows(RuntimeException.class, () -> assessService.createAssessment(CreateTraineeAssessmentRequest.builder().build(), "coach@gym.vn"));
@@ -411,11 +411,26 @@ class SystemComprehensiveUnitTests {
         TraineeAssessment viaPlan = TraineeAssessment.builder().assessmentId(502).workoutPlan(plan).build();
         assertEquals(100, CoachAssessmentServiceImpl.mapAssessmentToResponse(viaPlan).getClassId());
 
-        when(assessRepo.findByCoachEmailAndUserIdOrderByCreatedAtDesc("coach@gym.vn", 9)).thenReturn(List.of(viaPlan));
+        TraineeAssessment selfAssessment = TraineeAssessment.builder()
+                .assessmentId(503)
+                .user(student)
+                .coach(student)
+                .weight(new java.math.BigDecimal("65.5"))
+                .height(new java.math.BigDecimal("172.0"))
+                .bodyFatPercentage(new java.math.BigDecimal("16.5"))
+                .muscleMass(new java.math.BigDecimal("30.0"))
+                .assessmentTitle("Hội viên tự ghi nhận")
+                .feedbackNote("Tự đo InBody")
+                .build();
+        TraineeAssessmentResponse selfRes = CoachAssessmentServiceImpl.mapAssessmentToResponse(selfAssessment);
+        assertTrue(selfRes.getIsSelfRecorded());
+        assertEquals("Hội viên tự ghi nhận", selfRes.getCoachName());
+
+        when(assessRepo.findByUserIdOrderByCreatedAtDesc(9)).thenReturn(List.of(viaPlan, selfAssessment));
         when(assessRepo.findByCoachEmailOrderByCreatedAtDesc("coach@gym.vn")).thenReturn(List.of(viaBooking));
-        assertEquals(1, assessService.getCoachAssessments("coach@gym.vn", 9).size());
+        assertEquals(2, assessService.getCoachAssessments("coach@gym.vn", 9).size());
         assertEquals(1, assessService.getCoachAssessments("coach@gym.vn", null).size());
-        assertEquals(1, assessService.getStudentAssessmentHistory(9, "coach@gym.vn").size());
+        assertEquals(2, assessService.getStudentAssessmentHistory(9, "coach@gym.vn").size());
 
         List<EnrolledStudentResponse> students = assessService.getStudentsByClassId(100, "coach@gym.vn");
         assertEquals(1, students.size());

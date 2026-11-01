@@ -235,7 +235,7 @@ const MySchedule = () => {
                 {selectedDateBookings.length}{' '}{t("Sessions")}</span>
             </div>
 
-            <div className="flex flex-col gap-3.5 max-h-[640px] overflow-y-auto pr-1">
+            <div className="flex flex-col gap-3.5 max-h-[640px] overflow-y-auto pr-1.5 custom-scrollbar">
               {loading ? (
                 <div className="text-center py-10 text-[var(--text-muted)]">{t("Loading...")}</div>
               ) : selectedDateBookings.length === 0 ? (

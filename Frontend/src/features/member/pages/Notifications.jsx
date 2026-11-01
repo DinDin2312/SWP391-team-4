@@ -4,6 +4,7 @@ import axios from 'axios';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDateTime } from '../../../utils/displayFormat';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';
+import { getSavedMemberNotificationPreferences, filterMemberNotifications } from '../memberUtils';
 import { 
   Bell, 
   BellOff, 
@@ -187,6 +188,7 @@ const Notifications = () => {
   const pageSize = 8;
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
+  const [prefs, setPrefs] = useState(() => getSavedMemberNotificationPreferences());
 
   const fetchNotifications = async () => {
     try {
@@ -204,6 +206,14 @@ const Notifications = () => {
 
   useEffect(() => {
     fetchNotifications();
+
+    const handleSync = () => {
+      setPrefs(getSavedMemberNotificationPreferences());
+      fetchNotifications();
+    };
+
+    window.addEventListener('notificationUpdated', handleSync);
+    return () => window.removeEventListener('notificationUpdated', handleSync);
   }, []);
 
   const handleMarkAsRead = async (id) => {
@@ -291,13 +301,18 @@ const Notifications = () => {
     }
   };
 
+  // Filter notifications according to active member notification preferences
+  const allowedNotifications = useMemo(() => {
+    return filterMemberNotifications(notifications, prefs);
+  }, [notifications, prefs]);
+
   // Compute category statistics
   const tabStats = useMemo(() => {
     const stats = {};
     TABS.forEach(tab => {
-      let matching = notifications;
+      let matching = allowedNotifications;
       if (tab.id !== 'ALL') {
-        matching = notifications.filter(n => {
+        matching = allowedNotifications.filter(n => {
           const normType = (n.type || 'SYSTEM').toUpperCase();
           if (tab.types.includes(normType)) return true;
           if (normType === 'SYSTEM') {
@@ -313,14 +328,14 @@ const Notifications = () => {
       stats[tab.id] = { total, unread };
     });
     return stats;
-  }, [notifications]);
+  }, [allowedNotifications]);
 
   // Filtered notifications
   const filteredNotifications = useMemo(() => {
     const currentTab = TABS.find(t => t.id === activeTab) || TABS[0];
     const q = searchQuery.trim().toLowerCase();
 
-    return notifications.filter(n => {
+    return allowedNotifications.filter(n => {
       const isRead = Boolean(n.isRead ?? n.read);
       if (onlyUnread && isRead) return false;
 
@@ -343,7 +358,7 @@ const Notifications = () => {
 
       return true;
     });
-  }, [notifications, activeTab, onlyUnread, searchQuery]);
+  }, [allowedNotifications, activeTab, onlyUnread, searchQuery]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -361,7 +376,7 @@ const Notifications = () => {
   const startRecord = filteredNotifications.length === 0 ? 0 : (validPage - 1) * pageSize + 1;
   const endRecord = Math.min(validPage * pageSize, filteredNotifications.length);
 
-  const totalUnreadCount = notifications.filter(n => !(n.isRead ?? n.read)).length;
+  const totalUnreadCount = allowedNotifications.filter(n => !(n.isRead ?? n.read)).length;
 
   if (loading) {
     return (
@@ -494,12 +509,14 @@ const Notifications = () => {
 
           {/* Notifications List */}
           <div className="flex flex-col gap-3">
-            {notifications.length === 0 ? (
+            {allowedNotifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-16 bg-white/70 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 text-center backdrop-blur-xl">
                 <BellOff className="w-12 h-12 text-slate-400 mb-3 opacity-50 stroke-[1.5]" />
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t("No notifications yet")}</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm">
-                  {t("When you get updates, they'll show up here.")}
+                  {notifications.length > 0
+                    ? t("Some notifications may be hidden according to your Notification Preferences.")
+                    : t("When you get updates, they'll show up here.")}
                 </p>
               </div>
             ) : filteredNotifications.length === 0 ? (

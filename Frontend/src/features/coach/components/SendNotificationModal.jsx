@@ -1,6 +1,7 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, X, Users, School, User, Bell, CheckCircle2, AlertCircle, Loader2, MessageSquare, Layers
 } from 'lucide-react';
@@ -108,6 +109,9 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
       );
 
       setSuccessMsg(response.data?.message || 'Gửi thông báo thành công!');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('notificationUpdated'));
+      }
 
       setTimeout(() => {
         setTitle('');
@@ -169,21 +173,36 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
         {/* Form Body */}
         <form onSubmit={handleSend} className="p-6 space-y-5 text-xs overflow-y-auto max-h-[80vh]">
 
-          {/* Error Alert */}
-          {errorMsg && (
-            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 flex items-center gap-2.5 animate-shake">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-              <span>{t(errorMsg)}</span>
-            </div>
-          )}
+          {/* Animated Alerts */}
+          <AnimatePresence mode="wait">
+            {errorMsg && (
+              <motion.div
+                key="modal-err"
+                initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 flex items-center gap-2.5"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                <span>{t(errorMsg)}</span>
+              </motion.div>
+            )}
 
-          {/* Success Alert */}
-          {successMsg && (
-            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 flex items-center gap-2.5 animate-fade-in">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
-              <span>{successMsg}</span>
-            </div>
-          )}
+            {successMsg && (
+              <motion.div
+                key="modal-succ"
+                initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-300 flex items-center gap-2.5"
+              >
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+                <span>{successMsg}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* 1. Recipient Scope Selection */}
           <div className="space-y-2">

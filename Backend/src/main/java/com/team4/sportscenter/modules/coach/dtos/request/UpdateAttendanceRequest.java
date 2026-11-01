@@ -22,5 +22,6 @@ public class UpdateAttendanceRequest {
         private Integer bookingId;
         private Integer userId;
         private String attendanceStatus; // "NOT_YET", "PRESENT", "ABSENT"
+        private Boolean overrideFrontDeskCheckIn;
     }
 }

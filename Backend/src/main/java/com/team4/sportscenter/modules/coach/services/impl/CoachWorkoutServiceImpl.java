@@ -208,6 +208,19 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
             notificationsToSave.add(notification);
         }
 
+        // Build confirmation notification for coach
+        Notification coachNotification = Notification.builder()
+                .user(coach)
+                .title(isTrainingPlan ? "[Đã tạo lộ trình] " + request.getTitle().trim() : "[Đã giao bài tập] " + request.getTitle().trim())
+                .message(isTrainingPlan
+                        ? "Bạn đã tạo thành công lộ trình tập luyện \"" + request.getTitle().trim() + "\" (" + totalWeeks + " tuần) cho " + targetStudents.size() + " học viên."
+                        : "Bạn đã giao thành công giáo án \"" + request.getTitle().trim() + "\" cho " + targetStudents.size() + " học viên.")
+                .type("WORKOUT")
+                .isRead(false)
+                .createdAt(now)
+                .build();
+        notificationsToSave.add(coachNotification);
+
         notificationRepository.saveAll(notificationsToSave);
 
         Map<String, Object> response = new HashMap<>();
@@ -265,6 +278,7 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
                 .exerciseName(exercise.getExerciseName())
                 .muscleGroup(exercise.getMuscleGroup())
                 .videoUrl(exercise.getVideoUrl())
+                .contraindications(com.team4.sportscenter.modules.member.health.ExerciseSafetyRules.contraindicationCodesFor(exercise.getExerciseName(), exercise.getMuscleGroup()))
                 .build();
     }
 

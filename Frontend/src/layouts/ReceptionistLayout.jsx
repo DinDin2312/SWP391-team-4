@@ -2,7 +2,7 @@ import { t, useLanguage } from '../i18n/useLanguage';
 import AutoSidebar from '../components/AutoSidebar';
 import LanguageSwitcher from '../i18n/LanguageSwitcher';
 import ThemeToggle from '../components/ThemeToggle';
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import {
@@ -22,7 +22,23 @@ import {
 const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSelectFeature }) => {
   useLanguage();
   const navigate = useNavigate();
-  const { userInfo, logout } = useContext(AuthContext);
+  const { userInfo, logout, updateUserInfo } = useContext(AuthContext);
+
+  useEffect(() => {
+    const handleProfileSync = () => {
+      const stored = localStorage.getItem('userInfo');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && updateUserInfo) {
+            updateUserInfo(parsed);
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('userProfileUpdated', handleProfileSync);
+    return () => window.removeEventListener('userProfileUpdated', handleProfileSync);
+  }, [updateUserInfo]);
 
   const fullName = userInfo?.fullName || 'Lễ Tân Thúy Kiều';
   const initials = fullName
@@ -135,35 +151,52 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
         {/* Profile & Logout Footer */}
         <div className="auto-sidebar-footer p-4 border-t border-[var(--border)]">
           <div className="p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
+            <div
+              onClick={() => {
+                if (onSelectFeature) {
+                  onSelectFeature('settings');
+                }
+              }}
+              className="flex items-center gap-3 cursor-pointer group flex-1 min-w-0"
+              title={t("Settings & Avatar")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  if (onSelectFeature) onSelectFeature('settings');
+                }
+              }}
+            >
+              <div className="relative shrink-0">
                 {userInfo?.avatarUrl ? (
                   <img
                     src={userInfo.avatarUrl.startsWith('http') ? userInfo.avatarUrl : `http://localhost:8080${userInfo.avatarUrl}`}
                     alt={fullName}
-                    className="w-9 h-9 rounded-xl object-cover border border-[var(--primary-soft)]"
+                    className="w-9 h-9 rounded-xl object-cover border border-[var(--primary-soft)] group-hover:ring-2 group-hover:ring-[var(--primary)] transition-all"
                     onError={(e) => { e.currentTarget.style.display = 'none'; if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'; }}
                   />
                 ) : null}
                 <div
                   style={{ display: userInfo?.avatarUrl ? 'none' : 'flex' }}
-                  className="w-9 h-9 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs items-center justify-center"
+                  className="w-9 h-9 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs items-center justify-center group-hover:ring-2 group-hover:ring-[var(--primary)] transition-all"
                 >
                   {initials}
                 </div>
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[var(--success-hover)] border-2 border-[var(--border)]"></span>
               </div>
-              <div className="auto-sidebar-profile-text text-left">
-                <p className="text-xs font-bold text-[var(--text)] leading-tight">{fullName}</p>
-                <p className="text-[10px] text-[var(--primary)] flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3 text-[var(--primary)] inline" />{t("Front Desk")}
+              <div className="auto-sidebar-profile-text text-left min-w-0 flex-1">
+                <p className="text-xs font-bold text-[var(--text)] leading-tight group-hover:text-[var(--primary)] transition-colors truncate">{fullName}</p>
+                <p className="text-[10px] text-[var(--primary)] flex items-center gap-1 mt-0.5">
+                  <ShieldCheck className="w-3 h-3 text-[var(--primary)] inline shrink-0" />
+                  <span className="truncate">{t("Front Desk")}</span>
                 </p>
               </div>
             </div>
             <button
               onClick={handleLogout}
               title={t("Logout")}
-              className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors p-1"
+              className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors p-1.5 rounded-lg hover:bg-[var(--surface-hover)] shrink-0 ml-1 cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
             </button>

@@ -28,6 +28,13 @@ import receptionistService from '../services/receptionistService';
 import { AuthContext } from '../../../context/AuthContext';
 import MemberDetailModal from './MemberDetailModal';
 import CoachCheckInTab from './CoachCheckInTab';
+import {
+  formatCheckInNote,
+  formatCheckInAnomaly,
+  formatCheckInPackage,
+  formatFacilityName,
+} from '../receptionistUtils';
+import { locale } from '../../../i18n/languageStore';
 
 const getTodayDateString = () => {
   const now = new Date();
@@ -362,16 +369,16 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
     if (!dtStr) return '—';
     const d = new Date(dtStr);
     if (Number.isNaN(d.getTime())) return String(dtStr);
-    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) +
+    return d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) +
       ' - ' +
-      d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      d.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   const formatTimeOnly = (dtStr) => {
     if (!dtStr) return '—';
     const d = new Date(dtStr);
     if (Number.isNaN(d.getTime())) return String(dtStr);
-    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
   return (
@@ -1092,14 +1099,14 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                       <strong>{t('Facility / Zone:')}</strong> {activeCheckInForSelectedMember.facilityName}
                     </div>
                     <div>
-                      <strong>{t('Package:')}</strong> {activeCheckInForSelectedMember.packageName}
+                      <strong>{t('Package:')}</strong> {formatCheckInPackage(activeCheckInForSelectedMember.packageName, t)}
                     </div>
                     <div>
                       <strong>{t('Check-in Time:')}</strong> {formatTimeOnly(activeCheckInForSelectedMember.checkInTime)}
                     </div>
                     {activeCheckInForSelectedMember.note && (
                       <div>
-                        <strong>{t('Note:')}</strong> {activeCheckInForSelectedMember.note}
+                        <strong>{t('Note:')}</strong> {formatCheckInNote(activeCheckInForSelectedMember.note, t)}
                       </div>
                     )}
                   </div>
@@ -1632,7 +1639,7 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
 
                         <td style={{ padding: '0.85rem 1rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 600, color: 'var(--text)' }}>{rec.packageName}</span>
+                            <span style={{ fontWeight: 600, color: 'var(--text)' }}>{formatCheckInPackage(rec.packageName, t)}</span>
                             {rec.checkInType === 'CLASS_SESSION' || rec.packageType === 'CLASS' ? (
                               <span
                                 style={{
@@ -1679,7 +1686,7 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.76rem', color: 'var(--primary)', marginTop: '0.2rem', fontWeight: 600 }}>
                             <MapPin style={{ width: '13px', height: '13px' }} />
-                            <span>{rec.facilityName}</span>
+                            <span>{formatFacilityName(rec.facilityName, t)}</span>
                           </div>
 
                           {/* Access Code Pill / Class Direct Entry Pill */}
@@ -1726,7 +1733,7 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                             {rec.note && (
                               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.72rem', padding: '0.12rem 0.45rem', borderRadius: '0.35rem', backgroundColor: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
                                 <FileText style={{ width: '11px', height: '11px' }} />
-                                <span>{rec.note}</span>
+                                <span>{formatCheckInNote(rec.note, t)}</span>
                               </div>
                             )}
                           </div>
@@ -1770,27 +1777,34 @@ const MemberCheckInView = ({ initialMemberId = null, onNavigateFeature }) => {
                               <span style={{ whiteSpace: 'nowrap' }}>{isCurrentlyIn ? t('In Center') : t('Checked Out')}</span>
                             </span>
 
-                            {rec.hasAnomaly && (
-                              <div
-                                title={rec.anomalyReason || t('Check-in vào trung tâm học lớp nhưng HLV ghi nhận VẮNG MẶT trong lớp')}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.3rem',
-                                  padding: '0.2rem 0.5rem',
-                                  borderRadius: '0.4rem',
-                                  fontSize: '0.72rem',
-                                  fontWeight: 700,
-                                  backgroundColor: '#FEF2F2',
-                                  color: '#EF4444',
-                                  border: '1px solid #FCA5A5',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                <ShieldAlert style={{ width: '12px', height: '12px', flexShrink: 0 }} />
-                                <span>{t('Coach flagged absent')}</span>
-                              </div>
-                            )}
+                            {rec.hasAnomaly && (() => {
+                              const isCoachOverrideAnomaly = rec.checkInType === 'COACH_OVERRIDE' ||
+                                rec.anomalyReason?.includes('Chưa qua') ||
+                                rec.anomalyReason?.includes('lễ tân') ||
+                                rec.anomalyReason?.includes('Bypassed') ||
+                                rec.anomalyReason?.includes('front desk');
+                              return (
+                                <div
+                                  title={formatCheckInAnomaly(rec.anomalyReason, t) || t('Check-in vào trung tâm học lớp nhưng HLV ghi nhận VẮNG MẶT trong lớp')}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem',
+                                    padding: '0.2rem 0.5rem',
+                                    borderRadius: '0.4rem',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    backgroundColor: isCoachOverrideAnomaly ? '#FFFBEB' : '#FEF2F2',
+                                    color: isCoachOverrideAnomaly ? '#D97706' : '#EF4444',
+                                    border: isCoachOverrideAnomaly ? '1px solid #FDE68A' : '1px solid #FCA5A5',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  <ShieldAlert style={{ width: '12px', height: '12px', flexShrink: 0 }} />
+                                  <span>{t(isCoachOverrideAnomaly ? 'Chưa qua lễ tân' : 'Coach flagged absent')}</span>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </td>
 

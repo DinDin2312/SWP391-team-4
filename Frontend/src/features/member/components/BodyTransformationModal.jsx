@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
   X,
+  ArrowLeft,
   TrendingUp,
   Award,
   Sparkles,
@@ -10,6 +11,7 @@ import {
   Dumbbell,
   Activity,
   Calendar,
+  ChevronLeft,
   ChevronRight,
   Info,
   Clock,
@@ -33,7 +35,8 @@ const BodyTransformationModal = ({
   trainee = null,
   initialAssessments = null,
   coachInfo = null,
-  isCoachView = false
+  isCoachView = false,
+  onBack = null
 }) => {
   useLanguage();
 
@@ -41,6 +44,12 @@ const BodyTransformationModal = ({
   const [loading, setLoading] = useState(false);
   const [metricType, setMetricType] = useState('ALL'); // 'ALL' | 'FAT_MUSCLE' | 'WEIGHT'
   const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [isOpen, trainee]);
 
   // Close on ESC
   useEffect(() => {
@@ -92,6 +101,9 @@ const BodyTransformationModal = ({
   const latest = scoreResult.latestMetrics || {};
   const bmiInfo = getBmiInfo(latest.weight, latest.height);
 
+  const totalPages = Math.ceil(assessments.length / pageSize) || 1;
+  const paginatedAssessments = assessments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const getTierBadgeClass = (tier) => {
     switch (tier) {
       case 'DIAMOND':
@@ -106,7 +118,7 @@ const BodyTransformationModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-fade-in overflow-y-auto">
+    <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-fade-in overflow-y-auto">
       <div
         className="relative w-full max-w-4xl transformation-modal-card rounded-3xl overflow-hidden flex flex-col my-auto max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
@@ -140,13 +152,28 @@ const BodyTransformationModal = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-all cursor-pointer"
-            title={t('Đóng')}
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="px-3.5 py-2 rounded-xl flex items-center gap-1.5 text-xs font-bold text-[var(--text)] hover:text-[var(--primary)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-all cursor-pointer shadow-xs"
+                title={t('Quay lại đánh giá')}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('Quay lại đánh giá')}</span>
+                <span className="sm:hidden">{t('Quay lại')}</span>
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-all cursor-pointer"
+              title={t('Đóng')}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* ================= MODAL BODY ================= */}
@@ -169,16 +196,16 @@ const BodyTransformationModal = ({
           ) : (
             <>
               {/* 1. FPS HERO SCORE BANNER */}
-              <div className="fps-hero-banner rounded-2xl p-5 sm:p-6 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="fps-hero-banner rounded-2xl p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5 transition-colors">
                 <div className="flex items-center gap-5">
-                  <div className="relative w-24 h-24 rounded-2xl bg-slate-900/80 border border-sky-500/30 flex flex-col items-center justify-center p-2 shadow-inner shrink-0">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-sky-400">
+                  <div className="relative w-24 h-24 rounded-2xl bg-white/95 dark:bg-slate-900/80 border border-sky-200 dark:border-sky-500/30 flex flex-col items-center justify-center p-2 shadow-sm dark:shadow-inner shrink-0">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-sky-600 dark:text-sky-400">
                       FPS
                     </span>
                     <span className="fps-score-number text-3xl sm:text-4xl font-black">
                       {scoreResult.score}
                     </span>
-                    <span className="text-[9px] text-slate-400 font-semibold">
+                    <span className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold">
                       / 100 {t('điểm')}
                     </span>
                   </div>
@@ -189,14 +216,14 @@ const BodyTransformationModal = ({
                         <Award className="w-3.5 h-3.5" />
                         {t(scoreResult.tierName)}
                       </span>
-                      <span className="text-xs text-slate-400 font-medium">
+                      <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
                         {scoreResult.totalAssessments} {t('mốc đo đạc')}
                       </span>
                     </div>
-                    <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
                       {t('Chỉ Số Cải Thiện Thể Chất (Fitness Progress Score)')}
                     </h3>
-                    <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl">
                       {t(scoreResult.message)}
                     </p>
                   </div>
@@ -579,41 +606,47 @@ const BodyTransformationModal = ({
                   </span>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
                   <table className="w-full text-left text-xs text-[var(--text)]">
-                    <thead className="bg-[var(--surface-hover)] text-[var(--text-muted)] font-bold uppercase tracking-wider text-[10px] border-b border-[var(--border)]">
+                    <thead className="bg-[var(--surface-hover)] text-[var(--text-muted)] font-bold uppercase tracking-wider text-[10px] border-b border-[var(--border)] sticky top-0 z-10">
                       <tr>
-                        <th className="px-3.5 py-2.5 rounded-l-lg">{t('Ngày đo')}</th>
-                        <th className="px-3.5 py-2.5">{t('Cân nặng')}</th>
-                        <th className="px-3.5 py-2.5">{t('Tỷ lệ mỡ')}</th>
-                        <th className="px-3.5 py-2.5">{t('Khối lượng cơ')}</th>
-                        <th className="px-3.5 py-2.5">{t('Đánh giá HLV')}</th>
-                        <th className="px-3.5 py-2.5 rounded-r-lg">{t('Ghi chú')}</th>
+                        <th className="px-3.5 py-2.5 whitespace-nowrap">{t('Ngày đo')}</th>
+                        <th className="px-3.5 py-2.5 whitespace-nowrap">{t('Cân nặng')}</th>
+                        <th className="px-3.5 py-2.5 whitespace-nowrap">{t('Tỷ lệ mỡ')}</th>
+                        <th className="px-3.5 py-2.5 whitespace-nowrap">{t('Khối lượng cơ')}</th>
+                        <th className="px-3.5 py-2.5 whitespace-nowrap">{t('Đánh giá HLV')}</th>
+                        <th className="px-3.5 py-2.5">{t('Ghi chú')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border)]">
-                      {assessments.map((a, idx) => {
+                      {paginatedAssessments.map((a, idx) => {
                         const d = a.createdAt ? new Date(a.createdAt) : null;
                         const dateStr = d ? d.toLocaleDateString(locale()) : '--';
 
                         return (
                           <tr key={idx} className="hover:bg-[var(--surface-hover)]/60 transition-colors">
-                            <td className="px-3.5 py-3 font-semibold">{dateStr}</td>
-                            <td className="px-3.5 py-3 font-bold text-[var(--text)]">
+                            <td className="px-3.5 py-3 font-semibold whitespace-nowrap">{dateStr}</td>
+                            <td className="px-3.5 py-3 font-bold text-[var(--text)] whitespace-nowrap">
                               {a.weight ? `${a.weight} kg` : '--'}
                             </td>
-                            <td className="px-3.5 py-3 font-bold text-amber-500">
+                            <td className="px-3.5 py-3 font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap">
                               {a.bodyFatPercentage ? `${a.bodyFatPercentage}%` : '--'}
                             </td>
-                            <td className="px-3.5 py-3 font-bold text-emerald-500">
+                            <td className="px-3.5 py-3 font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
                               {a.muscleMass ? `${a.muscleMass} kg` : '--'}
                             </td>
-                            <td className="px-3.5 py-3">
-                              <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold text-[10px]">
-                                {a.performanceRating ? `${a.performanceRating}/5 ⭐` : '--'}
-                              </span>
+                            <td className="px-3.5 py-3 whitespace-nowrap">
+                              {a.isSelfRecorded || (a.assessmentTitle && a.assessmentTitle.includes('tự')) || (a.coachId && a.userId && a.coachId === a.userId) ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-sky-50 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 font-bold text-[10px] whitespace-nowrap shadow-xs">
+                                  {t("Tự cập nhật")}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold text-[10px] whitespace-nowrap">
+                                  {a.performanceRating ? `${a.performanceRating}/5 ⭐` : '--'}
+                                </span>
+                              )}
                             </td>
-                            <td className="px-3.5 py-3 text-[var(--text-muted)] max-w-xs truncate">
+                            <td className="px-3.5 py-3 text-[var(--text-muted)] max-w-xs truncate" title={a.feedbackNote || a.recommendation || ''}>
                               {a.feedbackNote || a.recommendation || '--'}
                             </td>
                           </tr>
@@ -622,6 +655,41 @@ const BodyTransformationModal = ({
                     </tbody>
                   </table>
                 </div>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-3 text-xs text-[var(--text-muted)]">
+                    <span>
+                      {t("Hiển thị {0} - {1} trên {2} bản ghi", [
+                        (currentPage - 1) * pageSize + 1,
+                        Math.min(currentPage * pageSize, assessments.length),
+                        assessments.length
+                      ])}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="p-1.5 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text)] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--border)] transition-all cursor-pointer font-medium flex items-center justify-center"
+                        title={t("Trang trước")}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <span className="px-2 font-semibold text-[var(--text)]">
+                        {currentPage} / {totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="p-1.5 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text)] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--border)] transition-all cursor-pointer font-medium flex items-center justify-center"
+                        title={t("Trang sau")}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -631,15 +699,28 @@ const BodyTransformationModal = ({
         <div className="px-6 py-4 bg-[var(--surface)] border-t border-[var(--border)] flex items-center justify-between sticky bottom-0 z-20">
           <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-amber-500" />
-            <span>{t('Dữ liệu được cập nhật tự động sau mỗi lần đo của Huấn luyện viên.')}</span>
+            <span>{t('Dữ liệu được cập nhật tự động sau mỗi lần đo của Huấn luyện viên hoặc do Hội viên tự cập nhật.')}</span>
           </div>
 
-          <button
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-[var(--surface-hover)] hover:bg-[var(--border)] text-[var(--text)] font-semibold text-xs transition-all cursor-pointer"
-          >
-            {t('Đóng')}
-          </button>
+          <div className="flex items-center gap-2">
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="px-4 py-2 rounded-xl bg-[var(--surface-hover)] hover:bg-[var(--border)] text-[var(--text)] font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>{t('Quay lại')}</span>
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs transition-all cursor-pointer"
+            >
+              {t('Đóng')}
+            </button>
+          </div>
         </div>
       </div>
     </div>

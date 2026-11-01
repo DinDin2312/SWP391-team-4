@@ -3,14 +3,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
-  Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send, Dumbbell, Target, Trophy, Activity, TrendingUp
+  Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send, Dumbbell, Target, Trophy, Activity, TrendingUp, HeartPulse, AlertTriangle, Scale
 } from 'lucide-react';
 import SendNotificationModal from '../components/SendNotificationModal';
 import BodyTransformationModal from '../../member/components/BodyTransformationModal';
+import { healthBadge, HEALTH_CONDITIONS } from '../../member/healthProfileUtils';
 
 const CoachStudents = () => {
   const navigate = useNavigate();
-  useLanguage();
+  const currentLang = useLanguage();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,6 +29,15 @@ const CoachStudents = () => {
   useEffect(() => {
     fetchCoachStudents();
   }, []);
+
+  useEffect(() => {
+    if (!selectedStudent) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setSelectedStudent(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedStudent]);
 
   const fetchCoachStudents = async () => {
     try {
@@ -93,7 +103,7 @@ const CoachStudents = () => {
         {/* Global Notification Button */}
         <button
           onClick={handleOpenBroadcastNotif}
-          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-[var(--text)] font-bold text-xs shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all cursor-pointer shrink-0 self-start md:self-auto"
+          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all cursor-pointer shrink-0 self-start md:self-auto"
         >
           <Bell className="w-4 h-4 animate-bounce" />
           <span>{t("Gửi Thông Báo")}</span>
@@ -164,108 +174,164 @@ const CoachStudents = () => {
             <p className="text-xs text-[var(--text-muted)] mt-1">{t("No trainees matched your current search criteria")}</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
             <table className="w-full text-left text-xs text-[var(--text)]">
-              <thead className="bg-[var(--surface)] text-[var(--text-muted)] font-bold uppercase tracking-wider text-[10px] border-b border-[var(--border)]">
+              <thead className="bg-[var(--surface-hover)]/70 text-[var(--text-muted)] font-bold uppercase tracking-wider text-[11px] border-b border-[var(--border)]">
                 <tr>
-                  <th className="px-4 py-3.5 rounded-l-xl">{t("Trainee")}</th>
-                  <th className="px-4 py-3.5">{t("Contact Details")}</th>
-                  <th className="px-4 py-3.5">{t("Enrolled Classes")}</th>
-                  <th className="px-4 py-3.5 text-center">{t("Booked Sessions")}</th>
-                  <th className="px-4 py-3.5 text-right rounded-r-xl">{t("Actions")}</th>
+                  <th className="px-4 py-3.5 whitespace-nowrap">{t("Trainee")}</th>
+                  <th className="px-4 py-3.5 whitespace-nowrap">{t("Contact Details")}</th>
+                  <th className="px-4 py-3.5 whitespace-nowrap">{t("Enrolled Classes")}</th>
+                  <th className="px-4 py-3.5 text-center whitespace-nowrap">{t("Booked Sessions")}</th>
+                  <th className="px-4 py-3.5 text-right whitespace-nowrap">{t("Actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
                 {filteredStudents.map((st, idx) => {
                   const initials = st.fullName ? st.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : t('TR');
+                  const hBadge = healthBadge(st.health, currentLang);
 
                   return (
-                    <tr key={idx} className="hover:bg-[var(--surface-hover)] transition-colors group">
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center shrink-0">
+                    <tr key={st.userId || idx} className="hover:bg-[var(--surface-hover)]/40 transition-colors group">
+                      {/* 1. Trainee & Health Profile */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3 min-w-[200px]">
+                          <div
+                            onClick={() => setSelectedStudent(st)}
+                            className="w-10 h-10 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center shrink-0 shadow-xs cursor-pointer hover:scale-105 transition-transform"
+                            title={t("Chi tiết")}
+                          >
                             {initials}
                           </div>
-                          <div className="flex flex-col">
-                            <span className="font-bold text-[var(--text)] text-sm group-hover:text-[var(--primary)] transition-colors">{st.fullName}</span>
-                            <span className="text-[10px] text-[var(--text-muted)]">{t("Trainee ID: #")}{st.userId}</span>
+                          <div className="flex flex-col min-w-0">
+                            <span
+                              onClick={() => setSelectedStudent(st)}
+                              className="font-bold text-[var(--text)] text-sm group-hover:text-[var(--primary)] transition-colors truncate cursor-pointer"
+                              title={st.fullName}
+                            >
+                              {st.fullName}
+                            </span>
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              <span className="text-[10px] text-[var(--text-muted)] font-mono whitespace-nowrap">#{st.userId}</span>
+                              <span className="text-[10px] text-[var(--text-muted)] opacity-40">•</span>
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap shrink-0 ${
+                                  hBadge.variant === 'danger'
+                                    ? 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30'
+                                    : hBadge.variant === 'warning'
+                                    ? 'bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30'
+                                    : hBadge.variant === 'success'
+                                    ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30'
+                                    : 'bg-slate-100 dark:bg-slate-500/15 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-500/30'
+                                }`}
+                                title={hBadge.tooltip}
+                              >
+                                <HeartPulse className="w-2.5 h-2.5 shrink-0" />
+                                <span>{t(hBadge.label)}</span>
+                              </span>
+                            </div>
+                            {(st.weight || st.height || st.bodyFatPercentage) && (
+                              <div className="flex items-center gap-1.5 mt-1 text-[10px] text-[var(--text-muted)] flex-wrap">
+                                <Scale className="w-3 h-3 text-[var(--primary)] shrink-0" />
+                                {st.weight && <span className="font-semibold text-[var(--text)]">{st.weight}kg</span>}
+                                {st.height && <span>• {st.height}cm</span>}
+                                {st.bodyFatPercentage && <span className="text-amber-600 dark:text-amber-400">• {st.bodyFatPercentage}% {t('fat')}</span>}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
 
-                      <td className="px-4 py-4">
-                        <div className="flex flex-col gap-1 text-[var(--text)]">
-                          {st.email && (
-                            <span className="flex items-center gap-1.5 text-xs">
-                              <Mail className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                              {st.email}
-                            </span>
-                          )}
-                          {st.phone && (
-                            <span className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
-                              <Phone className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                              {st.phone}
-                            </span>
-                          )}
+                      {/* 2. Contact Details */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col gap-0.5 min-w-[170px] text-[var(--text)]">
+                          <span className="flex items-center gap-1.5 text-xs">
+                            <Mail className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
+                            <span className="truncate max-w-[180px]">{st.email || t('Not updated')}</span>
+                          </span>
+                          <span className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                            <Phone className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
+                            <span>{st.phone || t('No phone')}</span>
+                          </span>
                         </div>
                       </td>
 
-                      <td className="px-4 py-4">
-                        <div className="flex flex-wrap gap-1.5 max-w-xs">
+                      {/* 3. Enrolled Classes */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col gap-1 min-w-[180px] max-w-[240px]">
                           {st.enrolledClasses && st.enrolledClasses.length > 0 ? (
-                            st.enrolledClasses.map((cls, cIdx) => (
-                              <span key={cIdx} className="px-2 py-0.5 rounded-md bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] text-[10px] font-semibold">
-                                {cls}
-                              </span>
-                            ))
+                            <>
+                              {st.enrolledClasses.slice(0, 2).map((cls, cIdx) => (
+                                <span
+                                  key={cIdx}
+                                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] text-[11px] font-semibold truncate max-w-full"
+                                  title={cls}
+                                >
+                                  <BookOpen className="w-3 h-3 shrink-0 opacity-70" />
+                                  <span className="truncate">{cls}</span>
+                                </span>
+                              ))}
+                              {st.enrolledClasses.length > 2 && (
+                                <span
+                                  className="text-[10px] text-[var(--text-muted)] font-medium pl-1"
+                                  title={st.enrolledClasses.slice(2).join(', ')}
+                                >
+                                  +{st.enrolledClasses.length - 2} {t('lớp khác')}
+                                </span>
+                              )}
+                            </>
                           ) : (
                             <span className="text-[var(--text-muted)] italic text-[11px]">{t("Unassigned")}</span>
                           )}
                         </div>
                       </td>
 
-                      <td className="px-4 py-4 text-center">
-                        <span className="px-3 py-1 rounded-full bg-[var(--success-soft)] border border-[var(--success-soft)] text-[var(--success-text)] font-bold text-xs">
-                          {st.totalBookings || 0}{' '}{t("sessions")}</span>
+                      {/* 4. Booked Sessions */}
+                      <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/60 font-bold text-xs shadow-xs">
+                          <Activity className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                          <span>{st.totalBookings || 0} {t("sessions")}</span>
+                        </span>
                       </td>
 
-                      <td className="px-4 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      {/* 5. Action Buttons */}
+                      <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => {
                               setSelectedTraineeForChart(st);
                               setIsTransformationModalOpen(true);
                             }}
                             title={t("Xem biểu đồ tiến trình thể trạng & FPS")}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 font-semibold text-xs border border-emerald-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 dark:hover:text-white text-emerald-800 dark:text-emerald-300 font-bold text-xs border border-emerald-300 dark:border-emerald-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
                           >
-                            <TrendingUp className="w-3.5 h-3.5" />
+                            <TrendingUp className="w-3.5 h-3.5 shrink-0" />
                             <span>{t("Tiến độ")}</span>
                           </button>
 
                           <button
                             onClick={() => navigate('/coach/workouts')}
                             title={t("Giao bài tập")}
-                            className="px-3 py-1.5 rounded-lg bg-[var(--primary-soft)] hover:bg-[var(--primary)] hover:text-[color:var(--on-primary)] text-[var(--primary)] font-semibold text-xs border border-[var(--primary-soft)] flex items-center gap-1.5 transition-all cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white text-blue-800 dark:text-blue-300 font-bold text-xs border border-blue-300 dark:border-blue-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
                           >
-                            <Dumbbell className="w-3.5 h-3.5" />
+                            <Dumbbell className="w-3.5 h-3.5 shrink-0" />
                             <span>{t("Giao bài")}</span>
                           </button>
 
                           <button
                             onClick={() => handleOpenIndividualNotif(st)}
                             title={t("Gửi thông báo riêng")}
-                            className="px-3 py-1.5 rounded-lg bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 hover:text-[var(--text)] font-semibold text-xs border border-blue-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/60 hover:bg-purple-600 hover:text-white dark:hover:bg-purple-600 dark:hover:text-white text-purple-800 dark:text-purple-300 font-bold text-xs border border-purple-300 dark:border-purple-700/60 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
                           >
-                            <Send className="w-3.5 h-3.5 text-[var(--primary)]" />
+                            <Send className="w-3.5 h-3.5 shrink-0" />
                             <span>{t("Gửi tin")}</span>
                           </button>
 
                           <button
                             onClick={() => setSelectedStudent(st)}
-                            className="px-3.5 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text)] hover:text-[var(--text)] font-semibold text-xs border border-[var(--border)] transition-all cursor-pointer"
+                            title={t("Xem hồ sơ chi tiết")}
+                            className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[var(--primary)] hover:text-white text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-300 dark:border-slate-700 transition-all cursor-pointer shadow-xs"
                           >
-                            {t("Chi tiết")}
+                            <span>{t("Chi tiết")}</span>
                           </button>
                         </div>
                       </td>
@@ -280,28 +346,36 @@ const CoachStudents = () => {
 
       {/* Trainee Detail Modal Popup */}
       {selectedStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--overlay)] backdrop-blur-md animate-fade-in">
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl w-full max-w-lg overflow-hidden shadow-[var(--shadow)] flex flex-col">
-            <div className="p-6 bg-gradient-to-r from-[var(--surface)] via-[var(--surface)] to-[var(--surface)] border-b border-[var(--border)] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-extrabold text-sm flex items-center justify-center">
+        <div
+          onClick={() => setSelectedStudent(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-sm animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl flex flex-col my-auto"
+          >
+            <div className="shrink-0 p-5 sm:p-6 bg-gradient-to-r from-[var(--surface)] via-[var(--surface)] to-[var(--surface)] border-b border-[var(--border)] flex items-center justify-between sticky top-0 z-10">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-12 h-12 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-extrabold text-sm flex items-center justify-center shrink-0">
                   {selectedStudent.fullName ? selectedStudent.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : t('TR')}
                 </div>
-                <div className="flex flex-col">
-                  <h3 className="text-lg font-bold text-[var(--text)]">{selectedStudent.fullName}</h3>
+                <div className="flex flex-col min-w-0">
+                  <h3 className="text-lg font-bold text-[var(--text)] truncate">{selectedStudent.fullName}</h3>
                   <span className="text-xs text-[var(--primary)] font-medium">{t("Official Nexus Center Trainee")}</span>
                 </div>
               </div>
 
               <button
+                type="button"
                 onClick={() => setSelectedStudent(null)}
-                className="w-8 h-8 rounded-lg bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] flex items-center justify-center transition-all"
+                aria-label={t("Đóng")}
+                className="w-9 h-9 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] flex items-center justify-center transition-all cursor-pointer shrink-0 ml-2"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs">
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 text-xs">
               <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-2">
                 <h5 className="font-bold text-[var(--text)] text-xs uppercase tracking-wider text-[var(--text-muted)]">{t("Contact Information")}</h5>
                 <div className="grid grid-cols-1 gap-2 pt-1 text-[var(--text)]">
@@ -317,15 +391,15 @@ const CoachStudents = () => {
               </div>
 
               {/* Workout Goal & Fitness Level Section */}
-              <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-900/30 via-[var(--surface)] to-purple-900/20 border border-indigo-500/30 space-y-3 shadow-sm">
-                <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-50/80 via-[var(--surface)] to-purple-50/50 dark:from-indigo-950/40 dark:via-[var(--surface)] dark:to-purple-950/20 border border-indigo-200/80 dark:border-indigo-500/30 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between border-b border-indigo-200/80 dark:border-indigo-500/20 pb-2">
                   <div className="flex items-center gap-2">
-                    <Target className="w-4 h-4 text-indigo-400" />
-                    <h5 className="font-bold text-indigo-300 text-xs uppercase tracking-wider">{t("Mục tiêu tập luyện & Thể lực")}</h5>
+                    <Target className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <h5 className="font-bold text-indigo-700 dark:text-indigo-300 text-xs uppercase tracking-wider">{t("Mục tiêu tập luyện & Thể lực")}</h5>
                   </div>
                   {selectedStudent.fitnessLevel && (
-                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold text-[11px] border border-indigo-500/30 flex items-center gap-1">
-                      <Activity className="w-3 h-3 text-indigo-400" />
+                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-semibold text-[11px] border border-indigo-200 dark:border-indigo-500/30 flex items-center gap-1">
+                      <Activity className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                       {codeLabel(selectedStudent.fitnessLevel) || selectedStudent.fitnessLevel}
                     </span>
                   )}
@@ -335,18 +409,18 @@ const CoachStudents = () => {
                   <div>
                     <span className="text-[11px] text-[var(--text-muted)] block">{t("Mục tiêu cá nhân:")}</span>
                     <p className="text-sm font-semibold text-[var(--text)] mt-0.5 flex items-center gap-2">
-                      <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
+                      <Trophy className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
                       <span>{selectedStudent.workoutGoal || t("Chưa thiết lập mục tiêu tập luyện")}</span>
                     </p>
                   </div>
 
                   {selectedStudent.assignedPlans && selectedStudent.assignedPlans.length > 0 && (
-                    <div className="pt-2 border-t border-indigo-500/10">
+                    <div className="pt-2 border-t border-indigo-200/60 dark:border-indigo-500/10">
                       <span className="text-[11px] text-[var(--text-muted)] block mb-1">{t("Giáo án HLV đã giao:")}</span>
                       <div className="flex flex-wrap gap-1.5">
                         {selectedStudent.assignedPlans.map((planTitle, pIdx) => (
-                          <span key={pIdx} className="px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-300 font-medium text-[11px] border border-purple-500/30 flex items-center gap-1">
-                            <Dumbbell className="w-3 h-3 text-purple-400" />
+                          <span key={pIdx} className="px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 font-medium text-[11px] border border-purple-200 dark:border-purple-500/30 flex items-center gap-1 shadow-xs">
+                            <Dumbbell className="w-3 h-3 text-purple-600 dark:text-purple-400" />
                             {planTitle}
                           </span>
                         ))}
@@ -354,6 +428,126 @@ const CoachStudents = () => {
                     </div>
                   )}
                 </div>
+              </div>
+
+                            {/* Health Profile & Medical Alert Section */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-teal-50/80 via-[var(--surface)] to-blue-50/50 dark:from-teal-950/40 dark:via-[var(--surface)] dark:to-blue-950/20 border border-teal-200/80 dark:border-teal-500/30 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between border-b border-teal-200/80 dark:border-teal-500/20 pb-2">
+                  <div className="flex items-center gap-2">
+                    <HeartPulse className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    <h5 className="font-bold text-teal-700 dark:text-teal-300 text-xs uppercase tracking-wider">{t("Health & Physiology Profile")}</h5>
+                  </div>
+                  {selectedStudent.health && (
+                    <span className={`px-2.5 py-0.5 rounded-full font-semibold text-[11px] border flex items-center gap-1 ${
+                      selectedStudent.health.clearanceRecommended
+                        ? 'bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30'
+                        : selectedStudent.health.completed
+                        ? 'bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30'
+                        : 'bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-500/30'
+                    }`}>
+                      {t(healthBadge(selectedStudent.health, currentLang).label)}
+                    </span>
+                  )}
+                </div>
+
+                {selectedStudent.health?.clearanceRecommended && (
+                  <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs flex items-center gap-2.5">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                    <span>{t("Warning: Red-flag PAR-Q — Medical consultation advised before vigorous training.")}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <span className="text-[var(--text-muted)] block">{t("Gender:")}</span>
+                    <strong className="text-[var(--text)]">
+                      {selectedStudent.health?.gender === 'MALE' ? t('Male') : selectedStudent.health?.gender === 'FEMALE' ? t('Female') : selectedStudent.health?.gender ? t('Other') : t('Not declared')}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-muted)] block">{t("Age:")}</span>
+                    <strong className="text-[var(--text)]">
+                      {selectedStudent.health?.age != null ? t('{0} years old', [selectedStudent.health.age]) : t('Not declared')}
+                    </strong>
+                  </div>
+                </div>
+
+                {selectedStudent.health?.conditions && selectedStudent.health.conditions.length > 0 && (
+                  <div>
+                    <span className="text-[11px] text-[var(--text-muted)] block mb-1.5 font-medium">{t("Pre-existing conditions / Injuries:")}</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedStudent.health.conditions.map((cCode, cIdx) => {
+                        const condObj = HEALTH_CONDITIONS.find(c => c.code === cCode);
+                        const condLabel = condObj ? (currentLang === 'en' ? condObj.en : condObj.vi) : cCode;
+                        return (
+                          <span
+                            key={cIdx}
+                            className="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[11px] font-semibold border border-amber-200 dark:border-amber-500/30 shadow-xs"
+                          >
+                            {condLabel}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {selectedStudent.health?.notes && (
+                  <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs text-[var(--text)] italic">
+                    "{selectedStudent.health.notes}"
+                  </div>
+                )}
+              </div>
+
+{/* Latest Physical & InBody Metrics Section */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50/80 via-[var(--surface)] to-emerald-50/50 dark:from-blue-950/40 dark:via-[var(--surface)] dark:to-emerald-950/20 border border-blue-200/80 dark:border-blue-500/30 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between border-b border-blue-200/80 dark:border-blue-500/20 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Scale className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <h5 className="font-bold text-blue-700 dark:text-blue-300 text-xs uppercase tracking-wider">{t("Chỉ số thể trạng InBody gần nhất")}</h5>
+                  </div>
+                  {selectedStudent.metricsUpdatedAt && (
+                    <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-semibold text-[10px] border border-blue-200 dark:border-blue-500/30">
+                      {selectedStudent.isSelfRecorded ? t("Học viên tự cập nhật") : t("HLV đo định kỳ")}
+                    </span>
+                  )}
+                </div>
+
+                {selectedStudent.weight || selectedStudent.height || selectedStudent.bodyFatPercentage || selectedStudent.muscleMass ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    <div className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex flex-col">
+                      <span className="text-[10px] text-[var(--text-muted)] font-medium">{t("Cân nặng")}</span>
+                      <strong className="text-sm font-bold text-[var(--text)] mt-0.5">
+                        {selectedStudent.weight ? `${selectedStudent.weight} kg` : '--'}
+                      </strong>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex flex-col">
+                      <span className="text-[10px] text-[var(--text-muted)] font-medium">{t("Chiều cao")}</span>
+                      <strong className="text-sm font-bold text-[var(--text)] mt-0.5">
+                        {selectedStudent.height ? `${selectedStudent.height} cm` : '--'}
+                      </strong>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex flex-col">
+                      <span className="text-[10px] text-[var(--text-muted)] font-medium">{t("Tỉ lệ mỡ")}</span>
+                      <strong className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5">
+                        {selectedStudent.bodyFatPercentage ? `${selectedStudent.bodyFatPercentage}%` : '--'}
+                      </strong>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex flex-col">
+                      <span className="text-[10px] text-[var(--text-muted)] font-medium">{t("Khối lượng cơ")}</span>
+                      <strong className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                        {selectedStudent.muscleMass ? `${selectedStudent.muscleMass} kg` : '--'}
+                      </strong>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-[var(--text-muted)] italic py-1">
+                    {t("Chưa có số đo thể trạng InBody nào được ghi nhận.")}
+                  </div>
+                )}
               </div>
 
               <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-2">
@@ -379,7 +573,7 @@ const CoachStudents = () => {
               )}
             </div>
 
-            <div className="p-4 bg-[var(--surface)] border-t border-[var(--border)] flex flex-wrap justify-between items-center gap-2">
+            <div className="shrink-0 p-4 bg-[var(--surface)] border-t border-[var(--border)] flex flex-wrap justify-between items-center gap-2">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -400,7 +594,7 @@ const CoachStudents = () => {
                     setSelectedStudent(null);
                     handleOpenIndividualNotif(current);
                   }}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-[var(--text)] font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
                   <span>{t("Gửi thông báo")}</span>
@@ -409,7 +603,7 @@ const CoachStudents = () => {
 
               <button
                 onClick={() => setSelectedStudent(null)}
-                className="px-5 py-2 rounded-xl bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text)] hover:text-[var(--text)] font-semibold text-xs transition-all cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-[var(--surface-hover)] hover:bg-[var(--border)] text-[var(--text)] border border-[var(--border)] font-semibold text-xs transition-all cursor-pointer"
               >{t("Đóng")}</button>
             </div>
           </div>

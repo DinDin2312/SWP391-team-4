@@ -32,10 +32,10 @@ export const useAttendanceHistory = () => {
     }
   }, [fetchHistory, token]);
 
-  const stats = useMemo(() => calculateAttendanceStats(bookings), [bookings]);
+  const stats = useMemo(() => calculateAttendanceStats(bookings, Date.now()), [bookings]);
 
   const filteredBookings = useMemo(() => {
-    const statusFiltered = filterBookingsByStatus(bookings, filterStatus);
+    const statusFiltered = filterBookingsByStatus(bookings, filterStatus, Date.now());
     const q = searchQuery.trim().toLowerCase();
     if (!q) return statusFiltered;
     return statusFiltered.filter(b => {

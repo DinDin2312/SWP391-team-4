@@ -22,7 +22,7 @@ import {
 import { useAttendanceHistory } from '../hooks/useAttendanceHistory';
 
 // Extracted UI Component for Badges
-const StatusBadge = ({ status }) => {
+const StatusBadge = ({ status, endTime, startTime }) => {
   if (status === "PRESENT") {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-xs font-bold uppercase tracking-wider shadow-xs">
@@ -31,18 +31,19 @@ const StatusBadge = ({ status }) => {
       </span>
     );
   }
-  if (status === "ABSENT") {
+  const isPast = (endTime ? new Date(endTime).getTime() : (startTime ? new Date(startTime).getTime() : 0)) < Date.now();
+  if (status === "ABSENT" || isPast) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-xs font-bold uppercase tracking-wider shadow-xs">
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-xs font-bold uppercase tracking-wider shadow-xs" title={status === "ABSENT" ? t("Vắng mặt") : t("Buổi học đã kết thúc và không có lượt điểm danh")}>
         <XCircle className="w-3.5 h-3.5 text-rose-500" />
-        {t("Absent")}
+        {status === "ABSENT" ? t("Absent") : t("Vắng mặt (Hết ca)")}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 text-xs font-bold uppercase tracking-wider shadow-xs">
       <Clock className="w-3.5 h-3.5 text-amber-500" />
-      {t("Pending")}
+      {t("Upcoming / Pending")}
     </span>
   );
 };
@@ -286,7 +287,7 @@ const AttendanceHistory = () => {
             { id: 'ALL', label: t('All'), count: bookings.length },
             { id: 'PRESENT', label: t('Present'), count: stats.presentCount },
             { id: 'ABSENT', label: t('Absent'), count: stats.absentCount },
-            { id: 'PENDING', label: t('Pending'), count: stats.pendingCount || 0 }
+            { id: 'PENDING', label: t('Upcoming / Pending'), count: stats.pendingCount || 0 }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -454,7 +455,7 @@ const AttendanceHistory = () => {
 
                         {/* Status Badge */}
                         <td className="p-4 text-right">
-                          <StatusBadge status={booking.attendanceStatus} />
+                          <StatusBadge status={booking.attendanceStatus} endTime={booking.endTime} startTime={booking.startTime} />
                         </td>
                       </tr>
                     );

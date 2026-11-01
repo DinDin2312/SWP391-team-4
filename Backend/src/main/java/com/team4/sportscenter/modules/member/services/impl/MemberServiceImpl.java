@@ -377,6 +377,20 @@ public class MemberServiceImpl implements MemberService {
                         .isRead(false)
                         .build());
             } catch (Exception ignored) {}
+
+            try {
+                User coach = (schedules.get(0).getGymClass() != null) ? schedules.get(0).getGymClass().getCoach() : null;
+                if (coach != null && coach.getEmail() != null) {
+                    notificationRepository.save(Notification.builder()
+                            .user(coach)
+                            .title("Học viên mới đăng ký lớp / New Trainee Enrolled")
+                            .message("Học viên " + (user.getFullName() != null && !user.getFullName().isBlank() ? user.getFullName() : user.getEmail())
+                                    + " đã đăng ký vào lớp '" + schedules.get(0).getGymClass().getClassName() + "'.")
+                            .type("BOOKING")
+                            .isRead(false)
+                            .build());
+                }
+            } catch (Exception ignored) {}
         }
     }
 
@@ -431,6 +445,21 @@ public class MemberServiceImpl implements MemberService {
                     .isRead(false)
                     .build();
             notificationRepository.save(notification);
+
+            try {
+                User coach = (myExistingBookings.get(0).getSchedule() != null && myExistingBookings.get(0).getSchedule().getGymClass() != null)
+                        ? myExistingBookings.get(0).getSchedule().getGymClass().getCoach() : null;
+                if (coach != null && coach.getEmail() != null) {
+                    notificationRepository.save(Notification.builder()
+                            .user(coach)
+                            .title("Học viên hủy đăng ký lớp / Trainee Dropped Class")
+                            .message("Học viên " + (user.getFullName() != null && !user.getFullName().isBlank() ? user.getFullName() : user.getEmail())
+                                    + " đã hủy " + cancelledCount + " buổi học lớp '" + className + "'.")
+                            .type("BOOKING")
+                            .isRead(false)
+                            .build());
+                }
+            } catch (Exception ignored) {}
         }
     }
 
@@ -599,6 +628,7 @@ public class MemberServiceImpl implements MemberService {
                         .weightKg(d.getWeightKg())
                         .coachNote(d.getCoachNote())
                         .sortOrder(d.getSortOrder() != null ? d.getSortOrder() : 0)
+                        .contraindications(com.team4.sportscenter.modules.member.health.ExerciseSafetyRules.contraindicationCodesFor(d.getExercise() != null ? d.getExercise().getExerciseName() : "", d.getExercise() != null ? d.getExercise().getMuscleGroup() : ""))
                         .build()).collect(Collectors.toList())
                 : Collections.emptyList();
 
@@ -644,6 +674,7 @@ public class MemberServiceImpl implements MemberService {
                                     .weightKg(d.getWeightKg())
                                     .coachNote(d.getCoachNote())
                                     .sortOrder(d.getSortOrder() != null ? d.getSortOrder() : 0)
+                        .contraindications(com.team4.sportscenter.modules.member.health.ExerciseSafetyRules.contraindicationCodesFor(d.getExercise() != null ? d.getExercise().getExerciseName() : "", d.getExercise() != null ? d.getExercise().getMuscleGroup() : ""))
                                     .build())
                             .collect(Collectors.toList());
 

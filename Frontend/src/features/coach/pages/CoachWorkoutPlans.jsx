@@ -1,9 +1,11 @@
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { locale } from '../../../i18n/languageStore.js';
+import { exerciseConflicts, formatContraTag, formatContraindications } from '../../member/healthProfileUtils';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Dumbbell, Users, Plus, Trash2, Send, CheckCircle2, AlertCircle,
+  Dumbbell, Users, Plus, Trash2, Send, CheckCircle2, AlertCircle, AlertTriangle,
   Clock, Play, ShieldAlert, Sparkles, Filter, RefreshCw, X, ChevronRight,
   BookOpen, Layers, Calendar, Copy, Target, Check, ChevronDown, Award, TrendingUp,
   ChevronLeft, Eye, List
@@ -70,11 +72,12 @@ const createInitialWeekSchedule = (defaultExerciseId = '') => ({
 });
 
 const CoachWorkoutPlans = () => {
-  useLanguage();
+  const currentLang = useLanguage();
 
   // Main Data States
   const [exercises, setExercises] = useState([]);
   const [students, setStudents] = useState([]);
+
   const [classes, setClasses] = useState([]);
   const [assignedPlans, setAssignedPlans] = useState([]);
 
@@ -121,6 +124,14 @@ const CoachWorkoutPlans = () => {
   const [tpWeeks, setTpWeeks] = useState({});
   const [tpSelectedDayKey, setTpSelectedDayKey] = useState('MONDAY');
   const [tpViewMode, setTpViewMode] = useState('FOCUS'); // 'FOCUS' (tập trung 1 ngày) | 'ALL' (xem tất cả ngày)
+
+  // Targeted student for health & contraindication checking
+  const targetedSingleStudent = targetType === 'INDIVIDUAL'
+    ? students.find(s => String(s.userId) === String(selectedStudentUserId))
+    : null;
+  const targetedTpStudent = tpTargetType === 'INDIVIDUAL'
+    ? students.find(s => String(s.userId) === String(tpStudentUserId))
+    : null;
 
   const fetchStudentsForClass = async (classId) => {
     if (!classId) return [];
@@ -493,6 +504,9 @@ const CoachWorkoutPlans = () => {
       const res = await axios.post(`${API_BASE}/workouts/assign`, payload, { headers: getHeaders() });
 
       showBanner('success', res.data?.message ? t(res.data.message) : t('Giao bài tập và gửi thông báo thành công!'));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('notificationUpdated'));
+      }
 
       setPlanTitle('');
       setPlanNote('');
@@ -789,6 +803,9 @@ const CoachWorkoutPlans = () => {
       const res = await axios.post(`${API_BASE}/workouts/assign`, payload, { headers: getHeaders() });
 
       showBanner('success', res.data?.message ? t(res.data.message) : t('Tạo kế hoạch tập luyện thành công!'));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('notificationUpdated'));
+      }
 
       // Reset form
       setTpTitle('');
@@ -913,23 +930,70 @@ const CoachWorkoutPlans = () => {
         </div>
       </div>
 
-      {/* Notification Banner */}
-      {notificationBanner && (
-        <div
-          className={`p-4 rounded-xl border flex items-center gap-3 text-xs font-semibold animate-fade-in ${
-            notificationBanner.type === 'success'
-              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-              : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-          }`}
-        >
-          {notificationBanner.type === 'success' ? (
-            <CheckCircle2 className="w-5 h-5 shrink-0" />
-          ) : (
-            <AlertCircle className="w-5 h-5 shrink-0" />
-          )}
-          <span>{notificationBanner.message}</span>
-        </div>
-      )}
+      {/* Floating Animated Toast Notification */}
+      <AnimatePresence>
+        {notificationBanner && (
+          <motion.div
+            key="coach-workout-toast"
+            initial={{ opacity: 0, y: -24, scale: 0.92, filter: 'blur(8px)' }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, y: -20, scale: 0.92, filter: 'blur(6px)' }}
+            transition={{ type: 'spring', stiffness: 450, damping: 28 }}
+            className={`fixed top-6 right-6 z-50 max-w-md w-[calc(100vw-3rem)] sm:w-96 rounded-2xl p-4 shadow-2xl backdrop-blur-2xl border transition-all ${
+              notificationBanner.type === 'success'
+                ? 'bg-slate-900/90 text-white border-emerald-500/40 shadow-[0_20px_40px_rgba(16,185,129,0.25)]'
+                : 'bg-slate-900/90 text-white border-rose-500/40 shadow-[0_20px_40px_rgba(244,63,94,0.25)]'
+            }`}
+          >
+            <div className="flex items-start gap-3.5">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg ${
+                  notificationBanner.type === 'success'
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                }`}
+              >
+                {notificationBanner.type === 'success' ? (
+                  <CheckCircle2 className="w-5 h-5" />
+                ) : (
+                  <AlertCircle className="w-5 h-5" />
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0 pr-1">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                    {notificationBanner.type === 'success' ? t('Success!') : t('Error!')}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setNotificationBanner(null)}
+                    className="w-6 h-6 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all cursor-pointer"
+                    aria-label={t('Đóng')}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <p className="text-xs text-slate-200 mt-1 leading-relaxed font-medium">
+                  {notificationBanner.message}
+                </p>
+              </div>
+            </div>
+
+            {/* Subtle Progress Bar */}
+            <div className="mt-3.5 w-full bg-white/10 h-1 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: '100%' }}
+                animate={{ width: '0%' }}
+                transition={{ duration: 6, ease: 'linear' }}
+                className={`h-full ${
+                  notificationBanner.type === 'success' ? 'bg-emerald-400' : 'bg-rose-400'
+                }`}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1539,7 +1603,7 @@ const CoachWorkoutPlans = () => {
                                   onChange={(e) => handleDayDurationChange(tpCurrentWeek, tpSelectedDayKey, e.target.value)}
                                   className="w-12 bg-transparent text-center font-bold text-[var(--text)] text-xs focus:outline-none"
                                 />
-                                <span className="text-[var(--text-muted)] font-medium">phút</span>
+                                <span className="text-[var(--text-muted)] font-medium">{t("phút")}</span>
                               </div>
                             </div>
 
@@ -1595,12 +1659,29 @@ const CoachWorkoutPlans = () => {
                                       className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] font-semibold"
                                     >
                                       <option value="">{t("-- Chọn bài tập --")}</option>
-                                      {exercises.map((eItem) => (
-                                        <option key={eItem.exerciseId} value={eItem.exerciseId}>
-                                          {eItem.exerciseName} [{t(eItem.muscleGroup || 'Chung')}]
-                                        </option>
-                                      ))}
+                                      {exercises.map((eItem) => {
+                                        const isConflict = targetedTpStudent?.health?.conditions
+                                          ? exerciseConflicts(targetedTpStudent.health.conditions, eItem.contraindications || []).length > 0
+                                          : false;
+                                        const contraTag = formatContraTag(eItem.contraindications, currentLang);
+                                        return (
+                                          <option key={eItem.exerciseId} value={eItem.exerciseId}>
+                                            {isConflict ? '⚠ ' : ''}{t(eItem.exerciseName)} [{t(eItem.muscleGroup || 'Chung')}]{contraTag}
+                                          </option>
+                                        );
+                                      })}
                                     </select>
+                                    {(() => {
+                                      const tpConflicts = (targetedTpStudent?.health?.conditions && exInfo?.contraindications)
+                                        ? exerciseConflicts(targetedTpStudent.health.conditions, exInfo.contraindications)
+                                        : [];
+                                      return tpConflicts.length > 0 ? (
+                                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 text-[11px] font-semibold mt-1">
+                                          <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+                                          <span>{t('Chống chỉ định y tế: ')}{formatContraindications(tpConflicts, currentLang)}</span>
+                                        </div>
+                                      ) : null;
+                                    })()}
                                     {exInfo && exInfo.videoUrl && (
                                       <a
                                         href={exInfo.videoUrl}
@@ -1710,11 +1791,17 @@ const CoachWorkoutPlans = () => {
                                       className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] font-semibold"
                                     >
                                       <option value="">{t("-- Chọn bài tập --")}</option>
-                                      {exercises.map((eItem) => (
-                                        <option key={eItem.exerciseId} value={eItem.exerciseId}>
-                                          {eItem.exerciseName} [{t(eItem.muscleGroup || 'Chung')}]
-                                        </option>
-                                      ))}
+                                      {exercises.map((eItem) => {
+                                        const isConflict = targetedTpStudent?.health?.conditions
+                                          ? exerciseConflicts(targetedTpStudent.health.conditions, eItem.contraindications || []).length > 0
+                                          : false;
+                                        const contraTag = formatContraTag(eItem.contraindications, currentLang);
+                                        return (
+                                          <option key={eItem.exerciseId} value={eItem.exerciseId}>
+                                            {isConflict ? '⚠ ' : ''}{t(eItem.exerciseName)} [{t(eItem.muscleGroup || 'Chung')}]{contraTag}
+                                          </option>
+                                        );
+                                      })}
                                     </select>
                                     {exInfo && exInfo.videoUrl && (
                                       <a href={exInfo.videoUrl} target="_blank" rel="noreferrer" className="text-[10px] text-blue-400 hover:underline flex items-center gap-1 mt-1">
@@ -2254,12 +2341,29 @@ const CoachWorkoutPlans = () => {
                         className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] font-semibold"
                       >
                         <option value="">{t("-- Chọn bài tập từ thư viện --")}</option>
-                        {exercises.map((ex) => (
-                          <option key={ex.exerciseId} value={ex.exerciseId}>
-                            {ex.exerciseName} [{t(ex.muscleGroup || 'Chung')}]
-                          </option>
-                        ))}
+                        {exercises.map((ex) => {
+                          const isConflict = targetedSingleStudent?.health?.conditions
+                            ? exerciseConflicts(targetedSingleStudent.health.conditions, ex.contraindications || []).length > 0
+                            : false;
+                          const contraTag = formatContraTag(ex.contraindications, currentLang);
+                          return (
+                            <option key={ex.exerciseId} value={ex.exerciseId}>
+                              {isConflict ? '⚠ ' : ''}{t(ex.exerciseName)} [{t(ex.muscleGroup || 'Chung')}]{contraTag}
+                            </option>
+                          );
+                        })}
                       </select>
+                      {(() => {
+                        const sConflicts = (targetedSingleStudent?.health?.conditions && currentExObj?.contraindications)
+                          ? exerciseConflicts(targetedSingleStudent.health.conditions, currentExObj.contraindications)
+                          : [];
+                        return sConflicts.length > 0 ? (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-400 text-[11px] font-semibold mt-1 animate-pulse">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+                            <span>{t('Chống chỉ định y tế: ')}{formatContraindications(sConflicts, currentLang)}</span>
+                          </div>
+                        ) : null;
+                      })()}
                       {currentExObj && currentExObj.videoUrl && (
                         <a href={currentExObj.videoUrl} target="_blank" rel="noreferrer" className="text-[10px] text-blue-400 hover:underline flex items-center gap-1 mt-0.5">
                           <Play className="w-3 h-3" /> {t("Xem video hướng dẫn mẫu")}

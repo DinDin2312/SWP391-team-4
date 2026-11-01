@@ -29,6 +29,10 @@ public class AiChatServiceImpl implements AiChatService {
 
     @Autowired
     private MemberService memberService;
+    @Autowired
+    private com.team4.sportscenter.modules.member.health.MemberHealthService memberHealthService;
+    @Autowired
+    private com.team4.sportscenter.modules.auth.repositories.UserRepository userRepository;
 
     @Override
     public String chat(String userMessage, String email) {
@@ -76,6 +80,15 @@ public class AiChatServiceImpl implements AiChatService {
             .map(b -> "- " + b.getClassName() + " from " + b.getStartTime().format(timeFormatter) + " to " + b.getEndTime().format(timeFormatter))
             .collect(Collectors.joining("\n"));
 
+        com.team4.sportscenter.modules.member.health.MemberHealthSummary healthSummary = com.team4.sportscenter.modules.member.health.MemberHealthSummary.empty();
+        if (email != null && !email.trim().isEmpty()) {
+            java.util.Optional<com.team4.sportscenter.modules.auth.entities.User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isPresent()) {
+                healthSummary = memberHealthService.summaryFor(userOpt.get());
+            }
+        }
+        String healthBlock = com.team4.sportscenter.modules.member.health.HealthPromptBuilder.memberBlock(healthSummary);
+
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5000);
         factory.setReadTimeout(15000);
@@ -114,6 +127,7 @@ public class AiChatServiceImpl implements AiChatService {
                 myPendingCartString + "\n" +
                 "--- USER'S CURRENT BOOKED SCHEDULE ---\n" +
                 myBookingsString + "\n\n" +
+                healthBlock + "\n" +
                 "SYSTEM NAVIGATION & AUTOMATION RULES (VERY IMPORTANT):\n" +
                 "You have the ability to trigger actions in the user's UI by appending specific hidden commands at the VERY END of your response.\n" +
                 "1. To navigate the user to their Settings/Change Email: Append [ACTION:NAVIGATE:/member/settings]\n" +
