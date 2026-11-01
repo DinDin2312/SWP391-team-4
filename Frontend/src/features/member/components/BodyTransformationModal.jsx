@@ -11,6 +11,7 @@ import {
   Dumbbell,
   Activity,
   Calendar,
+  ChevronLeft,
   ChevronRight,
   Info,
   Clock,
@@ -43,6 +44,12 @@ const BodyTransformationModal = ({
   const [loading, setLoading] = useState(false);
   const [metricType, setMetricType] = useState('ALL'); // 'ALL' | 'FAT_MUSCLE' | 'WEIGHT'
   const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [isOpen, trainee]);
 
   // Close on ESC
   useEffect(() => {
@@ -93,6 +100,9 @@ const BodyTransformationModal = ({
 
   const latest = scoreResult.latestMetrics || {};
   const bmiInfo = getBmiInfo(latest.weight, latest.height);
+
+  const totalPages = Math.ceil(assessments.length / pageSize) || 1;
+  const paginatedAssessments = assessments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const getTierBadgeClass = (tier) => {
     switch (tier) {
@@ -596,47 +606,47 @@ const BodyTransformationModal = ({
                   </span>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
                   <table className="w-full text-left text-xs text-[var(--text)]">
-                    <thead className="bg-[var(--surface-hover)] text-[var(--text-muted)] font-bold uppercase tracking-wider text-[10px] border-b border-[var(--border)]">
+                    <thead className="bg-[var(--surface-hover)] text-[var(--text-muted)] font-bold uppercase tracking-wider text-[10px] border-b border-[var(--border)] sticky top-0 z-10">
                       <tr>
-                        <th className="px-3.5 py-2.5 rounded-l-lg">{t('Ngày đo')}</th>
-                        <th className="px-3.5 py-2.5">{t('Cân nặng')}</th>
-                        <th className="px-3.5 py-2.5">{t('Tỷ lệ mỡ')}</th>
-                        <th className="px-3.5 py-2.5">{t('Khối lượng cơ')}</th>
-                        <th className="px-3.5 py-2.5">{t('Đánh giá HLV')}</th>
-                        <th className="px-3.5 py-2.5 rounded-r-lg">{t('Ghi chú')}</th>
+                        <th className="px-3.5 py-2.5 whitespace-nowrap">{t('Ngày đo')}</th>
+                        <th className="px-3.5 py-2.5 whitespace-nowrap">{t('Cân nặng')}</th>
+                        <th className="px-3.5 py-2.5 whitespace-nowrap">{t('Tỷ lệ mỡ')}</th>
+                        <th className="px-3.5 py-2.5 whitespace-nowrap">{t('Khối lượng cơ')}</th>
+                        <th className="px-3.5 py-2.5 whitespace-nowrap">{t('Đánh giá HLV')}</th>
+                        <th className="px-3.5 py-2.5">{t('Ghi chú')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border)]">
-                      {assessments.map((a, idx) => {
+                      {paginatedAssessments.map((a, idx) => {
                         const d = a.createdAt ? new Date(a.createdAt) : null;
                         const dateStr = d ? d.toLocaleDateString(locale()) : '--';
 
                         return (
                           <tr key={idx} className="hover:bg-[var(--surface-hover)]/60 transition-colors">
-                            <td className="px-3.5 py-3 font-semibold">{dateStr}</td>
-                            <td className="px-3.5 py-3 font-bold text-[var(--text)]">
+                            <td className="px-3.5 py-3 font-semibold whitespace-nowrap">{dateStr}</td>
+                            <td className="px-3.5 py-3 font-bold text-[var(--text)] whitespace-nowrap">
                               {a.weight ? `${a.weight} kg` : '--'}
                             </td>
-                            <td className="px-3.5 py-3 font-bold text-amber-700 dark:text-amber-400">
+                            <td className="px-3.5 py-3 font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap">
                               {a.bodyFatPercentage ? `${a.bodyFatPercentage}%` : '--'}
                             </td>
-                            <td className="px-3.5 py-3 font-bold text-emerald-700 dark:text-emerald-400">
+                            <td className="px-3.5 py-3 font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
                               {a.muscleMass ? `${a.muscleMass} kg` : '--'}
                             </td>
-                            <td className="px-3.5 py-3">
+                            <td className="px-3.5 py-3 whitespace-nowrap">
                               {a.isSelfRecorded || (a.assessmentTitle && a.assessmentTitle.includes('tự')) || (a.coachId && a.userId && a.coachId === a.userId) ? (
-                                <span className="px-2 py-0.5 rounded-md bg-sky-50 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 font-bold text-[10px]">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-sky-50 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 font-bold text-[10px] whitespace-nowrap shadow-xs">
                                   {t("Tự cập nhật")}
                                 </span>
                               ) : (
-                                <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold text-[10px]">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold text-[10px] whitespace-nowrap">
                                   {a.performanceRating ? `${a.performanceRating}/5 ⭐` : '--'}
                                 </span>
                               )}
                             </td>
-                            <td className="px-3.5 py-3 text-[var(--text-muted)] max-w-xs truncate">
+                            <td className="px-3.5 py-3 text-[var(--text-muted)] max-w-xs truncate" title={a.feedbackNote || a.recommendation || ''}>
                               {a.feedbackNote || a.recommendation || '--'}
                             </td>
                           </tr>
@@ -645,6 +655,41 @@ const BodyTransformationModal = ({
                     </tbody>
                   </table>
                 </div>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-3 text-xs text-[var(--text-muted)]">
+                    <span>
+                      {t("Hiển thị {0} - {1} trên {2} bản ghi", [
+                        (currentPage - 1) * pageSize + 1,
+                        Math.min(currentPage * pageSize, assessments.length),
+                        assessments.length
+                      ])}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="p-1.5 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text)] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--border)] transition-all cursor-pointer font-medium flex items-center justify-center"
+                        title={t("Trang trước")}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <span className="px-2 font-semibold text-[var(--text)]">
+                        {currentPage} / {totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="p-1.5 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text)] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--border)] transition-all cursor-pointer font-medium flex items-center justify-center"
+                        title={t("Trang sau")}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}

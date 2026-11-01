@@ -4229,6 +4229,7 @@ const bodyTransformationTranslations = [
   ["No InBody measurements recorded yet.", "Chưa có số đo thể trạng InBody nào được ghi nhận."],
   ["Student Note:", "Ghi chú của học viên:"],
   ["fat", "mỡ"],
+  ["Showing {0} - {1} of {2} records", "Hiển thị {0} - {1} trên {2} bản ghi"],
   ["Elite Transformation", "Bứt Phá Thần Tốc"],
   ["Strong Progress", "Tiến Bộ Vượt Bậc"],
   ["Steady Improver", "Kiên Trì Bền Bỉ"],
