@@ -114,6 +114,19 @@ stateDiagram-v2
     REJECTED --> [*] : Giữ lịch gốc hoặc HLV/Quản lý xử lý theo quy chế vắng mặt
 ```
 
+### 2.6. Vòng đời Đồ Thất Lạc (`LOST_AND_FOUND_ITEMS.status`)
+```mermaid
+stateDiagram-v2
+    [*] --> STORED : Lễ tân tiếp nhận & gán mã LF-YYYYMMDD-XXXX
+    STORED --> CLAIMED : Chủ nhân xác minh thông tin & nhận lại đồ
+    STORED --> OVERDUE : Quá hạn lưu kho (expiryDate < today)
+    OVERDUE --> CLAIMED : Khách đến chuộc/nhận muộn hợp lệ
+    OVERDUE --> DISPOSED : Lễ tân thanh lý / tiêu hủy / quyên góp
+    STORED --> DISPOSED : Thanh lý đồ đặc biệt (đồ tươi sống hỏng sớm)
+    CLAIMED --> [*] : Khóa lưu vết bàn giao
+    DISPOSED --> [*] : Khóa lưu vết thanh lý
+```
+
 ---
 
 ## 3. Phân hệ 1: Xác thực, Vòng đời Tài khoản & Bảo mật
@@ -501,6 +514,41 @@ flowchart LR
         C2 --> W2["Hệ thống tự động bật cờ hasAnomaly = true trên bản ghi Check-in<br/>Tăng bộ đếm anomalyCount & Cảnh báo đỏ trên hồ sơ Hội viên tại màn hình Lễ tân"]
     end
 ```
+
+### 8.4. Nghiệp vụ Quản lý Đồ Thất Lạc & Cơ chế Chống Nhận Vơ (Lost & Found Management)
+
+**Mã nguồn chính**: `LostAndFoundServiceImpl.java`, `LostAndFoundController.java`, `LostAndFoundRepository.java`, `LostAndFoundView.jsx`, `CreateLostItemModal.jsx`, `LostItemDetailModal.jsx`
+
+#### 8.4.1. Quy tắc Mã hóa & Định danh Độc bản (`generateItemCode`)
+- Tự động sinh mã định danh duy nhất theo định dạng `LF-YYYYMMDD-XXXX` (ví dụ: `LF-20261101-4521`), thuận tiện dán nhãn niêm phong và truy xuất nhanh trong kho Lễ tân.
+
+#### 8.4.2. Quy tắc Phân loại & Hạn Định Thời Gian Lưu Kho (`ValuationType` & `calculateExpiryDate`)
+Hệ thống tự động phân loại thời hạn lưu kho dựa trên danh mục đồ vật:
+1. **`HIGH_VALUE` (Đồ giá trị cao: Điện thoại, Máy tính bảng, Ví tiền, Trang sức, Giấy tờ tùy thân)**:
+   - Mặc định lưu trữ **90 ngày**.
+   - Bắt buộc lưu trữ tại vị trí an toàn đặc biệt (`storageLocation = 'Két sắt Lễ tân' / 'Tủ khóa số Lễ tân'`).
+2. **`STANDARD` (Đồ thông thường: Quần áo, Giày thể thao, Khăn tập, Bình nước, Phụ kiện tập)**:
+   - Mặc định lưu trữ **30 ngày** tại tủ lưu trữ Lost & Found sảnh.
+3. **`PERISHABLE` (Đồ tươi sống / Đồ ăn, nước uống dễ ôi thiu)**:
+   - Mặc định lưu trữ **02 ngày (48 giờ)**. Quá 48h tự động chuyển sang luồng thanh lý/tiêu hủy để bảo đảm vệ sinh môi trường tập luyện.
+4. **Tùy chỉnh thời hạn (`customRetentionDays`)**: Lễ tân có thể kéo dài ngày hết hạn nếu khách có liên hệ hẹn ngày đến nhận cụ thể.
+
+#### 8.4.3. Cơ chế Bảo Mật 2 Lớp Chống Nhận Vơ (`Secret Detail Verification Mechanism`)
+Để ngăn chặn tình trạng khách gian lận nhận nhầm đồ đắt tiền của người khác:
+- **Mô tả công khai (`publicDescription`)**: Hiển thị trên bảng tin công khai hoặc danh sách tìm đồ (ví dụ: *"Bình giữ nhiệt màu đen nhãn hiệu Hydro Flask nhặt được tại Phòng Gym Tầng 1 lúc 18h30"*).
+- **Chi tiết bí mật bảo mật (`secretDetails`)**: **TUYỆT ĐỐI ẨN đối với công chúng, CHỈ hiển thị trong Cổng Lễ tân** (ví dụ: *"Đáy bình có vết xước hình chữ V, bên trong nắp có dán nhãn tên 'Anh Tuấn', trong túi có 1 chìa khóa xe máy số 58"*).
+- **Quy tắc Kiểm chứng**: Khi người nhận đến quầy, Lễ tân phỏng vấn và yêu cầu mô tả các đặc điểm đặc biệt. Khớp đúng với `secretDetails` thì mới tiến hành thủ tục bàn giao.
+
+#### 8.4.4. Quy trình Bàn Giao Minh Bạch (`claimItem`) & Khóa Bất Biến
+- Khi bàn giao cho khách (`status = 'CLAIMED'`), hệ thống bắt buộc lưu vết:
+  - Họ tên người nhận (`claimantName`), Số điện thoại (`claimantPhone`), Số CCCD/CMND (`claimantIdCard`).
+  - Ghi chú nhận đồ (`claimNotes`), nhân viên lễ tân thực hiện bàn giao (`claimedByStaff`), thời điểm bàn giao (`claimedAt = NOW()`).
+  - Liên kết trực tiếp tài khoản hội viên (`claimedByUser`) nếu người nhận là hội viên của trung tâm.
+- **Ràng buộc Khóa Bất Biến**: Món đồ đã `CLAIMED` hoặc `DISPOSED` bị khóa tuyệt đối, **không cho phép sửa đổi hoặc xóa** để phục vụ đối soát, kiểm toán nội bộ.
+
+#### 8.4.5. Quy trình Thanh Lý & Xử Lý Quá Hạn (`disposeItem` & `syncOverdueItems`)
+- Mỗi khi Lễ tân tải trang, hệ thống tự động quét `syncOverdueItems()` để chuyển toàn bộ các món `STORED` có `expiryDate < TODAY` sang trạng thái **`OVERDUE` (Quá hạn)**.
+- Khi thanh lý (`DISPOSED`), Lễ tân bắt buộc chọn lý do thanh lý (`disposalReason`): Quyên góp từ thiện (`DONATION`), Tiêu hủy rác thải (`DESTROYED`), Tái chế (`RECYCLED`), v.v. và ghi nhận vào sổ nhật ký lưu trữ.
 
 ---
 

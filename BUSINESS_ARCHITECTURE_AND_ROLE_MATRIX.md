@@ -117,6 +117,7 @@ $\rightarrow$ **Ý nghĩa:** Nếu sau này Quản lý tăng giá gói hoặc c�
 | **Đo & Đánh Giá Chỉ Số InBody Định Kỳ** | I (Theo dõi chất lượng) | - | **A / R** (Đánh giá mốc) | **R** (Tự ghi nhận) |
 | **Đánh Giá Buổi Học Hàng Ngày (Kỹ thuật & Chuyên cần)** | I | - | **A / R** (Bắt buộc sau ca) | I (Nhận phản hồi) |
 | **Đề Xuất Dời Lịch Dạy Bù (Không có HLV thay thế)** | **A** (Thẩm định & Duyệt) | I (Nắm lịch vận hành) | **R** (Tạo đơn >12h) | **C / R** (Biểu quyết tự quyết) |
+| **Tiếp Nhận & Xử Lý Đồ Thất Lạc (Lost & Found)** | I (Giám sát tài sản) | **A / R** (Toàn quyền quản lý) | - | C (Khai báo / Nhận đồ) |
 | **Hủy Lớp / Đổi Lớp Hạn Chế** | A (Duyệt ca đặc biệt) | **R** (Xử lý tại quầy) | I (Nhận thông báo) | **R** (Gửi yêu cầu) |
 
 *Ghi chú RACI:* **A** (Accountable - Chịu trách nhiệm chính), **R** (Responsible - Trực tiếp thực hiện), **C** (Consulted - Tham vấn/Phối hợp), **I** (Informed - Nhận thông tin/Xem).
@@ -292,6 +293,41 @@ sequenceDiagram
 1. **Chỉ áp dụng khi không có HLV dạy thay**: Tránh lạm dụng dời lịch làm gián đoạn kế hoạch tập luyện của khách hàng.
 2. **Nguyên tắc Tự quyết (Member Sovereignty)**: Ca bù do trung tâm dời lịch nên khách hàng không bao giờ bị ép phải theo giờ mới; luôn có nút nhận hoàn 1 lượt tập tức thì.
 3. **Cơ chế Hạn chót & An toàn Tuyệt đối**: Quá hạn chót mà khách chưa kịp chọn, hệ thống luôn ưu tiên phương án bảo vệ khách hàng: tự động hoàn trả 1 lượt tập vào tài khoản.
+
+---
+
+### 5.5. Luồng 5: Quản Lý Đồ Thất Lạc & Kiểm Chứng Nhận Đồ (Lost & Found Protocol)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor F as Người Nhặt Được (Học viên / Tạp vụ)
+    actor R as Lễ Tân (Receptionist)
+    actor M as Người Mất Đồ (Claimant)
+    participant S as Lost & Found Service & DB
+
+    Note over F,R: Bước 1: Tiếp nhận đồ thất lạc tại quầy
+    F->>R: Bàn giao vật phẩm nhặt được tại sảnh/phòng tập
+    R->>S: Tạo món đồ: Tên, Phân loại (High Value / Standard / Perishable),<br/>Vị trí lưu kho, Ảnh, Mô tả công khai & CHI TIẾT ẨN BẢO MẬT (secretDetails)
+    S->>S: Tự động gán mã LF-YYYYMMDD-XXXX + Tính hạn lưu kho (2/30/90 ngày)
+    S-->>R: Lưu trữ thành công (Trạng thái: STORED)
+
+    Note over M,R: Bước 2: Khách đến quầy báo mất & nhận lại
+    M->>R: Khai báo mất đồ & mô tả vật phẩm
+    R->>S: Tra cứu danh sách đồ đang lưu kho
+    R->>R: Đối chiếu câu trả lời của khách với [secretDetails] ẩn
+    alt Thông tin kiểm chứng KHÔNG KHỚP
+        R-->>M: Từ chối bàn giao (Ngăn chặn hành vi nhận vơ đồ đắt tiền)
+    else Thông tin kiểm chứng HOÀN TOÀN TRÙNG KHỚP
+        R->>S: Bấm [Bàn Giao]: Nhập Tên, SĐT, Số CCCD/CMND người nhận
+        S->>S: Cập nhật status = CLAIMED, thời điểm bàn giao, nhân viên phụ trách
+        S-->>R: Xuất biên bản bàn giao & Khóa vĩnh viễn bản ghi (Bất biến)
+    end
+
+    Note over R,S: Bước 3: Đồ quá hạn lưu kho (OVERDUE)
+    S->>S: Quét tự động đồ quá hạn lưu kho (expiryDate < Today) -> Chuyển OVERDUE
+    R->>S: Lễ tân làm thủ tục thanh lý (DISPOSED): Nhập lý do (Quyên góp / Tiêu hủy)
+```
 
 ---
 
