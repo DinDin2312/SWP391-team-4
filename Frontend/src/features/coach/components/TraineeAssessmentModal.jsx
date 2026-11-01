@@ -411,13 +411,13 @@ const TraineeAssessmentModal = ({
 
             {/* Selected Trainee Profile Summary Card */}
             {selectedStudent && (
-              <div className="p-3.5 rounded-xl bg-gradient-to-br from-indigo-950/30 to-[var(--surface-hover)] border border-indigo-500/30 text-xs shrink-0 flex items-center justify-between">
+              <div className="p-3.5 rounded-xl bg-gradient-to-br from-indigo-50/90 to-[var(--surface-hover)] dark:from-indigo-950/30 dark:to-[var(--surface-hover)] border border-indigo-200 dark:border-indigo-500/30 text-xs shrink-0 flex items-center justify-between shadow-xs">
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">{t("Học viên mục tiêu")}</span>
+                  <span className="text-[10px] text-indigo-700 dark:text-indigo-300 font-bold uppercase tracking-wider">{t("Học viên mục tiêu")}</span>
                   <span className="font-extrabold text-sm text-[var(--text)]">{selectedStudent.fullName}</span>
                   <span className="text-[10px] text-[var(--text-muted)]">{selectedStudent.email}</span>
                 </div>
-                <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs border border-indigo-500/30">
+                <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-xs border border-indigo-200 dark:border-indigo-500/30">
                   <Activity className="w-4 h-4" />
                 </div>
               </div>
@@ -745,8 +745,8 @@ const TraineeAssessmentModal = ({
                               </span>
                             ) : (
                               <>
-                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 font-extrabold text-xs">
-                                  <Star className="w-3.5 h-3.5 fill-amber-400" />
+                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/20 text-amber-800 dark:text-amber-400 font-extrabold text-xs">
+                                  <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 dark:fill-amber-400 dark:text-amber-400" />
                                   <span>{item.performanceRating || 5}/5</span>
                                 </div>
 
@@ -754,7 +754,7 @@ const TraineeAssessmentModal = ({
                                   type="button"
                                   onClick={() => handleDeleteAssessment(item.assessmentId)}
                                   title={t("Xóa đánh giá này")}
-                                  className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/20 transition-colors cursor-pointer"
+                                  className="p-1.5 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors cursor-pointer"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -767,23 +767,23 @@ const TraineeAssessmentModal = ({
                         {(item.weight || item.height || item.bodyFatPercentage || item.muscleMass) && (
                           <div className="flex flex-wrap gap-2 pt-1 border-t border-[var(--border)]">
                             {item.weight && (
-                              <span className="px-2.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[10px] font-semibold">
-                                {t("Cân nặng:")} <strong>{item.weight} kg</strong>
+                              <span className="px-2.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-800 dark:text-blue-300 text-[10px] font-semibold">
+                                {t("Cân nặng:")} <strong className="text-blue-900 dark:text-blue-200">{item.weight} kg</strong>
                               </span>
                             )}
                             {item.height && (
-                              <span className="px-2.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[10px] font-semibold">
-                                {t("Chiều cao:")} <strong>{item.height} cm</strong>
+                              <span className="px-2.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-800 dark:text-blue-300 text-[10px] font-semibold">
+                                {t("Chiều cao:")} <strong className="text-blue-900 dark:text-blue-200">{item.height} cm</strong>
                               </span>
                             )}
                             {item.bodyFatPercentage && (
-                              <span className="px-2.5 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-semibold">
-                                {t("Body Fat:")} <strong>{item.bodyFatPercentage}%</strong>
+                              <span className="px-2.5 py-0.5 rounded-md bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 text-purple-800 dark:text-purple-300 text-[10px] font-semibold">
+                                {t("Body Fat:")} <strong className="text-purple-900 dark:text-purple-200">{item.bodyFatPercentage}%</strong>
                               </span>
                             )}
                             {item.muscleMass && (
-                              <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[10px] font-semibold">
-                                {t("Khối lượng cơ:")} <strong>{item.muscleMass} kg</strong>
+                              <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-[10px] font-semibold">
+                                {t("Khối lượng cơ:")} <strong className="text-emerald-900 dark:text-emerald-200">{item.muscleMass} kg</strong>
                               </span>
                             )}
                           </div>

@@ -459,25 +459,25 @@ const CoachSchedule = () => {
                         <div className="grid grid-cols-3 gap-1.5">
                           <button
                             onClick={() => openTraineesModal(s)}
-                            className="py-2 px-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-[var(--text)] font-semibold text-[11px] flex items-center justify-center gap-1 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+                            className="py-2 px-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-[11px] flex items-center justify-center gap-1 shadow-md shadow-blue-600/20 transition-all cursor-pointer"
                           >
-                            <Users className="w-3.5 h-3.5" />
+                            <Users className="w-3.5 h-3.5 text-white" />
                             <span>{t("Học viên")}{' '}({s.enrolledCount})</span>
                           </button>
 
                           <button
                             onClick={() => handleOpenScheduleAssessment(s)}
-                            className="py-2 px-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 hover:text-white font-semibold text-[11px] border border-amber-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                            className="py-2 px-2 rounded-xl bg-amber-50 dark:bg-amber-500/15 hover:bg-amber-100 dark:hover:bg-amber-500/30 text-amber-800 dark:text-amber-300 font-bold text-[11px] border border-amber-300 dark:border-amber-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
                           >
-                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                            <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 dark:fill-amber-400 dark:text-amber-400" />
                             <span>{t("Đánh giá")}</span>
                           </button>
 
                           <button
                             onClick={() => handleOpenClassNotification(s.classId)}
-                            className="py-2 px-2 rounded-xl bg-blue-600/15 hover:bg-blue-600/30 text-blue-300 hover:text-[var(--text)] font-semibold text-[11px] border border-blue-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                            className="py-2 px-2 rounded-xl bg-blue-50 dark:bg-blue-600/15 hover:bg-blue-100 dark:hover:bg-blue-600/30 text-blue-800 dark:text-blue-300 font-bold text-[11px] border border-blue-300 dark:border-blue-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
                           >
-                            <Bell className="w-3.5 h-3.5 text-[var(--primary)]" />
+                            <Bell className="w-3.5 h-3.5 text-blue-700 dark:text-[var(--primary)]" />
                             <span>{t("Báo tin")}</span>
                           </button>
                         </div>
