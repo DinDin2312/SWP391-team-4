@@ -39,7 +39,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults()) // SÄ‚Â¡Ă‚Â»Ă‚Â­ dÄ‚Â¡Ă‚Â»Ă‚Â¥ng cÄ‚Â¡Ă‚ÂºĂ‚Â¥u hĂ„â€Ă‚Â¬nh corsConfigurationSource bĂ„â€Ă‚Âªn dÄ‚â€ Ă‚Â°Ä‚Â¡Ă‚Â»Ă¢â‚¬Âºi
+                .cors(Customizer.withDefaults()) // Sử dụng cấu hình corsConfigurationSource bên dưới
                 .authorizeHttpRequests(auth -> auth
                         // Preflight OPTIONS
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -52,7 +52,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/payment/vietqr-submit-transfer/**").authenticated()
                         .requestMatchers("/api/v1/payment/vietqr-confirm/**", "/api/v1/payment/vietqr-reject/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
 
-                        // Cho phĂ„â€Ă‚Â©p truy cÄ‚Â¡Ă‚ÂºĂ‚Â­p cĂ„â€Ă‚Â¡c API cÄ‚Â¡Ă‚Â»Ă‚Â§a Receptionist
+                        // Cho phép truy cập các API của Receptionist
                         .requestMatchers("/api/receptionist/**", "/receptionist/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
 
 
