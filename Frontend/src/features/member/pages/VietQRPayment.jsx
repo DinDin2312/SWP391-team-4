@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   QrCode, Copy, Check, Clock, AlertCircle, ArrowLeft, 
-  CheckCircle2, ShieldCheck, Download, ExternalLink, Loader2 
+  CheckCircle2, ShieldCheck, Download, ExternalLink, Loader2, Sparkles, Send
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 
@@ -17,11 +17,13 @@ const VietQRPayment = () => {
   const [paymentInfo, setPaymentInfo] = useState(null);
   const [error, setError] = useState(null);
   const [copiedField, setCopiedField] = useState(null);
-  const [confirming, setConfirming] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [timeLeft, setTimeLeft] = useState(900); // 15 minutes
   const pollTimerRef = useRef(null);
   const countdownTimerRef = useRef(null);
+  const redirectTimerRef = useRef(null);
 
   const handleCancelAndReturnToCart = async () => {
     try {
@@ -41,6 +43,39 @@ const VietQRPayment = () => {
     }
   };
 
+  const handleSubmitTransfer = async () => {
+    try {
+      setSubmitting(true);
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:8080/api/v1/payment/vietqr-submit-transfer/${invoiceId}`, {}, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+
+      // Lưu lại ID hóa đơn đang chờ lễ tân duyệt để theo dõi toàn hệ thống
+      sessionStorage.setItem('awaitingInvoiceId', String(invoiceId));
+      window.dispatchEvent(new Event('cartUpdated'));
+
+      // Chuyển member về trang giỏ hàng với trạng thái đang chờ xác nhận
+      navigate('/member/cart?awaitingConfirmation=true');
+    } catch (err) {
+      alert(err.response?.data?.message || t('An error occurred while submitting payment confirmation.'));
+      setSubmitting(false);
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+    setIsSuccess(true);
+    sessionStorage.removeItem('awaitingInvoiceId');
+    window.dispatchEvent(new Event('cartUpdated'));
+    window.dispatchEvent(new Event('notificationUpdated'));
+
+    redirectTimerRef.current = setTimeout(() => {
+      navigate('/member/cart?paymentSuccess=true');
+    }, 2500);
+  };
+
   useEffect(() => {
     if (!invoiceId) {
       navigate('/member/cart');
@@ -57,11 +92,13 @@ const VietQRPayment = () => {
         const data = response.data;
         setPaymentInfo(data);
 
-        // If invoice is already paid, redirect to result
+        // If invoice is already paid, trigger success flow
         if (data.status === 'PAID') {
-          window.dispatchEvent(new Event('cartUpdated'));
-          window.dispatchEvent(new Event('notificationUpdated'));
-          navigate(`/member/payment-result?orderCode=${invoiceId}&status=PAID`);
+          handlePaymentSuccess();
+        } else if (data.status === 'AWAITING_CONFIRMATION') {
+          // Nếu đã bấm chuyển khoản rồi thì đưa về giỏ hàng luôn
+          sessionStorage.setItem('awaitingInvoiceId', String(invoiceId));
+          navigate('/member/cart?awaitingConfirmation=true');
         }
       } catch (err) {
         setError(err.response?.data?.message || t('Unable to load VietQR payment information.'));
@@ -72,7 +109,7 @@ const VietQRPayment = () => {
 
     fetchPaymentInfo();
 
-    // Auto polling check every 4 seconds
+    // Polling check every 3.5 seconds
     pollTimerRef.current = setInterval(async () => {
       try {
         const token = localStorage.getItem('token');
@@ -80,21 +117,19 @@ const VietQRPayment = () => {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
         if (response.data && response.data.status === 'PAID') {
-          clearInterval(pollTimerRef.current);
-          window.dispatchEvent(new Event('cartUpdated'));
-          window.dispatchEvent(new Event('notificationUpdated'));
-          navigate(`/member/payment-result?orderCode=${invoiceId}&status=PAID`);
+          handlePaymentSuccess();
         }
       } catch (e) {
         // Ignore polling errors
       }
-    }, 4000);
+    }, 3500);
 
     // Countdown timer
     countdownTimerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(countdownTimerRef.current);
+          if (pollTimerRef.current) clearInterval(pollTimerRef.current);
           return 0;
         }
         return prev - 1;
@@ -104,6 +139,7 @@ const VietQRPayment = () => {
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
       if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
     };
   }, [invoiceId, navigate]);
 
@@ -112,23 +148,6 @@ const VietQRPayment = () => {
     navigator.clipboard.writeText(String(text));
     setCopiedField(fieldName);
     setTimeout(() => setCopiedField(null), 2000);
-  };
-
-  const handleConfirmPayment = async () => {
-    try {
-      setConfirming(true);
-      const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:8080/api/v1/payment/vietqr-confirm/${invoiceId}`, {}, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-
-      window.dispatchEvent(new Event('cartUpdated'));
-      window.dispatchEvent(new Event('notificationUpdated'));
-      navigate(`/member/payment-result?orderCode=${invoiceId}&status=PAID`);
-    } catch (err) {
-      alert(err.response?.data?.message || t('An error occurred while confirming payment.'));
-      setConfirming(false);
-    }
   };
 
   const formatCurrency = (val) => {
@@ -171,13 +190,44 @@ const VietQRPayment = () => {
   }
 
   return (
-    <div className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full">
+    <div className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full relative">
+      {/* Success Modal Overlay */}
+      {isSuccess && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-[var(--surface)] border border-emerald-500/30 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl relative">
+            <div className="w-20 h-20 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto mb-5 border-2 border-emerald-500/30 animate-bounce">
+              <CheckCircle2 className="w-12 h-12 text-emerald-500" />
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold mb-3">
+              <Sparkles className="w-3.5 h-3.5" /> {t('Payment Verified')}
+            </div>
+            <h2 className="text-2xl font-black text-[var(--text)] mb-2">
+              {t('Payment Successful!')}
+            </h2>
+            <p className="text-sm text-[var(--text-muted)] mb-6 leading-relaxed">
+              {t('Your bank transfer has been received and confirmed. Your memberships and classes have been activated.')}
+            </p>
+            <div className="flex items-center justify-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-6">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>{t('Redirecting back to your cart...')}</span>
+            </div>
+            <button
+              onClick={() => navigate('/member/cart?paymentSuccess=true')}
+              className="w-full py-3.5 px-6 rounded-2xl font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2"
+            >
+              <span>{t('Return to Cart Now')}</span>
+              <ArrowLeft className="w-4 h-4 rotate-180" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <button
             onClick={handleCancelAndReturnToCart}
-            disabled={cancelling}
+            disabled={cancelling || submitting}
             className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] mb-2 transition-colors disabled:opacity-50"
           >
             {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeft className="w-4 h-4" />}
@@ -218,7 +268,7 @@ const VietQRPayment = () => {
               className="w-64 h-64 md:w-72 md:h-72 object-contain"
             />
             {timeLeft === 0 && (
-              <div className="absolute inset-0 bg-white/90 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center p-4">
+              <div className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center p-4">
                 <AlertCircle className="w-12 h-12 text-rose-500 mb-2" />
                 <p className="font-bold text-gray-800 text-sm">{t('QR code has expired')}</p>
                 <button 
@@ -247,7 +297,7 @@ const VietQRPayment = () => {
           </a>
         </div>
 
-        {/* Right Column: Bank Details & Confirmation */}
+        {/* Right Column: Bank Details & Automated Verification Notice */}
         <div className="lg:col-span-7 flex flex-col gap-6">
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-[var(--shadow)]">
             <h2 className="text-lg font-bold text-[var(--text)] mb-4 flex items-center gap-2">
@@ -310,7 +360,7 @@ const VietQRPayment = () => {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 gap-2">
                 <div>
                   <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold block">{t('Transfer Content (Required)')}</span>
-                  <span className="text-[11px] text-[var(--text-muted)]">{t('Keep this content unchanged for automatic confirmation')}</span>
+                  <span className="text-[11px] text-[var(--text-muted)]">{t('Keep this exact content for reception verification')}</span>
                 </div>
                 <div className="flex items-center gap-2 sm:justify-end">
                   <span className="text-base font-black text-emerald-700 dark:text-emerald-300 font-mono tracking-wider">
@@ -327,38 +377,45 @@ const VietQRPayment = () => {
               </div>
             </div>
 
-            {/* Note alert */}
-            <div className="mt-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300 flex items-start gap-3">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>
-                {t('After completing the transfer on your banking app, please click')} <strong>"{t('I have successfully transferred')}"</strong> {t('below to activate your package/course.')}
-              </span>
+            {/* User Action Instructions */}
+            <div className="mt-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-3.5">
+              <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                  {t('Important instructions')}
+                </p>
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                  {t('After completing the transfer on your banking app, please click')} <strong>"{t('I have transferred successfully')}"</strong> {t('below. Your order will be sent to Front Desk Reception for approval, and you can freely view other pages in the meantime.')}
+                </p>
+              </div>
             </div>
 
-            {/* Action Buttons */}
+            {/* Bottom Actions */}
             <div className="mt-8 flex flex-col sm:flex-row items-center gap-4">
               <button
-                onClick={handleConfirmPayment}
-                disabled={confirming || timeLeft === 0}
-                className="w-full sm:flex-1 py-4 px-6 rounded-2xl font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-[0.98] transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleSubmitTransfer}
+                disabled={submitting || cancelling || timeLeft === 0}
+                className="w-full sm:flex-1 py-4 px-6 rounded-2xl font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-[0.98] transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                {confirming ? (
+                {submitting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    {t('Confirming payment with system...')}
+                    <span>{t('Sending confirmation to reception...')}</span>
                   </>
                 ) : (
                   <>
                     <CheckCircle2 className="w-5 h-5" />
-                    {t('I have successfully transferred')}
+                    <span>{t('I have transferred successfully')}</span>
                   </>
                 )}
               </button>
 
               <button
                 onClick={handleCancelAndReturnToCart}
-                disabled={confirming || cancelling}
-                className="w-full sm:w-auto py-4 px-6 rounded-2xl font-semibold bg-[var(--surface-hover)] hover:bg-[var(--border)] text-[var(--text)] transition-all flex items-center justify-center gap-2"
+                disabled={submitting || cancelling}
+                className="w-full sm:w-auto py-4 px-6 rounded-2xl font-semibold bg-[var(--surface-hover)] hover:bg-[var(--border)] text-[var(--text)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {cancelling && <Loader2 className="w-4 h-4 animate-spin" />}
                 {t('Cancel')}
