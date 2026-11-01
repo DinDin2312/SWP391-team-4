@@ -8,7 +8,7 @@ import { useOutlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
 import {
-  LayoutDashboard, CalendarDays, Users, Dumbbell,
+  LayoutDashboard, CalendarDays, CalendarSync, Users, Dumbbell,
   Settings, LogOut, Award, Bell, Sparkles, Megaphone
 } from 'lucide-react';
 import SendNotificationModal from '../features/coach/components/SendNotificationModal';
@@ -82,6 +82,7 @@ const CoachLayout = () => {
     switch(location.pathname) {
       case '/coach/dashboard': return 'Coach Dashboard';
       case '/coach/schedule': return 'Teaching Schedule & Trainees';
+      case '/coach/reschedule': return 'Reschedule & Make-up';
       case '/coach/students': return 'Assigned Trainees';
       case '/coach/workouts': return 'Workout Plans';
       case '/coach/notifications': return 'Notifications';
@@ -133,6 +134,18 @@ const CoachLayout = () => {
             >
               <CalendarDays className="w-4 h-4" />
               <span>{t("Teaching Schedule")}</span>
+            </button>
+
+            <button
+              onClick={() => navigate("/coach/reschedule")}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                isActive('/coach/reschedule')
+                  ? 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-semibold'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
+              }`}
+            >
+              <CalendarSync className="w-4 h-4" />
+              <span>{t("Reschedule & Make-up")}</span>
             </button>
 
             <button

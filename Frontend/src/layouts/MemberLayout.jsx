@@ -11,6 +11,7 @@ import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { Bot, Sparkles, X, ArrowRight } from 'lucide-react';
 import NexusAiChat from '../features/member/components/NexusAiChat';
+import MemberNotificationDropdown from '../features/member/components/MemberNotificationDropdown';
 import { getSavedMemberNotificationPreferences, getMemberUnreadCount } from '../features/member/memberUtils';
 import {
   LayoutDashboard, CalendarDays, CreditCard, Dumbbell,
@@ -28,6 +29,7 @@ const MemberLayout = () => {
   const [isCartHighlighted, setIsCartHighlighted] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
   const [hasAiAccess, setHasAiAccess] = useState(false);
   const [aiNoticeVisible, setAiNoticeVisible] = useState(false);
   const aiPopoverRef = useRef(null);
@@ -407,6 +409,29 @@ const MemberLayout = () => {
                 </span>
               )}
             </button>
+
+            {/* Topbar Notification Bell */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsNotifDropdownOpen((prev) => !prev)}
+                className="relative p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)] text-[var(--text)] hover:scale-105 transition-all cursor-pointer"
+                title={t("Notifications")}
+              >
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 z-20 min-w-[18px] h-[18px] px-0.5 rounded-full text-[10px] font-black bg-[#0071E3] text-white flex items-center justify-center border-2 border-[var(--surface)] animate-pulse">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              <MemberNotificationDropdown
+                isOpen={isNotifDropdownOpen}
+                onClose={() => setIsNotifDropdownOpen(false)}
+                onUnreadChange={(cnt) => setUnreadCount(cnt)}
+              />
+            </div>
 
             <button onClick={handleLogout} className="px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-[var(--text)] hover:text-[var(--text)] text-xs font-medium transition-colors">{t("Logout")}</button>
             <ThemeToggle />

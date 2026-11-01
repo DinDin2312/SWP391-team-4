@@ -4,7 +4,7 @@ import axios from 'axios';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDateTime } from '../../../utils/displayFormat';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';
-import { getSavedMemberNotificationPreferences, filterMemberNotifications } from '../memberUtils';
+import { getSavedMemberNotificationPreferences, filterMemberNotifications, isMemberNotificationAllowed } from '../memberUtils';
 import { 
   Bell, 
   BellOff, 
@@ -29,7 +29,10 @@ import {
   Inbox,
   CheckCircle2,
   SlidersHorizontal,
+  Clock,
+  Gift
 } from 'lucide-react';
+import { getReasonLabel, formatScheduleSlot } from '../../coach/coachRescheduleUtils';
 
 const TABS = [
   { id: 'ALL', labelKey: 'All', shortLabelKey: 'All', icon: Bell, types: [] },
@@ -177,7 +180,8 @@ const getPaginationRange = (current, total) => {
 };
 
 const Notifications = () => {
-  useLanguage();
+  const currentLang = useLanguage();
+  const lang = (currentLang === 'vi' || globalThis.localStorage?.getItem('nexusLanguage') === 'vi') ? 'vi' : 'en';
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [isConfirmAllOpen, setIsConfirmAllOpen] = useState(false);
@@ -189,18 +193,44 @@ const Notifications = () => {
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
   const [prefs, setPrefs] = useState(() => getSavedMemberNotificationPreferences());
+  const [reschedules, setReschedules] = useState([]);
+  const [reschedBusyId, setReschedBusyId] = useState(null);
 
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:8080/api/v1/notifications', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setNotifications(res.data || []);
+      const [notifRes, reschedRes] = await Promise.all([
+        axios.get('http://localhost:8080/api/v1/notifications', {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => ({ data: [] })),
+        axios.get('http://localhost:8080/api/v1/member/reschedule-responses/my', {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => ({ data: [] }))
+      ]);
+      setNotifications(notifRes.data || []);
+      setReschedules(Array.isArray(reschedRes.data) ? reschedRes.data : []);
     } catch (err) {
       console.error("Failed to fetch notifications", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRescheduleRespond = async (requestId, action) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      setReschedBusyId(requestId);
+      await axios.post(
+        `http://localhost:8080/api/v1/member/reschedule-responses/${requestId}/respond`,
+        { action },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchNotifications();
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || t('Action failed.'));
+    } finally {
+      setReschedBusyId(null);
     }
   };
 
@@ -301,10 +331,9 @@ const Notifications = () => {
     }
   };
 
-  // Filter notifications according to active member notification preferences
-  const allowedNotifications = useMemo(() => {
-    return filterMemberNotifications(notifications, prefs);
-  }, [notifications, prefs]);
+  // Option A (Mute/DND mode): Keep full notifications archive in Notification Center history,
+  // while preferences govern bell alerts, sounds and unread badge count.
+  const allowedNotifications = notifications;
 
   // Compute category statistics
   const tabStats = useMemo(() => {
@@ -426,6 +455,101 @@ const Notifications = () => {
         
         {/* Main Column (8 cols): Controls & Notifications List */}
         <div className="lg:col-span-8 flex flex-col gap-5">
+
+          {/* Make-up Reschedule Urgent Notices */}
+          {reschedules.length > 0 && (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" />
+                  <span>{t('Class Reschedule & Make-up Decisions')}</span>
+                </span>
+                <span className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold">
+                  {reschedules.filter(r => r.responseStatus === 'PENDING' && !r.isExpired).length} {t('Pending response')}
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                {reschedules.map((req) => {
+                  const isPending = req.responseStatus === 'PENDING' && !req.isExpired;
+                  const isBusy = reschedBusyId === req.requestId;
+                  return (
+                    <div
+                      key={req.requestId}
+                      className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/20 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <strong className="text-slate-900 dark:text-white text-sm">{req.className}</strong>
+                          {req.responseStatus === 'ACCEPTED' ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">
+                              {t('Confirmed for Make-up')}
+                            </span>
+                          ) : req.responseStatus === 'DECLINED' ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-600 border border-blue-500/30">
+                              {t('Declined - 100% Credit Voucher Refunded')}
+                            </span>
+                          ) : req.isExpired ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-500/15 text-slate-500">
+                              {t('Expired')}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 animate-pulse">
+                              {t('Action Needed')}
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          {t('Coach')}: <strong>{req.coachName}</strong> • {t('Reason')}: {getReasonLabel(req.reasonCategory, lang)}
+                        </p>
+
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+                          <span className="line-through text-slate-400">
+                            {formatScheduleSlot(req.originalStartTime, req.originalEndTime, lang)}
+                          </span>
+                          <span>➔</span>
+                          <span className="text-[#0071E3] font-bold">
+                            {formatScheduleSlot(req.proposedStartTime, req.proposedEndTime, lang)}
+                          </span>
+                          {req.proposedRoomName && <span>• {t('Room')}: <strong>{req.proposedRoomName}</strong></span>}
+                        </div>
+
+                        {req.creditVoucherCode && (
+                          <p className="text-[11px] text-emerald-600 font-bold mt-1">
+                            {t('Credit Voucher')}: <code className="px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">{req.creditVoucherCode}</code> (+100% refund)
+                          </p>
+                        )}
+                      </div>
+
+                      {isPending && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => handleRescheduleRespond(req.requestId, 'ACCEPT')}
+                            disabled={isBusy}
+                            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>{t('Attend Make-up')}</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleRescheduleRespond(req.requestId, 'DECLINE')}
+                            disabled={isBusy}
+                            className="px-3 py-2 rounded-xl border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 font-bold text-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+                            title={t('Busy? Automatic 100% Credit Refund')}
+                          >
+                            <Gift className="w-3.5 h-3.5" />
+                            <span>{t('Decline & Refund 100%')}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           
           {/* Controls Bar: Search & Filter + Adaptive Grid Cupertino Segmented Control */}
           <div className="flex flex-col gap-3">
@@ -574,6 +698,15 @@ const Notifications = () => {
                             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${meta.badgeStyle}`}>
                               {meta.badge}
                             </span>
+                            {!isMemberNotificationAllowed(notification, prefs) && (
+                              <span
+                                className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-500/10 text-slate-500 dark:text-slate-400 border-slate-500/20 flex items-center gap-1"
+                                title={t("Muted according to Notification Preferences")}
+                              >
+                                <BellOff className="w-2.5 h-2.5" />
+                                <span>{t("Muted")}</span>
+                              </span>
+                            )}
                             <h3 className={`text-sm leading-snug tracking-tight ${
                               isUnread ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300'
                             }`}>
