@@ -31,7 +31,7 @@ import ClassRenewalModal from './ClassRenewalModal';
 import RenewalNoticeModal from './RenewalNoticeModal';
 import PaymentMethodSelector from './PaymentMethodSelector';
 
-export default function ManageMembershipsView() {
+export default function ManageMembershipsView({ initialKeyword = '' } = {}) {
   useLanguage();
     // Receipt Modal States
     const [receiptModalOpen, setReceiptModalOpen] = useState(false);
@@ -45,7 +45,13 @@ export default function ManageMembershipsView() {
     const [subscribing, setSubscribing] = useState(false);
     const [pkgFeedback, setPkgFeedback] = useState(null);
 
-    const [keyword, setKeyword] = useState('');
+    const [keyword, setKeyword] = useState(initialKeyword || '');
+
+    useEffect(() => {
+      if (initialKeyword !== undefined && initialKeyword !== null) {
+        setKeyword(initialKeyword);
+      }
+    }, [initialKeyword]);
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedMember, setSelectedMember] = useState(null);

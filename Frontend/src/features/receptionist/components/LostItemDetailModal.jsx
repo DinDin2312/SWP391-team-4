@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   X, CheckCircle2, ShieldCheck, MapPin, Calendar, Clock,
   User, Phone, CreditCard, Tag, Box, AlertTriangle, Trash2,
-  ExternalLink, ZoomIn, Eye, EyeOff
+  ExternalLink, ZoomIn, Eye, EyeOff, Lock, Package
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 
@@ -77,21 +77,24 @@ const LostItemDetailModal = ({ isOpen, item, onClose, onOpenClaim, onOpenDispose
   const getValuationBadge = (type) => {
     if (type === 'HIGH_VALUE') {
       return (
-        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
-          💎 {t('Giá trị cao')}
+        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1.5">
+          <Lock className="w-3 h-3 text-amber-500" />
+          <span>{t('Giá trị cao')}</span>
         </span>
       );
     }
     if (type === 'PERISHABLE') {
       return (
-        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-orange-500/10 text-orange-500 border border-orange-500/20">
-          🥗 {t('Đồ dễ hỏng (48h)')}
+        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-orange-500/10 text-orange-500 border border-orange-500/20 flex items-center gap-1.5">
+          <Clock className="w-3 h-3 text-orange-500" />
+          <span>{t('Đồ dễ hỏng (48h)')}</span>
         </span>
       );
     }
     return (
-      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[var(--surface-hover)] text-[var(--text-muted)] border border-[var(--border)]">
-        📦 {t('Tiêu chuẩn')}
+      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[var(--surface-hover)] text-[var(--text-muted)] border border-[var(--border)] flex items-center gap-1.5">
+        <Package className="w-3 h-3 opacity-60" />
+        <span>{t('Tiêu chuẩn')}</span>
       </span>
     );
   };
@@ -175,7 +178,7 @@ const LostItemDetailModal = ({ isOpen, item, onClose, onOpenClaim, onOpenDispose
                   {formatShortDate(item.expiryDate)}
                   {item.status === 'STORED' && (
                     <span className="text-[10px] text-[var(--text-muted)] block font-normal">
-                      ({item.daysUntilExpiry >= 0 ? `Còn ${item.daysUntilExpiry} ngày` : 'Đã quá hạn'})
+                      ({item.daysUntilExpiry >= 0 ? t('{0} days left', [item.daysUntilExpiry]) : t('Đã quá hạn')})
                     </span>
                   )}
                 </div>
@@ -279,7 +282,7 @@ const LostItemDetailModal = ({ isOpen, item, onClose, onOpenClaim, onOpenDispose
 
             {/* Timeline footer note */}
             <div className="text-[11px] text-[var(--text-muted)] border-t border-[var(--border)] pt-3 flex flex-wrap justify-between gap-2">
-              <span>{t('Tiếp nhận:')} {formatDate(item.createdAt)} {item.createdByName ? `bởi ${item.createdByName}` : ''}</span>
+              <span>{t('Tiếp nhận:')} {formatDate(item.createdAt)} {item.createdByName ? `${t('bởi')} ${item.createdByName}` : ''}</span>
               {item.foundByName && <span>{t('Người mang nộp:')} {item.foundByName}</span>}
             </div>
           </div>

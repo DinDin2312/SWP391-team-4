@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   PackageSearch, Plus, Search, Filter, RefreshCw, CheckCircle2,
   Clock, AlertTriangle, ShieldCheck, MapPin, Sparkles, Box,
-  ChevronLeft, ChevronRight, Eye, Check, Tag, AlertCircle, ShieldAlert
+  ChevronLeft, ChevronRight, Eye, Check, Tag, AlertCircle, ShieldAlert,
+  LayoutGrid, Smartphone, Wallet, Watch, Shirt, Package, Lock
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import lostAndFoundService from '../services/lostAndFoundService';
@@ -12,24 +13,24 @@ import LostItemDetailModal from './LostItemDetailModal';
 import DisposeItemModal from './DisposeItemModal';
 
 const CATEGORY_TABS = [
-  { key: 'ALL', label: 'Tất cả' },
-  { key: 'ELECTRONICS', label: '📱 Điện tử' },
-  { key: 'DOCUMENTS_WALLET', label: '💳 Ví & Giấy tờ' },
-  { key: 'ACCESSORIES', label: '🥤 Phụ kiện & Bình nước' },
-  { key: 'CLOTHING_SHOES', label: '👟 Quần áo & Giày' },
-  { key: 'PERISHABLE', label: '🥗 Đồ tươi (48h)' },
-  { key: 'OTHER', label: '📦 Khác' },
+  { key: 'ALL', label: 'Tất cả', icon: LayoutGrid },
+  { key: 'ELECTRONICS', label: 'Thiết bị điện tử', icon: Smartphone },
+  { key: 'DOCUMENTS_WALLET', label: 'Ví & Giấy tờ', icon: Wallet },
+  { key: 'ACCESSORIES', label: 'Phụ kiện & Bình nước', icon: Watch },
+  { key: 'CLOTHING_SHOES', label: 'Trang phục & Giày', icon: Shirt },
+  { key: 'PERISHABLE', label: 'Đồ tươi (48h)', icon: Clock },
+  { key: 'OTHER', label: 'Đồ dùng khác', icon: Package },
 ];
 
 const STATUS_FILTERS = [
   { key: 'ALL', label: 'Tất cả trạng thái' },
-  { key: 'STORED', label: '🟢 Đang lưu kho' },
-  { key: 'CLAIMED', label: '🔵 Đã bàn giao' },
-  { key: 'OVERDUE', label: '🟡 Quá hạn lưu' },
-  { key: 'DISPOSED', label: '🔴 Đã thanh lý' },
+  { key: 'STORED', label: 'Đang lưu kho' },
+  { key: 'CLAIMED', label: 'Đã bàn giao khách' },
+  { key: 'OVERDUE', label: 'Quá hạn lưu kho' },
+  { key: 'DISPOSED', label: 'Đã thanh lý / tiêu hủy' },
 ];
 
-const LostAndFoundView = () => {
+const LostAndFoundView = ({ initialKeyword = '' }) => {
   useLanguage();
 
   const [stats, setStats] = useState({
@@ -45,7 +46,16 @@ const LostAndFoundView = () => {
   const [errorMsg, setErrorMsg] = useState('');
 
   // Filters & Search
-  const [keyword, setKeyword] = useState('');
+  const [keyword, setKeyword] = useState(initialKeyword || '');
+
+  useEffect(() => {
+    if (initialKeyword !== undefined && initialKeyword !== null) {
+      setKeyword(initialKeyword);
+      setSelectedCategory('ALL');
+      setSelectedStatus('ALL');
+      setPage(0);
+    }
+  }, [initialKeyword]);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedValuation, setSelectedValuation] = useState('ALL');
@@ -209,61 +219,62 @@ const LostAndFoundView = () => {
         <button
           type="button"
           onClick={() => setCreateModalOpen(true)}
-          className="px-5 py-3 rounded-2xl bg-[var(--primary)] text-[color:var(--on-primary)] hover:opacity-95 active:scale-95 transition-all shadow-md font-semibold text-sm flex items-center justify-center gap-2.5 cursor-pointer shrink-0"
+          className="px-5 py-3 rounded-2xl bg-[#0071E3] hover:bg-[#0077ED] text-white active:scale-95 transition-all shadow-md font-semibold text-sm flex items-center justify-center gap-2.5 cursor-pointer shrink-0"
         >
           <Plus className="w-5 h-5" />
           <span>{t('Tiếp nhận món đồ mới')}</span>
         </button>
       </div>
 
-      {/* Metrics Bar (Apple Style Pills) */}
+      {/* Metrics Bar (Apple Style Bento Cards) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs flex items-center justify-between hover:border-[var(--primary)]/30 transition-all">
           <div>
             <div className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
               {t('Đang lưu kho')}
             </div>
-            <div className="text-2xl font-extrabold text-[var(--text)] mt-0.5">{stats.totalStored}</div>
+            <div className="text-2xl font-black text-[var(--text)] mt-0.5">{stats.totalStored}</div>
           </div>
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-            <Box className="w-5 h-5" />
+            <Package className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs flex items-center justify-between hover:border-amber-500/30 transition-all">
           <div>
-            <div className="text-[11px] font-semibold text-amber-500 uppercase tracking-wider flex items-center gap-1">
-              <span>💎 {t('Trong két an toàn')}</span>
+            <div className="text-[11px] font-semibold text-amber-500 uppercase tracking-wider flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5" />
+              <span>{t('Trong két an toàn')}</span>
             </div>
-            <div className="text-2xl font-extrabold text-amber-500 mt-0.5">{stats.highValueStored}</div>
+            <div className="text-2xl font-black text-amber-500 mt-0.5">{stats.highValueStored}</div>
           </div>
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
-            <ShieldAlert className="w-5 h-5" />
+            <ShieldCheck className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs flex items-center justify-between hover:border-blue-500/30 transition-all">
           <div>
             <div className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
               {t('Đã trao trả khách')}
             </div>
-            <div className="text-2xl font-extrabold text-blue-500 mt-0.5">{stats.totalClaimed}</div>
+            <div className="text-2xl font-black text-blue-500 mt-0.5">{stats.totalClaimed}</div>
           </div>
           <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
             <CheckCircle2 className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-xs flex items-center justify-between hover:border-rose-500/30 transition-all">
           <div>
             <div className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
               {t('Quá hạn / Sắp hết hạn')}
             </div>
-            <div className="text-2xl font-extrabold text-rose-500 mt-0.5">
+            <div className="text-2xl font-black text-rose-500 mt-0.5">
               {stats.totalOverdue}{' '}
               {stats.expiringSoon > 0 && (
                 <span className="text-xs font-normal text-amber-500">
-                  (+{stats.expiringSoon} sắp hết)
+                  {t('(+{0} expiring)', [stats.expiringSoon])}
                 </span>
               )}
             </div>
@@ -275,9 +286,10 @@ const LostAndFoundView = () => {
       </div>
 
       {/* Category Segmented Control (Apple Tabs) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         {CATEGORY_TABS.map((tab) => {
           const isSelected = selectedCategory === tab.key;
+          const IconComponent = tab.icon;
           return (
             <button
               key={tab.key}
@@ -286,13 +298,14 @@ const LostAndFoundView = () => {
                 setSelectedCategory(tab.key);
                 setPage(0);
               }}
-              className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer active:scale-95 ${
                 isSelected
-                  ? 'bg-[var(--primary)] text-[color:var(--on-primary)] shadow-xs'
+                  ? 'bg-[#0071E3] text-white shadow-sm shadow-[#0071E3]/25 font-bold'
                   : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
               }`}
             >
-              {t(tab.label)}
+              <IconComponent className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : 'text-[var(--text-muted)]'}`} />
+              <span>{t(tab.label)}</span>
             </button>
           );
         })}
@@ -311,23 +324,23 @@ const LostAndFoundView = () => {
               setKeyword(e.target.value);
               setPage(0);
             }}
-            className="w-full pl-9 pr-4 py-2 rounded-xl bg-[var(--surface-hover)]/40 border border-[var(--border)] text-[var(--text)] text-xs focus:border-[var(--primary)] outline-none"
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--text-muted)] text-xs focus:ring-2 focus:ring-[#0071E3]/30 focus:border-[#0071E3] outline-none transition-all"
           />
         </div>
 
         {/* Status Dropdown */}
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        <div className="flex items-center gap-2.5 w-full md:w-auto">
           <select
             value={selectedStatus}
             onChange={(e) => {
               setSelectedStatus(e.target.value);
               setPage(0);
             }}
-            className="px-3 py-2 rounded-xl bg-[var(--surface-hover)]/40 border border-[var(--border)] text-[var(--text)] text-xs outline-none focus:border-[var(--primary)] cursor-pointer"
+            className="px-3.5 py-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] text-xs outline-none focus:ring-2 focus:ring-[#0071E3]/30 focus:border-[#0071E3] cursor-pointer min-w-[155px] transition-all"
           >
             {STATUS_FILTERS.map((s) => (
               <option key={s.key} value={s.key}>
-                {s.label}
+                {t(s.label)}
               </option>
             ))}
           </select>
@@ -339,12 +352,12 @@ const LostAndFoundView = () => {
               setSelectedValuation(e.target.value);
               setPage(0);
             }}
-            className="px-3 py-2 rounded-xl bg-[var(--surface-hover)]/40 border border-[var(--border)] text-[var(--text)] text-xs outline-none focus:border-[var(--primary)] cursor-pointer"
+            className="px-3.5 py-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] text-xs outline-none focus:ring-2 focus:ring-[#0071E3]/30 focus:border-[#0071E3] cursor-pointer min-w-[155px] transition-all"
           >
-            <option value="ALL">Tất cả mức giá trị</option>
-            <option value="HIGH_VALUE">💎 Giá trị cao</option>
-            <option value="STANDARD">📦 Tiêu chuẩn</option>
-            <option value="PERISHABLE">🥗 Đồ tươi/hỏng</option>
+            <option value="ALL">{t('Tất cả phân loại')}</option>
+            <option value="HIGH_VALUE">{t('Két sắt (Giá trị cao)')}</option>
+            <option value="STANDARD">{t('Kho tiêu chuẩn')}</option>
+            <option value="PERISHABLE">{t('Đồ tươi / Dễ hỏng (48h)')}</option>
           </select>
 
           {/* Refresh Button */}
@@ -355,7 +368,7 @@ const LostAndFoundView = () => {
               fetchItems();
             }}
             title={t('Tải lại dữ liệu')}
-            className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-all cursor-pointer shrink-0"
+            className="p-2.5 rounded-xl text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-all cursor-pointer shrink-0 active:scale-95"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -421,8 +434,9 @@ const LostAndFoundView = () => {
                 </div>
 
                 {item.valuationType === 'HIGH_VALUE' && (
-                  <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-black shadow-sm">
-                    💎 {t('Giá trị cao')}
+                  <div className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-slate-950 flex items-center gap-1 shadow-sm">
+                    <Lock className="w-3 h-3" />
+                    <span>{t('Két sắt an toàn')}</span>
                   </div>
                 )}
               </div>
@@ -440,14 +454,18 @@ const LostAndFoundView = () => {
 
                   {/* Storage Location Chip */}
                   <div className="mt-2 flex items-center gap-1.5 text-xs">
-                    <span className="text-[var(--text-muted)]">📍 {t('Cất tại:')}</span>
+                    <span className="text-[var(--text-muted)] flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-[var(--primary)]" />
+                      <span>{t('Cất tại:')}</span>
+                    </span>
                     <span className="font-semibold text-[var(--text)] bg-[var(--surface-hover)] px-2 py-0.5 rounded-lg border border-[var(--border)] truncate max-w-[200px]">
                       {item.storageLocation}
                     </span>
                   </div>
 
-                  <div className="mt-1 flex items-center gap-1 text-[11px] text-[var(--text-muted)] truncate">
-                    <span>🕒 {t('Nơi nhặt:')} {item.foundLocation}</span>
+                  <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] truncate">
+                    <Clock className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
+                    <span>{t('Nơi nhặt:')} {item.foundLocation}</span>
                   </div>
 
                   {item.publicDescription && (
@@ -479,7 +497,7 @@ const LostAndFoundView = () => {
                     </button>
                   ) : item.status === 'CLAIMED' ? (
                     <span className="text-[11px] font-medium text-blue-500">
-                      ✓ Đã trả: <b>{item.claimantName}</b>
+                      {t('✓ Returned to: {0}', [item.claimantName || ''])}
                     </span>
                   ) : item.status === 'OVERDUE' ? (
                     <button

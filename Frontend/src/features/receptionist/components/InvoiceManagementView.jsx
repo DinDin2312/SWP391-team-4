@@ -32,10 +32,20 @@ const getPaginationRange = (current, total) => {
   return [1, '...', current - 1, current, current + 1, '...', total];
 };
 
-export default function InvoiceManagementView() {
+export default function InvoiceManagementView(props) {
+  const initialKeyword = props?.initialKeyword || '';
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState(initialKeyword);
+
+  useEffect(() => {
+    if (initialKeyword) {
+      setSearchKeyword(initialKeyword);
+      setPaymentFilter('ALL');
+      setDateFilter('ALL');
+      setCurrentPage(1);
+    }
+  }, [initialKeyword]);
   const [paymentFilter, setPaymentFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('ALL');
   const [sortOrder, setSortOrder] = useState('DESC');

@@ -90,3 +90,45 @@ test('receptionistUtils: formatCheckInPackage and formatFacilityName handle bili
   assert.equal(formatFacilityName(null), '—');
   assert.equal(formatFacilityName(''), '—');
 });
+
+test('receptionistUtils: Lost & Found bilingual i18n translates tabs, badges, actions, and metrics across EN and VI', async () => {
+  const { t } = await import('../../i18n/useLanguage.js');
+
+  // English verification
+  setLanguage('en');
+  assert.equal(t('Quản lý Đồ thất lạc & Bỏ quên'), 'Lost & Found Management');
+  assert.equal(t('FRONT DESK ASSET MANAGEMENT'), 'FRONT DESK ASSET MANAGEMENT');
+  assert.equal(t('Tiếp nhận món đồ mới'), 'Receive New Item');
+  assert.equal(t('Đang lưu kho'), 'In Storage');
+  assert.equal(t('Trong két an toàn'), 'In Safe Box');
+  assert.equal(t('Đã trao trả khách'), 'Handed Over');
+  assert.equal(t('Quá hạn / Sắp hết hạn'), 'Overdue / Expiring Soon');
+  assert.equal(t('Thiết bị điện tử'), 'Electronics');
+  assert.equal(t('Ví & Giấy tờ'), 'Wallets & IDs');
+  assert.equal(t('Trang phục & Giày'), 'Clothing & Shoes');
+  assert.equal(t('Đang giữ'), 'Stored');
+  assert.equal(t('Két sắt an toàn'), 'Secure Safe Box');
+  assert.equal(t('Bàn giao'), 'Hand Over');
+  assert.equal(t('Hội viên trung tâm'), 'Center Member');
+  assert.equal(t('Khách ngoài / Khách vãng lai'), 'Guest / Walk-in Visitor');
+  assert.equal(t('(+{0} expiring)', [3]), '(+3 expiring)');
+
+  // Vietnamese verification
+  setLanguage('vi');
+  assert.equal(t('Quản lý Đồ thất lạc & Bỏ quên'), 'Quản lý Đồ thất lạc & Bỏ quên');
+  assert.equal(t('FRONT DESK ASSET MANAGEMENT'), 'QUẢN LÝ TÀI SẢN BÀN LỄ TÂN');
+  assert.equal(t('Tiếp nhận món đồ mới'), 'Tiếp nhận món đồ mới');
+  assert.equal(t('Đang lưu kho'), 'Đang lưu kho');
+  assert.equal(t('Trong két an toàn'), 'Trong két an toàn');
+  assert.equal(t('Đã trao trả khách'), 'Đã trao trả khách');
+  assert.equal(t('Quá hạn / Sắp hết hạn'), 'Quá hạn / Sắp hết hạn');
+  assert.equal(t('Thiết bị điện tử'), 'Thiết bị điện tử');
+  assert.equal(t('Ví & Giấy tờ'), 'Ví & Giấy tờ');
+  assert.equal(t('Trang phục & Giày'), 'Trang phục & Giày');
+  assert.equal(t('Đang giữ'), 'Đang giữ');
+  assert.equal(t('Két sắt an toàn'), 'Két sắt an toàn');
+  assert.equal(t('Bàn giao'), 'Bàn giao');
+  assert.equal(t('Hội viên trung tâm'), 'Hội viên trung tâm');
+  assert.equal(t('Khách ngoài / Khách vãng lai'), 'Khách ngoài / Khách vãng lai');
+  assert.equal(t('(+{0} expiring)', [3]), '(+3 sắp hết)');
+});

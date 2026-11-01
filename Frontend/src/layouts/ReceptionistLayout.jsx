@@ -2,8 +2,9 @@ import { t, useLanguage } from '../i18n/useLanguage';
 import AutoSidebar from '../components/AutoSidebar';
 import LanguageSwitcher from '../i18n/LanguageSwitcher';
 import ThemeToggle from '../components/ThemeToggle';
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import {
   Users,
@@ -17,12 +18,21 @@ import {
   LifeBuoy,
   PackageSearch,
   Settings,
+  Bell,
 } from 'lucide-react';
+import ReceptionistNotificationDropdown from '../features/receptionist/components/ReceptionistNotificationDropdown';
+import {
+  getSavedReceptionistPreferences,
+  getReceptionistUnreadCount,
+} from '../features/receptionist/receptionistNotificationUtils';
 
 const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSelectFeature }) => {
   useLanguage();
   const navigate = useNavigate();
   const { userInfo, logout, updateUserInfo } = useContext(AuthContext);
+
+  const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const handleProfileSync = () => {
@@ -39,6 +49,31 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
     window.addEventListener('userProfileUpdated', handleProfileSync);
     return () => window.removeEventListener('userProfileUpdated', handleProfileSync);
   }, [updateUserInfo]);
+
+  // Sync Front Desk unread notifications
+  useEffect(() => {
+    const fetchUnread = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      try {
+        const res = await axios.get('http://localhost:8080/api/v1/notifications', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = Array.isArray(res.data) ? res.data : [];
+        const prefs = getSavedReceptionistPreferences();
+        setUnreadCount(getReceptionistUnreadCount(data, prefs));
+      } catch {}
+    };
+
+    fetchUnread();
+    const handleUpdate = () => fetchUnread();
+    window.addEventListener('notificationUpdated', handleUpdate);
+    window.addEventListener('receptionistNotificationUpdated', handleUpdate);
+    return () => {
+      window.removeEventListener('notificationUpdated', handleUpdate);
+      window.removeEventListener('receptionistNotificationUpdated', handleUpdate);
+    };
+  }, []);
 
   const fullName = userInfo?.fullName || 'Lễ Tân Thúy Kiều';
   const initials = fullName
@@ -91,6 +126,11 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
       icon: PackageSearch,
     },
     {
+      id: 'notifications',
+      label: 'Notifications',
+      icon: Bell,
+    },
+    {
       id: 'settings',
       label: 'Settings',
       icon: Settings,
@@ -138,10 +178,18 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
                       : 'border border-transparent text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
                   }`}
                 >
-                  <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                  <div className="w-5 h-5 flex items-center justify-center shrink-0 relative">
                     <Icon className="w-4 h-4 shrink-0" />
+                    {item.id === 'notifications' && unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
+                    )}
                   </div>
                   <span className="text-left leading-tight truncate flex-1 min-w-0">{t(item.label)}</span>
+                  {item.id === 'notifications' && unreadCount > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -207,8 +255,44 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
       {/* ===================== MAIN CONTENT WRAPPER ===================== */}
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
         <header className="role-page-topbar role-reception-topbar">
-          <nav className="role-breadcrumb" aria-label={t('Breadcrumb')}><span>{t('Front desk portal')}</span><span aria-hidden="true">/</span><strong>{t(navItems.find(item => item.id === activeFeature)?.label || '')}</strong></nav>
-          <div className="role-header-actions flex items-center gap-2"><ThemeToggle /><LanguageSwitcher /></div>
+          <nav className="role-breadcrumb" aria-label={t('Breadcrumb')}>
+            <span>{t('Front desk portal')}</span>
+            <span aria-hidden="true">/</span>
+            <strong>{t(navItems.find(item => item.id === activeFeature)?.label || '')}</strong>
+          </nav>
+          <div className="role-header-actions flex items-center gap-2">
+            {/* Front Desk Notification Bell Trigger */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsNotifDropdownOpen(!isNotifDropdownOpen)}
+                className={`relative p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-center ${
+                  isNotifDropdownOpen
+                    ? 'bg-[#0071E3] text-white border-[#0071E3] shadow-md shadow-blue-500/20'
+                    : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)]'
+                }`}
+                title={t("Notifications")}
+                aria-label={t("Notifications")}
+              >
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white dark:ring-slate-900 animate-pulse">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              <ReceptionistNotificationDropdown
+                isOpen={isNotifDropdownOpen}
+                onClose={() => setIsNotifDropdownOpen(false)}
+                onUnreadChange={setUnreadCount}
+                onNavigateFeature={onSelectFeature}
+              />
+            </div>
+
+            <ThemeToggle />
+            <LanguageSwitcher />
+          </div>
         </header>
         {children}
       </main>

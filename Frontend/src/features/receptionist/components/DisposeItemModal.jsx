@@ -33,7 +33,7 @@ const DisposeItemModal = ({ isOpen, item, onClose, onSuccess }) => {
       onClose();
     } catch (err) {
       console.error(err);
-      setErrorMsg(err.response?.data?.message || err.message || 'Không thể xử lý thanh lý món đồ.');
+      setErrorMsg(err.response?.data?.message || err.message || t('Không thể xử lý thanh lý món đồ.'));
     } finally {
       setSubmitting(false);
     }
@@ -80,7 +80,7 @@ const DisposeItemModal = ({ isOpen, item, onClose, onSuccess }) => {
             >
               {DISPOSAL_REASONS.map((r) => (
                 <option key={r.value} value={r.value}>
-                  {r.label}
+                  {t(r.label)}
                 </option>
               ))}
             </select>
