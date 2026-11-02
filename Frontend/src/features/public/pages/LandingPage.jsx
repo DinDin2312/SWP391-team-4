@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Dumbbell, Activity, Shield, Sparkles, ChevronRight, Play, Star, MapPin, 
   CheckCircle2, User, X, Menu, Clock, Phone, Mail, ChevronDown, Waves, 
-  Flame, Compass, HelpCircle, Search, Calendar, Check, ArrowRight
+  Flame, Compass, HelpCircle, Search, Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axiosClient from '../../../services/axiosClient';

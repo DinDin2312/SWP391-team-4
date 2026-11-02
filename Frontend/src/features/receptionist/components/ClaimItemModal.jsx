@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, User, Phone, CreditCard, ShieldCheck, AlertCircle, FileText, Package, MapPin, Clock, Tag } from 'lucide-react';
+import { X, CheckCircle2, User, ShieldCheck, AlertCircle, Package, MapPin, Clock, Tag } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import lostAndFoundService from '../services/lostAndFoundService';
 import receptionistService from '../services/receptionistService';

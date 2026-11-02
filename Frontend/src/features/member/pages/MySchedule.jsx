@@ -1,13 +1,12 @@
 import { locale } from '../../../i18n/languageStore.js';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
-import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import CancelClassPolicyModal from '../components/CancelClassPolicyModal';
 import TransferClassModal from '../components/TransferClassModal';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ChevronLeft, ChevronRight, Plus, Activity, MapPin,
-  User, CheckCircle2, XCircle, Clock, Dumbbell, Award, QrCode, X, ArrowRightLeft
+  ChevronLeft, ChevronRight, Plus, MapPin,
+  User, CheckCircle2, Clock, Dumbbell, Award, QrCode, X, ArrowRightLeft
 } from 'lucide-react';
 import MemberWorkoutsModal from '../components/MemberWorkoutsModal';
 import MemberAssessmentsModal from '../components/MemberAssessmentsModal';

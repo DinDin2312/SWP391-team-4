@@ -10,7 +10,6 @@ import {
   Flame,
   Dumbbell,
   Activity,
-  Calendar,
   ChevronLeft,
   ChevronRight,
   Info,
@@ -35,7 +34,7 @@ const BodyTransformationModal = ({
   onClose,
   trainee = null,
   initialAssessments = null,
-  coachInfo = null,
+  _coachInfo = null,
   isCoachView = false,
   onBack = null
 }) => {
@@ -517,7 +516,7 @@ const BodyTransformationModal = ({
                                 stroke="#ffffff"
                                 strokeWidth="2"
                                 className="svg-data-point"
-                                onMouseEnter={(e) => setHoveredPoint({ x: pt.x, y: pt.yFat, point: pt, type: 'fat' })}
+                                onMouseEnter={() => setHoveredPoint({ x: pt.x, y: pt.yFat, point: pt, type: 'fat' })}
                                 onMouseLeave={() => setHoveredPoint(null)}
                               />
                             )}
@@ -532,7 +531,7 @@ const BodyTransformationModal = ({
                                 stroke="#ffffff"
                                 strokeWidth="2"
                                 className="svg-data-point"
-                                onMouseEnter={(e) => setHoveredPoint({ x: pt.x, y: pt.yMuscle, point: pt, type: 'muscle' })}
+                                onMouseEnter={() => setHoveredPoint({ x: pt.x, y: pt.yMuscle, point: pt, type: 'muscle' })}
                                 onMouseLeave={() => setHoveredPoint(null)}
                               />
                             )}
@@ -547,7 +546,7 @@ const BodyTransformationModal = ({
                                 stroke="#ffffff"
                                 strokeWidth="2"
                                 className="svg-data-point"
-                                onMouseEnter={(e) => setHoveredPoint({ x: pt.x, y: pt.yWeight, point: pt, type: 'weight' })}
+                                onMouseEnter={() => setHoveredPoint({ x: pt.x, y: pt.yWeight, point: pt, type: 'weight' })}
                                 onMouseLeave={() => setHoveredPoint(null)}
                               />
                             )}

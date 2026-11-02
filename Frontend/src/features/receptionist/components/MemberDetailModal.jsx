@@ -19,13 +19,8 @@ import {
     ChevronDown,
     ChevronUp,
     Ban,
-    Info,
-    Banknote,
     Receipt,
-    Printer,
-    Users,
-    Calendar,
-    Sparkles
+    Printer
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
 import InvoiceReceiptModal from './InvoiceReceiptModal';

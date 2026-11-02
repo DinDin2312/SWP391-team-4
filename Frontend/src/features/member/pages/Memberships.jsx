@@ -17,23 +17,15 @@ import {
   Sparkles,
   QrCode,
   ArrowRight,
-  Plus,
   ShoppingBag,
-  ExternalLink,
   ChevronRight,
   AlertCircle,
   RefreshCw,
   Search,
   CheckCircle2,
-  Layers,
   Bot,
-  Flame,
-  Award,
-  Filter,
   X,
   ShieldCheck,
-  CalendarDays,
-  Zap,
 } from 'lucide-react';
 
 const loadOwnedDetail = (id) =>
@@ -151,7 +143,7 @@ const Memberships = () => {
 
   const memberId = userInfo?.userId || 'MEMBER';
   const memberName = userInfo?.fullName || 'Active Member';
-  const memberEmail = userInfo?.email || '';
+  const _memberEmail = userInfo?.email || '';
 
   const qrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=NEXUS-PASS-${encodeURIComponent(memberId)}`;
 
@@ -683,10 +675,10 @@ const Memberships = () => {
                         {isActive ? (
                           <button
                             type="button"
-                            onClick={() => navigate('/member/book-class')}
+                            onClick={() => navigate('/member/package-store')}
                             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-[#0071E3] hover:bg-[#0077ED] text-white shadow-xs active:scale-95 transition-all cursor-pointer"
                           >
-                            <span>{t("Book Class")}</span>
+                            <span>{t("Order Package")}</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </button>
                         ) : (

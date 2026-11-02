@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  REASON_CATEGORIES,
   getReasonLabel,
   getStatusMeta,
   formatDateTime,

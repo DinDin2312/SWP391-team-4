@@ -1,6 +1,6 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, X, User, Minus, Mic, MicOff, Sparkles, BookOpen } from 'lucide-react';
+import { Send, X, User, Minus, Mic, MicOff, Sparkles, BookOpen, Maximize2, Minimize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +10,7 @@ import { parseSseChunk, stripPartialActionTag } from '../chatStream.js';
 import { CyberFoxAvatar } from '../../../components/CyberFoxMascot';
 
 const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
-  const lang = useLanguage();
+  useLanguage();
   const [exitMode, setExitMode] = useState('fox');
   const [messages, setMessages] = useState([
     { id: 1, sender: 'bot', text: t('Hello! I am NEXUS AI. How can I assist you with your fitness journey today? (e.g. "I want to lose 5kg", "Which yoga class is good?")') }
@@ -18,6 +18,14 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
   const [input, setInput] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const DEFAULT_WIDTH = 390;
+  const DEFAULT_HEIGHT = 560;
+  const [size, setSize] = useState({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const preMaximizeState = useRef({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, position: { x: 0, y: 0 } });
+  const resizeDirection = useRef(null);
+  const resizeStart = useRef({ x: 0, y: 0, width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isChipsHovered, setIsChipsHovered] = useState(false);
@@ -273,6 +281,81 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
     }
   };
 
+  const handleToggleMaximize = (e) => {
+    e.stopPropagation();
+    setIsDragging(false);
+    if (isMaximized) {
+      setSize({ width: preMaximizeState.current.width, height: preMaximizeState.current.height });
+      setPosition(preMaximizeState.current.position);
+      setIsMaximized(false);
+    } else {
+      preMaximizeState.current = { width: size.width, height: size.height, position: { ...position } };
+      const maxWidth = Math.min(840, window.innerWidth - 48);
+      const maxHeight = Math.min(850, window.innerHeight - 100);
+      setSize({ width: maxWidth, height: maxHeight });
+      setIsMaximized(true);
+    }
+  };
+
+  const handleResizeStart = (direction, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    setIsResizing(true);
+    resizeDirection.current = direction;
+    resizeStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      width: size.width,
+      height: size.height
+    };
+    if (isMaximized) setIsMaximized(false);
+  };
+
+  const handleResizeMove = (e) => {
+    if (!resizeDirection.current) return;
+    const dir = resizeDirection.current;
+    const { x: startX, y: startY, width: startWidth, height: startHeight } = resizeStart.current;
+
+    const minWidth = 320;
+    const maxWidth = Math.min(window.innerWidth - 32, 920);
+    const minHeight = 420;
+    const maxHeight = Math.min(window.innerHeight - 90, 900);
+
+    let nextWidth = startWidth;
+    let nextHeight = startHeight;
+
+    if (dir.includes('left')) {
+      const deltaX = startX - e.clientX;
+      nextWidth = Math.max(minWidth, Math.min(maxWidth, startWidth + deltaX));
+    }
+    if (dir.includes('bottom')) {
+      const deltaY = e.clientY - startY;
+      nextHeight = Math.max(minHeight, Math.min(maxHeight, startHeight + deltaY));
+    }
+
+    setSize({ width: nextWidth, height: nextHeight });
+  };
+
+  const handleResizeEnd = () => {
+    setIsResizing(false);
+    resizeDirection.current = null;
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', handleResizeMove);
+      window.addEventListener('mouseup', handleResizeEnd);
+    } else {
+      window.removeEventListener('mousemove', handleResizeMove);
+      window.removeEventListener('mouseup', handleResizeEnd);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleResizeMove);
+      window.removeEventListener('mouseup', handleResizeEnd);
+    };
+  }, [isResizing]);
+
   useEffect(() => {
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
@@ -350,7 +433,7 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
             errText = t('You have already enrolled in this course.');
           } else if (typeof rawErr === 'string' && rawErr.includes('already in your cart')) {
             errText = t('This course is already in your cart.');
-          } else if (typeof rawErr === 'string' && rawErr.includes('conflict')) {
+          } else if (typeof rawErr === 'string' && (rawErr.toLowerCase().includes('conflict') || rawErr.toLowerCase().includes('overlaps') || rawErr.toLowerCase().includes('trùng'))) {
             errText = t('Schedule conflict with another enrolled session.');
           } else if (rawErr) {
             errText = String(rawErr);
@@ -535,8 +618,15 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
                 : { opacity: 0, x: 110 - position.x, y: 360 - position.y, scale: 0.18 }
             }
             transition={{ type: "spring", stiffness: 360, damping: 26 }}
-            className="pointer-events-auto flex flex-col bg-[var(--surface)] backdrop-blur-xl border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden w-[340px] sm:w-[390px]"
-            style={{ height: "540px" }}
+            className={`pointer-events-auto flex flex-col bg-[var(--surface)] backdrop-blur-xl border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden relative ${
+              isResizing ? 'select-none' : ''
+            }`}
+            style={{
+              width: `${size.width}px`,
+              height: `${size.height}px`,
+              maxWidth: 'calc(100vw - 32px)',
+              maxHeight: 'calc(100vh - 90px)'
+            }}
           >
             {/* HEADER */}
             <div 
@@ -563,6 +653,16 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
                   aria-label={t("Minimize (Keep history)")}
                 >
                   <Minus className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={handleToggleMaximize}
+                  className="p-1.5 text-blue-100 hover:bg-white/10 rounded-lg hover:text-white transition-colors cursor-pointer"
+                  title={isMaximized ? t("Restore size") : t("Maximize")}
+                  aria-label={isMaximized ? t("Restore size") : t("Maximize")}
+                >
+                  {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </button>
                 <button
                   type="button"
@@ -734,6 +834,25 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
               <div className="text-center mt-2">
                 <span className="text-[10px] font-medium text-[var(--text-muted)]">{t("NEXUS AI can make mistakes. Verify before buying.")}</span>
               </div>
+            </div>
+
+            {/* RESIZE HANDLERS */}
+            <div
+              onMouseDown={(e) => handleResizeStart('left', e)}
+              className="absolute left-0 top-0 bottom-0 w-2.5 cursor-ew-resize hover:bg-cyan-500/25 active:bg-cyan-500/40 z-30 transition-colors"
+              title={t("Drag left border to resize width")}
+            />
+            <div
+              onMouseDown={(e) => handleResizeStart('bottom', e)}
+              className="absolute left-0 right-0 bottom-0 h-2.5 cursor-ns-resize hover:bg-cyan-500/25 active:bg-cyan-500/40 z-30 transition-colors"
+              title={t("Drag bottom border to resize height")}
+            />
+            <div
+              onMouseDown={(e) => handleResizeStart('bottom-left', e)}
+              className="absolute left-0 bottom-0 w-6 h-6 cursor-nesw-resize z-40 flex items-end justify-start p-1.5 group select-none"
+              title={t("Drag corner to resize")}
+            >
+              <div className="w-2.5 h-2.5 border-b-2 border-l-2 border-slate-400 dark:border-slate-500 group-hover:border-cyan-400 group-hover:scale-110 rounded-bl-xs transition-all" />
             </div>
           </motion.div>
         </div>

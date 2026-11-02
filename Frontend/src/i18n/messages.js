@@ -2582,7 +2582,6 @@ const workoutDictionary = {
   "Select allocation for individual student or synchronized class": "Chọn phân bổ kế hoạch theo học viên riêng biệt hoặc đồng bộ cả lớp",
   "Set plan title, training goals and timeframe": "Thiết lập tên kế hoạch, mục tiêu rèn luyện và khung thời gian áp dụng",
   "Training": "Tập",
-  "Rest": "Nghỉ",
 
   // Single Workout Assignment
   "Choose Assignment Scope": "Chọn Phạm Vi Giao Bài",
@@ -3920,6 +3919,8 @@ const myPackagesRedesignTranslations = [
   ["Expiring Soon", "Sắp hết hạn"],
   ["Renew Package", "Gia hạn gói tập"],
   ["Renew this package", "Gia hạn gói này"],
+  ["Order Package", "Đặt gói"],
+  ["Book Package", "Đặt gói"],
   ["Book Class", "Đặt lịch tập"],
   ["Search my packages...", "Tìm kiếm gói tập..."],
   ["Valid Until", "Có hiệu lực đến"],

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Bell, BellOff, CheckCheck, Trash2, Calendar, ShieldCheck,
-  Receipt, X, RefreshCw, ExternalLink, Dumbbell
+  BellOff, CheckCheck, Trash2, Calendar, ShieldCheck,
+  Receipt, X, RefreshCw, Dumbbell
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';

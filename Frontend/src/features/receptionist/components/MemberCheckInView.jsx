@@ -49,7 +49,7 @@ const MemberCheckInView = ({
   initialHistoryKeyword = '',
   initialHistoryFilter = 'ALL',
   onNavigateFeature,
-  onSwitchToRenew
+  _onSwitchToRenew
 }) => {
   useLanguage();
   const { userInfo } = useContext(AuthContext);
@@ -66,12 +66,12 @@ const MemberCheckInView = ({
   const [loadingMemberships, setLoadingMemberships] = useState(false);
 
   // Check-in form state
-  const [checkInType, setCheckInType] = useState('GYM_FACILITY'); // 'GYM_FACILITY' | 'CLASS_SESSION' | 'COMBO_ALL'
+  const [_checkInType, setCheckInType] = useState('GYM_FACILITY'); // 'GYM_FACILITY' | 'CLASS_SESSION' | 'COMBO_ALL'
   const [selectedMembershipId, setSelectedMembershipId] = useState('');
   const [selectedBookingId, setSelectedBookingId] = useState('');
   const [activateEarly, setActivateEarly] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState('');
-  const [customFacility, setCustomFacility] = useState('');
+  const [_customFacility, _setCustomFacility] = useState('');
   const [note, setNote] = useState('');
   const [submittingCheckIn, setSubmittingCheckIn] = useState(false);
 
@@ -244,7 +244,7 @@ const MemberCheckInView = ({
   }, [memberBookings]);
 
   // Currently selected class booking object
-  const selectedClassBooking = useMemo(() => {
+  const _selectedClassBooking = useMemo(() => {
     if (!todayClasses.length) return null;
     return todayClasses.find((b) => String(b.bookingId) === String(selectedBookingId)) || todayClasses[0];
   }, [todayClasses, selectedBookingId]);
@@ -256,7 +256,7 @@ const MemberCheckInView = ({
     );
   }, [activeMemberships, selectedMembershipId]);
 
-  const allowedRoomIdsForSelectedPackage = useMemo(() => {
+  const _allowedRoomIdsForSelectedPackage = useMemo(() => {
     if (!selectedMembershipObj || !Array.isArray(selectedMembershipObj.benefits)) {
       return null;
     }

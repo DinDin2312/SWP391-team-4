@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, AlertTriangle, Check, AlertCircle } from 'lucide-react';
+import { X, AlertTriangle, AlertCircle } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import lostAndFoundService from '../services/lostAndFoundService';
 

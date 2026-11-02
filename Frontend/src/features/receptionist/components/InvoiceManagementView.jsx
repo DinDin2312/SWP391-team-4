@@ -17,8 +17,7 @@ import {
   CheckCircle2,
   XCircle,
   Phone,
-  Clock,
-  AlertCircle
+  Clock
 } from 'lucide-react';
 import { receptionistService } from '../services/receptionistService';
 import InvoiceReceiptModal from './InvoiceReceiptModal';

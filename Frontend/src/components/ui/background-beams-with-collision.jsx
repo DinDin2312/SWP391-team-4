@@ -94,7 +94,7 @@ export const BackgroundBeamsWithCollision = ({
   );
 };
 
-const CollisionMechanism = React.forwardRef(({ parentRef, containerRef, beamOptions = {} }, ref) => {
+const CollisionMechanism = React.forwardRef(({ parentRef, containerRef, beamOptions = {} }, _ref) => {
   const beamRef = useRef(null);
   const [collision, setCollision] = useState({
     detected: false,
