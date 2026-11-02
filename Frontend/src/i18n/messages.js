@@ -4853,3 +4853,51 @@ for (const [en, vi] of rescheduleTranslations) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }
+
+const reportsChartTranslations = [
+  ['Use the left and right arrow keys to read each column.', 'Dùng phím mũi tên trái/phải để xem từng cột.'],
+  ['Weekly revenue', 'Doanh thu theo tuần'],
+  ['Weekly average', 'Trung bình/tuần'],
+  ['Long ranges are grouped by week (Monday to Sunday).', 'Khoảng thời gian dài được gộp theo tuần (thứ Hai đến Chủ nhật).'],
+  ['Daily average', 'Trung bình/ngày'],
+  ['of period', 'của kỳ'],
+  ['Total revenue', 'Tổng doanh thu'],
+  ['{0} days in period', '{0} ngày trong kỳ'],
+  ['Best day', 'Ngày cao nhất'],
+  ['Days with revenue', 'Ngày có doanh thu'],
+  ['No bookings in this period.', 'Không có lượt đặt lớp trong kỳ này.'],
+  ['bookings created', 'lượt đặt được tạo'],
+  ['Low occupancy', 'Lấp đầy thấp'],
+  ['Average {0} per transaction', 'Trung bình {0} mỗi giao dịch'],
+  ['Days without successful payments count as 0. Hover or use the arrow keys for each value.', 'Ngày không có thanh toán thành công được tính là 0. Rê chuột hoặc dùng phím mũi tên để xem từng giá trị.'],
+  ['View data table', 'Xem bảng số liệu'],
+  ['Below {0}%: low occupancy', 'Dưới {0}%: lấp đầy thấp'],
+  ['Normal', 'Bình thường'],
+  ['85% or more: nearly full', 'Từ 85%: gần kín chỗ'],
+  ['{0} other packages: {1} registrations.', '{0} gói khác: {1} lượt đăng ký.'],
+  ['No change vs previous period', 'Không đổi so với kỳ trước'],
+  ['New this period (previous: 0)', 'Mới trong kỳ (kỳ trước: 0)'],
+  ['vs previous period', 'so với kỳ trước'],
+  ['{0} students', '{0} học viên'],
+  ['{0} new this period', '{0} mới trong kỳ'],
+  ['students', 'học viên'],
+  ['+{0} new', '+{0} mới'],
+  ['Member accounts created in this period', 'Tài khoản hội viên tạo trong kỳ'],
+  ['Confirmed session seats by session date', 'Số chỗ đã xác nhận theo ngày học'],
+  ['compared with {0} – {1}', 'so với {0} – {1}'],
+  ['Most registered classes', 'Lớp được đăng ký nhiều nhất'],
+  ['Members studying each class in this period, each member counted once.', 'Số hội viên theo học mỗi lớp trong kỳ, mỗi người chỉ tính một lần.'],
+  ['No class registrations in this period.', 'Không có đăng ký lớp trong kỳ này.'],
+  ['"New" = members whose registration was created in this period.', '"Mới" = hội viên có lượt đăng ký được tạo trong kỳ này.'],
+  ['Classes needing attention', 'Lớp cần chú ý'],
+  ['10 classes with the lowest occupancy in this period.', '10 lớp có tỷ lệ lấp đầy thấp nhất trong kỳ.'],
+  ['Students', 'Học viên'],
+  ['Seats booked', 'Chỗ đã đặt'],
+  ['{0} sessions', '{0} buổi'],
+  ['Seats booked = confirmed seats across all sessions / total seats of those sessions.', 'Chỗ đã đặt = số chỗ đã xác nhận trên tất cả các buổi / tổng số chỗ của các buổi đó.'],
+  ['{0} classes', '{0} lớp'],
+];
+for (const [en, vi] of reportsChartTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
