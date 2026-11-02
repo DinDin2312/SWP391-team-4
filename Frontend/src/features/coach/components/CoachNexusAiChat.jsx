@@ -17,7 +17,7 @@ const SUGGESTIONS = [
 ];
 
 const CoachNexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
-  const lang = useLanguage();
+  useLanguage();
   const [exitMode, setExitMode] = useState('fox');
   const [messages, setMessages] = useState([
     {

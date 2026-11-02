@@ -80,7 +80,7 @@ const MemberLayout = () => {
           });
           window.dispatchEvent(new Event('cartUpdated'));
         }
-      } catch (e) {
+      } catch  {
         // Ignore background polling errors
       }
     };
@@ -210,7 +210,7 @@ const MemberLayout = () => {
   }, [location.pathname]); // Refresh when navigating
 
   const fullName = userInfo?.fullName || 'Active Member';
-  const initials = fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  const _initials = fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
   const handleLogout = () => {
     logout();

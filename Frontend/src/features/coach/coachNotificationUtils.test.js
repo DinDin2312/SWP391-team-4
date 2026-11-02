@@ -54,7 +54,7 @@ test('getSavedCoachPreferences: returns defaults when storage is empty or mocked
 
   // Mock localStorage present
   globalThis.localStorage = {
-    getItem: (key) => JSON.stringify({ scheduleReminders: false, attendanceAlerts: true, assessmentReminders: true, systemNotices: true })
+    getItem: () => JSON.stringify({ scheduleReminders: false, attendanceAlerts: true, assessmentReminders: true, systemNotices: true })
   };
   const parsed = getSavedCoachPreferences();
   assert.equal(parsed.scheduleReminders, false);

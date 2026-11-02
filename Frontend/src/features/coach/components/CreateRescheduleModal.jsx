@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Calendar, Clock, AlertTriangle, CheckCircle, RefreshCw,
+  X, Calendar, Clock, AlertTriangle, RefreshCw,
   AlertCircle, Search, MapPin, Users, CheckCircle2
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';

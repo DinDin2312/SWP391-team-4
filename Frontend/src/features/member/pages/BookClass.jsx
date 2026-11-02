@@ -406,8 +406,10 @@ const BookClass = () => {
             const startTime = new Date(course.nextSessionTime);
             const timeStr = startTime.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
 
-            const spotsLeft = course.maxSlots - (course.bookedSlots || 0);
-            const progressWidth = Math.min(100, Math.max(0, ((course.maxSlots - spotsLeft) / course.maxSlots) * 100));
+            const rawBooked = Number(course.bookedSlots) || 0;
+            const spotsLeft = Math.max(0, course.maxSlots - rawBooked);
+            const displayBooked = Math.min(course.maxSlots, rawBooked);
+            const progressWidth = Math.min(100, Math.max(0, (displayBooked / (course.maxSlots || 1)) * 100));
             const isBooked = course.isBookedByMe;
             const isPending = !!course.isPendingPayment;
             const isFull = spotsLeft <= 0;
@@ -513,7 +515,7 @@ const BookClass = () => {
                   <div className="space-y-1.5 pt-1">
                     <div className="flex items-center justify-between text-[11px] font-semibold">
                       <span className="text-slate-500 dark:text-slate-400">
-                        {course.maxSlots - spotsLeft}/{course.maxSlots} {t("Students Enrolled")}
+                        {displayBooked}/{course.maxSlots} {t("Students Enrolled")}
                       </span>
                       {spotsLeft <= 3 && spotsLeft > 0 && (
                         <span className="text-amber-600 dark:text-amber-400 font-bold">

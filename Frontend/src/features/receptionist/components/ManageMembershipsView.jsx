@@ -3,9 +3,7 @@ import { formatDateTime as displayFormatDateTime, formatMoney } from '../../../u
 import React, { useState, useEffect } from 'react';
 import {
     Search,
-    RotateCw,
     ArrowRightCircle,
-    AlertTriangle,
     RefreshCw,
     CheckCircle2,
     User,
@@ -20,9 +18,7 @@ import {
     Clock,
     MapPin,
     Users,
-    Dumbbell,
-    Calendar,
-    Sparkles
+    Dumbbell
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
 import MemberDetailModal from './MemberDetailModal';

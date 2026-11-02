@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
   X, CheckCircle2, ShieldCheck, MapPin, Calendar, Clock,
-  User, Phone, CreditCard, Tag, Box, AlertTriangle, Trash2,
-  ExternalLink, ZoomIn, Eye, EyeOff, Lock, Package
+  Box, AlertTriangle, Trash2,
+  ZoomIn, Eye, EyeOff, Lock, Package
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 

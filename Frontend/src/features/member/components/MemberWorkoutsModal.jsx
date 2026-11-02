@@ -10,24 +10,20 @@ import {
   X,
   Search,
   ExternalLink,
-  ChevronRight,
   Flame,
-  CheckCircle2,
-  AlertCircle,
   Sparkles,
   Info,
   Layers,
   Video,
   Target,
   Send,
-  Award,
-  Play
+  Award
 } from 'lucide-react';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 
 const API_BASE = 'http://localhost:8080/api/v1/member';
 
-const DAYS_OF_WEEK_MAP = {
+const _DAYS_OF_WEEK_MAP = {
   MONDAY: 'Thứ Hai',
   TUESDAY: 'Thứ Ba',
   WEDNESDAY: 'Thứ Tư',

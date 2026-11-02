@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell, BellOff, CheckCheck, Trash2, UserCheck, Package,
   Receipt, RefreshCw, Search, ArrowRight, Check,
-  SlidersHorizontal, Filter, Headphones, ShieldAlert,
-  AlertCircle, Sparkles, X
+  Filter, Headphones, ShieldAlert,
+  X
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';
@@ -176,7 +176,7 @@ const ReceptionistNotificationsView = ({ onNavigateFeature }) => {
   const totalCount = notifications.length;
   const unreadTotal = useMemo(() => getReceptionistUnreadCount(notifications, prefs), [notifications, prefs]);
   const supportCount = useMemo(() => filterReceptionistNotifications(notifications, 'SUPPORT', prefs).length, [notifications, prefs]);
-  const checkinCount = useMemo(() => filterReceptionistNotifications(notifications, 'CHECKIN', prefs).length, [notifications, prefs]);
+  const _checkinCount = useMemo(() => filterReceptionistNotifications(notifications, 'CHECKIN', prefs).length, [notifications, prefs]);
   const lostFoundCount = useMemo(() => filterReceptionistNotifications(notifications, 'LOST_FOUND', prefs).length, [notifications, prefs]);
 
   const renderCardIcon = (item) => {

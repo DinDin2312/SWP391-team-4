@@ -4,7 +4,7 @@ import axios from 'axios';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDateTime } from '../../../utils/displayFormat';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';
-import { getSavedMemberNotificationPreferences, filterMemberNotifications, isMemberNotificationAllowed } from '../memberUtils';
+import { getSavedMemberNotificationPreferences, isMemberNotificationAllowed } from '../memberUtils';
 import { 
   Bell, 
   BellOff, 

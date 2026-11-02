@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { memberService } from '../services/memberService';
 import {
-  HEALTH_CONDITIONS,
   PARQ_QUESTIONS,
   calcAge,
   visibleConditions,
@@ -71,7 +70,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
           if (data.consentAt) setConsent(true);
           if (data.completed) setHasExistingProfile(true);
         }
-      } catch (err) {
+      } catch  {
         // If 404 or empty profile, ignore error
       } finally {
         if (isMounted) setLoading(false);

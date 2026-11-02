@@ -1,6 +1,6 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { setLanguage } from '../../../i18n/languageStore';
-import { useContext, useState, useEffect, useRef } from 'react';
+import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Dumbbell, 

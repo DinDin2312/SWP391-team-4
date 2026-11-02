@@ -9,7 +9,6 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import {
   getPriorityBadge as renderPriorityBadge,
-  getPriorityLabel,
   getDisplayTitle,
   formatRespondedAt,
   getStatusBadge

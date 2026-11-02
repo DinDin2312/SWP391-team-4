@@ -13,7 +13,6 @@ import {
   Wallet,
   Clock,
   CheckCircle2,
-  AlertCircle,
   XCircle,
   ShieldCheck,
   Search,

@@ -215,16 +215,18 @@ FROM CLASSES c WHERE c.class_name = 'Bơi Sải Tốc Độ & Sức Bền Kỹ T
 AND NOT EXISTS (SELECT 1 FROM SCHEDULES s WHERE s.class_id = c.class_id AND s.start_time = '2026-11-08 14:00:00');
 
 -- 7. TỰ ĐỘNG ADD HỌC VIÊN VÀO TỪNG LỚP (ENROLL MEMBERS INTO SCHEDULES)
--- Gán 5 đến 8 học viên vào TẤT CẢ các ca học từ 01/11/2026 đến 08/11/2026
--- Sử dụng bảng tạm / cross join có điều kiện hash mod để mỗi ca có nhóm học viên đa dạng
+-- Gán 5 đến 7 học viên vào các ca học (luôn đảm bảo không vượt quá max_slots của lớp)
 INSERT IGNORE INTO BOOKINGS (user_id, schedule_id, status, attendance_status, booking_time)
-SELECT m.user_id, s.schedule_id, 'CONFIRMED', 'NOT_YET', NOW()
-FROM SCHEDULES s
-CROSS JOIN (
-    SELECT user_id, @row_num := @row_num + 1 AS rn
-    FROM USERS, (SELECT @row_num := 0) r
-    WHERE role_id = 4 AND status = 'ACTIVE'
-    ORDER BY user_id
-) m
-WHERE s.start_time >= '2026-11-01 00:00:00' AND s.start_time <= '2026-11-08 23:59:59'
-AND (MOD(m.rn + s.schedule_id, 15) < 7);
+SELECT sub.user_id, sub.schedule_id, 'CONFIRMED', 'NOT_YET', NOW()
+FROM (
+    SELECT u.user_id, s.schedule_id,
+           ROW_NUMBER() OVER (PARTITION BY s.schedule_id ORDER BY u.user_id) as rn,
+           c.max_slots
+    FROM SCHEDULES s
+    JOIN CLASSES c ON s.class_id = c.class_id
+    CROSS JOIN USERS u
+    WHERE u.role_id = 4 AND u.status = 'ACTIVE'
+      AND s.start_time >= '2026-11-01 00:00:00' AND s.start_time <= '2026-11-08 23:59:59'
+      AND MOD(u.user_id + s.schedule_id, 3) != 0
+) sub
+WHERE sub.rn <= LEAST(7, GREATEST(1, sub.max_slots - 3));
