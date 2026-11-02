@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { useTeachingSlots, slotLabel } from './teachingSlots';
 import { Drawer } from './OperationsDrawers';
@@ -7,6 +7,7 @@ import { addDays } from './operationsUtils';
 import { formatDate } from '../../../utils/displayFormat';
 
 import CourseSchedulePreview from './CourseSchedulePreview';
+import ClassPicker from '../components/ClassPicker';
 
 const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 export default function CourseScheduleDialog({config,data,onClose,onSaved}) {
@@ -22,6 +23,7 @@ export default function CourseScheduleDialog({config,data,onClose,onSaved}) {
   const stepHeading=useRef(null);
   useEffect(()=>{stepHeading.current?.focus();},[step]);
   const selected=data.classes.find(row=>String(row.classId)===String(form.classId));
+  const activeClasses=useMemo(()=>data.classes.filter(row=>row.status==='ACTIVE'),[data.classes]);
   const change=(key,value)=>{setForm(current=>({...current,[key]:value,...(key==='classId'?{weekdaySlots:{}}:{}),overrides:{}}));setPlan(null);setPreviewRules(null);setError('');};
   const rules=current=>({classId:Number(current.classId),fromDate:current.fromDate,toDate:addDays(current.fromDate,365),sessions:Number(current.sessions),durationMinutes:policy.durationMinutes,breakMinutes:policy.breakMinutes,
     weekdays:current.weekdays,weekdaySlots:Object.fromEntries(current.weekdays.map(day=>[day,current.weekdaySlots[day] || policy.starts[0].slice(0,5)])),availableFrom:policy.opensAt,availableTo:policy.closesAt,preferredTime:policy.starts[0],excludedDates:current.excludedDates,overrides:current.overrides});
@@ -70,8 +72,7 @@ export default function CourseScheduleDialog({config,data,onClose,onSaved}) {
       {(policyError || error) && <div role="alert" className="manager-alert">{t(policyError || error)}</div>}
       {step==='review' && busy && !plan && <p role="status">{t('Generating plan…')}</p>}
       <fieldset disabled={busy || created || !policy} hidden={step!=='setup'}>
-        <label className="ops-field">{t('Class')}<select required value={form.classId} onChange={e=>change('classId',e.target.value)}><option value="">{t('Select a class')}</option>{data.classes.filter(row=>row.status==='ACTIVE').map(row=><option key={row.classId} value={row.classId}>{row.className}</option>)}</select></label>
-        {selected && <div className="ops-assignment"><strong>{selected.coachName}</strong><span>{selected.roomName}</span></div>}
+        <ClassPicker classes={activeClasses} value={form.classId} onChange={value=>change('classId',value)} required/>
         <p className="ops-note">{t('Schedule the full course before accepting registrations. Use supplementary sessions for make-up lessons afterwards.')}</p>
         <div className="ops-plan-grid">
           <label className="ops-field">{t('Course start date')}<input required type="date" min={tomorrow} value={form.fromDate} onInput={e=>change('fromDate',e.target.value)} onChange={e=>change('fromDate',e.target.value)}/></label>
