@@ -195,3 +195,29 @@ test("ongoing is derived only for scheduled sessions, with an exclusive end boun
     false,
   );
 });
+
+test('cascading filters narrow coaches and rooms to the selected subject and coach', async () => {
+  const { cascadeFilterOptions, cascadeFilterPatch } = await import('./operationsUtils.js');
+  const data = {
+    subjects: [{ subjectId: 1, subjectName: 'Bơi' }, { subjectId: 2, subjectName: 'Yoga' }],
+    coaches: [{ userId: 5, fullName: 'Hoàng', subjectIds: [1] }, { userId: 4, fullName: 'Mai Anh', subjectIds: [2] }, { userId: 9, fullName: 'Mới', subjectIds: [1] }],
+    rooms: [{ roomId: 4, roomName: 'Bể bơi' }, { roomId: 2, roomName: 'Studio Yoga' }, { roomId: 7, roomName: 'Bể trẻ em' }],
+    classes: [
+      { classId: 1, subjectId: 1, coachId: 5, roomId: 4, status: 'ACTIVE', coachName: 'Hoàng' },
+      { classId: 2, subjectId: 2, coachId: 4, roomId: 2, status: 'ACTIVE', coachName: 'Mai Anh' },
+      { classId: 3, subjectId: 1, coachId: 5, roomId: 7, status: 'ACTIVE', coachName: 'Hoàng' },
+      { classId: 4, subjectId: 1, coachId: 4, roomId: 2, status: 'INACTIVE', coachName: 'Mai Anh' },
+    ],
+  };
+  const all = cascadeFilterOptions(data, {});
+  assert.equal(all.coach.length, 3);
+  assert.equal(all.room.length, 3);
+  assert.deepEqual(all.subject, [['1', 'Bơi', 2], ['2', 'Yoga', 1]]);
+  const swim = cascadeFilterOptions(data, { subject: '1' });
+  assert.deepEqual(swim.coach, [['5', 'Hoàng', 2], ['9', 'Mới', 0]]);
+  assert.deepEqual(swim.room.map(([id]) => id), ['4', '7']);
+  assert.deepEqual(cascadeFilterOptions(data, { coach: '4' }).room.map(([id]) => id), ['2']);
+  assert.deepEqual(cascadeFilterPatch(data, { subject: '', coach: '4', room: '2' }, 'subject', '1'), { coach: true, room: true });
+  assert.deepEqual(cascadeFilterPatch(data, { subject: '1', coach: '5', room: '4' }, 'coach', '5'), {});
+  assert.deepEqual(cascadeFilterOptions({}, {}), { subject: [], coach: [], room: [] });
+});
