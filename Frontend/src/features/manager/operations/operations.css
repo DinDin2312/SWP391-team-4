@@ -983,3 +983,6 @@ html.dark .course-review-pattern > span,
 .ops-subject-slot-list { list-style:none; padding:0; margin:12px 0 0; }
 .ops-subject-slot-list li { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
 .ops-subject-slots [aria-pressed="true"] { border-color:var(--primary); color:var(--primary); background:var(--primary-light,#eff6ff); }
+
+.ops-filter-cascade-note { grid-column:1/-1; margin:2px 0 0; font-size:12px; color:var(--text-muted); }
+.ops-filter-cascade-note span { margin-left:6px; padding:2px 8px; border-radius:999px; background:var(--primary-soft); color:var(--primary); font-weight:600; }

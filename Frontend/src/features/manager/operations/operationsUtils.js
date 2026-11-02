@@ -125,3 +125,43 @@ export function operationPayload(type, form) {
       }
     : { ...session, scheduleId: form.scheduleId, status: "SCHEDULED" };
 }
+
+// Cascading filter options: Subject -> Coach -> Room. A coach belongs to a subject when they teach a class of it
+// or list it as a specialty; a room belongs when a class of the selected subject/coach uses it. Each option carries
+// the number of active classes it covers so managers can see where the work is.
+export function cascadeFilterOptions({ subjects = [], coaches = [], rooms = [], classes = [] }, selection = {}) {
+  const active = classes.filter((row) => row.status === "ACTIVE" || row.status == null);
+  const bySubject = active.filter((row) => !selection.subject || String(row.subjectId) === String(selection.subject));
+  const bySubjectCoach = bySubject.filter((row) => !selection.coach || String(row.coachId) === String(selection.coach));
+  const countBy = (rows, key) => rows.reduce((map, row) => map.set(String(row[key]), (map.get(String(row[key])) || 0) + 1), new Map());
+  const sortByName = (a, b) => String(a[1] ?? "").localeCompare(String(b[1] ?? ""), "vi");
+
+  const subjectCounts = countBy(active, "subjectId");
+  const subjectOptions = subjects.map((row) => [String(row.subjectId), row.subjectName, subjectCounts.get(String(row.subjectId)) || 0]).sort(sortByName);
+
+  const coachCounts = countBy(bySubject, "coachId");
+  const coachNames = new Map(active.map((row) => [String(row.coachId), row.coachName]));
+  coaches.forEach((row) => coachNames.set(String(row.userId), row.fullName));
+  const specialists = new Set(coaches.filter((row) => !selection.subject || (row.subjectIds || []).map(String).includes(String(selection.subject))).map((row) => String(row.userId)));
+  const coachIds = new Set([...coachCounts.keys(), ...(selection.subject ? specialists : coachNames.keys())]);
+  const coachOptions = [...coachIds].filter((id) => id !== "undefined" && id !== "null").map((id) => [id, coachNames.get(id) || id, coachCounts.get(id) || 0]).sort(sortByName);
+
+  const roomCounts = countBy(bySubjectCoach, "roomId");
+  const narrowedRooms = selection.subject || selection.coach;
+  const roomOptions = rooms.filter((row) => !narrowedRooms || roomCounts.has(String(row.roomId)))
+    .map((row) => [String(row.roomId), row.roomName, roomCounts.get(String(row.roomId)) || 0]).sort(sortByName);
+
+  return { subject: subjectOptions, coach: coachOptions, room: roomOptions };
+}
+
+// When a parent filter changes, drop child selections that no longer belong to it.
+export function cascadeFilterPatch(data, selection, key, value) {
+  const next = { ...selection, [key]: value };
+  const order = ["subject", "coach", "room"];
+  const reset = {};
+  for (const child of order.slice(order.indexOf(key) + 1)) {
+    const options = cascadeFilterOptions(data, next)[child];
+    if (next[child] && !options.some(([id]) => id === String(next[child]))) { next[child] = ""; reset[child] = true; }
+  }
+  return reset;
+}
