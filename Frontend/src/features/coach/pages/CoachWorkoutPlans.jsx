@@ -7,8 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dumbbell, Users, Plus, Trash2, Send, CheckCircle2, AlertCircle, AlertTriangle,
   Clock, Play, ShieldAlert, Sparkles, Filter, RefreshCw, X, ChevronRight,
-  BookOpen, Layers, Calendar, Copy, Target, Check, ChevronDown, Award, TrendingUp,
-  ChevronLeft, Eye, List
+  BookOpen, Layers, Calendar, Copy, Target, Award, ChevronLeft, Eye, List
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8080/api/v1/coach';

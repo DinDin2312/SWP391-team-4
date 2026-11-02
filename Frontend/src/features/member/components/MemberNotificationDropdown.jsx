@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import {
-  Bell, Check, X, Clock, Calendar, CheckCheck, RefreshCw,
-  ExternalLink, Sparkles, AlertTriangle, ShieldAlert, Award, Gift
+  Bell, Check, Clock, CheckCheck, RefreshCw,
+  ExternalLink, AlertTriangle, Gift
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { t, useLanguage } from '../../../i18n/useLanguage';
-import { getReasonLabel, formatDateTime, formatScheduleSlot, isDeadlineExpired } from '../../coach/coachRescheduleUtils';
+import { getReasonLabel, formatDateTime, formatScheduleSlot } from '../../coach/coachRescheduleUtils';
 import { getSavedMemberNotificationPreferences, getMemberUnreadCount } from '../memberUtils';
 
 export default function MemberNotificationDropdown({ isOpen, onClose, onUnreadChange }) {

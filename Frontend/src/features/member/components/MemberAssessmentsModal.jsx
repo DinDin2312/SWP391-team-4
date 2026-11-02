@@ -11,19 +11,14 @@ import {
   Search,
   Sparkles,
   Layers,
-  Heart,
   Scale,
-  Ruler,
   Activity,
   MessageSquare,
   BookOpen,
-  ChevronRight,
   TrendingUp,
-  Flame,
-  CheckCircle2,
-  Info
+  CheckCircle2
 } from 'lucide-react';
-import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
+import { t, useLanguage } from '../../../i18n/useLanguage';
 import { locale } from '../../../i18n/languageStore.js';
 import BodyTransformationModal from './BodyTransformationModal';
 

@@ -1,8 +1,6 @@
 package com.team4.sportscenter.modules.rag.services.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.team4.sportscenter.modules.rag.dtos.IndexedChunk;
 import com.team4.sportscenter.modules.rag.entities.Audience;
 import com.team4.sportscenter.modules.rag.entities.DocumentChunk;
 import com.team4.sportscenter.modules.rag.entities.KnowledgeDocument;
