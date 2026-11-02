@@ -456,14 +456,18 @@ public class ManagerRepository {
 
     public Map<String, Object> report(LocalDate from, LocalDate to) {
         Map<String, Object> result = new java.util.LinkedHashMap<>();
-        result.put("summary", jdbc.queryForMap("""
-                SELECT
-                  (SELECT COALESCE(SUM(p.amount),0) FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id WHERE p.status IN ('SUCCESS','COMPLETED') AND i.status<>'REVIEW' AND DATE(p.payment_date) BETWEEN ? AND ?) revenue,
-                  (SELECT COUNT(*) FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id WHERE p.status IN ('SUCCESS','COMPLETED') AND i.status<>'REVIEW' AND DATE(p.payment_date) BETWEEN ? AND ?) successfulPayments,
-                  (SELECT COUNT(*) FROM INVOICES WHERE status='PENDING' AND DATE(created_at) BETWEEN ? AND ?) pendingInvoices,
-                  (SELECT COUNT(*) FROM BOOKINGS b JOIN SCHEDULES sc ON sc.schedule_id=b.schedule_id
-                    WHERE b.status='CONFIRMED' AND DATE(sc.start_time) BETWEEN ? AND ?) confirmedBookings
-                """, from, to, from, to, from, to, from, to));
+        // Comparison window: the same number of days immediately before the selected range.
+        long days = java.time.temporal.ChronoUnit.DAYS.between(from, to) + 1;
+        LocalDate previousTo = from.minusDays(1);
+        LocalDate previousFrom = previousTo.minusDays(days - 1);
+        result.put("summary", summary(from, to));
+        result.put("previousPeriod", Map.of("from", previousFrom.toString(), "to", previousTo.toString()));
+        Map<String, Object> previous = new java.util.LinkedHashMap<>(summary(previousFrom, previousTo));
+        previous.put("newMembers", jdbc.queryForObject("""
+                SELECT COUNT(*) FROM USERS u JOIN ROLES r ON r.role_id=u.role_id
+                WHERE r.role_name='Member' AND u.created_at>=? AND u.created_at<?
+                """, Long.class, previousFrom.atStartOfDay(), previousTo.plusDays(1).atStartOfDay()));
+        result.put("previousSummary", previous);
         result.put("memberGrowth", jdbc.queryForMap("""
                 SELECT COUNT(CASE WHEN u.created_at>=? AND u.created_at<? THEN 1 END) newMembers,
                        COUNT(CASE WHEN u.created_at IS NULL THEN 1 END) unknownCreationDates
@@ -475,24 +479,56 @@ public class ManagerRepository {
                 GROUP BY b.status ORDER BY b.status
                 """,from.atStartOfDay(),to.plusDays(1).atStartOfDay()));
         result.put("revenueByDay", jdbc.queryForList("""
-                SELECT DATE(p.payment_date) label,SUM(p.amount) value FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id
+                SELECT DATE_FORMAT(p.payment_date,'%Y-%m-%d') label,SUM(p.amount) value FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id
                 WHERE p.status IN ('SUCCESS','COMPLETED') AND i.status<>'REVIEW' AND DATE(p.payment_date) BETWEEN ? AND ?
-                GROUP BY DATE(p.payment_date) ORDER BY DATE(p.payment_date)
+                GROUP BY DATE_FORMAT(p.payment_date,'%Y-%m-%d') ORDER BY label
                 """, from, to));
         result.put("memberships", jdbc.queryForList("""
                 SELECT p.package_name label,COUNT(um.membership_id) value
                 FROM PACKAGES p LEFT JOIN USER_MEMBERSHIPS um ON um.package_id=p.package_id AND um.start_date BETWEEN ? AND ?
                 GROUP BY p.package_id,p.package_name ORDER BY value DESC
                 """, from, to));
+        // Popularity counts each member once per class: one registration creates one booking per session,
+        // so counting bookings would rank classes by how many sessions they have, not by demand.
+        result.put("classPopularity", jdbc.queryForList("""
+                SELECT c.class_id classId,c.class_name label,s.subject_name subject,u.full_name coach,
+                       COUNT(DISTINCT CASE WHEN b.status='CONFIRMED' THEN b.user_id END) students,
+                       COUNT(DISTINCT CASE WHEN b.status='CONFIRMED' AND b.booking_time>=? AND b.booking_time<? THEN b.user_id END) newStudents
+                FROM CLASSES c JOIN SCHEDULES sc ON sc.class_id=c.class_id AND sc.status<>'CANCELLED'
+                  AND sc.start_time>=? AND sc.start_time<?
+                JOIN BOOKINGS b ON b.schedule_id=sc.schedule_id
+                LEFT JOIN SUBJECTS s ON s.subject_id=c.subject_id
+                LEFT JOIN USERS u ON u.user_id=c.coach_id
+                GROUP BY c.class_id,c.class_name,s.subject_name,u.full_name
+                HAVING students>0 ORDER BY students DESC,newStudents DESC,c.class_name LIMIT 10
+                """, from.atStartOfDay(), to.plusDays(1).atStartOfDay(), from.atStartOfDay(), to.plusDays(1).atStartOfDay()));
+        // Lowest occupancy first: these are the classes a manager needs to act on.
         result.put("classOccupancy", jdbc.queryForList("""
-                SELECT c.class_id classId,c.class_name label,c.max_slots*COUNT(DISTINCT sc.schedule_id) capacity,
-                       COUNT(CASE WHEN b.status='CONFIRMED' THEN 1 END) value
+                SELECT c.class_id classId,c.class_name label,s.subject_name subject,u.full_name coach,
+                       c.max_slots*COUNT(DISTINCT sc.schedule_id) capacity,COUNT(DISTINCT sc.schedule_id) sessions,
+                       COUNT(CASE WHEN b.status='CONFIRMED' THEN 1 END) value,
+                       COUNT(DISTINCT CASE WHEN b.status='CONFIRMED' THEN b.user_id END) students
                 FROM CLASSES c JOIN SCHEDULES sc ON sc.class_id=c.class_id AND sc.status<>'CANCELLED'
                   AND sc.start_time>=? AND sc.start_time<?
                 LEFT JOIN BOOKINGS b ON b.schedule_id=sc.schedule_id
-                GROUP BY c.class_id,c.class_name,c.max_slots ORDER BY value DESC LIMIT 10
+                LEFT JOIN SUBJECTS s ON s.subject_id=c.subject_id
+                LEFT JOIN USERS u ON u.user_id=c.coach_id
+                GROUP BY c.class_id,c.class_name,c.max_slots,s.subject_name,u.full_name
+                ORDER BY COUNT(CASE WHEN b.status='CONFIRMED' THEN 1 END)/NULLIF(c.max_slots*COUNT(DISTINCT sc.schedule_id),0) ASC,c.class_name
+                LIMIT 10
                 """, from.atStartOfDay(), to.plusDays(1).atStartOfDay()));
         return result;
+    }
+
+    private Map<String, Object> summary(LocalDate from, LocalDate to) {
+        return jdbc.queryForMap("""
+                SELECT
+                  (SELECT COALESCE(SUM(p.amount),0) FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id WHERE p.status IN ('SUCCESS','COMPLETED') AND i.status<>'REVIEW' AND DATE(p.payment_date) BETWEEN ? AND ?) revenue,
+                  (SELECT COUNT(*) FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id WHERE p.status IN ('SUCCESS','COMPLETED') AND i.status<>'REVIEW' AND DATE(p.payment_date) BETWEEN ? AND ?) successfulPayments,
+                  (SELECT COUNT(*) FROM INVOICES WHERE status='PENDING' AND DATE(created_at) BETWEEN ? AND ?) pendingInvoices,
+                  (SELECT COUNT(*) FROM BOOKINGS b JOIN SCHEDULES sc ON sc.schedule_id=b.schedule_id
+                    WHERE b.status='CONFIRMED' AND DATE(sc.start_time) BETWEEN ? AND ?) confirmedBookings
+                """, from, to, from, to, from, to, from, to);
     }
 
     private int insert(String sql, Object... values) {

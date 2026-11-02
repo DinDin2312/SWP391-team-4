@@ -749,6 +749,11 @@ class ManagerIntegrationTests {
         var row = occupancy.stream().filter(value -> ((Number) value.get("classId")).intValue() == course).findFirst().orElseThrow();
         assertEquals(2, ((Number) row.get("value")).intValue());
         assertEquals(10, ((Number) row.get("capacity")).intValue());
+        @SuppressWarnings("unchecked") var popularity = (List<Map<String, Object>>) result.get("classPopularity");
+        var popular = popularity.stream().filter(value -> ((Number) value.get("classId")).intValue() == course).findFirst().orElseThrow();
+        assertEquals(1, ((Number) popular.get("students")).intValue(), "one member booking two sessions is one student");
+        assertEquals(1, ((Number) row.get("students")).intValue());
+        assertNotNull(result.get("previousSummary"));
         assertDoesNotThrow(() -> service.classes());
         assertDoesNotThrow(() -> service.packages());
     }
