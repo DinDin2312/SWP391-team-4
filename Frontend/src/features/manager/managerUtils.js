@@ -39,7 +39,8 @@ export function reportCsv(data) {
     ['Members with unknown creation date (excluded)', data.memberGrowth?.unknownCreationDates || 0],
     [], ['Booking status (booking creation date)', 'Count'], ...(data.bookingStatuses || []).map(row=>[row.status,row.value]),
     [], ['Date', 'Revenue (VND)'], ...(data.revenueByDay || []).map((row) => [row.label, row.value]),
-    [], ['Class', 'Bookings', 'Total session capacity'], ...(data.classOccupancy || []).map((row) => [row.label, row.value, row.capacity]),
+    [], ['Most registered classes', 'Students (counted once)', 'New students in period'], ...(data.classPopularity || []).map((row) => [row.label, row.students, row.newStudents]),
+    [], ['Class (lowest occupancy first)', 'Confirmed seats', 'Total session capacity'], ...(data.classOccupancy || []).map((row) => [row.label, row.value, row.capacity]),
     [], ['Package', 'Registrations (membership start date)'], ...(data.memberships || []).map((row) => [row.label, row.value]),
   ];
   return '\uFEFF' + rows.map((row) => row.map(cell).join(',')).join('\r\n');
