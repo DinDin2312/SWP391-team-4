@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  HelpCircle, CreditCard, Ticket, Clock, CheckCircle2,
+  CreditCard, Ticket, Clock, CheckCircle2,
   AlertTriangle, Plus, Send, X, Copy, Check, MessageSquare,
   ShieldCheck, AlertCircle, ChevronDown, ChevronUp, RefreshCw,
-  Dumbbell, DollarSign, Sparkles, Wrench, UserCheck, Calendar, RotateCcw,
+  Sparkles, Wrench, UserCheck, Calendar, RotateCcw,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
@@ -25,7 +25,6 @@ import {
 import {
   ClassCancellationPreviewCard,
   ClassCancellationSuccessCard,
-  CancellationGuaranteeNotice,
   ClassCancellationFormSection
 } from '../components/ClassCancellationCards';
 

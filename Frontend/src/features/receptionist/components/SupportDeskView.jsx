@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { AuthContext } from '../../../context/AuthContext';
 import {
   LifeBuoy, Search, Filter, RefreshCw, CheckCircle2,
-  Clock, AlertTriangle, ShieldCheck, X, ChevronLeft,
-  ChevronRight, CreditCard, MessageSquare, ArrowUpRight,
-  Eye, Phone, Mail, User, Dumbbell, DollarSign, Sparkles
+  Clock, AlertTriangle, ChevronLeft,
+  ChevronRight, MessageSquare, ArrowUpRight,
+  Eye, Phone, Mail
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Send, X, Users, School, User, Bell, CheckCircle2, AlertCircle, Loader2, MessageSquare, Layers
+  Send, X, Users, School, User, Bell, CheckCircle2, AlertCircle, Loader2, Layers
 } from 'lucide-react';
 
 const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', initialStudent = null, initialClassId = null, onSuccess }) => {
@@ -17,7 +17,7 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
 
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
-  const [loadingData, setLoadingData] = useState(false);
+  const [_loadingData, setLoadingData] = useState(false);
   const [sending, setSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');

@@ -4,7 +4,6 @@ import com.team4.sportscenter.modules.support.dtos.request.CreateSupportRequest;
 import com.team4.sportscenter.modules.support.dtos.request.RespondSupportRequest;
 import com.team4.sportscenter.modules.support.dtos.response.CancelClassPreviewResponse;
 import com.team4.sportscenter.modules.support.dtos.response.SupportRequestResponse;
-import com.team4.sportscenter.modules.support.dtos.response.TransferClassOptionResponse;
 import com.team4.sportscenter.modules.support.dtos.response.TransferClassPreviewResponse;
 import com.team4.sportscenter.modules.support.dtos.response.UserCreditResponse;
 import com.team4.sportscenter.modules.support.enums.SupportCategory;

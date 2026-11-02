@@ -474,7 +474,7 @@ function projectVertex3D([x, y, z, weight = 1.0], yawDeg, pitchDeg, rollDeg) {
 export const CyberFoxAvatar = memo(({
   direction = 'DIRECT_HOVER',
   className = 'w-12 h-12',
-  isHovered = false,
+  _isHovered = false,
 }) => {
   const pose = POSE_3D_ANGLES[direction] || POSE_3D_ANGLES.DIRECT_HOVER;
 

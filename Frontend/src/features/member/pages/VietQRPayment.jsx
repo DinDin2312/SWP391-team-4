@@ -2,8 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
-  QrCode, Copy, Check, Clock, AlertCircle, ArrowLeft, 
-  CheckCircle2, ShieldCheck, Download, ExternalLink, Loader2, Sparkles, Send
+  Copy, Check, Clock, AlertCircle, ArrowLeft, 
+  CheckCircle2, ShieldCheck, Download, Loader2, Sparkles
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 
@@ -119,7 +119,7 @@ const VietQRPayment = () => {
         if (response.data && response.data.status === 'PAID') {
           handlePaymentSuccess();
         }
-      } catch (e) {
+      } catch  {
         // Ignore polling errors
       }
     }, 3500);

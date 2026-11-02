@@ -175,7 +175,7 @@ const PackageStore = () => {
       setTimeout(() => {
         setToast({ visible: false, message: '', type: 'success' });
       }, 2800);
-    } catch (err) {
+    } catch  {
       setToast({ visible: true, message: t('Failed to clear cart'), type: 'error' });
       setTimeout(() => {
         setToast({ visible: false, message: '', type: 'error' });

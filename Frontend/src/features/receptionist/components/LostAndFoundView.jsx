@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  PackageSearch, Plus, Search, Filter, RefreshCw, CheckCircle2,
-  Clock, AlertTriangle, ShieldCheck, MapPin, Sparkles, Box,
-  ChevronLeft, ChevronRight, Eye, Check, Tag, AlertCircle, ShieldAlert,
-  LayoutGrid, Smartphone, Wallet, Watch, Shirt, Package, Lock
+  PackageSearch, Plus, Search, RefreshCw, CheckCircle2,
+  Clock, AlertTriangle, ShieldCheck, MapPin, Box,
+  ChevronLeft, ChevronRight, Eye, Check, AlertCircle, LayoutGrid, Smartphone, Wallet, Watch, Shirt, Package, Lock
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import lostAndFoundService from '../services/lostAndFoundService';
@@ -43,7 +42,7 @@ const LostAndFoundView = ({ initialKeyword = '' }) => {
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [_errorMsg, setErrorMsg] = useState('');
 
   // Filters & Search
   const [keyword, setKeyword] = useState(initialKeyword || '');

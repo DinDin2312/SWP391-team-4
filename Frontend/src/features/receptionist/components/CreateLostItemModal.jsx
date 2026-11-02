@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, UploadCloud, Image as ImageIcon, Sparkles, AlertCircle, ShieldAlert, Check } from 'lucide-react';
+import { X, UploadCloud, Sparkles, AlertCircle, ShieldAlert, Check } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import lostAndFoundService from '../services/lostAndFoundService';
 

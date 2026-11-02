@@ -10,12 +10,10 @@ import {
   MapPin,
   LogOut,
   Calendar,
-  Sparkles,
   Check,
   Dumbbell,
   Phone,
   Mail,
-  User,
   ShieldCheck,
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';

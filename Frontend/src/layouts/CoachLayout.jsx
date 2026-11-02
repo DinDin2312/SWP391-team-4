@@ -55,7 +55,7 @@ const CoachLayout = () => {
         const data = Array.isArray(res.data) ? res.data : [];
         const prefs = getSavedCoachPreferences();
         setUnreadCount(getUnreadCount(data, prefs));
-      } catch (err) {
+      } catch  {
         // silent fail
       }
     };

@@ -11,7 +11,6 @@ import com.team4.sportscenter.modules.coach.services.CoachNotificationService;
 import com.team4.sportscenter.modules.coach.services.CoachScheduleService;
 import com.team4.sportscenter.modules.coach.services.CoachWorkoutService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;

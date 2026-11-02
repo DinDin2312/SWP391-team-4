@@ -66,12 +66,17 @@ const PaymentCart = () => {
     const handlePageHide = () => {
       setCheckoutLoading(false);
     };
+    const handleCartUpdated = () => {
+      fetchCartItems(true);
+    };
 
     window.addEventListener('pageshow', handlePageShow);
     window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('cartUpdated', handleCartUpdated);
     return () => {
       window.removeEventListener('pageshow', handlePageShow);
       window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('cartUpdated', handleCartUpdated);
     };
   }, []);
 
@@ -83,9 +88,9 @@ const PaymentCart = () => {
     return () => clearTimeout(timer);
   }, [checkoutLoading]);
 
-  const fetchCartItems = async () => {
+  const fetchCartItems = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const token = localStorage.getItem('token');
       const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
       const [cartRes, profileRes, creditsRes] = await Promise.allSettled([
@@ -126,7 +131,7 @@ const PaymentCart = () => {
       console.error(err);
       setError('Failed to load cart items. Please try again.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -138,7 +143,7 @@ const PaymentCart = () => {
       const invId = targetInvoiceId || pendingInvoice?.invoiceId;
       try {
         await axios.post('http://localhost:8080/api/v1/payment/cancel-pending-checkout', { invoiceId: invId }, { headers: authHeader });
-      } catch (e) {
+      } catch  {
         await axios.post('http://localhost:8080/api/v1/payment/cart/cancel-pending', {}, { headers: authHeader });
       }
       setToast({

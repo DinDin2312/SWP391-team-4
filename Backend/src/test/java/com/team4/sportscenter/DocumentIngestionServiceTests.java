@@ -12,7 +12,6 @@ import com.team4.sportscenter.modules.rag.services.VectorIndex;
 import com.team4.sportscenter.modules.rag.services.impl.DocumentIngestionServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

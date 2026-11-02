@@ -4,9 +4,9 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Mail, Phone, BookOpen, AlertTriangle, CheckCircle2,
-  Award, FileText, Save, X, RefreshCw, Camera, Trash2,
-  AlertCircle, Sparkles, ShieldCheck, Lock, Eye, EyeOff,
-  Bell, Check, Copy, ChevronRight, Sliders, KeyRound
+  Award, Save, X, RefreshCw, Camera, Trash2,
+  Sparkles, ShieldCheck, Lock, Eye, EyeOff,
+  Bell, Check, Copy, ChevronRight
 } from 'lucide-react';
 
 const CoachSettings = () => {
@@ -312,7 +312,7 @@ const CoachSettings = () => {
     }
   };
 
-  const selectedSubjectObj = profile.availableSubjects?.find(
+  const _selectedSubjectObj = profile.availableSubjects?.find(
     s => s.subjectId === Number(selectedSubjectId)
   );
 

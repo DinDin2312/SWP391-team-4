@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import {
   CalendarSync, CheckCircle, XCircle, AlertTriangle, AlertCircle, Clock,
-  Users, MapPin, Check, X, RefreshCw, UserCheck, ShieldAlert
+  Check, X, RefreshCw, UserCheck
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import ManagerPageHeader from './ManagerPageHeader';
-import ManagerSelect from '../staff/ManagerSelect';
+
 import {
   getReasonLabel,
   getStatusMeta,

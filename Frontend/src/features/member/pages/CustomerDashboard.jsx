@@ -1,6 +1,5 @@
 import { locale } from '../../../i18n/languageStore.js';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
-import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import CancelClassPolicyModal from '../components/CancelClassPolicyModal';
 import MemberAssessmentsModal from '../components/MemberAssessmentsModal';
 import SelfAssessmentModal from '../components/SelfAssessmentModal';
@@ -11,7 +10,6 @@ import MemberTierAvatar from '../../../components/MemberTierAvatar';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import { memberService } from '../services/memberService';
-import axiosClient from '../../../services/axiosClient';
 import {
   Dumbbell,
   QrCode,
