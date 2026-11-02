@@ -4607,6 +4607,29 @@ for (const [en, vi] of memberHealthTranslations) {
   translations[vi] = [en, vi];
 }
 
+const operationsPickerTranslations = [
+  ['{0} classes', '{0} lớp'],
+  ['Search by class code, name, subject, coach or room', 'Tìm theo mã lớp, tên lớp, môn, HLV hoặc phòng'],
+  ['Clear selected class', 'Bỏ chọn lớp'],
+  ['no classes yet', 'chưa có lớp'],
+  ['All (matching)', 'Tất cả (phù hợp)'],
+  ['Coaches and rooms narrowed to {0}; rooms narrowed to {1}.', 'HLV và phòng đang lọc theo môn {0}; phòng lọc thêm theo HLV {1}.'],
+  ['Coaches and rooms narrowed to {0}.', 'HLV và phòng đang lọc theo môn {0}.'],
+  ['Rooms narrowed to {0}.', 'Phòng đang lọc theo HLV {0}.'],
+  ['{0} coaches · {1} rooms', '{0} HLV · {1} phòng'],
+  ['Filter by subject', 'Lọc theo môn'],
+  ['Students per session / capacity', 'Học viên mỗi buổi / sức chứa'],
+  ['No class matches "{0}".', 'Không có lớp nào khớp "{0}".'],
+  ['Showing {0} of {1} classes. Keep typing to narrow down.', 'Đang hiển thị {0}/{1} lớp. Gõ thêm để thu hẹp.'],
+  ['move', 'di chuyển'],
+  ['select', 'chọn'],
+  ['close', 'đóng'],
+];
+for (const [en, vi] of operationsPickerTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
 const rescheduleTranslations = [
   // Coach portal
   ["Reschedule & Make-up", "Đổi lịch & Dạy bù"],
