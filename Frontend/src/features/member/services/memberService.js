@@ -65,6 +65,14 @@ export const memberService = {
     return await axiosClient.get(`/v1/member/classes/${classId}/workouts`);
   },
 
+  submitWorkout: async (planId, payload) => {
+    return await axiosClient.post(`/v1/member/workouts/${planId}/submit`, payload);
+  },
+
+  getMySubmissionsByPlan: async (planId) => {
+    return await axiosClient.get(`/v1/member/workouts/${planId}/submissions`);
+  },
+
   createSelfAssessment: async (payload) => {
     return await axiosClient.post('/v1/member/assessments/self', payload);
   },

@@ -7,8 +7,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dumbbell, Users, Plus, Trash2, Send, CheckCircle2, AlertCircle, AlertTriangle,
   Clock, Play, ShieldAlert, Sparkles, Filter, RefreshCw, X, ChevronRight,
-  BookOpen, Layers, Calendar, Copy, Target, Award, ChevronLeft, Eye, List
+  BookOpen, Layers, Calendar, Copy, Target, Award, ChevronLeft, Eye, List,
+  Video, Star, MessageSquare, ExternalLink, Search
 } from 'lucide-react';
+import CoachReviewSubmissionModal from '../components/CoachReviewSubmissionModal';
+import { coachService } from '../services/coachService';
 
 const API_BASE = 'http://localhost:8080/api/v1/coach';
 
@@ -98,6 +101,35 @@ const CoachWorkoutPlans = () => {
 
   // Cache to avoid refetching student list repeatedly
   const [classStudentsCache, setClassStudentsCache] = useState({});
+  // Submissions State
+  const [submissions, setSubmissions] = useState([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [submissionStatusFilter, setSubmissionStatusFilter] = useState('ALL');
+  const [submissionClassFilter, setSubmissionClassFilter] = useState('ALL');
+  const [submissionSearch, setSubmissionSearch] = useState('');
+  const [selectedSubmissionForReview, setSelectedSubmissionForReview] = useState(null);
+
+  const fetchSubmissions = async (status = submissionStatusFilter, classId = submissionClassFilter) => {
+    try {
+      setLoadingSubmissions(true);
+      const params = {};
+      if (status && status !== 'ALL') params.status = status;
+      if (classId && classId !== 'ALL') params.classId = classId;
+      const res = await coachService.getSubmissions(params);
+      const list = res?.data || res || [];
+      setSubmissions(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('Error fetching submissions for coach:', err);
+    } finally {
+      setLoadingSubmissions(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'submissions') {
+      fetchSubmissions(submissionStatusFilter, submissionClassFilter);
+    }
+  }, [activeTab, submissionStatusFilter, submissionClassFilter]);
 
   // ==================== FORM 1: GIAO BÀI TẬP ĐƠN (SINGLE) ====================
   const [targetType, setTargetType] = useState('INDIVIDUAL'); // 'INDIVIDUAL' | 'CLASS'
@@ -236,6 +268,7 @@ const CoachWorkoutPlans = () => {
       setStudents(stRes.data || []);
       setClasses(clRes.data || []);
       setAssignedPlans(plRes.data || []);
+      fetchSubmissions();
 
       const defaultExId = exList.length > 0 ? exList[0].exerciseId : '';
 
@@ -1073,6 +1106,23 @@ const CoachWorkoutPlans = () => {
         >
           <BookOpen className="w-4 h-4" />
           <span>{t("Danh Sách Kế Hoạch & Bài Tập")} ({assignedPlans.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('submissions')}
+          className={`px-5 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-2 relative cursor-pointer ${
+            activeTab === 'submissions'
+              ? 'bg-[var(--primary)] text-[color:var(--on-primary)] shadow-md shadow-amber-500/20'
+              : 'bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-[var(--border)]'
+          }`}
+        >
+          <Video className="w-4 h-4" />
+          <span>{t("Bài Nộp Của Học Viên")}</span>
+          {submissions.filter((s) => s.status === 'SUBMITTED').length > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500 text-white animate-pulse">
+              {submissions.filter((s) => s.status === 'SUBMITTED').length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -2831,6 +2881,221 @@ const CoachWorkoutPlans = () => {
         </div>
       )}
 
+      {/* ===================== TAB 4: BÀI NỘP CỦA HỌC VIÊN (SUBMISSIONS) ===================== */}
+      {activeTab === 'submissions' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Header Controls: Search, Class Dropdown & Status Filters */}
+          <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-[var(--shadow)] flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+            {/* Search Input & Class Dropdown */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+              {/* Search Input */}
+              <div className="relative w-full sm:w-60">
+                <input
+                  type="text"
+                  value={submissionSearch}
+                  onChange={(e) => setSubmissionSearch(e.target.value)}
+                  placeholder={t("Tìm học viên, bài tập...")}
+                  className="w-full pl-9 pr-4 py-2 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)]"
+                />
+                <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
+              </div>
+
+              {/* Class Dropdown Selector */}
+              <div className="relative flex items-center">
+                <select
+                  id="submission-class-filter"
+                  value={submissionClassFilter}
+                  onChange={(e) => setSubmissionClassFilter(e.target.value)}
+                  className="w-full sm:w-auto bg-[var(--surface-hover)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs font-semibold text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition-all cursor-pointer shadow-xs"
+                >
+                  <option value="ALL">
+                    {t("Tất cả các lớp")} ({classes.length} {t("lớp")})
+                  </option>
+                  {classes.map((cls) => (
+                    <option key={cls.classId} value={cls.classId}>
+                      {cls.className} {cls.roomName && cls.roomName !== 'N/A' ? `(${cls.roomName})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Status Filter Badges */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+              {[
+                { key: 'ALL', label: t('Tất cả') },
+                { key: 'SUBMITTED', label: t('Chờ duyệt'), count: submissions.filter((s) => s.status === 'SUBMITTED').length },
+                { key: 'APPROVED', label: t('Đạt chuẩn') },
+                { key: 'REVIEWED', label: t('Đã nhận xét') },
+                { key: 'REVISION_REQUESTED', label: t('Cần tập lại') }
+              ].map((btn) => (
+                <button
+                  key={btn.key}
+                  type="button"
+                  onClick={() => setSubmissionStatusFilter(btn.key)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                    submissionStatusFilter === btn.key
+                      ? 'bg-[var(--primary)] text-[color:var(--on-primary)] shadow-sm'
+                      : 'bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text)]'
+                  }`}
+                >
+                  <span>{btn.label}</span>
+                  {btn.count > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500 text-white font-extrabold">
+                      {btn.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => fetchSubmissions(submissionStatusFilter, submissionClassFilter)}
+                className="p-1.5 rounded-xl bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer transition-all ml-1 shrink-0"
+                title={t('Làm mới')}
+              >
+                <RefreshCw className={`w-4 h-4 ${loadingSubmissions ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Submissions List */}
+          {(() => {
+            const filtered = submissions.filter((s) => {
+              const matchSearch =
+                !submissionSearch.trim() ||
+                (s.studentName && s.studentName.toLowerCase().includes(submissionSearch.toLowerCase())) ||
+                (s.studentEmail && s.studentEmail.toLowerCase().includes(submissionSearch.toLowerCase())) ||
+                (s.exerciseName && s.exerciseName.toLowerCase().includes(submissionSearch.toLowerCase())) ||
+                (s.planTitle && s.planTitle.toLowerCase().includes(submissionSearch.toLowerCase()));
+              return matchSearch;
+            });
+
+            if (loadingSubmissions) {
+              return (
+                <div className="py-16 text-center text-xs text-[var(--text-muted)] flex flex-col items-center justify-center gap-2">
+                  <RefreshCw className="w-6 h-6 animate-spin text-[var(--primary)]" />
+                  <span>{t("Đang tải danh sách bài nộp của học viên...")}</span>
+                </div>
+              );
+            }
+
+            if (filtered.length === 0) {
+              return (
+                <div className="py-16 text-center text-xs text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border)] rounded-2xl space-y-2">
+                  <Video className="w-10 h-10 mx-auto text-[var(--text-muted)]/40" />
+                  <p className="font-semibold">{t("Chưa có bài nộp nào phù hợp bộ lọc.")}</p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filtered.map((sub) => (
+                  <div
+                    key={sub.submissionId}
+                    className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-[var(--shadow)] hover:border-[var(--primary)]/40 transition-all flex flex-col justify-between gap-4 group"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] font-bold flex items-center justify-center text-xs border border-[var(--primary)]/20">
+                            {sub.studentName ? sub.studentName.charAt(0).toUpperCase() : 'H'}
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-[var(--text)] line-clamp-1">{sub.studentName || t('Học viên')}</p>
+                            <p className="text-[11px] text-[var(--text-muted)]">{sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString('vi-VN') : ''}</p>
+                          </div>
+                        </div>
+
+                        {sub.status === 'APPROVED' && (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            {t('Đạt chuẩn')}
+                          </span>
+                        )}
+                        {sub.status === 'REVIEWED' && (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0 flex items-center gap-1">
+                            <MessageSquare className="w-3 h-3" />
+                            {t('Đã nhận xét')}
+                          </span>
+                        )}
+                        {sub.status === 'REVISION_REQUESTED' && (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 shrink-0 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            {t('Tập lại')}
+                          </span>
+                        )}
+                        {sub.status === 'SUBMITTED' && (
+                          <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0 flex items-center gap-1">
+                            <Clock className="w-3 h-3 animate-spin" />
+                            {t('Chờ duyệt')}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-[var(--surface-hover)]/70 border border-[var(--border)] text-xs space-y-1">
+                        <p className="font-bold text-[var(--text)] flex items-center gap-1.5">
+                          <Target className="w-3.5 h-3.5 text-[var(--primary)]" />
+                          <span>{sub.exerciseName || sub.planTitle}</span>
+                        </p>
+                        <p className="text-[11px] text-[var(--text-muted)] line-clamp-1">
+                          {t('Giáo án:')} {sub.planTitle} {sub.dayLabel ? `• ${sub.dayLabel}` : ''}
+                        </p>
+                        {sub.className && (
+                          <p className="text-[11px] text-blue-500 font-semibold line-clamp-1 flex items-center gap-1">
+                            <BookOpen className="w-3 h-3" />
+                            <span>{t('Class:')} {sub.className}</span>
+                          </p>
+                        )}
+                      </div>
+
+                      {sub.videoUrl && (
+                        <a
+                          href={sub.videoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:underline text-xs font-semibold"
+                        >
+                          <Video className="w-3.5 h-3.5" />
+                          <span className="line-clamp-1">{t('Mở liên kết video')}</span>
+                          <ExternalLink className="w-3 h-3 shrink-0" />
+                        </a>
+                      )}
+
+                      {sub.studentNote && (
+                        <p className="text-xs text-[var(--text-muted)] italic line-clamp-2 bg-[var(--surface-hover)]/30 p-2.5 rounded-lg border border-[var(--border)]">
+                          "{sub.studentNote}"
+                        </p>
+                      )}
+
+                      {sub.coachFeedback && (
+                        <div className="text-xs text-[var(--text)] bg-blue-500/5 border border-blue-500/20 p-2.5 rounded-lg space-y-1">
+                          <p className="font-bold text-blue-500 text-[11px] flex items-center gap-1">
+                            <MessageSquare className="w-3 h-3" />
+                            <span>{t('Góp ý của bạn:')}</span>
+                          </p>
+                          <p className="line-clamp-2 text-[11px]">{sub.coachFeedback}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSubmissionForReview(sub)}
+                      className="w-full py-2.5 rounded-xl bg-[var(--primary)] text-[color:var(--on-primary)] hover:opacity-95 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm group-hover:scale-[1.01]"
+                    >
+                      <Award className="w-4 h-4" />
+                      <span>{sub.status === 'SUBMITTED' ? t('Xem & Đánh Giá Bài Nộp') : t('Xem Lại / Chỉnh Sửa Góp Ý')}</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
       {/* ===================== MODAL 2: THÊM BÀI TẬP VÀO THƯ VIỆN ===================== */}
       {isAddExModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--overlay)] backdrop-blur-md animate-fade-in">
@@ -2916,6 +3181,17 @@ const CoachWorkoutPlans = () => {
             </form>
           </div>
         </div>
+      )}
+      {/* ===================== MODAL 3: ĐÁNH GIÁ BÀI NỘP HỌC VIÊN ===================== */}
+      {selectedSubmissionForReview && (
+        <CoachReviewSubmissionModal
+          isOpen={Boolean(selectedSubmissionForReview)}
+          onClose={() => setSelectedSubmissionForReview(null)}
+          submission={selectedSubmissionForReview}
+          onReviewSuccess={() => {
+            fetchSubmissions(submissionStatusFilter, submissionClassFilter);
+          }}
+        />
       )}
     </div>
   );

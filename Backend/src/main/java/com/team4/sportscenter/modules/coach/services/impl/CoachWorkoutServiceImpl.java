@@ -4,6 +4,10 @@ import com.team4.sportscenter.modules.auth.entities.User;
 import com.team4.sportscenter.modules.auth.repositories.UserRepository;
 import com.team4.sportscenter.modules.coach.dtos.request.AssignWorkoutPlanRequest;
 import com.team4.sportscenter.modules.coach.dtos.request.CreateExerciseRequest;
+import com.team4.sportscenter.modules.coach.dtos.request.SubmissionFeedbackRequest;
+import com.team4.sportscenter.modules.coach.dtos.response.WorkoutSubmissionResponse;
+import com.team4.sportscenter.modules.coach.entities.CoachWorkoutSubmission;
+import com.team4.sportscenter.modules.coach.repositories.CoachWorkoutSubmissionRepository;
 import com.team4.sportscenter.modules.coach.dtos.request.WorkoutPlanDetailRequest;
 import com.team4.sportscenter.modules.coach.dtos.response.CoachWorkoutPlanResponse;
 import com.team4.sportscenter.modules.coach.dtos.response.ExerciseResponse;
@@ -35,6 +39,7 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
     private final CoachClassRepository coachClassRepository;
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
+    private final CoachWorkoutSubmissionRepository workoutSubmissionRepository;
 
     @Override
     public List<ExerciseResponse> getAllExercises() {
@@ -373,6 +378,109 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
                 .createdAt(plan.getCreatedAt())
                 .details(detailResponses)
                 .weeks(weeks)
+                .build();
+    }
+
+    @Override
+    public List<WorkoutSubmissionResponse> getCoachSubmissions(String coachEmail, String status, Integer studentUserId, Integer planId, Integer classId) {
+        User coach = userRepository.findByEmail(coachEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin HLV."));
+
+        String filterStatus = (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status.trim()))
+                ? status.trim().toUpperCase()
+                : null;
+
+        List<CoachWorkoutSubmission> list = workoutSubmissionRepository.findCoachSubmissionsFiltered(
+                coach.getUserId(), filterStatus, studentUserId, planId, classId);
+
+        return list.stream().map(CoachWorkoutServiceImpl::mapSubmissionToResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public WorkoutSubmissionResponse submitCoachFeedback(String coachEmail, Integer submissionId, SubmissionFeedbackRequest request) {
+        if (request == null || request.getCoachFeedback() == null || request.getCoachFeedback().trim().isEmpty()) {
+            throw new RuntimeException("Vui lòng nhập nhận xét cho học viên.");
+        }
+
+        User coach = userRepository.findByEmail(coachEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin HLV."));
+
+        CoachWorkoutSubmission submission = workoutSubmissionRepository.findById(submissionId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy bài nộp ID: " + submissionId));
+
+        if (!submission.getCoach().getUserId().equals(coach.getUserId())) {
+            throw new RuntimeException("Bạn không có quyền đánh giá bài nộp này.");
+        }
+
+        String newStatus = request.getStatus() != null && !request.getStatus().trim().isEmpty()
+                ? request.getStatus().trim().toUpperCase()
+                : "REVIEWED";
+
+        submission.setCoachFeedback(request.getCoachFeedback().trim());
+        submission.setStatus(newStatus);
+        submission.setRating(request.getRating());
+        submission.setReviewedAt(LocalDateTime.now());
+
+        CoachWorkoutSubmission saved = workoutSubmissionRepository.save(submission);
+
+        // Send notification to student
+        User student = submission.getUser();
+        if (student != null) {
+            String exerciseName = (submission.getPlanDetail() != null && submission.getPlanDetail().getExercise() != null)
+                    ? submission.getPlanDetail().getExercise().getExerciseName()
+                    : (submission.getWorkoutPlan() != null ? submission.getWorkoutPlan().getTitle() : "Bài tập");
+
+            String ratingText = request.getRating() != null ? " (" + request.getRating() + " ⭐)" : "";
+
+            Notification notif = Notification.builder()
+                    .user(student)
+                    .title("[Nhận xét bài tập] HLV " + coach.getFullName())
+                    .message("HLV " + coach.getFullName() + " đã nhận xét bài tập: " + exerciseName + ratingText + ". Góp ý: " + request.getCoachFeedback().trim())
+                    .type("WORKOUT_FEEDBACK")
+                    .isRead(false)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            notificationRepository.save(notif);
+        }
+
+        return mapSubmissionToResponse(saved);
+    }
+
+    public static WorkoutSubmissionResponse mapSubmissionToResponse(CoachWorkoutSubmission s) {
+        if (s == null) return null;
+        CoachWorkoutPlan plan = s.getWorkoutPlan();
+        GymClass gymClass = plan != null ? plan.getGymClass() : null;
+        CoachPlanDetail detail = s.getPlanDetail();
+        User student = s.getUser();
+        User coach = s.getCoach();
+
+        return WorkoutSubmissionResponse.builder()
+                .submissionId(s.getSubmissionId())
+                .planId(plan != null ? plan.getPlanId() : null)
+                .planTitle(plan != null ? plan.getTitle() : null)
+                .classId(gymClass != null ? gymClass.getClassId() : null)
+                .className(gymClass != null ? gymClass.getClassName() : null)
+                .detailId(detail != null ? detail.getDetailId() : null)
+                .exerciseId(detail != null && detail.getExercise() != null ? detail.getExercise().getExerciseId() : null)
+                .exerciseName(detail != null && detail.getExercise() != null ? detail.getExercise().getExerciseName() : (plan != null ? plan.getTitle() : "Bài tập chung"))
+                .weekNumber(detail != null ? detail.getWeekNumber() : null)
+                .dayOfWeek(detail != null ? detail.getDayOfWeek() : null)
+                .dayLabel(detail != null ? detail.getDayLabel() : null)
+                .userId(student != null ? student.getUserId() : null)
+                .studentName(student != null ? student.getFullName() : null)
+                .studentEmail(student != null ? student.getEmail() : null)
+                .studentAvatar(student != null ? student.getAvatarPath() : null)
+                .coachId(coach != null ? coach.getUserId() : null)
+                .coachName(coach != null ? coach.getFullName() : null)
+                .coachEmail(coach != null ? coach.getEmail() : null)
+                .videoUrl(s.getVideoUrl())
+                .studentNote(s.getStudentNote())
+                .status(s.getStatus())
+                .coachFeedback(s.getCoachFeedback())
+                .rating(s.getRating())
+                .submittedAt(s.getSubmittedAt())
+                .reviewedAt(s.getReviewedAt())
                 .build();
     }
 }
