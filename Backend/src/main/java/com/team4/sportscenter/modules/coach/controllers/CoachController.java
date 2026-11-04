@@ -97,9 +97,11 @@ public class CoachController {
     }
 
     @GetMapping("/students")
-    public ResponseEntity<List<CoachStudentResponse>> getCoachStudents(Authentication authentication) {
+    public ResponseEntity<List<CoachStudentResponse>> getCoachStudents(
+            @RequestParam(required = false) Integer classId,
+            Authentication authentication) {
         String coachEmail = authentication.getName();
-        List<CoachStudentResponse> students = coachScheduleService.getCoachStudents(coachEmail);
+        List<CoachStudentResponse> students = coachScheduleService.getCoachStudents(coachEmail, classId);
         return ResponseEntity.ok(students);
     }
 

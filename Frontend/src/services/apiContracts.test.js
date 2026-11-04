@@ -96,6 +96,7 @@ test('coachService contracts cover schedules, attendance, workouts, and assessme
     await coachService.getScheduleStudents(10);
     await coachService.updateAttendance(10, [{ bookingId: 1, status: 'ATTENDED' }]);
     await coachService.getStudents();
+    await coachService.getStudents(10);
     await coachService.getClasses();
     await coachService.getStudentsByClassId(5);
     await coachService.sendNotification({ title: 'Notice', message: 'Body' });
@@ -111,13 +112,13 @@ test('coachService contracts cover schedules, attendance, workouts, and assessme
     await coachService.getStudentAssessmentHistory(99);
     await coachService.createAssessment({ weightKg: 70 });
     await coachService.deleteAssessment(12);
-
-    assert.equal(calls.length, 22);
+    assert.equal(calls.length, 23);
     assert.deepEqual(calls[4], { method: 'get', args: ['/v1/coach/schedules/10/students'] });
-    assert.deepEqual(calls[12], { method: 'get', args: ['/v1/coach/workouts', { params: {} }] });
-    assert.deepEqual(calls[13], { method: 'get', args: ['/v1/coach/workouts', { params: { studentUserId: 99 } }] });
-    assert.deepEqual(calls[17], { method: 'get', args: ['/v1/coach/assessments', { params: {} }] });
-    assert.deepEqual(calls[18], { method: 'get', args: ['/v1/coach/assessments', { params: { studentUserId: 99 } }] });
+    assert.deepEqual(calls[7], { method: 'get', args: ['/v1/coach/students', { params: { classId: 10 } }] });
+    assert.deepEqual(calls[13], { method: 'get', args: ['/v1/coach/workouts', { params: {} }] });
+    assert.deepEqual(calls[14], { method: 'get', args: ['/v1/coach/workouts', { params: { studentUserId: 99 } }] });
+    assert.deepEqual(calls[18], { method: 'get', args: ['/v1/coach/assessments', { params: {} }] });
+    assert.deepEqual(calls[19], { method: 'get', args: ['/v1/coach/assessments', { params: { studentUserId: 99 } }] });
   });
 });
 
@@ -163,7 +164,6 @@ test('memberService contracts cover bookings, packages, cart, notifications, and
     await memberService.getMySupportRequests();
     await memberService.getMyCredits();
     await memberService.withdrawSupportRequest(21);
-
     assert.equal(calls.length, 40);
     assert.deepEqual(calls[6], { method: 'post', args: ['/v1/member/book-class/11', {}] });
     assert.deepEqual(calls[24], { method: 'post', args: ['/v1/payment/checkout', { paymentMethod: 'SEPAY' }] });
