@@ -22,6 +22,7 @@ public class CoachStudentResponse {
     private String bio;
     private Integer totalBookings;
     private List<String> enrolledClasses;
+    private List<Integer> enrolledClassIds;
     private String workoutGoal;
     private String fitnessLevel;
     private List<String> assignedPlans;
