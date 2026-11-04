@@ -25,7 +25,10 @@ export const coachService = {
     return await axiosClient.put(`/v1/coach/schedules/${scheduleId}/attendance`, payload);
   },
 
-  getStudents: async () => {
+  getStudents: async (classId) => {
+    if (classId) {
+      return await axiosClient.get('/v1/coach/students', { params: { classId } });
+    }
     return await axiosClient.get('/v1/coach/students');
   },
 
