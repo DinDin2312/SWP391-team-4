@@ -48,13 +48,22 @@ class ManagerReportCompletionTests {
     }
 
     @Test void everyManagerReadSurfaceRejectsOtherRoles() throws Exception {
-        var paths=List.of("/api/manager/users","/api/manager/classes","/api/manager/packages","/api/manager/audit-logs","/api/manager/reports?from=2047-03-01&to=2047-03-03");
+        var paths=List.of("/api/manager/users","/api/manager/classes","/api/manager/packages","/api/manager/audit-logs","/api/manager/reports?from=2047-03-01&to=2047-03-03","/api/manager/reports/coach-teaching?from=2047-03-01&to=2047-03-03");
         for(String role:List.of("Member","Coach","Receptionist","Center Manager")) {
             int id=jdbc.queryForObject("SELECT u.user_id FROM USERS u JOIN ROLES r ON r.role_id=u.role_id WHERE r.role_name=? AND u.status='ACTIVE' LIMIT 1",Integer.class,role);
             String token=jwt.generateToken(users.findById(id).orElseThrow());
             for(String path:paths) assertEquals(role.equals("Center Manager")?200:403,get(path,token),role+" "+path);
         }
         for(String path:paths) assertTrue(Set.of(401,403).contains(get(path,null)));
+    }
+
+    @Test void coachTeachingReportCalculatesWorkloadAndSubstitutesCorrectly() {
+        var result = reports.coachTeachingReport(LocalDate.of(2020, 1, 1), LocalDate.of(2050, 1, 1), null);
+        assertNotNull(result);
+        assertTrue(result.containsKey("coaches"));
+        assertTrue(result.containsKey("coachStats"));
+        assertTrue(result.containsKey("overview"));
+        assertTrue(result.containsKey("sessions"));
     }
     int get(String path,String token)throws Exception {
         var request=HttpRequest.newBuilder(URI.create("http://localhost:"+port+path));

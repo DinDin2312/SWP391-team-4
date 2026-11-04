@@ -4925,3 +4925,50 @@ for (const [en, vi] of reportsChartTranslations) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }
+
+const coachTeachingTranslations = [
+  ["Center Overview & Revenue", "T\u1ed5ng quan trung t\u00e2m & Doanh thu"],
+  ["Trainer Teaching Statistics", "Th\u1ed1ng k\u00ea d\u1ea1y h\u1ecdc c\u1ee7a HLV"],
+  ["Filter criteria", "Ti\u00eau ch\u00ed l\u1ecdc"],
+  ["All coaches ({0})", "T\u1ea5t c\u1ea3 hu\u1ea5n luy\u1ec7n vi\u00ean ({0})"],
+  ["Selected coach", "HLV \u0111\u00e3 ch\u1ecdn"],
+  ["Clear coach filter", "B\u1ecf l\u1ecdc HLV"],
+  ["Export Excel (.xls)", "Xu\u1ea5t file Excel (.xls)"],
+  ["Unable to load coach teaching report.", "Kh\u00f4ng th\u1ec3 t\u1ea3i b\u00e1o c\u00e1o th\u1ed1ng k\u00ea d\u1ea1y h\u1ecdc c\u1ee7a HLV."],
+  ["Coach teaching workload & performance overview", "T\u1ed5ng quan kh\u1ed1i l\u01b0\u1ee3ng & hi\u1ec7u su\u1ea5t gi\u1ea3ng d\u1ea1y c\u1ee7a HLV"],
+  ["Completed sessions", "S\u1ed1 ca d\u1ea1y \u0111\u00e3 ho\u00e0n th\u00e0nh"],
+  ["Sessions successfully conducted in this period", "S\u1ed1 ca d\u1ea1y \u0111\u00e3 ho\u00e0n th\u00e0nh trong kho\u1ea3ng th\u1eddi gian n\u00e0y"],
+  ["Teaching hours", "S\u1ed1 gi\u1edd d\u1ea1y"],
+  ["Total teaching time for completed sessions", "T\u1ed5ng th\u1eddi gian d\u1ea1y th\u1ef1c t\u1ebf c\u1ee7a c\u00e1c ca ho\u00e0n th\u00e0nh"],
+  ["Substitute sessions", "Ca d\u1ea1y thay"],
+  ["Sessions where a substitute coach stepped in", "S\u1ed1 ca c\u00f3 HLV d\u1ea1y thay \u0111\u1ee9ng l\u1edbp"],
+  ["Total students taught", "T\u1ed5ng l\u01b0\u1ee3t h\u1ecdc vi\u00ean \u0111\u00e3 d\u1ea1y"],
+  ["Total confirmed attendee seats across completed classes", "T\u1ed5ng l\u01b0\u1ee3t h\u1ecdc vi\u00ean \u0111\u00e3 tham gia trong c\u00e1c ca d\u1ea1y ho\u00e0n th\u00e0nh"],
+  ["Avg occupancy rate", "T\u1ef7 l\u1ec7 l\u1ea5p \u0111\u1ea7y TB"],
+  ["Average attendance ratio vs maximum class capacity", "T\u1ef7 l\u1ec7 h\u1ecdc vi\u00ean trung b\u00ecnh so v\u1edbi s\u1ee9c ch\u1ee9a t\u1ed1i \u0111a c\u1ee7a l\u1edbp"],
+  ["Coach Workload & Performance Summary", "B\u1ea3ng t\u1ed5ng h\u1ee3p c\u00f4ng d\u1ea1y & hi\u1ec7u su\u1ea5t theo HLV"],
+  ["Workload, completed hours, substitutions and student attendance by coach.", "Th\u1ed1ng k\u00ea kh\u1ed1i l\u01b0\u1ee3ng d\u1ea1y, s\u1ed1 gi\u1edd d\u1ea1y ho\u00e0n th\u00e0nh, d\u1ea1y thay v\u00e0 l\u01b0\u1ee3t h\u1ecdc vi\u00ean theo HLV."],
+  ["Search coach by name or email...", "T\u00ecm HLV theo t\u00ean ho\u1eb7c email..."],
+  ["Total Hours", "T\u1ed5ng s\u1ed1 gi\u1edd"],
+  ["Taught as substitute for others", "\u0110\u1ee9ng l\u1edbp d\u1ea1y thay cho HLV kh\u00e1c"],
+  ["taught", "d\u1ea1y thay"],
+  ["Transferred class to substitute", "\u0110\u00e3 nh\u1edd HLV kh\u00e1c d\u1ea1y thay"],
+  ["transferred", "chuy\u1ec3n giao"],
+  ["{0} unique", "{0} h\u1ecdc vi\u00ean duy nh\u1ea5t"],
+  ["View sessions", "Xem ca d\u1ea1y"],
+  ["No coach data found matching criteria.", "Kh\u00f4ng t\u00ecm th\u1ea5y d\u1eef li\u1ec7u HLV ph\u00f9 h\u1ee3p v\u1edbi \u0111i\u1ec1u ki\u1ec7n l\u1ecdc."],
+  ["Detailed Teaching Sessions", "Danh s\u00e1ch chi ti\u1ebft c\u00e1c ca d\u1ea1y"],
+  ["Showing sessions taught by {0}", "\u0110ang hi\u1ec3n th\u1ecb c\u00e1c ca d\u1ea1y th\u1ef1c t\u1ebf c\u1ee7a {0}"],
+  ["All scheduled and completed class sessions in this period.", "T\u1ea5t c\u1ea3 c\u00e1c ca h\u1ecdc \u0111\u01b0\u1ee3c x\u1ebfp l\u1ecbch v\u00e0 ho\u00e0n th\u00e0nh trong kho\u1ea3ng th\u1eddi gian n\u00e0y."],
+  ["Search by class, room, or coach...", "T\u00ecm theo t\u00ean l\u1edbp, ph\u00f2ng h\u1ecdc, ho\u1eb7c HLV..."],
+  ["Substituted", "D\u1ea1y thay"],
+  ["Session Time", "Th\u1eddi gian ca h\u1ecdc"],
+  ["Class & Subject", "L\u1edbp & B\u1ed9 m\u00f4n"],
+  ["Teacher / Substitute", "HLV gi\u1ea3ng d\u1ea1y / D\u1ea1y thay"],
+  ["No sessions found for this period.", "Kh\u00f4ng c\u00f3 ca d\u1ea1y n\u00e0o trong kho\u1ea3ng th\u1eddi gian n\u00e0y."],
+  ["Low occupancy", "T\u1ef7 l\u1ec7 l\u1ea5p \u0111\u1ea7y th\u1ea5p"],
+];
+for (const [en, vi] of coachTeachingTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}

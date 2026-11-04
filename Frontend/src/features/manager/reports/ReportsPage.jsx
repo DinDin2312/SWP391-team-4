@@ -1,11 +1,12 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ArrowDownRight, ArrowDownToLine, ArrowUpRight, BarChart3, CalendarDays, CheckCircle2, ChevronDown, ClipboardList, FileClock, Info, Minus, Package, Trophy, UserPlus, Users, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowDownRight, ArrowDownToLine, ArrowUpRight, BarChart3, CalendarDays, CheckCircle2, ChevronDown, ClipboardList, Dumbbell, FileClock, Info, Minus, Package, Trophy, UserPlus, Users, Wallet } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { locale } from '../../../i18n/languageStore';
 import { formatDate, formatMoney } from '../../../utils/displayFormat';
 import { isoDate, reportCsv } from '../managerUtils';
 import { bucketDays, fillDays } from './revenueSeries';
 import ManagerPageHeader from '../components/ManagerPageHeader';
+import CoachTeachingReport from './CoachTeachingReport';
 import './reports.css';
 
 const LOW_OCCUPANCY = 25;
@@ -200,6 +201,7 @@ function ClassPopularity({ rows }) {
 
 export default function ReportsPage({ data, filters, appliedFilters, setFilters, reload, page, loading = false, loadError = '', openTransactions }) {
   useLanguage();
+  const [activeTab, setActiveTab] = useState('overview');
   const [showDaily, setShowDaily] = useState(false);
   const report = !loading && !loadError ? data : null;
   const summary = report?.summary;
@@ -242,54 +244,93 @@ export default function ReportsPage({ data, filters, appliedFilters, setFilters,
   const loadingBlock = <div className="reports-chart-loading" role="status">{t('Loading...')}</div>;
 
   return <div className="reports-page" aria-busy={loading}>
-    <ManagerPageHeader title={page.title} description={page.description} actions={<button type="button" className="manager-secondary reports-export" disabled={!report} onClick={exportReport}><ArrowDownToLine size={16} aria-hidden="true" />{t('Export CSV')}</button>} />
-    <form className="reports-filter" onSubmit={event => { event.preventDefault(); if (valid && !loading) reload(); }}>
-      <div className="reports-filter-title"><CalendarDays size={18} aria-hidden="true" /><span>{t('Reporting period')}</span></div>
-      <div className="reports-presets">{presets.map(label => { const range = presetRange(label); return <button type="button" key={label} disabled={loading} aria-pressed={filters.from === range.from && filters.to === range.to} onClick={() => setFilters(current => ({ ...current, ...range }))}>{t(label)}</button>; })}</div>
-      <div className="reports-date-inputs"><label>{t('From')}<input type="date" value={filters.from} max={filters.to || undefined} onChange={event => setFilters(current => ({ ...current, from: event.target.value }))} /></label><span aria-hidden="true">–</span><label>{t('To')}<input type="date" value={filters.to} min={filters.from || undefined} onChange={event => setFilters(current => ({ ...current, to: event.target.value }))} /></label><button className="manager-primary" type="submit" disabled={!valid || loading}>{t(loading ? 'Loading...' : 'View')}</button></div>
-      {(!valid || pendingRange) && <p className="reports-filter-hint" role="status">{t(!valid ? 'Select a valid date range: the start date cannot be after the end date.' : 'Apply the date range to update this report.')}</p>}
-    </form>
+    <ManagerPageHeader
+      title={page.title}
+      description={page.description}
+      actions={activeTab === 'overview' ? (
+        <button type="button" className="manager-secondary reports-export" disabled={!report} onClick={exportReport}>
+          <ArrowDownToLine size={16} aria-hidden="true" />{t('Export CSV')}
+        </button>
+      ) : null}
+    />
 
-    <div className="reports-period"><span>{t('Performance summary')}</span><span><CalendarDays size={14} aria-hidden="true" />{formatDate(appliedFilters.from)} — {formatDate(appliedFilters.to)}{previousPeriod && <em>{t('compared with {0} – {1}', [formatDate(previousPeriod.from), formatDate(previousPeriod.to)])}</em>}</span></div>
-    <div className="reports-kpis">{cards.map(({ key, label, icon: Icon, value, note, tone, current, before, goodWhenUp }) => <article key={key} className={`reports-kpi ${tone}${loading ? ' is-loading' : ''}`}>
-      <div className="reports-kpi-label"><span>{t(label)}</span><span className="reports-kpi-icon"><Icon size={18} aria-hidden="true" /></span></div>
-      <strong>{value}</strong>
-      {report && <Delta current={current} previous={before} goodWhenUp={goodWhenUp} />}
-      <p>{report ? note : '\u00a0'}{key === 'newMembers' && unknownDates > 0 && <span className="reports-kpi-info" title={t('These accounts are excluded because their registration period cannot be verified. Newly created accounts are recorded automatically.')}><Info size={12} aria-hidden="true" />{t('{0} existing member accounts have no creation date.', [count(unknownDates)])}</span>}</p>
-      {openTransactions && ['revenue', 'successfulPayments', 'pendingInvoices'].includes(key) && <button type="button" className="reports-ledger-link" disabled={!report} onClick={() => openTransactions({ mode: key === 'pendingInvoices' ? 'invoices' : 'payments', status: key === 'pendingInvoices' ? 'PENDING' : 'SUCCESS', from: appliedFilters.from, to: appliedFilters.to })}>{t('View transactions')} →</button>}
-    </article>)}</div>
-
-    <section className="reports-card reports-revenue">
-      <div className="reports-card-header"><div><h2>{t('Revenue trend')}</h2><p>{t('Daily totals from successful payments.')}</p></div><span className="reports-unit">VND</span></div>
-      {loading ? loadingBlock : hasRevenue ? <><RevenueStats days={days} /><RevenueChart days={days} /></> : <Empty text={loadError ? 'Report data is unavailable.' : 'No successful payments in this period.'} />}
-      {hasRevenue && <><div className="reports-chart-footer"><span>{t('Days without successful payments count as 0. Hover or use the arrow keys for each value.')}</span><button type="button" aria-expanded={showDaily} onClick={() => setShowDaily(current => !current)}>{t('View data table')}<ChevronDown size={15} className={showDaily ? 'is-open' : ''} aria-hidden="true" /></button></div>
-        {showDaily && <div className="reports-daily-table"><table><thead><tr><th scope="col">{t('Date')}</th><th scope="col">{t('Revenue (VND)')}</th></tr></thead><tbody>{days.filter(day => day.value > 0).map(day => <tr key={day.date}><td>{formatDate(day.date)}</td><td>{formatMoney(day.value)}</td></tr>)}</tbody></table></div>}</>}
-    </section>
-
-    <div className="reports-bottom-grid reports-demand-grid">
-      <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Most registered classes')}</h2><p>{t('Members studying each class in this period, each member counted once.')}</p></div><span className="reports-section-icon"><Trophy size={19} aria-hidden="true" /></span></div>
-        {loading ? loadingBlock : popularity.length ? <ClassPopularity rows={popularity} /> : <Empty icon={Trophy} text={loadError ? 'Report data is unavailable.' : 'No class registrations in this period.'} />}
-        {popularity.length > 0 && <p className="reports-card-note">{t('"New" = members whose registration was created in this period.')}</p>}
-      </section>
-      <div className="reports-stack">
-        <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Booking status breakdown')}</h2><p>{t('By booking creation date, not session date. Statuses reflect the current state.')}</p></div><span className="reports-section-icon"><ClipboardList size={19} aria-hidden="true" /></span></div>
-          {loading ? loadingBlock : report ? <BookingBreakdown rows={report.bookingStatuses || []} /> : <Empty icon={ClipboardList} text="Report data is unavailable." />}
-        </section>
-        <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Package registrations')}</h2><p>{t('Top 5 packages by registrations.')}</p></div><span className="reports-section-icon"><Package size={19} aria-hidden="true" /></span></div>
-          {loading ? loadingBlock : packages.length ? <ol className="reports-packages">{packages.map((item, index) => <li key={`${item.label}-${index}`}>
-            <span className="reports-package-rank">{index + 1}</span>
-            <div><div className="reports-package-name"><strong>{item.label}</strong><span><b>{count(item.value)}</b> · {percent(Number(item.value) / packageTotal * 100)}</span></div><i aria-hidden="true"><b style={{ width: `${Number(item.value) / maxPackages * 100}%` }} /></i></div>
-          </li>)}</ol> : <Empty icon={Package} text={loadError ? 'Report data is unavailable.' : 'No package registrations in this period.'} />}
-          {packages.length > 0 && <p className="reports-card-note">{packageRest.length > 0 && <>{t('{0} other packages: {1} registrations.', [count(packageRest.length), count(packageRest.reduce((sum, item) => sum + Number(item.value), 0))])} </>}{t('Based on membership start date, not payment status.')}</p>}
-        </section>
-      </div>
+    {/* SUB-TAB NAVIGATOR */}
+    <div className="reports-tabs-nav" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeTab === 'overview'}
+        className={`reports-tab-item${activeTab === 'overview' ? ' is-active' : ''}`}
+        onClick={() => setActiveTab('overview')}
+      >
+        <BarChart3 size={16} aria-hidden="true" />
+        <span>{t('Center Overview & Revenue')}</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeTab === 'coaches'}
+        className={`reports-tab-item${activeTab === 'coaches' ? ' is-active' : ''}`}
+        onClick={() => setActiveTab('coaches')}
+      >
+        <Dumbbell size={16} aria-hidden="true" />
+        <span>{t('Trainer Teaching Statistics')}</span>
+      </button>
     </div>
 
-    <div className="reports-attention">
-      <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Classes needing attention')}</h2><p>{t('10 classes with the lowest occupancy in this period.')}</p></div><span className="reports-section-icon is-warning"><AlertTriangle size={19} aria-hidden="true" /></span></div>
-        {loading ? loadingBlock : classes.length ? <div className="reports-class-table"><table><thead><tr><th scope="col">{t('Class')}</th><th scope="col">{t('Students')}</th><th scope="col">{t('Seats booked')}</th><th scope="col">{t('Occupancy')}</th></tr></thead><tbody>{classes.map(item => { const rate = Number(item.capacity) > 0 ? Number(item.value) / Number(item.capacity) * 100 : null; const meta = [item.subject, item.coach].filter(Boolean).join(' · '); return <tr key={item.classId}><td><strong>{item.label}</strong>{meta && <span className="reports-class-meta">{meta}</span>}</td><td>{item.students == null ? '—' : count(item.students)}</td><td>{count(item.value)}/{count(item.capacity)}{item.sessions != null && <span className="reports-class-meta">{t('{0} sessions', [count(item.sessions)])}</span>}</td><td><OccupancyMeter rate={rate} /></td></tr>; })}</tbody></table></div> : <Empty icon={ClipboardList} text={loadError ? 'Report data is unavailable.' : 'No class sessions in this period.'} />}
-        {classes.length > 0 && <div className="reports-card-note reports-occupancy-legend"><span><i className="is-low" aria-hidden="true" />{t('Below {0}%: low occupancy', [LOW_OCCUPANCY])}</span><span><i aria-hidden="true" />{t('Normal')}</span><span><i className="is-high" aria-hidden="true" />{t('85% or more: nearly full')}</span><span>{t('Seats booked = confirmed seats across all sessions / total seats of those sessions.')}</span></div>}
-      </section>
-    </div>
+    {activeTab === 'coaches' ? (
+      <CoachTeachingReport initialFrom={appliedFilters.from} initialTo={appliedFilters.to} />
+    ) : (
+      <>
+        <form className="reports-filter" onSubmit={event => { event.preventDefault(); if (valid && !loading) reload(); }}>
+          <div className="reports-filter-title"><CalendarDays size={18} aria-hidden="true" /><span>{t('Reporting period')}</span></div>
+          <div className="reports-presets">{presets.map(label => { const range = presetRange(label); return <button type="button" key={label} disabled={loading} aria-pressed={filters.from === range.from && filters.to === range.to} onClick={() => setFilters(current => ({ ...current, ...range }))}>{t(label)}</button>; })}</div>
+          <div className="reports-date-inputs"><label>{t('From')}<input type="date" value={filters.from} max={filters.to || undefined} onChange={event => setFilters(current => ({ ...current, from: event.target.value }))} /></label><span aria-hidden="true">–</span><label>{t('To')}<input type="date" value={filters.to} min={filters.from || undefined} onChange={event => setFilters(current => ({ ...current, to: event.target.value }))} /></label><button className="manager-primary" type="submit" disabled={!valid || loading}>{t(loading ? 'Loading...' : 'View')}</button></div>
+          {(!valid || pendingRange) && <p className="reports-filter-hint" role="status">{t(!valid ? 'Select a valid date range: the start date cannot be after the end date.' : 'Apply the date range to update this report.')}</p>}
+        </form>
+
+        <div className="reports-period"><span>{t('Performance summary')}</span><span><CalendarDays size={14} aria-hidden="true" />{formatDate(appliedFilters.from)} — {formatDate(appliedFilters.to)}{previousPeriod && <em>{t('compared with {0} – {1}', [formatDate(previousPeriod.from), formatDate(previousPeriod.to)])}</em>}</span></div>
+        <div className="reports-kpis">{cards.map(({ key, label, icon: Icon, value, note, tone, current, before, goodWhenUp }) => <article key={key} className={`reports-kpi ${tone}${loading ? ' is-loading' : ''}`}>
+          <div className="reports-kpi-label"><span>{t(label)}</span><span className="reports-kpi-icon"><Icon size={18} aria-hidden="true" /></span></div>
+          <strong>{value}</strong>
+          {report && <Delta current={current} previous={before} goodWhenUp={goodWhenUp} />}
+          <p>{report ? note : '\u00a0'}{key === 'newMembers' && unknownDates > 0 && <span className="reports-kpi-info" title={t('These accounts are excluded because their registration period cannot be verified. Newly created accounts are recorded automatically.')}><Info size={12} aria-hidden="true" />{t('{0} existing member accounts have no creation date.', [count(unknownDates)])}</span>}</p>
+          {openTransactions && ['revenue', 'successfulPayments', 'pendingInvoices'].includes(key) && <button type="button" className="reports-ledger-link" disabled={!report} onClick={() => openTransactions({ mode: key === 'pendingInvoices' ? 'invoices' : 'payments', status: key === 'pendingInvoices' ? 'PENDING' : 'SUCCESS', from: appliedFilters.from, to: appliedFilters.to })}>{t('View transactions')} →</button>}
+        </article>)}</div>
+
+        <section className="reports-card reports-revenue">
+          <div className="reports-card-header"><div><h2>{t('Revenue trend')}</h2><p>{t('Daily totals from successful payments.')}</p></div><span className="reports-unit">VND</span></div>
+          {loading ? loadingBlock : hasRevenue ? <><RevenueStats days={days} /><RevenueChart days={days} /></> : <Empty text={loadError ? 'Report data is unavailable.' : 'No successful payments in this period.'} />}
+          {hasRevenue && <><div className="reports-chart-footer"><span>{t('Days without successful payments count as 0. Hover or use the arrow keys for each value.')}</span><button type="button" aria-expanded={showDaily} onClick={() => setShowDaily(current => !current)}>{t('View data table')}<ChevronDown size={15} className={showDaily ? 'is-open' : ''} aria-hidden="true" /></button></div>
+            {showDaily && <div className="reports-daily-table"><table><thead><tr><th scope="col">{t('Date')}</th><th scope="col">{t('Revenue (VND)')}</th></tr></thead><tbody>{days.filter(day => day.value > 0).map(day => <tr key={day.date}><td>{formatDate(day.date)}</td><td>{formatMoney(day.value)}</td></tr>)}</tbody></table></div>}</>}
+        </section>
+
+        <div className="reports-bottom-grid reports-demand-grid">
+          <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Most registered classes')}</h2><p>{t('Members studying each class in this period, each member counted once.')}</p></div><span className="reports-section-icon"><Trophy size={19} aria-hidden="true" /></span></div>
+            {loading ? loadingBlock : popularity.length ? <ClassPopularity rows={popularity} /> : <Empty icon={Trophy} text={loadError ? 'Report data is unavailable.' : 'No class registrations in this period.'} />}
+            {popularity.length > 0 && <p className="reports-card-note">{t('"New" = members whose registration was created in this period.')}</p>}
+          </section>
+          <div className="reports-stack">
+            <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Booking status breakdown')}</h2><p>{t('By booking creation date, not session date. Statuses reflect the current state.')}</p></div><span className="reports-section-icon"><ClipboardList size={19} aria-hidden="true" /></span></div>
+              {loading ? loadingBlock : report ? <BookingBreakdown rows={report.bookingStatuses || []} /> : <Empty icon={ClipboardList} text="Report data is unavailable." />}
+            </section>
+            <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Package registrations')}</h2><p>{t('Top 5 packages by registrations.')}</p></div><span className="reports-section-icon"><Package size={19} aria-hidden="true" /></span></div>
+              {loading ? loadingBlock : packages.length ? <ol className="reports-packages">{packages.map((item, index) => <li key={`${item.label}-${index}`}>
+                <span className="reports-package-rank">{index + 1}</span>
+                <div><div className="reports-package-name"><strong>{item.label}</strong><span><b>{count(item.value)}</b> · {percent(Number(item.value) / packageTotal * 100)}</span></div><i aria-hidden="true"><b style={{ width: `${Number(item.value) / maxPackages * 100}%` }} /></i></div>
+              </li>)}</ol> : <Empty icon={Package} text={loadError ? 'Report data is unavailable.' : 'No package registrations in this period.'} />}
+              {packages.length > 0 && <p className="reports-card-note">{packageRest.length > 0 && <>{t('{0} other packages: {1} registrations.', [count(packageRest.length), count(packageRest.reduce((sum, item) => sum + Number(item.value), 0))])} </>}{t('Based on membership start date, not payment status.')}</p>}
+            </section>
+          </div>
+        </div>
+
+        <div className="reports-attention">
+          <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Classes needing attention')}</h2><p>{t('10 classes with the lowest occupancy in this period.')}</p></div><span className="reports-section-icon is-warning"><AlertTriangle size={19} aria-hidden="true" /></span></div>
+            {loading ? loadingBlock : classes.length ? <div className="reports-class-table"><table><thead><tr><th scope="col">{t('Class')}</th><th scope="col">{t('Students')}</th><th scope="col">{t('Seats booked')}</th><th scope="col">{t('Occupancy')}</th></tr></thead><tbody>{classes.map(item => { const rate = Number(item.capacity) > 0 ? Number(item.value) / Number(item.capacity) * 100 : null; const meta = [item.subject, item.coach].filter(Boolean).join(' · '); return <tr key={item.classId}><td><strong>{item.label}</strong>{meta && <span className="reports-class-meta">{meta}</span>}</td><td>{item.students == null ? '—' : count(item.students)}</td><td>{count(item.value)}/{count(item.capacity)}{item.sessions != null && <span className="reports-class-meta">{t('{0} sessions', [count(item.sessions)])}</span>}</td><td><OccupancyMeter rate={rate} /></td></tr>; })}</tbody></table></div> : <Empty icon={ClipboardList} text={loadError ? 'Report data is unavailable.' : 'No class sessions in this period.'} />}
+            {classes.length > 0 && <div className="reports-card-note reports-occupancy-legend"><span><i className="is-low" aria-hidden="true" />{t('Below {0}%: low occupancy', [LOW_OCCUPANCY])}</span><span><i aria-hidden="true" />{t('Normal')}</span><span><i className="is-high" aria-hidden="true" />{t('85% or more: nearly full')}</span><span>{t('Seats booked = confirmed seats across all sessions / total seats of those sessions.')}</span></div>}
+          </section>
+        </div>
+      </>
+    )}
   </div>;
 }
