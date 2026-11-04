@@ -230,4 +230,26 @@ public class CoachController {
         String coachEmail = authentication.getName();
         return coachAiChatService.chatStream(request.getMessage(), request.getHistory(), coachEmail);
     }
+
+    // ==================== BÀI NỘP CỦA HỌC VIÊN (WORKOUT SUBMISSIONS) ====================
+
+    @GetMapping("/workouts/submissions")
+    public ResponseEntity<List<WorkoutSubmissionResponse>> getCoachSubmissions(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer studentUserId,
+            @RequestParam(required = false) Integer planId,
+            @RequestParam(required = false) Integer classId,
+            Authentication authentication) {
+        String coachEmail = authentication.getName();
+        return ResponseEntity.ok(coachWorkoutService.getCoachSubmissions(coachEmail, status, studentUserId, planId, classId));
+    }
+
+    @PostMapping("/submissions/{submissionId}/feedback")
+    public ResponseEntity<WorkoutSubmissionResponse> submitCoachFeedback(
+            @PathVariable Integer submissionId,
+            @Valid @RequestBody com.team4.sportscenter.modules.coach.dtos.request.SubmissionFeedbackRequest request,
+            Authentication authentication) {
+        String coachEmail = authentication.getName();
+        return ResponseEntity.ok(coachWorkoutService.submitCoachFeedback(coachEmail, submissionId, request));
+    }
 }

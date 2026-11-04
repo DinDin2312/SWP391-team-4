@@ -152,4 +152,19 @@ public class MemberController {
             @RequestBody com.team4.sportscenter.modules.member.dtos.AiMessageRequest request) {
         return aiChatService.chatStream(request.getMessage(), request.getHistory(), authentication.getName());
     }
+
+    @PostMapping("/workouts/{planId}/submit")
+    public ResponseEntity<com.team4.sportscenter.modules.coach.dtos.response.WorkoutSubmissionResponse> submitWorkout(
+            Authentication authentication,
+            @PathVariable Integer planId,
+            @jakarta.validation.Valid @RequestBody com.team4.sportscenter.modules.coach.dtos.request.SubmitWorkoutRequest request) {
+        return ResponseEntity.ok(memberService.submitWorkout(authentication.getName(), planId, request));
+    }
+
+    @GetMapping("/workouts/{planId}/submissions")
+    public ResponseEntity<List<com.team4.sportscenter.modules.coach.dtos.response.WorkoutSubmissionResponse>> getMySubmissionsByPlan(
+            Authentication authentication,
+            @PathVariable Integer planId) {
+        return ResponseEntity.ok(memberService.getMySubmissionsByPlan(authentication.getName(), planId));
+    }
 }

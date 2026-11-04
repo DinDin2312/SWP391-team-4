@@ -112,7 +112,9 @@ test('coachService contracts cover schedules, attendance, workouts, and assessme
     await coachService.getStudentAssessmentHistory(99);
     await coachService.createAssessment({ weightKg: 70 });
     await coachService.deleteAssessment(12);
-    assert.equal(calls.length, 23);
+    await coachService.getSubmissions();
+    await coachService.submitFeedback(15, { coachFeedback: 'Great form', rating: 5, status: 'APPROVED' });
+    assert.equal(calls.length, 25);
     assert.deepEqual(calls[4], { method: 'get', args: ['/v1/coach/schedules/10/students'] });
     assert.deepEqual(calls[7], { method: 'get', args: ['/v1/coach/students', { params: { classId: 10 } }] });
     assert.deepEqual(calls[13], { method: 'get', args: ['/v1/coach/workouts', { params: {} }] });
@@ -164,7 +166,9 @@ test('memberService contracts cover bookings, packages, cart, notifications, and
     await memberService.getMySupportRequests();
     await memberService.getMyCredits();
     await memberService.withdrawSupportRequest(21);
-    assert.equal(calls.length, 40);
+    await memberService.submitWorkout(7, { videoUrl: 'https://youtube.com/watch?v=123', studentNote: 'Done' });
+    await memberService.getMySubmissionsByPlan(7);
+    assert.equal(calls.length, 42);
     assert.deepEqual(calls[6], { method: 'post', args: ['/v1/member/book-class/11', {}] });
     assert.deepEqual(calls[24], { method: 'post', args: ['/v1/payment/checkout', { paymentMethod: 'SEPAY' }] });
     assert.deepEqual(calls[35], { method: 'post', args: ['/v1/member/support/classes/11/transfer-to/12', {}] });
