@@ -69,6 +69,7 @@ const managerService = {
     return payload.packageId?axiosClient.put(`/manager/packages/${payload.packageId}`,payload):axiosClient.post('/manager/packages',payload);
   },
   reports: (from, to) => axiosClient.get('/manager/reports', { params: { from, to } }),
+  coachTeachingReport: (from, to, coachId) => axiosClient.get('/manager/reports/coach-teaching', { params: { from, to, ...(coachId ? { coachId } : {}) } }),
   auditLogs: () => axiosClient.get('/manager/audit-logs'),
 };
 
