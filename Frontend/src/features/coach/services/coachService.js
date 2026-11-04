@@ -69,6 +69,14 @@ export const coachService = {
     return await axiosClient.delete(`/v1/coach/workouts/${planId}`);
   },
 
+  getSubmissions: async (params) => {
+    return await axiosClient.get('/v1/coach/workouts/submissions', { params });
+  },
+
+  submitFeedback: async (submissionId, payload) => {
+    return await axiosClient.post(`/v1/coach/submissions/${submissionId}/feedback`, payload);
+  },
+
   getAssessments: async (studentUserId) => {
     const params = studentUserId ? { studentUserId } : {};
     return await axiosClient.get('/v1/coach/assessments', { params });

@@ -3243,7 +3243,6 @@ const supportTranslations = [
   ["Latest Update", "Cập nhật mới nhất"],
   ["Measured on:", "Đo ngày:"],
   ["Coach:", "HLV:"],
-  ["Class:", "Lớp:"],
   ["View All Assessments", "Xem tất cả đánh giá"],
   ["Update Metrics", "Tự cập nhật chỉ số"],
   ["Weight", "Cân nặng"],
@@ -4969,6 +4968,108 @@ const coachTeachingTranslations = [
   ["Low occupancy", "T\u1ef7 l\u1ec7 l\u1ea5p \u0111\u1ea7y th\u1ea5p"],
 ];
 for (const [en, vi] of coachTeachingTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+const workoutSubmissionTranslations = [
+  ["Filter by assigned class:", "Lọc theo lớp học được phân công:"],
+  ["Filter by class:", "Lọc theo lớp:"],
+  ["Select class:", "Chọn lớp:"],
+  ["All classes", "Tất cả các lớp"],
+  ["All Classes", "Tất cả các lớp"],
+  ["classes", "lớp"],
+  // Tabs & Navigation
+  ["Student Submissions", "Bài Nộp Của Học Viên"],
+  ["Student Workout Submissions", "Bài Nộp Của Học Viên"],
+  ["Search student, exercise...", "Tìm học viên, bài tập..."],
+  ["Loading student submissions...", "Đang tải danh sách bài nộp của học viên..."],
+  ["No submissions match the current filter.", "Chưa có bài nộp nào phù hợp bộ lọc."],
+  ["No submissions match the filter.", "Chưa có bài nộp nào phù hợp bộ lọc."],
+  ["Plan:", "Giáo án:"],
+  ["Workout plan:", "Giáo án:"],
+  ["Open video link", "Mở liên kết video"],
+  ["Your feedback:", "Góp ý của bạn:"],
+  ["Review & Rate Submission", "Xem & Đánh Giá Bài Nộp"],
+  ["View / Edit Feedback", "Xem Lại / Chỉnh Sửa Góp Ý"],
+  
+  // Submit Workout Modal
+  ["Submit Workout / Video", "Nộp Bài Tập / Video"],
+  ["Member", "Học viên"],
+  ["Student", "Học viên"],
+  ["Please enter your workout video link.", "Vui lòng nhập đường dẫn video bài tập của bạn."],
+  ["Workout plan ID not found.", "Không tìm thấy mã giáo án."],
+  ["Workout submitted successfully! The coach will review and give feedback soon.", "Nộp bài tập thành công! HLV sẽ sớm xem và nhận xét cho bạn."],
+  ["An error occurred while submitting workout.", "Đã xảy ra lỗi khi nộp bài."],
+  ["An error occurred while submitting the workout.", "Đã xảy ra lỗi khi nộp bài."],
+  ["Practice Exercise", "Bài tập thực hành"],
+  ["Coach Review Status", "Trạng thái đánh giá từ HLV"],
+  ["Coach Evaluation Status", "Trạng thái đánh giá từ HLV"],
+  ["Approved", "Đạt chuẩn"],
+  ["Needs Revision", "Cần tập lại"],
+  ["Revision Needed", "Cần tập lại"],
+  ["Reviewed", "Đã nhận xét"],
+  ["Waiting for Coach", "Chờ HLV xem"],
+  ["Feedback from Coach:", "Lời nhận xét từ HLV:"],
+  ["Open submitted video", "Mở xem lại video đã nộp"],
+  ["Submit New Workout", "Nộp lại bài tập mới"],
+  ["Workout Video Link (Google Drive, YouTube, TikTok, v.v.)", "Đường dẫn Video bài tập (Google Drive, YouTube, TikTok, v.v.)"],
+  ["Workout Video Link (Google Drive, YouTube, TikTok, etc.)", "Đường dẫn Video bài tập (Google Drive, YouTube, TikTok, v.v.)"],
+  ["Please ensure the video link has view permissions enabled (Public or Anyone with link).", "Hãy đảm bảo video đã được mở quyền xem (Công khai hoặc Bất kỳ ai có đường liên kết)."],
+  ["Please ensure the video view permissions are open (Public or Anyone with the link).", "Hãy đảm bảo video đã được mở quyền xem (Công khai hoặc Bất kỳ ai có đường liên kết)."],
+  ["Open link to check", "Mở liên kết để kiểm tra"],
+  ["Your Notes / Feedback while training", "Ghi chú / Cảm nhận của bạn khi tập"],
+  ["Your Notes / Feedback During Training", "Ghi chú / Cảm nhận của bạn khi tập"],
+  ["E.g., Finished 3 sets, wrist felt a bit strained on the last set, please check my form...", "Ví dụ: Em hoàn thành 3 hiệp, hiệp cuối hơi mỏi cổ tay, nhờ HLV xem giúp tư thế..."],
+  ["E.g., Completed 3 sets, wrist felt a bit tired on the last set, please check my posture...", "Ví dụ: Em hoàn thành 3 hiệp, hiệp cuối hơi mỏi cổ tay, nhờ HLV xem giúp tư thế..."],
+  ["Back to feedback", "Quay lại xem nhận xét"],
+  ["Submitting...", "Đang gửi bài..."],
+  ["Submit workout to coach", "Gửi bài tập cho HLV"],
+
+  // Coach Review Submission Modal
+  ["Review Student Submission", "Đánh Giá Bài Nộp Học Viên"],
+  ["Coach", "Huấn luyện viên"],
+  ["Please enter feedback or advice for the student.", "Vui lòng nhập lời nhận xét hoặc góp ý cho học viên."],
+  ["An error occurred while saving review.", "Đã xảy ra lỗi khi gửi đánh giá."],
+  ["An error occurred while submitting review.", "Đã xảy ra lỗi khi gửi đánh giá."],
+  ["Student practice video", "Video thực hành của học viên"],
+  ["Student Practice Video", "Video thực hành của học viên"],
+  ["View fullscreen in new tab", "Xem toàn màn hình trên tab mới"],
+  ["View fullscreen in a new tab", "Xem toàn màn hình trên tab mới"],
+  ["Open submission video", "Mở xem video bài nộp"],
+  ["Student has not attached a video link.", "Học viên chưa đính kèm link video."],
+  ["The student has not attached a video link.", "Học viên chưa đính kèm link video."],
+  ["Student notes / feedback:", "Ghi chú / Cảm nhận của học viên:"],
+  ["Student's Notes / Feedback:", "Ghi chú / Cảm nhận của học viên:"],
+  ["Review status", "Trạng thái đánh giá"],
+  ["Review Status", "Trạng thái đánh giá"],
+  ["Feedback", "Góp ý"],
+  ["Retrain", "Tập lại"],
+  ["Rate technique (1 - 5 stars)", "Chấm điểm kỹ thuật (1 - 5 sao)"],
+  ["Rate Technique (1 - 5 stars)", "Chấm điểm kỹ thuật (1 - 5 sao)"],
+  ["stars", "sao"],
+  ["Professional review & Technical feedback", "Nhận xét chuyên môn & Góp ý kỹ thuật"],
+  ["Professional Review & Technique Feedback", "Nhận xét chuyên môn & Góp ý kỹ thuật"],
+  ["E.g., Great arm extension and body alignment. Make sure to exhale evenly underwater...", "Ví dụ: Sải tay vươn đều, tư thế thân người thẳng. Cần chú ý thở ra đều dưới nước..."],
+  ["E.g., Good arm extension, straight posture. Remember to exhale smoothly underwater...", "Ví dụ: Sải tay vươn đều, tư thế thân người thẳng. Cần chú ý thở ra đều dưới nước..."],
+  ["Send feedback to student", "Gửi nhận xét cho học viên"],
+  ["Send Feedback to Student", "Gửi nhận xét cho học viên"],
+
+  // Member Workouts Modal table column & buttons
+  ["Submission / Progress", "Nộp bài / Quá trình"],
+  ["Submit / Progress", "Nộp bài / Quá trình"],
+  ["Submit practice video to coach", "Nộp video thực hành cho HLV"],
+  ["Submit", "Nộp bài"],
+  ["Technique approved - Click to view details", "Đạt chuẩn kỹ thuật - Bấm xem chi tiết"],
+  ["Approved", "Đạt"],
+  ["Coach requested revision - Click to view feedback", "HLV yêu cầu tập lại - Bấm xem góp ý"],
+  ["Coach gave feedback - Click to view", "HLV đã góp ý - Bấm xem"],
+  ["Reviewed", "Đã góp ý"],
+  ["Waiting for coach review - Click to view submitted video", "Chờ HLV xem - Bấm xem video đã gửi"],
+  ["Waiting for coach - Click to view submitted video", "Chờ HLV xem - Bấm xem video đã gửi"]
+];
+
+for (const [en, vi] of workoutSubmissionTranslations) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }

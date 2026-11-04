@@ -2,8 +2,10 @@ package com.team4.sportscenter.modules.coach.services;
 
 import com.team4.sportscenter.modules.coach.dtos.request.AssignWorkoutPlanRequest;
 import com.team4.sportscenter.modules.coach.dtos.request.CreateExerciseRequest;
+import com.team4.sportscenter.modules.coach.dtos.request.SubmissionFeedbackRequest;
 import com.team4.sportscenter.modules.coach.dtos.response.CoachWorkoutPlanResponse;
 import com.team4.sportscenter.modules.coach.dtos.response.ExerciseResponse;
+import com.team4.sportscenter.modules.coach.dtos.response.WorkoutSubmissionResponse;
 
 import java.util.List;
 import java.util.Map;
@@ -22,4 +24,8 @@ public interface CoachWorkoutService {
     CoachWorkoutPlanResponse getWorkoutPlanById(Integer planId, String coachEmail);
 
     void deleteWorkoutPlan(Integer planId, String coachEmail);
+
+    List<WorkoutSubmissionResponse> getCoachSubmissions(String coachEmail, String status, Integer studentUserId, Integer planId, Integer classId);
+
+    WorkoutSubmissionResponse submitCoachFeedback(String coachEmail, Integer submissionId, SubmissionFeedbackRequest request);
 }

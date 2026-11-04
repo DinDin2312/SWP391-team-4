@@ -44,6 +44,13 @@ import com.team4.sportscenter.modules.coach.entities.CoachWorkoutPlan;
 import com.team4.sportscenter.modules.coach.entities.TraineeAssessment;
 import com.team4.sportscenter.modules.coach.dtos.response.TraineeAssessmentResponse;
 import com.team4.sportscenter.modules.coach.services.impl.CoachAssessmentServiceImpl;
+import com.team4.sportscenter.modules.coach.repositories.CoachWorkoutSubmissionRepository;
+import com.team4.sportscenter.modules.coach.repositories.CoachPlanDetailRepository;
+import com.team4.sportscenter.modules.coach.entities.CoachPlanDetail;
+import com.team4.sportscenter.modules.coach.entities.CoachWorkoutSubmission;
+import com.team4.sportscenter.modules.coach.dtos.request.SubmitWorkoutRequest;
+import com.team4.sportscenter.modules.coach.dtos.response.WorkoutSubmissionResponse;
+import com.team4.sportscenter.modules.coach.services.impl.CoachWorkoutServiceImpl;
 import com.team4.sportscenter.modules.member.dtos.response.EnrolledClassResponse;
 import com.team4.sportscenter.modules.member.dtos.response.MemberWorkoutPlanResponse;
 import com.team4.sportscenter.modules.member.dtos.response.MemberWorkoutExerciseResponse;
@@ -64,6 +71,8 @@ public class MemberServiceImpl implements MemberService {
     private final CoachWorkoutPlanRepository coachWorkoutPlanRepository;
     private final CoachClassRepository coachClassRepository;
     private final TraineeAssessmentRepository traineeAssessmentRepository;
+    private final CoachWorkoutSubmissionRepository workoutSubmissionRepository;
+    private final CoachPlanDetailRepository coachPlanDetailRepository;
 
     @Override
     public MemberMembershipResponse getMyActiveMembership(String email) {
@@ -765,5 +774,79 @@ public class MemberServiceImpl implements MemberService {
 
         TraineeAssessment saved = traineeAssessmentRepository.save(assessment);
         return CoachAssessmentServiceImpl.mapAssessmentToResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public WorkoutSubmissionResponse submitWorkout(String email, Integer planId, SubmitWorkoutRequest request) {
+        if (request == null || request.getVideoUrl() == null || request.getVideoUrl().trim().isEmpty()) {
+            throw new RuntimeException("Vui lòng cung cấp đường dẫn video bài tập.");
+        }
+
+        User student = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin học viên."));
+
+        CoachWorkoutPlan plan = coachWorkoutPlanRepository.findById(planId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy giáo án tập luyện ID: " + planId));
+
+        boolean isOwner = plan.getUser() != null && plan.getUser().getUserId().equals(student.getUserId());
+        if (!isOwner) {
+            if (plan.getGymClass() != null) {
+                boolean enrolled = bookingRepository.existsConfirmedByEmailAndClassId(email, plan.getGymClass().getClassId());
+                if (!enrolled) {
+                    throw new RuntimeException("Bạn không thuộc danh sách học viên của giáo án này.");
+                }
+            } else {
+                throw new RuntimeException("Bạn không có quyền nộp bài cho giáo án này.");
+            }
+        }
+
+        CoachPlanDetail detail = null;
+        if (request.getDetailId() != null) {
+            detail = coachPlanDetailRepository.findById(request.getDetailId()).orElse(null);
+        }
+
+        User coach = plan.getCoach();
+        if (coach == null) {
+            throw new RuntimeException("Giáo án chưa được gán Huấn luyện viên phụ trách.");
+        }
+
+        CoachWorkoutSubmission submission = CoachWorkoutSubmission.builder()
+                .workoutPlan(plan)
+                .planDetail(detail)
+                .user(student)
+                .coach(coach)
+                .videoUrl(request.getVideoUrl().trim())
+                .studentNote(request.getStudentNote() != null ? request.getStudentNote().trim() : null)
+                .status("SUBMITTED")
+                .submittedAt(LocalDateTime.now())
+                .build();
+
+        CoachWorkoutSubmission saved = workoutSubmissionRepository.save(submission);
+
+        // Send notification to coach
+        String exerciseTitle = (detail != null && detail.getExercise() != null)
+                ? detail.getExercise().getExerciseName()
+                : plan.getTitle();
+
+        Notification notif = Notification.builder()
+                .user(coach)
+                .title("[Bài nộp mới] Học viên " + student.getFullName())
+                .message("Học viên " + student.getFullName() + " vừa nộp video bài tập cho: \"" + exerciseTitle + "\" trong giáo án \"" + plan.getTitle() + "\".")
+                .type("WORKOUT_SUBMISSION")
+                .isRead(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+        notificationRepository.save(notif);
+
+        return CoachWorkoutServiceImpl.mapSubmissionToResponse(saved);
+    }
+
+    @Override
+    public List<WorkoutSubmissionResponse> getMySubmissionsByPlan(String email, Integer planId) {
+        User student = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin học viên."));
+        List<CoachWorkoutSubmission> list = workoutSubmissionRepository.findByWorkoutPlanPlanIdAndUserUserIdOrderBySubmittedAtDesc(planId, student.getUserId());
+        return list.stream().map(CoachWorkoutServiceImpl::mapSubmissionToResponse).collect(Collectors.toList());
     }
 }
