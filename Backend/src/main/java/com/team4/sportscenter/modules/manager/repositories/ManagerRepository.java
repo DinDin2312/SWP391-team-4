@@ -545,4 +545,267 @@ public class ManagerRepository {
         }
         return keyHolder.getKey().intValue();
     }
+
+    public Map<String, Object> coachTeachingReport(LocalDate from, LocalDate to, Integer selectedCoachId) {
+        LocalDateTime now = centerNow();
+        LocalDateTime fromTime = from.atStartOfDay();
+        LocalDateTime toTime = to.plusDays(1).atStartOfDay();
+
+        // 1. All active coaches for dropdown
+        List<Map<String, Object>> coaches = jdbc.queryForList("""
+                SELECT u.user_id id, u.full_name name, u.email email, u.avatar_path avatar
+                FROM USERS u
+                JOIN ROLES r ON r.role_id = u.role_id
+                WHERE r.role_name = 'Coach' AND u.status = 'ACTIVE'
+                ORDER BY u.full_name ASC
+                """);
+
+        // 2. Fetch all sessions in the range with coach, class, room, and booking counts
+        List<Map<String, Object>> rawSessions = jdbc.queryForList("""
+                SELECT
+                    s.schedule_id scheduleId,
+                    s.class_id classId,
+                    c.class_name className,
+                    sub.subject_name subjectName,
+                    r.room_name roomName,
+                    s.start_time startTime,
+                    s.end_time endTime,
+                    s.status status,
+                    c.max_slots maxSlots,
+                    c.coach_id originalCoachId,
+                    orig_u.full_name originalCoachName,
+                    s.substitute_coach_id substituteCoachId,
+                    sub_u.full_name substituteCoachName,
+                    COALESCE(s.substitute_coach_id, c.coach_id) actualCoachId,
+                    COALESCE(sub_u.full_name, orig_u.full_name) actualCoachName,
+                    (SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id = s.schedule_id AND b.status = 'CONFIRMED') bookedStudents,
+                    (SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id = s.schedule_id AND b.status = 'CONFIRMED' AND b.attendance_status = 'PRESENT') presentStudents
+                FROM SCHEDULES s
+                JOIN CLASSES c ON c.class_id = s.class_id
+                LEFT JOIN SUBJECTS sub ON sub.subject_id = c.subject_id
+                LEFT JOIN ROOMS r ON r.room_id = c.room_id
+                LEFT JOIN USERS orig_u ON orig_u.user_id = c.coach_id
+                LEFT JOIN USERS sub_u ON sub_u.user_id = s.substitute_coach_id
+                WHERE s.start_time >= ? AND s.start_time < ?
+                ORDER BY s.start_time ASC
+                """, fromTime, toTime);
+
+        // 3. Unique students per actual coach for completed sessions in range
+        Map<Integer, Integer> uniqueStudentsMap = new java.util.HashMap<>();
+        List<Map<String, Object>> uniqueRows = jdbc.queryForList("""
+                SELECT COALESCE(s.substitute_coach_id, c.coach_id) actualCoachId,
+                       COUNT(DISTINCT b.user_id) uniqueCount
+                FROM BOOKINGS b
+                JOIN SCHEDULES s ON s.schedule_id = b.schedule_id
+                JOIN CLASSES c ON c.class_id = s.class_id
+                WHERE b.status = 'CONFIRMED' AND s.status <> 'CANCELLED' AND s.end_time <= ?
+                  AND s.start_time >= ? AND s.start_time < ?
+                GROUP BY COALESCE(s.substitute_coach_id, c.coach_id)
+                """, now, fromTime, toTime);
+        for (Map<String, Object> uRow : uniqueRows) {
+            Number cid = (Number) uRow.get("actualCoachId");
+            Number cnt = (Number) uRow.get("uniqueCount");
+            if (cid != null && cnt != null) {
+                uniqueStudentsMap.put(cid.intValue(), cnt.intValue());
+            }
+        }
+
+        // 4. Group session metrics by coach
+        Map<Integer, CoachStatAccumulator> accumulators = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> coach : coaches) {
+            int cid = ((Number) coach.get("id")).intValue();
+            accumulators.put(cid, new CoachStatAccumulator(
+                    cid,
+                    (String) coach.get("name"),
+                    (String) coach.get("email"),
+                    (String) coach.get("avatar")
+            ));
+        }
+
+        List<Map<String, Object>> processedSessions = new java.util.ArrayList<>();
+
+        for (Map<String, Object> session : rawSessions) {
+            localTimes(session);
+            LocalDateTime start = (LocalDateTime) session.get("startTime");
+            LocalDateTime end = (LocalDateTime) session.get("endTime");
+            String status = (String) session.get("status");
+            boolean isCancelled = "CANCELLED".equalsIgnoreCase(status);
+            boolean isCompleted = !isCancelled && end != null && !end.isAfter(now);
+            boolean isScheduled = !isCancelled && end != null && end.isAfter(now);
+
+            String computedStatus = isCancelled ? "CANCELLED" : (isCompleted ? "COMPLETED" : "SCHEDULED");
+            session.put("status", computedStatus);
+
+            long durationMinutes = (start != null && end != null) ? java.time.Duration.between(start, end).toMinutes() : 0;
+            double hours = Math.round((durationMinutes / 60.0) * 10.0) / 10.0;
+            session.put("durationMinutes", durationMinutes);
+            session.put("durationHours", hours);
+
+            Number origCoachIdNum = (Number) session.get("originalCoachId");
+            Number subCoachIdNum = (Number) session.get("substituteCoachId");
+            Number actualCoachIdNum = (Number) session.get("actualCoachId");
+            int origCoachId = origCoachIdNum != null ? origCoachIdNum.intValue() : 0;
+            Integer subCoachId = subCoachIdNum != null ? subCoachIdNum.intValue() : null;
+            int actualCoachId = actualCoachIdNum != null ? actualCoachIdNum.intValue() : 0;
+
+            boolean isSubstitute = subCoachId != null && !subCoachId.equals(origCoachId);
+            session.put("isSubstitute", isSubstitute);
+
+            String origCoachName = (String) session.get("originalCoachName");
+            String subCoachName = (String) session.get("substituteCoachName");
+
+            if (isSubstitute) {
+                session.put("substituteNote", "Dạy thay cho " + (origCoachName != null ? origCoachName : "HLV chính"));
+            } else {
+                session.put("substituteNote", null);
+            }
+
+            int maxSlots = session.get("maxSlots") != null ? ((Number) session.get("maxSlots")).intValue() : 0;
+            int bookedStudents = session.get("bookedStudents") != null ? ((Number) session.get("bookedStudents")).intValue() : 0;
+            int presentStudents = session.get("presentStudents") != null ? ((Number) session.get("presentStudents")).intValue() : 0;
+
+            double occRate = maxSlots > 0 ? Math.round((bookedStudents * 100.0 / maxSlots) * 10.0) / 10.0 : 0.0;
+            session.put("occupancyRate", occRate);
+
+            // Accumulate for actual coach (who actually taught / is scheduled)
+            CoachStatAccumulator actualAcc = accumulators.get(actualCoachId);
+            if (actualAcc != null) {
+                actualAcc.totalSessions++;
+                if (isCancelled) {
+                    actualAcc.cancelledSessions++;
+                } else if (isCompleted) {
+                    actualAcc.completedSessions++;
+                    actualAcc.totalMinutes += durationMinutes;
+                    actualAcc.totalStudents += bookedStudents;
+                    actualAcc.attendedStudents += presentStudents;
+                    actualAcc.totalCapacity += maxSlots;
+                } else if (isScheduled) {
+                    actualAcc.scheduledSessions++;
+                }
+                if (isSubstitute) {
+                    actualAcc.substituteSessionsCount++;
+                }
+            }
+
+            // Accumulate transferred sessions for original coach
+            if (isSubstitute) {
+                CoachStatAccumulator origAcc = accumulators.get(origCoachId);
+                if (origAcc != null) {
+                    origAcc.transferredSessionsCount++;
+                }
+            }
+
+            // Filter sessions for output based on selectedCoachId
+            if (selectedCoachId == null || selectedCoachId <= 0) {
+                processedSessions.add(session);
+            } else if (actualCoachId == selectedCoachId) {
+                processedSessions.add(session);
+            } else if (origCoachId == selectedCoachId && isSubstitute) {
+                // Also display the transferred session with explicit note
+                Map<String, Object> transferredCopy = new java.util.LinkedHashMap<>(session);
+                transferredCopy.put("isTransferred", true);
+                transferredCopy.put("substituteNote", "Đã nhờ " + (subCoachName != null ? subCoachName : "HLV khác") + " dạy thay");
+                processedSessions.add(transferredCopy);
+            }
+        }
+
+        // Build coachStats list
+        List<Map<String, Object>> coachStats = new java.util.ArrayList<>();
+        int overviewCompleted = 0;
+        int overviewScheduled = 0;
+        int overviewCancelled = 0;
+        int overviewSubstitute = 0;
+        long overviewTotalMinutes = 0;
+        int overviewStudents = 0;
+        int overviewCapacity = 0;
+
+        for (CoachStatAccumulator acc : accumulators.values()) {
+            if (selectedCoachId != null && selectedCoachId > 0 && acc.coachId != selectedCoachId) {
+                continue;
+            }
+            int uCount = uniqueStudentsMap.getOrDefault(acc.coachId, 0);
+            double totalHours = Math.round((acc.totalMinutes / 60.0) * 10.0) / 10.0;
+            double avgOcc = acc.totalCapacity > 0
+                    ? Math.round((acc.totalStudents * 100.0 / acc.totalCapacity) * 10.0) / 10.0
+                    : 0.0;
+
+            Map<String, Object> stat = new java.util.LinkedHashMap<>();
+            stat.put("coachId", acc.coachId);
+            stat.put("coachName", acc.coachName);
+            stat.put("coachEmail", acc.coachEmail);
+            stat.put("avatarPath", acc.avatarPath);
+            stat.put("completedSessions", acc.completedSessions);
+            stat.put("scheduledSessions", acc.scheduledSessions);
+            stat.put("cancelledSessions", acc.cancelledSessions);
+            stat.put("totalSessions", acc.totalSessions);
+            stat.put("totalHours", totalHours);
+            stat.put("substituteSessionsCount", acc.substituteSessionsCount);
+            stat.put("transferredSessionsCount", acc.transferredSessionsCount);
+            stat.put("totalStudents", acc.totalStudents);
+            stat.put("attendedStudents", acc.attendedStudents);
+            stat.put("uniqueStudents", uCount);
+            stat.put("totalCapacity", acc.totalCapacity);
+            stat.put("avgOccupancyRate", avgOcc);
+
+            coachStats.add(stat);
+
+            overviewCompleted += acc.completedSessions;
+            overviewScheduled += acc.scheduledSessions;
+            overviewCancelled += acc.cancelledSessions;
+            overviewSubstitute += acc.substituteSessionsCount;
+            overviewTotalMinutes += acc.totalMinutes;
+            overviewStudents += acc.totalStudents;
+            overviewCapacity += acc.totalCapacity;
+        }
+
+        double overviewHours = Math.round((overviewTotalMinutes / 60.0) * 10.0) / 10.0;
+        double overviewOcc = overviewCapacity > 0
+                ? Math.round((overviewStudents * 100.0 / overviewCapacity) * 10.0) / 10.0
+                : 0.0;
+
+        Map<String, Object> overview = new java.util.LinkedHashMap<>();
+        overview.put("totalCoaches", coaches.size());
+        overview.put("completedSessions", overviewCompleted);
+        overview.put("scheduledSessions", overviewScheduled);
+        overview.put("cancelledSessions", overviewCancelled);
+        overview.put("substituteSessions", overviewSubstitute);
+        overview.put("totalTeachingHours", overviewHours);
+        overview.put("totalStudents", overviewStudents);
+        overview.put("avgOccupancyRate", overviewOcc);
+
+        Map<String, Object> response = new java.util.LinkedHashMap<>();
+        response.put("coaches", coaches);
+        response.put("overview", overview);
+        response.put("coachStats", coachStats);
+        response.put("sessions", processedSessions);
+        response.put("selectedCoachId", selectedCoachId);
+        response.put("from", from.toString());
+        response.put("to", to.toString());
+
+        return response;
+    }
+
+    private static class CoachStatAccumulator {
+        final int coachId;
+        final String coachName;
+        final String coachEmail;
+        final String avatarPath;
+        int completedSessions = 0;
+        int scheduledSessions = 0;
+        int cancelledSessions = 0;
+        int totalSessions = 0;
+        long totalMinutes = 0;
+        int substituteSessionsCount = 0;
+        int transferredSessionsCount = 0;
+        int totalStudents = 0;
+        int attendedStudents = 0;
+        int totalCapacity = 0;
+
+        CoachStatAccumulator(int coachId, String coachName, String coachEmail, String avatarPath) {
+            this.coachId = coachId;
+            this.coachName = coachName;
+            this.coachEmail = coachEmail;
+            this.avatarPath = avatarPath;
+        }
+    }
 }
