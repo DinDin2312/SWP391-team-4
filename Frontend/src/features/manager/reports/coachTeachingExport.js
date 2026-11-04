@@ -224,6 +224,7 @@ export function generateCoachTeachingXml(reportData, from, to) {
      const timeStr = s.startTime && s.endTime ? `${s.startTime.slice(11, 16)} - ${s.endTime.slice(11, 16)}` : '';
      const dateStr = startTimeStr ? startTimeStr.slice(0, 10) : '';
      const roleText = s.isSubstitute ? 'Dạy thay' : s.isTransferred ? 'Chuyển giao' : 'Chính thức';
+     const statusText = s.status === 'CANCELLED' ? 'Đã hủy' : s.status === 'COMPLETED' ? 'Đã hoàn thành' : 'Sắp diễn ra';
 
      return `
    <Row>
@@ -240,7 +241,7 @@ export function generateCoachTeachingXml(reportData, from, to) {
     <Cell ss:StyleID="CellNumber"><Data ss:Type="Number">${s.bookedStudents || 0}</Data></Cell>
     <Cell ss:StyleID="CellNumber"><Data ss:Type="Number">${s.maxSlots || 0}</Data></Cell>
     <Cell ss:StyleID="CellDecimal"><Data ss:Type="Number">${s.occupancyRate || 0}</Data></Cell>
-    <Cell ss:StyleID="CellCenter"><Data ss:Type="String">${escapeXml(s.status || '')}</Data></Cell>
+    <Cell ss:StyleID="CellCenter"><Data ss:Type="String">${escapeXml(statusText)}</Data></Cell>
    </Row>`;
    }).join('')}
   </Table>
