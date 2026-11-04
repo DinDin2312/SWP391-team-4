@@ -209,6 +209,14 @@ public class ManagerController {
         return managerService.report(from, to);
     }
 
+    @GetMapping("/reports/coach-teaching")
+    public Map<String, Object> coachTeachingReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Integer coachId) {
+        return managerService.coachTeachingReport(from, to, coachId);
+    }
+
     @GetMapping("/audit-logs")
     public List<AuditLog> auditLogs() { return managerService.auditLogs(); }
 }
