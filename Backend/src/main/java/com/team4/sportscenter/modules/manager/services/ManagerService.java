@@ -553,6 +553,12 @@ public class ManagerService {
     }
 
     @Transactional(readOnly = true)
+    public Map<String, Object> coachTeachingReport(LocalDate from, LocalDate to, Integer coachId) {
+        validateDateRange(from, to);
+        return managerRepository.coachTeachingReport(from, to, coachId);
+    }
+
+    @Transactional(readOnly = true)
     public List<AuditLog> auditLogs() { return auditLogRepository.findTop100ByOrderByCreatedAtDesc(); }
 
     private User findUser(Integer id) {
