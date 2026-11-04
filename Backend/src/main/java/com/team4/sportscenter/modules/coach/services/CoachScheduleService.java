@@ -10,6 +10,7 @@ import java.util.List;
 public interface CoachScheduleService {
     List<CoachScheduleResponse> getCoachSchedules(String coachEmail);
     List<CoachStudentResponse> getCoachStudents(String coachEmail);
+    List<CoachStudentResponse> getCoachStudents(String coachEmail, Integer classId);
     List<EnrolledStudentResponse> getScheduleStudents(Integer scheduleId, String coachEmail);
     void updateAttendance(Integer scheduleId, UpdateAttendanceRequest request, String coachEmail);
 }

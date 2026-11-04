@@ -155,7 +155,19 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
 
     @Override
     public List<CoachStudentResponse> getCoachStudents(String coachEmail) {
+        return getCoachStudents(coachEmail, null);
+    }
+
+    @Override
+    public List<CoachStudentResponse> getCoachStudents(String coachEmail, Integer classId) {
         List<Booking> bookings = coachScheduleRepository.findBookingsByCoachEmail(coachEmail);
+
+        if (classId != null) {
+            bookings = bookings.stream()
+                    .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
+                            && classId.equals(b.getSchedule().getGymClass().getClassId()))
+                    .collect(Collectors.toList());
+        }
 
         // Group bookings by User
         Map<User, List<Booking>> userBookingsMap = bookings.stream()
@@ -168,7 +180,13 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
             List<Booking> userBookings = entry.getValue();
 
             Set<String> enrolledClasses = userBookings.stream()
+                    .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null)
                     .map(b -> b.getSchedule().getGymClass().getClassName())
+                    .collect(Collectors.toSet());
+
+            Set<Integer> enrolledClassIds = userBookings.stream()
+                    .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null)
+                    .map(b -> b.getSchedule().getGymClass().getClassId())
                     .collect(Collectors.toSet());
 
             // Fetch student AI workout goal & fitness level
@@ -220,6 +238,7 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                     .bio(user.getBio())
                     .totalBookings(userBookings.size())
                     .enrolledClasses(new ArrayList<>(enrolledClasses))
+                    .enrolledClassIds(new ArrayList<>(enrolledClassIds))
                     .workoutGoal(workoutGoal)
                     .fitnessLevel(fitnessLevel)
                     .assignedPlans(assignedPlans)
