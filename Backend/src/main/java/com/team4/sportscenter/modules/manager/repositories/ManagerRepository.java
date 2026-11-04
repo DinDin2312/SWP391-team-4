@@ -633,6 +633,9 @@ public class ManagerRepository {
             boolean isCompleted = !isCancelled && end != null && !end.isAfter(now);
             boolean isScheduled = !isCancelled && end != null && end.isAfter(now);
 
+            String computedStatus = isCancelled ? "CANCELLED" : (isCompleted ? "COMPLETED" : "SCHEDULED");
+            session.put("status", computedStatus);
+
             long durationMinutes = (start != null && end != null) ? java.time.Duration.between(start, end).toMinutes() : 0;
             double hours = Math.round((durationMinutes / 60.0) * 10.0) / 10.0;
             session.put("durationMinutes", durationMinutes);

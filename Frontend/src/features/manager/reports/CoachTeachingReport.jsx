@@ -113,7 +113,8 @@ export default function CoachTeachingReport({ initialFrom, initialTo }) {
   const filteredSessions = useMemo(() => {
     return sessions.filter(s => {
       // Status filter
-      if (sessionStatusFilter === 'COMPLETED' && s.status === 'CANCELLED') return false;
+      if (sessionStatusFilter === 'COMPLETED' && s.status !== 'COMPLETED') return false;
+      if (sessionStatusFilter === 'SCHEDULED' && s.status !== 'SCHEDULED') return false;
       if (sessionStatusFilter === 'CANCELLED' && s.status !== 'CANCELLED') return false;
       if (sessionStatusFilter === 'SUBSTITUTE' && !s.isSubstitute) return false;
 
@@ -450,14 +451,14 @@ export default function CoachTeachingReport({ initialFrom, initialTo }) {
               />
             </div>
             <div className="coach-status-pills">
-              {['ALL', 'COMPLETED', 'SUBSTITUTE', 'CANCELLED'].map(st => (
+              {['ALL', 'COMPLETED', 'SCHEDULED', 'SUBSTITUTE', 'CANCELLED'].map(st => (
                 <button
                   type="button"
                   key={st}
                   className={`pill-btn${sessionStatusFilter === st ? ' is-active' : ''}`}
                   onClick={() => setSessionStatusFilter(st)}
                 >
-                  {t(st === 'ALL' ? 'All' : st === 'COMPLETED' ? 'Completed' : st === 'SUBSTITUTE' ? 'Substituted' : 'Cancelled')}
+                  {t(st === 'ALL' ? 'All' : st === 'COMPLETED' ? 'Completed' : st === 'SCHEDULED' ? 'Scheduled' : st === 'SUBSTITUTE' ? 'Substituted' : 'Cancelled')}
                 </button>
               ))}
             </div>
