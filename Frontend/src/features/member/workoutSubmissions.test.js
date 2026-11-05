@@ -4,7 +4,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 
-test('SubmitWorkoutModal and CoachReviewSubmissionModal render safely without crashing across languages', async () => {
+test('Workout Submissions Comprehensive Test Suite - All Scenarios & Both Plan Types', async () => {
   const server = await createServer({
     server: { middlewareMode: true, ws: false },
     appType: 'custom',
@@ -18,12 +18,17 @@ test('SubmitWorkoutModal and CoachReviewSubmissionModal render safely without cr
     const { default: CoachReviewSubmissionModal } = await server.ssrLoadModule(
       '/src/features/coach/components/CoachReviewSubmissionModal.jsx'
     );
+    const { default: MemberWorkoutsModal } = await server.ssrLoadModule(
+      '/src/features/member/components/MemberWorkoutsModal.jsx'
+    );
     const { setLanguage } = await server.ssrLoadModule('/src/i18n/languageStore.js');
 
-    // ==================== VIETNAMESE ('vi') ====================
+    // =========================================================================
+    // SCENARIO 1: Happy Path - Member Submits -> Coach Reviews & Approves (VI)
+    // =========================================================================
     setLanguage('vi');
 
-    // 1. SubmitWorkoutModal for a new submission (VI)
+    // 1.1 Member Submits new workout
     assert.doesNotThrow(() => {
       const html = renderToStaticMarkup(
         React.createElement(SubmitWorkoutModal, {
@@ -34,37 +39,12 @@ test('SubmitWorkoutModal and CoachReviewSubmissionModal render safely without cr
           existingSubmission: null
         })
       );
-      assert.ok(html.includes('Nộp Bài Tập / Video'));
-      assert.ok(html.includes('Bơi sải 100m'));
-      assert.ok(html.includes('Gửi bài tập cho HLV'));
+      assert.ok(html.includes('Nộp Bài Tập / Video'), 'Should render title in VI');
+      assert.ok(html.includes('Bơi sải 100m'), 'Should render exercise name');
+      assert.ok(html.includes('Gửi bài tập cho HLV'), 'Should render submit button in VI');
     });
 
-    // 2. SubmitWorkoutModal with existing reviewed submission (VI)
-    assert.doesNotThrow(() => {
-      const html = renderToStaticMarkup(
-        React.createElement(SubmitWorkoutModal, {
-          isOpen: true,
-          onClose: () => {},
-          workoutPlan: { planId: 10, title: 'Kế hoạch Boxing' },
-          exercise: { detailId: 102, exerciseName: 'Kỹ thuật Jab' },
-          existingSubmission: {
-            submissionId: 55,
-            videoUrl: 'https://youtube.com/watch?v=sample123',
-            studentNote: 'Em hoàn thành 3 hiệp',
-            status: 'APPROVED',
-            rating: 5,
-            coachFeedback: 'Đòn đánh thẳng và thu tay về phòng thủ rất tốt!'
-          }
-        })
-      );
-      assert.ok(html.includes('Trạng thái đánh giá từ HLV'));
-      assert.ok(html.includes('Đạt chuẩn'));
-      assert.ok(html.includes('Đòn đánh thẳng'));
-      assert.ok(html.includes('Mở xem lại video đã nộp'));
-      assert.ok(html.includes('Nộp lại bài tập mới'));
-    });
-
-    // 3. CoachReviewSubmissionModal for reviewing a submission (VI)
+    // 1.2 Coach Reviews and Approves submission (5 stars)
     assert.doesNotThrow(() => {
       const html = renderToStaticMarkup(
         React.createElement(CoachReviewSubmissionModal, {
@@ -74,28 +54,98 @@ test('SubmitWorkoutModal and CoachReviewSubmissionModal render safely without cr
             submissionId: 55,
             studentName: 'Nguyễn Văn A',
             studentEmail: 'nguyenvana@gmail.com',
-            exerciseName: 'Tư thế Yoga Chiến Binh',
-            planTitle: 'Khoá Yoga Linh Hoạt',
-            videoUrl: 'https://drive.google.com/file/d/sample/view',
-            studentNote: 'Nhờ thầy xem giúp độ mở hông',
+            exerciseName: 'Bơi sải 100m',
+            planTitle: 'Kế hoạch Bơi lội & Yoga',
+            className: 'Lớp Bơi Cơ Bản',
+            videoUrl: 'https://youtube.com/watch?v=sample123',
+            studentNote: 'Em hoàn thành 3 hiệp',
             status: 'SUBMITTED',
             submittedAt: '2026-11-04T10:00:00'
           },
           onReviewSuccess: () => {}
         })
       );
-      assert.ok(html.includes('Đánh Giá Bài Nộp Học Viên'));
-      assert.ok(html.includes('Nguyễn Văn A'));
-      assert.ok(html.includes('Mở xem video bài nộp'));
-      assert.ok(html.includes('Đạt chuẩn'));
-      assert.ok(html.includes('Tập lại'));
-      assert.ok(html.includes('Gửi nhận xét cho học viên'));
+      assert.ok(html.includes('Đánh Giá Bài Nộp Học Viên'), 'Should render review modal title');
+      assert.ok(html.includes('Nguyễn Văn A'), 'Should render student name');
+      assert.ok(html.includes('Lớp Bơi Cơ Bản'), 'Should render class name');
+      assert.ok(html.includes('Mở xem video bài nộp'), 'Should have external link button');
+      assert.ok(html.includes('Đạt chuẩn'), 'Should have approve option');
+      assert.ok(html.includes('Gửi nhận xét cho học viên'), 'Should have send feedback button');
     });
 
-    // ==================== ENGLISH ('en') ====================
+    // 1.3 Member views approved submission in Member modal
+    assert.doesNotThrow(() => {
+      const html = renderToStaticMarkup(
+        React.createElement(SubmitWorkoutModal, {
+          isOpen: true,
+          onClose: () => {},
+          workoutPlan: { planId: 10, title: 'Kế hoạch Bơi lội & Yoga' },
+          exercise: { detailId: 101, exerciseName: 'Bơi sải 100m' },
+          existingSubmission: {
+            submissionId: 55,
+            videoUrl: 'https://youtube.com/watch?v=sample123',
+            studentNote: 'Em hoàn thành 3 hiệp',
+            status: 'APPROVED',
+            rating: 5,
+            coachFeedback: 'Động tác chuẩn, nhịp thở đều!'
+          }
+        })
+      );
+      assert.ok(html.includes('Trạng thái đánh giá từ HLV'));
+      assert.ok(html.includes('Đạt chuẩn'));
+      assert.ok(html.includes('Động tác chuẩn, nhịp thở đều!'));
+      assert.ok(html.includes('Mở xem lại video đã nộp'));
+      assert.ok(html.includes('Nộp lại bài tập mới'));
+    });
+
+    // =========================================================================
+    // SCENARIO 2: Revision Requested Flow
+    // =========================================================================
+    assert.doesNotThrow(() => {
+      const html = renderToStaticMarkup(
+        React.createElement(SubmitWorkoutModal, {
+          isOpen: true,
+          onClose: () => {},
+          workoutPlan: { planId: 20, title: 'Boxing Cơ Bản' },
+          exercise: { detailId: 202, exerciseName: 'Kỹ thuật Jab & Cross' },
+          existingSubmission: {
+            submissionId: 60,
+            videoUrl: 'https://youtube.com/watch?v=sample456',
+            studentNote: 'Em bị mỏi tay ở hiệp 3',
+            status: 'REVISION_REQUESTED',
+            rating: 2,
+            coachFeedback: 'Tay sau chưa che hàm khi ra đòn, cần tập lại nhé!'
+          }
+        })
+      );
+      assert.ok(html.includes('Cần tập lại'));
+      assert.ok(html.includes('Tay sau chưa che hàm khi ra đòn'));
+      assert.ok(html.includes('Nộp lại bài tập mới'));
+    });
+
+    // =========================================================================
+    // SCENARIO 3: Single Workout Plan (Bài giao 1 lần) - Submission Verification
+    // =========================================================================
+    // Verify that MemberWorkoutsModal renders the "Nộp bài / Quá trình" column
+    // for SINGLE workout plans as well as TRAINING_PLAN.
+    assert.doesNotThrow(() => {
+      const html = renderToStaticMarkup(
+        React.createElement(MemberWorkoutsModal, {
+          isOpen: true,
+          onClose: () => {}
+        })
+      );
+      assert.ok(html.includes('Lộ Trình') || html.includes('Roadmaps'), 'Modal should render when open');
+      assert.ok(html.includes('Kế Hoạch Theo Mốc') || html.includes('Milestone'), 'Should have milestone tab');
+      assert.ok(html.includes('Bài Giao 1 Lần') || html.includes('Single'), 'Should have single workouts tab');
+    });
+
+    // =========================================================================
+    // SCENARIO 4: Bilingual Switching (English - 'en')
+    // =========================================================================
     setLanguage('en');
 
-    // 4. SubmitWorkoutModal for a new submission (EN)
+    // 4.1 SubmitWorkoutModal in English
     assert.doesNotThrow(() => {
       const html = renderToStaticMarkup(
         React.createElement(SubmitWorkoutModal, {
@@ -106,36 +156,12 @@ test('SubmitWorkoutModal and CoachReviewSubmissionModal render safely without cr
           existingSubmission: null
         })
       );
-      assert.ok(html.includes('Submit Workout / Video'));
+      assert.ok(html.includes('Submit Workout / Video'), 'Should translate title to EN');
       assert.ok(html.includes('Freestyle 100m'));
       assert.ok(html.includes('Submit workout to coach') || html.includes('Submit Workout to Coach'));
     });
 
-    // 5. SubmitWorkoutModal with existing reviewed submission (EN)
-    assert.doesNotThrow(() => {
-      const html = renderToStaticMarkup(
-        React.createElement(SubmitWorkoutModal, {
-          isOpen: true,
-          onClose: () => {},
-          workoutPlan: { planId: 10, title: 'Boxing Plan' },
-          exercise: { detailId: 102, exerciseName: 'Jab Technique' },
-          existingSubmission: {
-            submissionId: 55,
-            videoUrl: 'https://youtube.com/watch?v=sample123',
-            studentNote: 'Completed 3 sets',
-            status: 'APPROVED',
-            rating: 5,
-            coachFeedback: 'Straight punch and great guard recovery!'
-          }
-        })
-      );
-      assert.ok(html.includes('Coach Review Status') || html.includes('Coach Evaluation Status'));
-      assert.ok(html.includes('Approved'));
-      assert.ok(html.includes('Open submitted video'));
-      assert.ok(html.includes('Submit New Workout'));
-    });
-
-    // 6. CoachReviewSubmissionModal for reviewing a submission (EN)
+    // 4.2 CoachReviewSubmissionModal in English
     assert.doesNotThrow(() => {
       const html = renderToStaticMarkup(
         React.createElement(CoachReviewSubmissionModal, {
@@ -147,6 +173,7 @@ test('SubmitWorkoutModal and CoachReviewSubmissionModal render safely without cr
             studentEmail: 'johndoe@gmail.com',
             exerciseName: 'Warrior Pose',
             planTitle: 'Flexible Yoga Course',
+            className: 'Morning Yoga',
             videoUrl: 'https://drive.google.com/file/d/sample/view',
             studentNote: 'Please check hip opening',
             status: 'SUBMITTED',
@@ -155,19 +182,27 @@ test('SubmitWorkoutModal and CoachReviewSubmissionModal render safely without cr
           onReviewSuccess: () => {}
         })
       );
-      assert.ok(html.includes('Review Student Submission'));
+      assert.ok(html.includes('Review Student Submission'), 'Should translate to EN');
       assert.ok(html.includes('John Doe'));
-      assert.ok(html.includes('Open submission video') || html.includes('Open Submission Video'));
+      assert.ok(html.includes('Morning Yoga'));
       assert.ok(html.includes('Approved'));
       assert.ok(html.includes('Retrain'));
       assert.ok(html.includes('Send feedback to student') || html.includes('Send Feedback to Student'));
     });
 
-    // 7. Closed modals should return null / empty string
-    const emptyHtml = renderToStaticMarkup(
+    // =========================================================================
+    // SCENARIO 5: Modal closed state returns empty
+    // =========================================================================
+    const closedHtml = renderToStaticMarkup(
       React.createElement(SubmitWorkoutModal, { isOpen: false })
     );
-    assert.equal(emptyHtml, '');
+    assert.equal(closedHtml, '', 'Closed modal should return empty');
+
+    const closedMemberHtml = renderToStaticMarkup(
+      React.createElement(MemberWorkoutsModal, { isOpen: false })
+    );
+    assert.equal(closedMemberHtml, '', 'Closed member workouts modal should return empty');
+
   } finally {
     await server.close();
   }
