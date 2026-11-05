@@ -87,9 +87,11 @@ const MemberWorkoutsModal = ({ isOpen, onClose, initialClassId = null }) => {
   const findLatestSubmission = (planId, detailId) => {
     const list = submissionsByPlan[planId] || [];
     if (detailId) {
-      return list.find((s) => s.detailId === detailId) || null;
+      const match = list.find((s) => s.detailId === detailId);
+      if (match) return match;
+      return list.find((s) => !s.detailId) || null;
     }
-    return list[0] || null;
+    return list.find((s) => !s.detailId) || list[0] || null;
   };
 
   const handleOpenSubmitModal = (plan, exercise) => {
@@ -100,6 +102,73 @@ const MemberWorkoutsModal = ({ isOpen, onClose, initialClassId = null }) => {
       exercise: exercise,
       existingSubmission: existing
     });
+  };
+
+  const renderSubmissionButton = (plan, ex) => {
+    const sub = findLatestSubmission(plan.planId, ex?.detailId);
+    if (!sub) {
+      return (
+        <button
+          type="button"
+          onClick={() => handleOpenSubmitModal(plan, ex)}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white font-bold text-[11px] transition-all cursor-pointer"
+          title={t("Nộp video thực hành cho HLV")}
+        >
+          <UploadCloud className="w-3.5 h-3.5" />
+          <span>{t("Nộp bài")}</span>
+        </button>
+      );
+    }
+    if (sub.status === 'APPROVED') {
+      return (
+        <button
+          type="button"
+          onClick={() => handleOpenSubmitModal(plan, ex)}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 font-bold text-[11px] transition-all cursor-pointer border border-emerald-500/20"
+          title={t("Đạt chuẩn kỹ thuật - Bấm xem chi tiết")}
+        >
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+          <span>{sub.rating ? `⭐ ${sub.rating}` : t("Đạt")}</span>
+        </button>
+      );
+    }
+    if (sub.status === 'REVISION_REQUESTED') {
+      return (
+        <button
+          type="button"
+          onClick={() => handleOpenSubmitModal(plan, ex)}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 font-bold text-[11px] transition-all cursor-pointer border border-rose-500/20"
+          title={t("HLV yêu cầu tập lại - Bấm xem góp ý")}
+        >
+          <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+          <span>{t("Cần tập lại")}</span>
+        </button>
+      );
+    }
+    if (sub.status === 'REVIEWED') {
+      return (
+        <button
+          type="button"
+          onClick={() => handleOpenSubmitModal(plan, ex)}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 font-bold text-[11px] transition-all cursor-pointer border border-blue-500/20"
+          title={t("HLV đã góp ý - Bấm xem")}
+        >
+          <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
+          <span>{sub.rating ? `⭐ ${sub.rating}` : t("Đã góp ý")}</span>
+        </button>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => handleOpenSubmitModal(plan, ex)}
+        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 font-bold text-[11px] transition-all cursor-pointer border border-amber-500/20"
+        title={t("Chờ HLV xem - Bấm xem video đã gửi")}
+      >
+        <Clock className="w-3.5 h-3.5 text-amber-500" />
+        <span>{t("Chờ duyệt")}</span>
+      </button>
+    );
   };
 
   // Load enrolled classes on modal open
@@ -633,6 +702,74 @@ const MemberWorkoutsModal = ({ isOpen, onClose, initialClassId = null }) => {
                         </div>
 
                         <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                          {!isTrainingPlan && (
+                            (() => {
+                              const overallSub = findLatestSubmission(plan.planId, null);
+                              if (!overallSub) {
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenSubmitModal(plan, plan.exercises?.[0] || null)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                                    title={t("Nộp video bài tập cho giáo án này")}
+                                  >
+                                    <UploadCloud className="w-3.5 h-3.5" />
+                                    <span>{t("Nộp bài")}</span>
+                                  </button>
+                                );
+                              }
+                              if (overallSub.status === 'APPROVED') {
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenSubmitModal(plan, plan.exercises?.[0] || null)}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold text-xs transition-all cursor-pointer"
+                                    title={t("Đạt chuẩn kỹ thuật - Bấm xem chi tiết")}
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                    <span>{overallSub.rating ? `⭐ ${overallSub.rating} (${t("Đạt")})` : t("Đạt chuẩn")}</span>
+                                  </button>
+                                );
+                              }
+                              if (overallSub.status === 'REVISION_REQUESTED') {
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenSubmitModal(plan, plan.exercises?.[0] || null)}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-bold text-xs transition-all cursor-pointer"
+                                    title={t("HLV yêu cầu tập lại - Bấm xem góp ý")}
+                                  >
+                                    <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+                                    <span>{t("Cần tập lại")}</span>
+                                  </button>
+                                );
+                              }
+                              if (overallSub.status === 'REVIEWED') {
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenSubmitModal(plan, plan.exercises?.[0] || null)}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-bold text-xs transition-all cursor-pointer"
+                                    title={t("HLV đã góp ý - Bấm xem")}
+                                  >
+                                    <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
+                                    <span>{overallSub.rating ? `⭐ ${overallSub.rating}` : t("Đã góp ý")}</span>
+                                  </button>
+                                );
+                              }
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenSubmitModal(plan, plan.exercises?.[0] || null)}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold text-xs transition-all cursor-pointer"
+                                  title={t("Chờ HLV xem - Bấm xem video đã gửi")}
+                                >
+                                  <Clock className="w-3.5 h-3.5 text-amber-500" />
+                                  <span>{t("Chờ duyệt")}</span>
+                                </button>
+                              );
+                            })()
+                          )}
                           <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text)]">
                             {isTrainingPlan
                               ? `${plan.weeks?.length || plan.totalWeeks || 1} ${t("mốc tuần")} • ${plan.exercises?.length || 0} ${t("bài")}`
@@ -792,72 +929,7 @@ const MemberWorkoutsModal = ({ isOpen, onClose, initialClassId = null }) => {
                                               )}
                                             </td>
                                             <td className="py-3 text-center">
-                                              {(() => {
-                                                const sub = findLatestSubmission(plan.planId, ex.detailId);
-                                                if (!sub) {
-                                                  return (
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleOpenSubmitModal(plan, ex)}
-                                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white font-bold text-[11px] transition-all cursor-pointer"
-                                                      title={t("Nộp video thực hành cho HLV")}
-                                                    >
-                                                      <UploadCloud className="w-3.5 h-3.5" />
-                                                      <span>{t("Nộp bài")}</span>
-                                                    </button>
-                                                  );
-                                                }
-                                                if (sub.status === 'APPROVED') {
-                                                  return (
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleOpenSubmitModal(plan, ex)}
-                                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 font-bold text-[11px] transition-all cursor-pointer border border-emerald-500/20"
-                                                      title={t("Đạt chuẩn kỹ thuật - Bấm xem chi tiết")}
-                                                    >
-                                                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                                                      <span>{sub.rating ? `⭐ ${sub.rating}` : t("Đạt")}</span>
-                                                    </button>
-                                                  );
-                                                }
-                                                if (sub.status === 'REVISION_REQUESTED') {
-                                                  return (
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleOpenSubmitModal(plan, ex)}
-                                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 font-bold text-[11px] transition-all cursor-pointer border border-rose-500/20"
-                                                      title={t("HLV yêu cầu tập lại - Bấm xem góp ý")}
-                                                    >
-                                                      <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
-                                                      <span>{t("Cần tập lại")}</span>
-                                                    </button>
-                                                  );
-                                                }
-                                                if (sub.status === 'REVIEWED') {
-                                                  return (
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleOpenSubmitModal(plan, ex)}
-                                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 font-bold text-[11px] transition-all cursor-pointer border border-blue-500/20"
-                                                      title={t("HLV đã góp ý - Bấm xem")}
-                                                    >
-                                                      <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
-                                                      <span>{sub.rating ? `⭐ ${sub.rating}` : t("Đã góp ý")}</span>
-                                                    </button>
-                                                  );
-                                                }
-                                                return (
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => handleOpenSubmitModal(plan, ex)}
-                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 font-bold text-[11px] transition-all cursor-pointer border border-amber-500/20"
-                                                    title={t("Chờ HLV xem - Bấm xem video đã gửi")}
-                                                  >
-                                                    <Clock className="w-3.5 h-3.5 text-amber-500" />
-                                                    <span>{t("Chờ duyệt")}</span>
-                                                  </button>
-                                                );
-                                              })()}
+                                              {renderSubmissionButton(plan, ex)}
                                             </td>
                                           </tr>
                                         ))}
@@ -882,10 +954,11 @@ const MemberWorkoutsModal = ({ isOpen, onClose, initialClassId = null }) => {
                                 <tr className="border-b border-[var(--border)] text-[var(--text-muted)] font-bold uppercase text-[10px] tracking-wider">
                                   <th className="pb-2.5 pl-1 w-10">#</th>
                                   <th className="pb-2.5">{t("Động Tác / Bài Tập")}</th>
-                                  <th className="pb-2.5 text-center">{t("Số Hiệp")}</th>
-                                  <th className="pb-2.5 text-center">{t("Số Lần (Reps)")}</th>
+                                  <th className="pb-2.5 text-center">{t("Sets x Reps")}</th>
+                                  <th className="pb-2.5 text-center">{t("Mức Tạ (kg)")}</th>
                                   <th className="pb-2.5 text-center">{t("Nghỉ Giữa Hiệp")}</th>
-                                  <th className="pb-2.5 text-right pr-1">{t("Hướng Dẫn")}</th>
+                                  <th className="pb-2.5 text-right pr-1">{t("Video")}</th>
+                                  <th className="pb-2.5 text-center">{t("Nộp bài / Quá trình")}</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-[var(--border)]/50">
@@ -903,23 +976,32 @@ const MemberWorkoutsModal = ({ isOpen, onClose, initialClassId = null }) => {
                                           <span className="font-bold text-[var(--text)] text-xs sm:text-sm">
                                             {ex.exerciseName}
                                           </span>
-                                          {ex.muscleGroup && (
-                                            <span className="text-[10px] text-[var(--primary)] font-semibold flex items-center gap-1 mt-0.5">
-                                              <Flame className="w-2.5 h-2.5" />
-                                              {t(ex.muscleGroup)}
-                                            </span>
-                                          )}
+                                          <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)] mt-0.5">
+                                            {ex.muscleGroup && (
+                                              <span className="text-[var(--primary)] font-semibold flex items-center gap-1">
+                                                <Flame className="w-2.5 h-2.5" />
+                                                {t(ex.muscleGroup)}
+                                              </span>
+                                            )}
+                                            {ex.coachNote && (
+                                              <span>• {t("Ghi chú:")} <em className="text-[var(--text)]">{ex.coachNote}</em></span>
+                                            )}
+                                          </div>
                                         </div>
                                       </td>
                                       <td className="py-3 text-center">
-                                        <span className="inline-block px-2.5 py-1 rounded-lg bg-[var(--surface-hover)] font-bold text-[var(--text)]">
-                                          {ex.sets || 3} {t("hiệp")}
+                                        <span className="inline-block px-2.5 py-1 rounded-lg bg-[var(--surface)] font-bold text-[var(--text)] border border-[var(--border)]">
+                                          {ex.sets || 3} {t("Set")} x {ex.reps || 10} {t("Rep")}
                                         </span>
                                       </td>
                                       <td className="py-3 text-center">
-                                        <span className="inline-block px-2.5 py-1 rounded-lg bg-[var(--surface-hover)] font-bold text-[var(--text)]">
-                                          {ex.reps || 10} {t("lần")}
-                                        </span>
+                                        {ex.weightKg !== null && ex.weightKg !== undefined ? (
+                                          <span className="inline-block px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-500 font-extrabold text-[11px] border border-amber-500/20">
+                                            {ex.weightKg} kg
+                                          </span>
+                                        ) : (
+                                          <span className="text-[var(--text-muted)] font-semibold">-</span>
+                                        )}
                                       </td>
                                       <td className="py-3 text-center">
                                         <span className="inline-block px-2 py-1 rounded-lg text-[var(--text-muted)] font-medium">
@@ -945,15 +1027,28 @@ const MemberWorkoutsModal = ({ isOpen, onClose, initialClassId = null }) => {
                                           </span>
                                         )}
                                       </td>
+                                      <td className="py-3 text-center">
+                                        {renderSubmissionButton(plan, ex)}
+                                      </td>
                                     </tr>
                                   ))
                                 ) : (
                                   <tr>
                                     <td
                                       colSpan={7}
-                                      className="py-4 text-center text-[var(--text-muted)] text-xs"
+                                      className="py-8 text-center text-[var(--text-muted)] text-xs"
                                     >
-                                      {t("Giáo án chưa có động tác cụ thể.")}
+                                      <div className="flex flex-col items-center justify-center gap-2.5">
+                                        <p>{t("Giáo án chưa có động tác cụ thể.")}</p>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleOpenSubmitModal(plan, null)}
+                                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all cursor-pointer shadow-xs"
+                                        >
+                                          <UploadCloud className="w-3.5 h-3.5" />
+                                          <span>{t("Nộp bài tập ngay")}</span>
+                                        </button>
+                                      </div>
                                     </td>
                                   </tr>
                                 )}

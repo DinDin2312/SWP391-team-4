@@ -244,6 +244,7 @@ const CoachWorkoutPlans = () => {
 
   useEffect(() => {
     fetchInitialData();
+    fetchSubmissions();
   }, []);
 
   const getHeaders = () => {
@@ -2843,26 +2844,47 @@ const CoachWorkoutPlans = () => {
                     {t("Danh Sách Bài Tập ({0})", [selectedPlanDetail.details?.length || 0])}
                   </h5>
                   <div className="space-y-2">
-                    {selectedPlanDetail.details?.map((d, dIdx) => (
-                      <div key={dIdx} className="p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 rounded-md bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center">
-                            #{dIdx + 1}
-                          </span>
-                          <div>
-                            <p className="font-bold text-[var(--text)]">{d.exerciseName}</p>
-                            <p className="text-[10px] text-[var(--text-muted)]">{t("Cơ tác động:")} {t(d.muscleGroup || 'Chung')}</p>
+                    {selectedPlanDetail.details?.map((d, dIdx) => {
+                      const sub = submissions.find(
+                        (s) =>
+                          s.planId === selectedPlanDetail.planId &&
+                          (s.detailId === d.detailId || !s.detailId)
+                      );
+                      return (
+                        <div key={dIdx} className="p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <span className="w-6 h-6 rounded-md bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center">
+                              #{dIdx + 1}
+                            </span>
+                            <div>
+                              <p className="font-bold text-[var(--text)]">{d.exerciseName}</p>
+                              <p className="text-[10px] text-[var(--text-muted)]">{t("Cơ tác động:")} {t(d.muscleGroup || 'Chung')}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 text-right">
+                            {sub && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedPlanDetail(null);
+                                  setSelectedSubmissionForReview(sub);
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white font-bold text-[11px] transition-all cursor-pointer"
+                                title={t("Xem và đánh giá bài nộp")}
+                              >
+                                <Video className="w-3.5 h-3.5" />
+                                <span>{sub.status === 'SUBMITTED' ? t("Chấm bài") : t("Xem bài nộp")}</span>
+                              </button>
+                            )}
+                            <span className="px-2.5 py-1 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] font-semibold text-[11px]">
+                              {d.sets} {t("Set")} x {d.reps} {t("Rep")}
+                            </span>
+                            <span className="text-[10px] text-[var(--text-muted)]">{t("Nghỉ")} {d.restSeconds}s</span>
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-3 text-right">
-                          <span className="px-2.5 py-1 rounded-lg bg-[var(--surface-hover)] border border-[var(--border)] font-semibold text-[11px]">
-                            {d.sets} {t("Set")} x {d.reps} {t("Rep")}
-                          </span>
-                          <span className="text-[10px] text-[var(--text-muted)]">{t("Nghỉ")} {d.restSeconds}s</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

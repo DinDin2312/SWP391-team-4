@@ -18,6 +18,9 @@ test('SubmitWorkoutModal and CoachReviewSubmissionModal render safely without cr
     const { default: CoachReviewSubmissionModal } = await server.ssrLoadModule(
       '/src/features/coach/components/CoachReviewSubmissionModal.jsx'
     );
+    const { default: MemberWorkoutsModal } = await server.ssrLoadModule(
+      '/src/features/member/components/MemberWorkoutsModal.jsx'
+    );
     const { setLanguage } = await server.ssrLoadModule('/src/i18n/languageStore.js');
 
     // ==================== VIETNAMESE ('vi') ====================
@@ -168,6 +171,19 @@ test('SubmitWorkoutModal and CoachReviewSubmissionModal render safely without cr
       React.createElement(SubmitWorkoutModal, { isOpen: false })
     );
     assert.equal(emptyHtml, '');
+
+    // 8. MemberWorkoutsModal renders safely when open or closed across languages
+    const memberModalClosed = renderToStaticMarkup(
+      React.createElement(MemberWorkoutsModal, { isOpen: false, onClose: () => {} })
+    );
+    assert.equal(memberModalClosed, '');
+
+    assert.doesNotThrow(() => {
+      const memberModalOpen = renderToStaticMarkup(
+        React.createElement(MemberWorkoutsModal, { isOpen: true, onClose: () => {} })
+      );
+      assert.ok(memberModalOpen.length > 0);
+    });
   } finally {
     await server.close();
   }
