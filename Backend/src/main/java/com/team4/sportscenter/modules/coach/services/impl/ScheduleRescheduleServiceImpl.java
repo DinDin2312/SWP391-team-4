@@ -177,7 +177,7 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
 
         // Notify Managers
         try {
-            List<User> managers = userRepository.findByRoleNameIgnoreCase("Manager");
+            List<User> managers = userRepository.findByRoleNameIgnoreCase("Center Manager");
             if (managers.isEmpty()) {
                 managers = userRepository.findByRoleNameIgnoreCase("Admin");
             }
