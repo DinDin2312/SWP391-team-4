@@ -1,4 +1,6 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
+import SearchSelect from '../components/SearchSelect';
+import ClassPicker from '../components/ClassPicker';
 import { useEffect, useId, useRef, useState } from "react";
 import { AlertTriangle, CalendarDays, MapPin, Users, X } from "lucide-react";
 import managerService from "../services/managerService";
@@ -14,6 +16,13 @@ import {
   eligibleClasses,
   operationPayload,
   sessionDay,
+  classCoachOptions,
+  classRoomOptions,
+  classSubjectOptions,
+  roomFitsSubject,
+  seatLimit,
+  duplicateClassName,
+  conflictParts,
 } from "./operationsUtils";
 import { Occupancy, OperationStatus } from "./OperationsUI";
 import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
@@ -249,7 +258,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
   },[policy,editing,type]);
   const title = config.supplementary ? "Add supplementary session" : `${editing ? "Edit" : "Create"} ${type === "series" ? "repeating sessions" : type === "schedule" ? "session" : type}`;
   const set = (key, value) => {
-    setForm((current) => ({ ...current, [key]: value, ...(type==='class' && key==='subjectId'?{coachId:''}:{}), ...(['schedule','series'].includes(type) && key==='classId'?{startTime:'',endTime:''}:{}), ...((type==='schedule' || type==='series') && key==='startTime'?{endTime:slotEnd(value,policy?.durationMinutes || 90)}:{}) }));
+    setForm((current) => ({ ...current, [key]: value, ...(type==='class' && key==='subjectId'?{coachId:'',roomId:roomFits(current.roomId,value)?current.roomId:''}:{}), ...(type==='class' && key==='roomId' && value && (!current.maxSlots || Number(current.maxSlots)>seatLimit(data.rooms,value))?{maxSlots:String(seatLimit(data.rooms,value))}:{}), ...(['schedule','series'].includes(type) && key==='classId'?{startTime:'',endTime:''}:{}), ...((type==='schedule' || type==='series') && key==='startTime'?{endTime:slotEnd(value,policy?.durationMinutes || 90)}:{}) }));
     setErrors((current) => ({ ...current, [key]: undefined }));
   };
   const candidates =
@@ -260,6 +269,10 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
   const selectedRoom = data.rooms.find(
     (row) => String(row.roomId) === String(form.roomId),
   );
+  const roomFits=(roomId,subjectId)=>roomFitsSubject(data.rooms,roomId,subjectId);
+  const initialRoom = config.item?.roomId, initialSubject = config.item?.subjectId;
+  const roomOptions = classRoomOptions(data,form.subjectId,initialRoom).map(option=>({...option,hint:t('{0} seats',[option.hint])}));
+  const searchSelect=(key,label,options,extra={})=><SearchSelect key={key} name={key} label={label} required options={options} value={form[key]} error={errors[key]} onChange={value=>set(key,value)} {...extra}/>;
   const coaches = data.coaches.filter(coach=>(coach.subjectIds || []).map(Number).includes(Number(form.subjectId)));
   const input = (key, label, attrs = {}, help) => (
     <Field key={key} name={key} label={t(label)} error={errors[key]} help={help}>
@@ -285,7 +298,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
           disabled={disabled}
           onChange={(event) => set(key, event.target.value)}
         >
-          <option value="">{t("Select")}{' '}{t(label).toLocaleLowerCase()}</option>
+          {key !== 'status' && <option value="">{t("Select")}{' '}{t(label).toLocaleLowerCase()}</option>}
           {options.map(([value, name]) => (
             <option key={value} value={value}>
               {key === 'status' ? t(name) : name}
@@ -299,6 +312,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
     event.preventDefault();
     if (saving || photoError) return;
     const invalid = validate(type, form);
+    if (type === 'class' && form.roomId && Number(form.maxSlots) > seatLimit(data.rooms, form.roomId)) invalid.maxSlots = t('At most {0} seats: the room capacity.', [seatLimit(data.rooms, form.roomId)]);
     setErrors(invalid);
     setError("");
     if (Object.keys(invalid).length) {
@@ -316,7 +330,12 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
         schedule: "saveSchedule",
         series: "createScheduleSeries",
       };
-      await managerService[methods[type]](operationPayload(type, form),photo);
+      const result = await managerService[methods[type]](operationPayload(type, form),photo);
+      if (config.supplementary && form.enrollMembers !== false && result?.id) {
+        const enrolled = await managerService.enrollClassMembers(result.id);
+        await onSaved(t('Session added. {0} class members were booked into it{1}.', [enrolled?.added || 0, enrolled?.skipped ? t(' ({0} skipped: busy at that time or no seat left)', [enrolled.skipped]) : '']));
+        return;
+      }
       await onSaved(
         type === "series"
           ? `${form.occurrences} sessions created. The last session starts on ${formatDate(addDays(sessionDay(form.startTime), (Number(form.occurrences) - 1) * Number(form.intervalWeeks) * 7))}. Change the date range to view it.`
@@ -349,7 +368,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
         <div className="ops-drawer-body">
           {error && (
             <div className="manager-alert" role="alert">
-              {t(error)}
+              {conflictParts(error) ? t(conflictParts(error).who === 'coach' ? 'Schedule conflict: the coach already teaches {0} at {1}.' : 'Schedule conflict: the room is already used by {0} at {1}.', [conflictParts(error).className, conflictParts(error).at]) : t(error)}
             </div>
           )}
           <fieldset className="ops-editor-fields" disabled={saving}>
@@ -358,6 +377,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
               <>
                 {input("subjectName", "Subject name", { maxLength: 255 })}
                 <SubjectSlotFields form={form} set={set} policy={policy}/>
+                {select("status","Subject status",[["ACTIVE","Offered"],["INACTIVE","No longer offered"]],false,"Subjects no longer offered cannot be used for new classes. Existing classes keep running.")}
                 {errors.durationMinutes && <p role="alert" className="manager-field-error">{t(errors.durationMinutes)}</p>}
                 <Field
                   name="description"
@@ -386,36 +406,27 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                   { type: "number", min: 1, step: 1 },
                   "Must accommodate the largest class assigned to this room.",
                 )}
+                {select("status","Room status",[["ACTIVE","In use"],["MAINTENANCE","Under maintenance"],["INACTIVE","No longer in use"]],false,"Rooms under maintenance or not in use are not offered for new classes.")}
+                <fieldset className="ops-room-subjects"><legend>{t('Subjects taught in this room')}</legend>
+                  <div>{data.subjects.map(row=>{const ids=(form.subjectIds || []).map(String),on=ids.includes(String(row.subjectId));return <label key={row.subjectId}><input type="checkbox" checked={on} onChange={()=>set('subjectIds',on?ids.filter(id=>id!==String(row.subjectId)):[...ids,String(row.subjectId)])}/>{row.subjectName}</label>;})}</div>
+                  <small className="ops-field-help">{t('Rooms are suggested first when creating a class of these subjects.')}</small>
+                </fieldset>
               </>
             )}
             {type === "class" && (
               <>
-                {input("className", "Class name", { maxLength: 255 })}
-                {select(
-                  "subjectId",
-                  "Subject",
-                  data.subjects.map((row) => [row.subjectId, row.subjectName]),
-                )}
+                {input("className", "Class name", { maxLength: 255 }, duplicateClassName(data.classes, form.className, form.classId) ? "Another class already uses this name." : undefined)}
+                {searchSelect("subjectId","Subject",classSubjectOptions(data,initialSubject),{placeholder:'Search subjects'})}
                 {form.subjectId && <p className="ops-note">{t('Inherited subject timetable')}: {t('{0} minutes per session',[data.subjects.find(subject=>String(subject.subjectId)===String(form.subjectId))?.durationMinutes || 90])}</p>}
                 {form.subjectId && !coaches.length && <p className="ops-warning" role="status">{t('No coaches are assigned to this subject. Assign teaching subjects in Staff & Roles first.')}</p>}
                 {form.coachId && !coaches.some(c=>String(c.userId)===String(form.coachId)) && <p className="ops-warning" role="alert">{t('The selected coach is not assigned to this subject.')}</p>}
-                {select(
-                  "coachId",
-                  "Coach",
-                  coaches.map((row) => [row.userId, row.fullName]),
-                )}
-                {select(
-                  "roomId",
-                  "Room",
-                  data.rooms.map((row) => [
-                    row.roomId,
-                    `${row.roomName} · ${t('{0} seats',[row.capacity])}`,
-                  ]),
-                )}
+                {searchSelect("coachId","Coach",classCoachOptions(data,form.subjectId),{disabled:!form.subjectId,placeholder:form.subjectId?'Search coaches':'Choose a subject first'})}
+                {searchSelect("roomId","Room",roomOptions,{groupLabels:form.subjectId?['Rooms for this subject','Other rooms']:[],collapseGroup:form.subjectId && roomOptions.some(o=>o.group===0)?1:undefined,placeholder:'Search rooms',help:form.subjectId && !roomOptions.some(o=>o.group===0)?'No room is linked to this subject yet. Link subjects in the room settings.':undefined})}
+                {form.roomId && form.subjectId && !roomFits(form.roomId,form.subjectId) && <p className="ops-warning" role="status">{t('This room is not set up for the selected subject. Saving will link them.')}</p>}
                 {input(
                   "maxSlots",
                   "Capacity per session",
-                  { type: "number", min: 1, step: 1 },
+                  { type: "number", min: 1, step: 1, max: selectedRoom?.capacity },
                   selectedRoom
                     ? t('Room capacity: {0}. Cannot be below existing booked/held seats.',[selectedRoom.capacity])
                     : "Choose a room to see its capacity.",
@@ -423,9 +434,10 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                 {input("price", "Tuition (VND / class registration)", {
                   type: "number",
                   min: 0,
-                  max: 99999999.99,
-                  step: 0.01,
-                })}
+                  max: 99999999,
+                  step: 1000,
+                  inputMode: "numeric",
+                }, form.price !== undefined && form.price !== '' && Number.isFinite(Number(form.price)) ? formatMoney(form.price) : undefined)}
                 {select(
                   "status",
                   "Status",
@@ -434,7 +446,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                     ["INACTIVE", "Inactive"],
                   ],
                   false,
-                  "Cancel all future sessions before deactivating a class.",
+                  "Deactivating a class cancels its upcoming sessions and notifies members.",
                 )}
                 <p className="ops-warning">
                   <AlertTriangle size={18} />{t("Changing a class’s room, coach or capacity affects all its sessions.")}</p>
@@ -442,7 +454,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
             )}
             {(type === "schedule" || type === "series") && (
               <>
-                {select(
+                {!editing ? <ClassPicker classes={candidates} value={form.classId || ''} onChange={value=>set('classId',value)} required/> : select(
                   "classId",
                   "Class",
                   (editing ? [config.item] : candidates).map((row) => [
@@ -484,6 +496,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                   type: "datetime-local",
                   readOnly: true,
                 })}
+                {config.supplementary && <label className="ops-check-row"><input type="checkbox" checked={form.enrollMembers !== false} onChange={e=>set('enrollMembers',e.target.checked)}/>{t('Book the class’s current members into this session and notify them')}</label>}
                 {editing && (
                   <p className="ops-note">{t("Moving the session sends a notification to its booked members. The backend also checks their timetable.")}</p>
                 )}
@@ -694,11 +707,9 @@ export function OperationConfirmation({ config, onClose, onSaved }) {
     setSaving(true);
     setError("");
     try {
+      let cancelled = 0;
       if (deactivate)
-        await managerService.saveClass({
-          ...operationPayload("class", config.item),
-          status: "INACTIVE",
-        });
+        cancelled = (await managerService.deactivateClass(config.item.classId))?.cancelledSessions || 0;
       else
         await managerService.saveSchedule({
           scheduleId: config.item.scheduleId,
@@ -711,7 +722,7 @@ export function OperationConfirmation({ config, onClose, onSaved }) {
         cancel
           ? "Session cancelled. Its bookings were cancelled and members notified."
           : deactivate
-            ? "Class deactivated."
+            ? (cancelled ? t('Class deactivated. {0} upcoming sessions were cancelled and their members notified.', [cancelled]) : "Class deactivated.")
             : "Session completed.",
       );
     } catch (err) {
@@ -738,12 +749,12 @@ export function OperationConfirmation({ config, onClose, onSaved }) {
         <AlertTriangle size={26} />
         <h2 id={id}>{t(action)}?</h2>
         <strong>{config.item.className}</strong>
-        {deactivate && config.upcomingInRange > 0 && <p className="ops-warning">{t('{0} upcoming sessions in the loaded range. Cancel these before deactivating.',[config.upcomingInRange])}</p>}
+        {deactivate && config.upcomingInRange > 0 && <p className="ops-warning">{t('At least {0} upcoming sessions will be cancelled.',[config.upcomingInRange])}</p>}
         <p>
           {t(cancel
             ? t("All bookings for this session will be cancelled and members will receive a notification. The session cannot be reopened. This action does not issue a refund; contact reception about tuition.")
             : deactivate
-              ? t("The backend will reject this change if the class has any future sessions. Cancel them first. Room and coach assignments are kept.")
+              ? t("Every upcoming session of this class will be cancelled, its bookings released and members notified. No refund is issued automatically. Room and coach assignments are kept.")
               : t("This ended session will be marked completed and can no longer be edited."))}
         </p>
         {error && (

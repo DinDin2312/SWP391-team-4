@@ -5081,6 +5081,41 @@ for (const [en, vi] of workoutSubmissionTranslations) {
   translations[vi] = [en, vi];
 }
 
+const operationsUsabilityLabels = {
+  'Type to search':'Gõ để tìm','Clear selection':'Xóa lựa chọn','No match for "{0}".':'Không có kết quả cho "{0}".',
+  'Showing {0} of {1}. Keep typing to narrow down.':'Đang hiện {0}/{1}. Gõ thêm để thu hẹp.',
+  'Search subjects':'Tìm bộ môn','Search coaches':'Tìm huấn luyện viên','Search rooms':'Tìm phòng','Choose a subject first':'Chọn bộ môn trước',
+  'Rooms for this subject':'Phòng dành cho bộ môn này','Other rooms':'Phòng khác',
+  'No room is linked to this subject yet. Link subjects in the room settings.':'Chưa có phòng nào gắn với bộ môn này. Gắn bộ môn trong phần sửa phòng.',
+  'This room is not set up for the selected subject. Saving will link them.':'Phòng này chưa dành cho bộ môn đã chọn. Khi lưu, hệ thống sẽ gắn phòng với bộ môn.',
+  'Subjects taught in this room':'Bộ môn học tại phòng này','Rooms are suggested first when creating a class of these subjects.':'Phòng sẽ được gợi ý trước khi tạo lớp thuộc các bộ môn này.',
+  'Search':'Tìm','Show {0} other options':'Hiện {0} lựa chọn khác',
+};
+for (const [en, vi] of Object.entries(operationsUsabilityLabels)) translations[en] = [en, vi];
+
+const operationsRound2Labels = {
+  'At most {0} seats: the room capacity.':'Tối đa {0} chỗ, bằng sức chứa của phòng.',
+  'Another class already uses this name.':'Đã có lớp khác dùng tên này.',
+  'Schedule conflict: the coach already teaches {0} at {1}.':'Trùng lịch: HLV đã dạy lớp {0} lúc {1}.',
+  'Schedule conflict: the room is already used by {0} at {1}.':'Trùng lịch: phòng đã được lớp {0} dùng lúc {1}.',
+  'Room status':'Trạng thái phòng','In use':'Đang sử dụng','Under maintenance':'Đang bảo trì','No longer in use':'Ngừng sử dụng',
+  'Rooms under maintenance or not in use are not offered for new classes.':'Phòng đang bảo trì hoặc ngừng sử dụng sẽ không được chọn cho lớp mới.',
+  'Subject status':'Trạng thái bộ môn','Offered':'Đang mở','No longer offered':'Ngừng mở',
+  'Subjects no longer offered cannot be used for new classes. Existing classes keep running.':'Bộ môn ngừng mở không dùng được cho lớp mới. Các lớp đang có vẫn chạy bình thường.',
+  'Class deactivated. {0} upcoming sessions were cancelled and their members notified.':'Đã ngừng lớp. Đã hủy {0} buổi sắp tới và thông báo cho học viên.',
+  'At least {0} upcoming sessions will be cancelled.':'Ít nhất {0} buổi sắp tới sẽ bị hủy.',
+  'Every upcoming session of this class will be cancelled, its bookings released and members notified. No refund is issued automatically. Room and coach assignments are kept.':'Mọi buổi sắp tới của lớp sẽ bị hủy, chỗ đặt được giải phóng và học viên được thông báo. Hệ thống không tự hoàn tiền. Phòng và HLV của lớp vẫn giữ nguyên.',
+  'Deactivating a class cancels its upcoming sessions and notifies members.':'Ngừng lớp sẽ hủy các buổi sắp tới và thông báo cho học viên.',
+  'Sort by':'Sắp xếp','Name (A–Z)':'Tên (A–Z)','Capacity: largest first':'Sức chứa: lớn trước','Capacity: smallest first':'Sức chứa: nhỏ trước','Most classes':'Nhiều lớp nhất',
+  'Subjects':'Bộ môn','Not set':'Chưa gắn',
+  'This room is under maintenance or no longer in use. Choose another room.':'Phòng này đang bảo trì hoặc ngừng sử dụng. Chọn phòng khác.',
+  'This subject is no longer offered. Choose another subject.':'Bộ môn này đã ngừng mở. Chọn bộ môn khác.',
+  'Overlapping time':'Trùng giờ','Book the class’s current members into this session and notify them':'Xếp học viên hiện tại của lớp vào buổi này và gửi thông báo',
+  'Session added. {0} class members were booked into it{1}.':'Đã thêm buổi. Đã xếp {0} học viên của lớp vào buổi{1}.',
+  ' ({0} skipped: busy at that time or no seat left)':' ({0} người bỏ qua vì trùng lịch hoặc hết chỗ)',
+  'The class room is under maintenance or no longer in use. Move the class to another room first.':'Phòng của lớp đang bảo trì hoặc ngừng sử dụng. Hãy chuyển lớp sang phòng khác trước.',
+};
+for (const [en, vi] of Object.entries(operationsRound2Labels)) translations[en] = [en, vi];
 const overviewV2Labels = {
   'Needs your decision':'Cần bạn quyết định','Nothing needs your decision':'Không có việc cần bạn quyết định',
   'Requests, escalations and low-fill sessions will appear here.':'Yêu cầu đổi lịch, khiếu nại chuyển cấp và buổi vắng học viên sẽ hiện ở đây.',

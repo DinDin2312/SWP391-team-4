@@ -42,11 +42,13 @@ public final class ManagerRequests {
     }
 
     public record SubjectRequest(@NotBlank @Size(max = 255) String subjectName, @Size(max = 10000) String description,
-            @Min(15) @Max(240) Integer durationMinutes, @Size(max=48) List<@NotNull LocalTime> slotStarts) {
-        public SubjectRequest(String subjectName,String description) {this(subjectName,description,null,null);}
+            @Min(15) @Max(240) Integer durationMinutes, @Size(max=48) List<@NotNull LocalTime> slotStarts, String status) {
+        public SubjectRequest(String subjectName,String description) {this(subjectName,description,null,null,null);}
+        public SubjectRequest(String subjectName,String description,Integer durationMinutes,List<LocalTime> slotStarts) {this(subjectName,description,durationMinutes,slotStarts,null);}
     }
 
-    public record RoomRequest(@NotBlank @Size(max = 255) String roomName, @NotNull @Min(1) Integer capacity) {
+    public record RoomRequest(@NotBlank @Size(max = 255) String roomName, @NotNull @Min(1) Integer capacity, java.util.List<Integer> subjectIds, String status) {
+        public RoomRequest(String roomName, Integer capacity) { this(roomName, capacity, null, null); }
     }
 
     public record ClassRequest(

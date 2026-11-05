@@ -40,6 +40,8 @@ const managerService = {
   rooms: () => axiosClient.get('/manager/rooms'),
   saveRoom: (payload,photo) => saveOperationResource('rooms',payload.roomId,payload,photo),
   classes: () => axiosClient.get('/manager/classes'),
+  deactivateClass: (id) => axiosClient.post(`/manager/classes/${id}/deactivate`),
+  enrollClassMembers: (scheduleId) => axiosClient.post(`/manager/schedules/${scheduleId}/enroll-class-members`),
   saveClass: (payload,photo) => saveOperationResource('classes',payload.classId,payload,photo),
   schedules: (from, to, extra = {}) => axiosClient.get('/manager/schedules', { params: { from, to, ...extra } }),
   scheduleBookings: (id) => axiosClient.get(`/manager/schedules/${id}/bookings`),

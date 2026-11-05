@@ -214,6 +214,28 @@ public class ManagerRepository {
                 """, title, message, "BOOKING", id);
     }
 
+    // Members holding a confirmed seat in this class; each is booked into the session unless they are busy then.
+    public Map<String, Integer> enrollClassMembers(Integer scheduleId) {
+        var s = jdbc.queryForMap("SELECT sc.class_id classId,sc.start_time startTime,sc.end_time endTime,c.max_slots maxSlots FROM SCHEDULES sc JOIN CLASSES c ON c.class_id=sc.class_id WHERE sc.schedule_id=?", scheduleId);
+        List<Integer> members = jdbc.queryForList("""
+                SELECT DISTINCT b.user_id FROM BOOKINGS b JOIN SCHEDULES x ON x.schedule_id=b.schedule_id
+                WHERE x.class_id=? AND x.schedule_id<>? AND b.status='CONFIRMED' AND x.status<>'CANCELLED'
+                """, Integer.class, s.get("classId"), scheduleId);
+        int added = 0, skipped = 0;
+        int seats = ((Number) s.get("maxSlots")).intValue() - jdbc.queryForObject("SELECT COUNT(*) FROM BOOKINGS WHERE schedule_id=? AND status IN ('CONFIRMED','PENDING')", Integer.class, scheduleId);
+        for (Integer userId : members) {
+            Integer busy = jdbc.queryForObject("""
+                    SELECT COUNT(*) FROM BOOKINGS b JOIN SCHEDULES x ON x.schedule_id=b.schedule_id
+                    WHERE b.user_id=? AND b.status IN ('CONFIRMED','PENDING') AND x.status<>'CANCELLED'
+                      AND (x.schedule_id=? OR (x.start_time<? AND x.end_time>?))
+                    """, Integer.class, userId, scheduleId, s.get("endTime"), s.get("startTime"));
+            if (busy > 0 || seats <= 0) { skipped++; continue; }
+            jdbc.update("INSERT INTO BOOKINGS(user_id,schedule_id,status,booking_time,attendance_status) VALUES (?,?,'CONFIRMED',NOW(),'NOT_YET')", userId, scheduleId);
+            added++; seats--;
+        }
+        return Map.of("added", added, "skipped", skipped);
+    }
+
     public void cancelScheduleBookings(Integer id) {
         jdbc.update("UPDATE BOOKINGS SET status='CANCELLED' WHERE schedule_id=? AND status IN ('CONFIRMED','PENDING')", id);
     }
@@ -321,10 +343,10 @@ public class ManagerRepository {
 
     public List<Map<String, Object>> subjects() {
         var rows=jdbc.queryForList("""
-            SELECT s.subject_id subjectId,s.subject_name subjectName,s.description,s.image_path imagePath,
+            SELECT s.subject_id subjectId,s.subject_name subjectName,s.description,s.image_path imagePath,s.status,
                 s.duration_minutes durationMinutes,s.slot_starts slotStarts,COUNT(c.class_id) classCount
             FROM SUBJECTS s LEFT JOIN CLASSES c ON c.subject_id=s.subject_id
-            GROUP BY s.subject_id,s.subject_name,s.description,s.image_path,s.duration_minutes,s.slot_starts ORDER BY s.subject_name
+            GROUP BY s.subject_id,s.subject_name,s.description,s.image_path,s.status,s.duration_minutes,s.slot_starts ORDER BY s.subject_name
             """);
         rows.forEach(row->row.put("slotStarts",parseStarts((String)row.get("slotStarts"))));return rows;
     }
@@ -342,24 +364,43 @@ public class ManagerRepository {
     public int saveSubject(Integer id, ManagerRequests.SubjectRequest request) {
         if(id==null)id=insert("INSERT INTO SUBJECTS(subject_name,description) VALUES (?,?)",request.subjectName(),request.description());
         else jdbc.update("UPDATE SUBJECTS SET subject_name=?,description=? WHERE subject_id=?",request.subjectName(),request.description(),id);
+        if(request.status()!=null)jdbc.update("UPDATE SUBJECTS SET status=? WHERE subject_id=?",request.status(),id);
         if(request.durationMinutes()!=null)jdbc.update("UPDATE SUBJECTS SET duration_minutes=? WHERE subject_id=?",request.durationMinutes(),id);
         if(request.slotStarts()!=null)jdbc.update("UPDATE SUBJECTS SET slot_starts=? WHERE subject_id=?",String.join(",",request.slotStarts().stream().sorted().map(Object::toString).toList()),id);
         return id;
     }
 
     public List<Map<String, Object>> rooms() {
-        return jdbc.queryForList("""
-                SELECT r.room_id roomId,r.room_name roomName,r.capacity,r.image_path imagePath,COUNT(c.class_id) classCount
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                SELECT r.room_id roomId,r.room_name roomName,r.capacity,r.image_path imagePath,r.status,COUNT(c.class_id) classCount
                 FROM ROOMS r LEFT JOIN CLASSES c ON c.room_id=r.room_id
-                GROUP BY r.room_id,r.room_name,r.capacity,r.image_path ORDER BY r.room_name
+                GROUP BY r.room_id,r.room_name,r.capacity,r.image_path,r.status ORDER BY r.room_name
                 """);
+        List<Map<String, Object>> links = jdbc.queryForList("SELECT room_id roomId,subject_id subjectId FROM ROOM_SUBJECTS");
+        rows.forEach(row -> row.put("subjectIds", links.stream().filter(l -> l.get("roomId").equals(row.get("roomId"))).map(l -> ((Number) l.get("subjectId")).intValue()).toList()));
+        return rows;
+    }
+
+    public void replaceRoomSubjects(int roomId, List<Integer> subjectIds) {
+        jdbc.update("DELETE FROM ROOM_SUBJECTS WHERE room_id=?", roomId);
+        for (Integer subjectId : new java.util.LinkedHashSet<>(subjectIds)) {
+            requireSubject(subjectId);
+            jdbc.update("INSERT INTO ROOM_SUBJECTS(room_id,subject_id) VALUES (?,?)", roomId, subjectId);
+        }
+    }
+
+    public void linkRoomSubject(int roomId, int subjectId) {
+        jdbc.update("INSERT IGNORE INTO ROOM_SUBJECTS(room_id,subject_id) VALUES (?,?)", roomId, subjectId);
     }
 
     public int saveRoom(Integer id, ManagerRequests.RoomRequest request) {
         if (id == null) {
-            return insert("INSERT INTO ROOMS(room_name,capacity) VALUES (?,?)", request.roomName(), request.capacity());
+            int created = insert("INSERT INTO ROOMS(room_name,capacity) VALUES (?,?)", request.roomName(), request.capacity());
+            if (request.status() != null) jdbc.update("UPDATE ROOMS SET status=? WHERE room_id=?", request.status(), created);
+            return created;
         }
         jdbc.update("UPDATE ROOMS SET room_name=?,capacity=? WHERE room_id=?", request.roomName(), request.capacity(), id);
+        if (request.status() != null) jdbc.update("UPDATE ROOMS SET status=? WHERE room_id=?", request.status(), id);
         return id;
     }
 
@@ -393,6 +434,40 @@ public class ManagerRepository {
         jdbc.update("UPDATE CLASSES SET subject_id=?,coach_id=?,room_id=?,class_name=?,price=?,max_slots=?,status=? WHERE class_id=?",
                 request.subjectId(), request.coachId(), request.roomId(), request.className(), request.price(), request.maxSlots(), request.status().toUpperCase(java.util.Locale.ROOT), id);
         return id;
+    }
+
+    public void setClassStatus(Integer classId, String status) {
+        jdbc.update("UPDATE CLASSES SET status=? WHERE class_id=?", status, classId);
+    }
+
+    public String roomStatus(Integer roomId) {
+        List<String> v = jdbc.queryForList("SELECT status FROM ROOMS WHERE room_id=?", String.class, roomId);
+        return v.isEmpty() ? null : v.get(0);
+    }
+
+    public String subjectStatus(Integer subjectId) {
+        List<String> v = jdbc.queryForList("SELECT status FROM SUBJECTS WHERE subject_id=?", String.class, subjectId);
+        return v.isEmpty() ? null : v.get(0);
+    }
+
+    public List<Integer> upcomingScheduleIds(Integer classId) {
+        return jdbc.queryForList("SELECT schedule_id FROM SCHEDULES WHERE class_id=? AND status='SCHEDULED' AND end_time>NOW() ORDER BY start_time", Integer.class, classId);
+    }
+
+    // First session that would clash if the class moved to this coach/room, for a precise error message.
+    public Map<String, Object> assignmentConflict(Integer classId, Integer coachId, Integer roomId) {
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                SELECT other_c.class_name otherClass,other_sc.start_time startTime,IF(other_c.coach_id=?,'coach','room') clash
+                FROM SCHEDULES own_sc
+                JOIN SCHEDULES other_sc ON other_sc.schedule_id <> own_sc.schedule_id
+                  AND other_sc.status <> 'CANCELLED'
+                  AND other_sc.start_time < TIMESTAMPADD(MINUTE,own_sc.changeover_minutes,own_sc.end_time) AND TIMESTAMPADD(MINUTE,other_sc.changeover_minutes,other_sc.end_time) > own_sc.start_time
+                JOIN CLASSES other_c ON other_c.class_id=other_sc.class_id
+                WHERE own_sc.class_id=? AND own_sc.status <> 'CANCELLED' AND own_sc.end_time>NOW()
+                  AND other_c.class_id <> ? AND (other_c.coach_id=? OR other_c.room_id=?)
+                ORDER BY other_sc.start_time LIMIT 1
+                """, coachId, classId, classId, coachId, roomId);
+        return rows.isEmpty() ? null : rows.get(0);
     }
 
     public boolean hasAssignmentConflict(Integer classId, Integer coachId, Integer roomId) {
