@@ -413,7 +413,7 @@ public class ManagerRepository {
     public List<Map<String, Object>> classes() {
         return jdbc.queryForList("""
                 SELECT c.class_id classId,c.class_name className,c.subject_id subjectId,s.subject_name subjectName,
-                       COALESCE(sc.substitute_coach_id,c.coach_id) coachId,COALESCE(sub.full_name,u.full_name) coachName,IF(sub.user_id IS NULL,NULL,u.full_name) originalCoachName,COALESCE(sub.avatar_path,u.avatar_path) coachAvatarPath,c.room_id roomId,r.room_name roomName,r.image_path roomImagePath,
+                       c.coach_id coachId,u.full_name coachName,u.avatar_path coachAvatarPath,c.room_id roomId,r.room_name roomName,r.image_path roomImagePath,
                        c.price,c.max_slots maxSlots,c.status,c.image_path imagePath,
                        COALESCE((SELECT MAX(booked) FROM (
                          SELECT sx.class_id,COUNT(*) booked FROM SCHEDULES sx JOIN BOOKINGS bx ON bx.schedule_id=sx.schedule_id
@@ -491,7 +491,7 @@ public class ManagerRepository {
     public List<Map<String, Object>> schedules(LocalDate from, LocalDate to) {
         return jdbc.queryForList("""
                 SELECT sc.schedule_id scheduleId,sc.class_id classId,c.class_name className,
-                       c.coach_id coachId,u.full_name coachName,u.avatar_path coachAvatarPath,c.room_id roomId,r.room_name roomName,c.image_path classImagePath,r.image_path roomImagePath,
+                       COALESCE(sc.substitute_coach_id,c.coach_id) coachId,COALESCE(sub.full_name,u.full_name) coachName,IF(sub.user_id IS NULL,NULL,u.full_name) originalCoachName,COALESCE(sub.avatar_path,u.avatar_path) coachAvatarPath,c.room_id roomId,r.room_name roomName,c.image_path classImagePath,r.image_path roomImagePath,
                        sc.start_time startTime,sc.end_time endTime,sc.status,
                        COUNT(CASE WHEN b.status IN ('CONFIRMED','PENDING') THEN 1 END) booked,c.max_slots maxSlots
                 FROM SCHEDULES sc JOIN CLASSES c ON c.class_id=sc.class_id JOIN USERS u ON u.user_id=c.coach_id
