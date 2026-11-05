@@ -238,6 +238,7 @@ public class ManagerService {
     public List<Map<String, Object>> subjects() { return managerRepository.subjects(); }
 
     public int saveSubject(Integer id, ManagerRequests.SubjectRequest request, String actor) {
+        if (request.status() != null) validateStatus(request.status(), CLASS_STATUSES);
         managerRepository.lockOperations();
         if (id != null) managerRepository.requireSubject(id);
         var existing=id==null?managerRepository.slotPolicy():managerRepository.subjectPolicy(id);
@@ -261,6 +262,7 @@ public class ManagerService {
                 throw new IllegalArgumentException("Room capacity cannot be lower than the maximum capacity of its assigned classes");
             }
         }
+        if (request.status() != null) validateStatus(request.status(), Set.of("ACTIVE", "MAINTENANCE", "INACTIVE"));
         int savedId = managerRepository.saveRoom(id, request);
         if (request.subjectIds() != null) managerRepository.replaceRoomSubjects(savedId, request.subjectIds());
         audit(actor, id == null ? "CREATE" : "UPDATE", "ROOM", savedId, request.roomName() + " - " + request.capacity() + " seats");
@@ -293,9 +295,20 @@ public class ManagerService {
             throw new IllegalArgumentException("The selected coach is not assigned to this subject.");
         Integer capacity = managerRepository.roomCapacity(request.roomId());
         if (capacity == null) throw new IllegalArgumentException("The room does not exist");
+        var previousAssignment = id == null ? null : managerRepository.classAssignment(id);
+        boolean roomChanged = previousAssignment == null || !request.roomId().equals(((Number) previousAssignment.get("roomId")).intValue());
+        boolean subjectChanged = previousAssignment == null || !request.subjectId().equals(((Number) previousAssignment.get("subjectId")).intValue());
+        if (roomChanged && !"ACTIVE".equals(managerRepository.roomStatus(request.roomId())))
+            throw new IllegalArgumentException("This room is under maintenance or no longer in use. Choose another room.");
+        if (subjectChanged && !"ACTIVE".equals(managerRepository.subjectStatus(request.subjectId())))
+            throw new IllegalArgumentException("This subject is no longer offered. Choose another subject.");
         if (request.maxSlots() > capacity) throw new IllegalArgumentException("Maximum class capacity exceeds room capacity");
         if (id != null && managerRepository.hasAssignmentConflict(id, request.coachId(), request.roomId())) {
-            throw new IllegalArgumentException("The new assignment conflicts with the coach or room schedule");
+            var clash = managerRepository.assignmentConflict(id, request.coachId(), request.roomId());
+            if (clash == null) throw new IllegalArgumentException("The new assignment conflicts with the coach or room schedule");
+            var at = clash.get("startTime") instanceof java.sql.Timestamp ts ? ts.toLocalDateTime() : (LocalDateTime) clash.get("startTime");
+            throw new IllegalArgumentException("Schedule conflict: " + ("coach".equals(clash.get("clash")) ? "the coach" : "the room")
+                    + " already has " + clash.get("otherClass") + " at " + at.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy")) + ".");
         }
         if(id!=null) packageBenefits.validateClassRoom(id,request.roomId());
         int savedId = managerRepository.saveClass(id, request);
@@ -436,9 +449,39 @@ public class ManagerService {
         return ids;
     }
 
+    public Map<String, Integer> enrollClassMembers(Integer scheduleId, String actor) {
+        managerRepository.lockOperations();
+        var schedule = managerRepository.schedule(scheduleId);
+        if (!"SCHEDULED".equals(schedule.get("status"))) throw new IllegalArgumentException("Only scheduled sessions can receive members");
+        var result = managerRepository.enrollClassMembers(scheduleId);
+        if (result.get("added") > 0) {
+            var assignment = managerRepository.classAssignment(((Number) schedule.get("classId")).intValue());
+            managerRepository.notifyScheduleBookings(scheduleId, "Buổi học bổ sung", assignment.get("className") + " có thêm buổi lúc " + schedule.get("startTime") + ". Bạn đã được xếp vào buổi này.");
+        }
+        audit(actor, "ENROLL", "SCHEDULE", scheduleId, "Added " + result.get("added") + " class members, skipped " + result.get("skipped"));
+        return result;
+    }
+
+    // Cancels every upcoming session (members are notified, seats released), then deactivates the class.
+    public int deactivateClass(Integer id, String actor) {
+        managerRepository.lockOperations();
+        var assignment = managerRepository.classAssignment(id);
+        List<Integer> upcoming = managerRepository.upcomingScheduleIds(id);
+        for (Integer scheduleId : upcoming) {
+            var s = managerRepository.schedule(scheduleId);
+            saveSchedule(scheduleId, new ManagerRequests.ScheduleRequest(id, LocalDateTime.parse(String.valueOf(s.get("startTime"))),
+                    LocalDateTime.parse(String.valueOf(s.get("endTime"))), "CANCELLED"), actor);
+        }
+        managerRepository.setClassStatus(id, "INACTIVE");
+        audit(actor, "DEACTIVATE", "CLASS", id, assignment.get("className") + " - cancelled " + upcoming.size() + " upcoming sessions");
+        return upcoming.size();
+    }
+
     private Map<String,Object> planningAssignment(Integer classId) {
         var assignment=managerRepository.classAssignment(classId);
         if (!"ACTIVE".equals(assignment.get("status"))) throw new IllegalArgumentException("Only active classes can be scheduled");
+        if (!"ACTIVE".equals(managerRepository.roomStatus(((Number)assignment.get("roomId")).intValue())))
+            throw new IllegalArgumentException("The class room is under maintenance or no longer in use. Move the class to another room first.");
         var coach=findUser(((Number)assignment.get("coachId")).intValue());
         if (!"Coach".equalsIgnoreCase(coach.getRole().getRoleName()) || !coach.isEnabled())
             throw new IllegalArgumentException("The assigned coach is no longer active; assign another coach");
