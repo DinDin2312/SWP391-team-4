@@ -31,10 +31,12 @@ import StaffAvatar from '../staff/StaffAvatar';
 import { rolePermissions } from '../staff/rolePermissions';
 import ManagerSelect from '../staff/ManagerSelect';
 import PasswordInput from '../staff/PasswordInput';
+import CoachSubjectsField from '../staff/CoachSubjectsField';
 import { validateAvatarFile } from '../staff/staffData';
 import './manager.css';
 import './manager-polish.css';
 import './admin-design.css';
+import VnDateInput from '../../../components/VnDateInput';
 
 const today = new Date();
 const initialFrom = isoDate(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -117,7 +119,7 @@ function ManagerDashboard() {
       }
       if (active === 'packages') publish(await managerService.packages());
       if (active === 'reports') publish(await managerService.reports(appliedFilters.from, appliedFilters.to));
-      if (active === 'audit') publish(await managerService.auditLogs());
+      if (active === 'audit') publish(null); // AuditPage pages through the log itself
       if (active === 'transactions') publish(null);
     } catch (err) {
       if (currentRequest === requestId.current) {
@@ -238,7 +240,7 @@ function ManagerDashboard() {
 
         <section className="manager-content">
           {error && active !== 'packages' && <div className="manager-alert" role="alert"><span>{t(error)}</span><button onClick={load}>{t("Retry")}</button></div>}
-          {initialLoading && !['dashboard', 'packages', 'transactions', 'support', 'settings', 'reschedule'].includes(active) ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={dataView === active ? data : null} filters={filters} appliedFilters={active === 'operations' ? operationFilters : appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={refreshAll} loading={loading || dataView !== active} loadError={error} updatedAt={updatedAt} openTransactions={openTransactions} />}
+          {initialLoading && !['dashboard', 'packages', 'transactions', 'support', 'settings', 'reschedule', 'audit'].includes(active) ? (active === 'people' ? <StaffSkeleton /> : active === 'operations' ? <OperationsSkeleton /> : <Loading />) : <ManagerView page={currentPage} active={active} data={dataView === active ? data : null} filters={filters} appliedFilters={active === 'operations' ? operationFilters : appliedFilters} setFilters={setFilters} reload={applyFilters} selectPage={selectPage} currentUser={userInfo} notify={setNotice} openModal={setModal} refresh={refreshAll} loading={loading || dataView !== active} loadError={error} updatedAt={updatedAt} openTransactions={openTransactions} />}
         </section>
       </main>
       <ManagerToast message={t(notice)} onClose={() => setNotice('')} />
@@ -308,6 +310,7 @@ function EditorModal({ config, dictionaries, onClose, onSaved }) {
           roleId: payload.roleId,
           status: payload.status,
           forcePasswordChange: Boolean(payload.forcePasswordChange),
+          ...(dictionaries?.roles?.find(role => String(role.roleId) === String(payload.roleId))?.roleName === 'Coach' ? { subjectIds: (payload.subjectIds || []).map(Number) } : {}),
         };
         if (!userPayload.password) delete userPayload.password;
         let userId = item.userId;
@@ -375,6 +378,7 @@ function EditorFields({ type, form, set, data, editing, avatarPreview, onAvatarS
           <div className="manager-role-help wide" aria-live="polite"><strong>{t('Role access')}</strong>{selectedRole?<><p>{t(selectedRole.roleName)}</p><ul>{(rolePermissions[selectedRole.roleName] || []).map(permission=><li key={permission}>{t(permission)}</li>)}</ul><small>{t('Access is predefined by the system. Selecting a role assigns its existing access; it does not customize individual permissions.')}</small></>:<p>{t('Select a role to review its access.')}</p>}</div>
           <Field label={t("Status")} required error={touched.status && errors.status}><ManagerSelect aria-invalid={Boolean(touched.status && errors.status)} value={form.status || 'ACTIVE'} onBlur={() => onBlur('status')} onChange={(e) => set('status', e.target.value)}><option value="ACTIVE">{t("Active")}</option><option value="INACTIVE">{t("Inactive")}</option><option value="PENDING">{t("Pending")}</option></ManagerSelect></Field>
           <Field label={t(editing ? 'New password' : 'Temporary password')} required={!editing} error={touched.password && errors.password}><PasswordInput value={form.password || ''} onChange={(e) => set('password', e.target.value)} onBlur={() => onBlur('password')} invalid={Boolean(touched.password && errors.password)} autoFocus={focusPassword} /><small className="manager-field-help">{t("6–72 characters")}</small></Field>
+          {selectedRole?.roleName === 'Coach' && <CoachSubjectsField value={form.subjectIds || []} onChange={ids => set('subjectIds', ids)} />}
           <label className="manager-force-password wide"><input type="checkbox" checked={Boolean(form.forcePasswordChange)} onChange={(event) => set('forcePasswordChange', event.target.checked)} /><span>{t("Force password change on first login")}</span></label>
         </div>
       </section>
@@ -383,7 +387,7 @@ function EditorFields({ type, form, set, data, editing, avatarPreview, onAvatarS
   if (type === 'subject') return <div className="manager-form-grid one"><Field label={t("Subject name")}><input required value={form.subjectName || ''} onChange={(e) => set('subjectName', e.target.value)} /></Field><Field label={t("Description")}><textarea rows="4" value={form.description || ''} onChange={(e) => set('description', e.target.value)} /></Field></div>;
   if (type === 'room') return <div className="manager-form-grid"><Field label={t("Room name")}><input required value={form.roomName || ''} onChange={(e) => set('roomName', e.target.value)} /></Field><Field label={t("Capacity")}><input required min="1" type="number" value={form.capacity || ''} onChange={(e) => set('capacity', e.target.value)} /></Field></div>;
   if (type === 'class') return <div className="manager-form-grid"><Field label={t("Class name")} wide><input required value={form.className || ''} onChange={(e) => set('className', e.target.value)} /></Field><Field label={t("Subject")}><select required value={form.subjectId || ''} onChange={(e) => set('subjectId', e.target.value)}><option value="">{t("Select a subject")}</option>{data?.subjects?.map((x) => <option key={x.subjectId} value={x.subjectId}>{x.subjectName}</option>)}</select></Field><Field label={t("Coach")}><select required value={form.coachId || ''} onChange={(e) => set('coachId', e.target.value)}><option value="">{t("Select a coach")}</option>{data?.coaches?.map((x) => <option key={x.userId} value={x.userId}>{x.fullName}</option>)}</select></Field><Field label={t("Room")}><select required value={form.roomId || ''} onChange={(e) => set('roomId', e.target.value)}><option value="">{t("Select a room")}</option>{data?.rooms?.map((x) => <option key={x.roomId} value={x.roomId}>{x.roomName} ({x.capacity})</option>)}</select></Field><Field label={t("Maximum capacity")}><input required min="1" type="number" value={form.maxSlots || ''} onChange={(e) => set('maxSlots', e.target.value)} /></Field><Field label={t("Fee")}><input required min="0" step="0.01" max="99999999.99" type="number" value={form.price ?? ''} onChange={(e) => set('price', e.target.value)} /></Field><Field label={t("Status")}><select value={form.status || 'ACTIVE'} onChange={(e) => set('status', e.target.value)}><option value="ACTIVE">{t("Active")}</option><option value="INACTIVE">{t("Inactive")}</option></select></Field></div>;
-  if (type === 'schedule') return <div className="manager-form-grid"><div className="wide"><ClassPicker classes={(data?.classes || []).filter((x) => x.status === 'ACTIVE' || x.classId === Number(form.classId))} value={form.classId || ''} onChange={(value) => set('classId', value)} required /></div><Field label={t("Start time")}><input required type="datetime-local" value={form.startTime || ''} onChange={(e) => set('startTime', e.target.value)} /></Field><Field label={t("End time")}><input required type="datetime-local" value={form.endTime || ''} onChange={(e) => set('endTime', e.target.value)} /></Field><Field label={t("Status")} wide><select value={form.status || 'SCHEDULED'} onChange={(e) => set('status', e.target.value)}><option value="SCHEDULED">{t("Scheduled")}</option>{editing && <><option value="COMPLETED">{t("Completed")}</option><option value="CANCELLED">{t("Cancelled")}</option></>}</select></Field>
+  if (type === 'schedule') return <div className="manager-form-grid"><div className="wide"><ClassPicker classes={(data?.classes || []).filter((x) => x.status === 'ACTIVE' || x.classId === Number(form.classId))} value={form.classId || ''} onChange={(value) => set('classId', value)} required /></div><Field label={t("Start time")}><VnDateInput required type="datetime-local" value={form.startTime || ''} onChange={(e) => set('startTime', e.target.value)} /></Field><Field label={t("End time")}><VnDateInput required type="datetime-local" value={form.endTime || ''} onChange={(e) => set('endTime', e.target.value)} /></Field><Field label={t("Status")} wide><select value={form.status || 'SCHEDULED'} onChange={(e) => set('status', e.target.value)}><option value="SCHEDULED">{t("Scheduled")}</option>{editing && <><option value="COMPLETED">{t("Completed")}</option><option value="CANCELLED">{t("Cancelled")}</option></>}</select></Field>
     {!editing && <><Field label={t("Repeat weekly")} wide><input type="checkbox" checked={form.repeat} onChange={(e) => set('repeat', e.target.checked)} /></Field>{form.repeat && <><Field label={t("Total sessions (including the first)")}><input required type="number" min="2" max="52" value={form.occurrences} onChange={(e) => set('occurrences', e.target.value)} /></Field><Field label={t("Interval (weeks)")}><input required type="number" min="1" max="4" value={form.intervalWeeks} onChange={(e) => set('intervalWeeks', e.target.value)} /></Field><p className="wide manager-help">{t("If any session conflicts with an existing schedule, the entire series will be cancelled.")}</p></>}</>}
     {form.status === 'CANCELLED' && <p className="wide manager-help">{t("Cancelling a session will cancel its bookings and send notifications. Fees must be reconciled separately by reception; the system does not issue automatic refunds.")}</p>}
   </div>;
