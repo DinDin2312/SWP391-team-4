@@ -262,7 +262,6 @@ class ManagerIntegrationTests {
             jdbc.update("DELETE FROM SUBJECTS WHERE subject_id=?",other);
         }
     }
-    }
 
     @Test void newCoursesNeedTheConfiguredNotice() {
         service.saveCourseLeadDays(30, actor);
