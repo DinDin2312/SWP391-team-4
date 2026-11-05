@@ -5140,3 +5140,10 @@ for (const [en, vi] of Object.entries(operationsFlowLabels)) translations[en] = 
 
 const operationsHoursLabels = { 'Opening hours':'Giờ hoạt động', 'Changeover {0} minutes':'Chuyển ca {0} phút', 'Every subject’s teaching slots must fit inside these hours.':'Các ca học của mọi bộ môn phải nằm trong khung giờ này. Thay đổi chỉ áp dụng cho buổi mới hoặc buổi đổi lịch.' };
 for (const [en, vi] of Object.entries(operationsHoursLabels)) translations[en] = [en, vi];
+
+const courseLeadLabels = {
+  'New courses {0} days ahead':'Mở khóa mới trước {0} ngày',
+  'Notice for new courses (days)':'Báo trước khi mở khóa mới (ngày)',
+  'New courses open at least {0} days ahead so members can register. Earliest start: {1}.':'Khóa mới phải mở trước ít nhất {0} ngày để hội viên kịp đăng ký. Ngày bắt đầu sớm nhất: {1}.',
+};
+for (const [en, vi] of Object.entries(courseLeadLabels)) translations[en] = [en, vi];

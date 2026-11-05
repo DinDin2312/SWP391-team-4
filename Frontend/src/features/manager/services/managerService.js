@@ -12,6 +12,7 @@ function saveOperationResource(resource,id,payload,photo={}) {
 
 const managerService = {
   schedulePolicy: classId => axiosClient.get(classId?`/manager/classes/${classId}/schedule-policy`:'/manager/schedule-policy'),
+  saveCourseLeadDays: (days) => axiosClient.put('/manager/schedule-policy/course-lead-days', { days }),
   saveSchedulePolicy: payload => axiosClient.put('/manager/schedule-policy',payload),
   uploadResourceImage: (resource, id, image) => {
     const body = new FormData();

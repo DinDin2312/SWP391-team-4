@@ -342,11 +342,32 @@ public class ManagerService {
     @Transactional(readOnly=true)
     public Map<String,Object> classSlotPolicy(Integer classId) {
         var p=managerRepository.classSlotPolicy(classId);
-        return Map.of("classId",classId,"opensAt",p.opensAt(),"closesAt",p.closesAt(),"breakMinutes",p.breakMinutes(),"durationMinutes",p.durationMinutes(),"starts",p.starts());
+        return Map.of("classId",classId,"opensAt",p.opensAt(),"closesAt",p.closesAt(),"breakMinutes",p.breakMinutes(),"durationMinutes",p.durationMinutes(),"starts",p.starts(),
+            "courseLeadDays",managerRepository.courseLeadDays(),"earliestCourseStart",earliestCourseStart().toString());
     }
     public Map<String,Object> slotPolicy() {
         var p=managerRepository.slotPolicy();
-        return Map.of("opensAt",p.opensAt(),"closesAt",p.closesAt(),"breakMinutes",p.breakMinutes(),"durationMinutes",p.durationMinutes(),"starts",p.starts());
+        return Map.of("opensAt",p.opensAt(),"closesAt",p.closesAt(),"breakMinutes",p.breakMinutes(),"durationMinutes",p.durationMinutes(),"starts",p.starts(),
+            "courseLeadDays",managerRepository.courseLeadDays(),"earliestCourseStart",earliestCourseStart().toString());
+    }
+
+    // A new course may start no earlier than today + the configured lead time.
+    private java.time.LocalDate earliestCourseStart() {
+        return java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(managerRepository.courseLeadDays());
+    }
+
+    private void requireCourseLead(java.time.LocalDate fromDate) {
+        var earliest = earliestCourseStart();
+        if (fromDate.isBefore(earliest))
+            throw new IllegalArgumentException("A new course must start on or after " + earliest.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                + " (" + managerRepository.courseLeadDays() + " days notice).");
+    }
+
+    public Map<String,Object> saveCourseLeadDays(int days, String actor) {
+        if (days < 0 || days > 180) throw new IllegalArgumentException("Choose 0 to 180 days of notice.");
+        managerRepository.saveCourseLeadDays(days);
+        audit(actor,"UPDATE","SCHEDULE_POLICY",1,"courseLeadDays=" + days);
+        return slotPolicy();
     }
     public Map<String,Object> saveSlotPolicy(TeachingSlots.Policy policy,String actor) {
         managerRepository.lockOperations();
@@ -506,7 +527,7 @@ public class ManagerService {
     @Transactional(readOnly=true)
     public Map<String,Object> previewSchedulePlan(ManagerRequests.SchedulePlanRequest request) {
         var now=LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
-        fixedRules(request); SchedulePlanner.validateRules(request,now);
+        fixedRules(request); SchedulePlanner.validateRules(request,now); requireCourseLead(request.fromDate());
         var assignment=planningAssignment(request.classId());
         int coachId=((Number)assignment.get("coachId")).intValue(), roomId=((Number)assignment.get("roomId")).intValue();
         var busy=managerRepository.occupiedSlots(coachId,roomId,request.fromDate().atStartOfDay().minusMinutes(request.breakMinutes()),request.toDate().plusDays(1).atStartOfDay().plusMinutes(request.breakMinutes()));
@@ -522,7 +543,7 @@ public class ManagerService {
     public List<Integer> commitSchedulePlan(ManagerRequests.SchedulePlanCommitRequest request, String actor) {
         managerRepository.lockOperations();
         var now=LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
-        var rules=fixedRules(request.rules()); SchedulePlanner.validateRules(rules,now);
+        var rules=fixedRules(request.rules()); SchedulePlanner.validateRules(rules,now); requireCourseLead(rules.fromDate());
         var assignment=planningAssignment(rules.classId());
         int coachId=((Number)assignment.get("coachId")).intValue(), roomId=((Number)assignment.get("roomId")).intValue();
         if (!java.util.Objects.equals(request.coachId(),coachId) || !java.util.Objects.equals(request.roomId(),roomId))

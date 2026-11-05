@@ -26,6 +26,8 @@ public class ManagerController {
     public Map<String,Object> classSlotPolicy(@PathVariable Integer id) {return managerService.classSlotPolicy(id);}
     @GetMapping("/schedule-policy")
     public Map<String,Object> schedulePolicy(){return managerService.slotPolicy();}
+    @PutMapping("/schedule-policy/course-lead-days")
+    public Map<String,Object> courseLeadDays(@RequestBody Map<String,Integer> body,java.security.Principal principal){return managerService.saveCourseLeadDays(body.getOrDefault("days",30),principal.getName());}
     @PutMapping("/schedule-policy")
     public Map<String,Object> schedulePolicy(@RequestBody com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy policy,java.security.Principal principal){return managerService.saveSlotPolicy(policy,principal.getName());}
 

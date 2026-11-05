@@ -15,6 +15,9 @@ export default function CourseScheduleDialog({config,data,onClose,onSaved}) {
   const tomorrow=addDays(new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Ho_Chi_Minh'}),1);
   const [form,setForm]=useState({classId:config.initial?.classId || '',fromDate:config.initial?.fromDate && config.initial.fromDate>=tomorrow?config.initial.fromDate:tomorrow,sessions:12,weekdays:[2,4],weekdaySlots:{},excludedDates:[],overrides:{}});
   const {policy,error:policyError}=useTeachingSlots(form.classId || undefined);
+  // New courses need the center's notice period (set with the opening hours); the server enforces it too.
+  const earliest=policy?.earliestCourseStart && policy.earliestCourseStart>tomorrow?policy.earliestCourseStart:tomorrow;
+  useEffect(()=>{setForm(current=>current.fromDate<earliest?{...current,fromDate:earliest}:current);},[earliest]);
   const [excluded,setExcluded]=useState(''),[plan,setPlan]=useState(null),[previewRules,setPreviewRules]=useState(null);
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[created,setCreated]=useState(false);
   const [availability,setAvailability]=useState(null),[availabilityError,setAvailabilityError]=useState('');
@@ -75,7 +78,7 @@ export default function CourseScheduleDialog({config,data,onClose,onSaved}) {
         <ClassPicker classes={activeClasses} value={form.classId} onChange={value=>change('classId',value)} required/>
         <p className="ops-note">{t('Schedule the full course before accepting registrations. Use supplementary sessions for make-up lessons afterwards.')}</p>
         <div className="ops-plan-grid">
-          <label className="ops-field">{t('Course start date')}<input required type="date" min={tomorrow} value={form.fromDate} onInput={e=>change('fromDate',e.target.value)} onChange={e=>change('fromDate',e.target.value)}/></label>
+          <label className="ops-field">{t('Course start date')}<input required type="date" min={earliest} value={form.fromDate} onInput={e=>change('fromDate',e.target.value)} onChange={e=>change('fromDate',e.target.value)}/>{policy?.courseLeadDays>0 && <small className="ops-field-help">{t('New courses open at least {0} days ahead so members can register. Earliest start: {1}.',[policy.courseLeadDays,formatDate(earliest)])}</small>}</label>
           <label className="ops-field">{t('Total course sessions')}<input required type="number" min="1" max="52" step="1" value={form.sessions} onInput={e=>change('sessions',e.target.value)} onChange={e=>change('sessions',e.target.value)}/></label>
         </div>
         <fieldset className="ops-course-week"><legend>{t('Weekly teaching slots')}</legend>

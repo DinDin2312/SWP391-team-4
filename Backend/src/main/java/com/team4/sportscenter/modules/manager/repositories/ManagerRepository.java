@@ -505,6 +505,15 @@ public class ManagerRepository {
         return jdbc.queryForObject("SELECT opens_at,closes_at,break_minutes FROM CENTER_SCHEDULE_POLICY WHERE policy_id=1",
             (rs,n)->new com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy(rs.getTime(1).toLocalTime(),rs.getTime(2).toLocalTime(),rs.getInt(3)));
     }
+    public int courseLeadDays() {
+        Integer v = jdbc.queryForObject("SELECT course_lead_days FROM CENTER_SCHEDULE_POLICY WHERE policy_id=1", Integer.class);
+        return v == null ? 0 : v;
+    }
+
+    public void saveCourseLeadDays(int days) {
+        jdbc.update("UPDATE CENTER_SCHEDULE_POLICY SET course_lead_days=? WHERE policy_id=1", days);
+    }
+
     public void saveSlotPolicy(com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy p) {
         jdbc.update("UPDATE CENTER_SCHEDULE_POLICY SET opens_at=?,closes_at=?,break_minutes=? WHERE policy_id=1",p.opensAt(),p.closesAt(),p.breakMinutes());
     }

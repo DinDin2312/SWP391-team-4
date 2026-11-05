@@ -55,7 +55,7 @@ class ManagerIntegrationTests {
     }
 
     @BeforeEach void fixtures() {
-        jdbc.update("UPDATE CENTER_SCHEDULE_POLICY SET opens_at='06:00:00',closes_at='22:00:00',break_minutes=15 WHERE policy_id=1");
+        jdbc.update("UPDATE CENTER_SCHEDULE_POLICY SET opens_at='06:00:00',closes_at='22:00:00',break_minutes=15,course_lead_days=0 WHERE policy_id=1");
         actor = "-qa-" + UUID.randomUUID() + "@example.test";
         admin = user("admin", "Center Manager");
         coach = user("coach", "Coach");
@@ -266,6 +266,20 @@ class ManagerIntegrationTests {
             jdbc.update("DELETE FROM CLASSES WHERE subject_id=?",other);
             jdbc.update("DELETE FROM USER_SUBJECTS WHERE subject_id=?",other);
             jdbc.update("DELETE FROM SUBJECTS WHERE subject_id=?",other);
+        }
+    }
+
+    @Test void newCoursesNeedTheConfiguredNotice() {
+        service.saveCourseLeadDays(30, actor);
+        try {
+            var policy = service.slotPolicy();
+            assertEquals(30, ((Number) policy.get("courseLeadDays")).intValue());
+            assertEquals(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(30).toString(), policy.get("earliestCourseStart"));
+            var error = assertThrows(IllegalArgumentException.class, () -> service.previewSchedulePlan(planRules()));
+            assertTrue(error.getMessage().contains("30 days notice"));
+            assertThrows(IllegalArgumentException.class, () -> service.saveCourseLeadDays(-1, actor));
+        } finally {
+            service.saveCourseLeadDays(0, actor);
         }
     }
 
