@@ -203,6 +203,19 @@ test('Workout Submissions Comprehensive Test Suite - All Scenarios & Both Plan T
     );
     assert.equal(closedMemberHtml, '', 'Closed member workouts modal should return empty');
 
+    // =========================================================================
+    // SCENARIO 6: Coach Workout Submissions Tab & Pagination UI
+    // =========================================================================
+    const { default: CoachWorkoutPlans } = await server.ssrLoadModule(
+      '/src/features/coach/pages/CoachWorkoutPlans.jsx'
+    );
+    assert.doesNotThrow(() => {
+      const html = renderToStaticMarkup(
+        React.createElement(CoachWorkoutPlans)
+      );
+      assert.ok(html.includes('Student Workout Submissions') || html.includes('Bài Nộp Của Học Viên'));
+    });
+
   } finally {
     await server.close();
   }
