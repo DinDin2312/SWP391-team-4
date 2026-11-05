@@ -246,12 +246,8 @@ public class ManagerService {
         if (request.status() != null) validateStatus(request.status(), CLASS_STATUSES);
         managerRepository.lockOperations();
         if (id != null) managerRepository.requireSubject(id);
-        var existing=id==null?managerRepository.slotPolicy():managerRepository.subjectPolicy(id);
-        new TeachingSlots.Policy(existing.opensAt(),existing.closesAt(),existing.breakMinutes(),
-            request.durationMinutes()==null?existing.durationMinutes():request.durationMinutes(),
-            request.slotStarts()==null?existing.configuredStarts():request.slotStarts());
+        // Session length and slots are set once for the whole center, not per subject.
         int savedId = managerRepository.saveSubject(id, request);
-        managerRepository.subjectPolicy(savedId);
         audit(actor, id == null ? "CREATE" : "UPDATE", "SUBJECT", savedId, request.subjectName());
         return savedId;
     }
@@ -373,12 +369,9 @@ public class ManagerService {
     }
     public Map<String,Object> saveSlotPolicy(TeachingSlots.Policy policy,String actor) {
         managerRepository.lockOperations();
-        for(var subject:managerRepository.subjects()) {
-            var existing=managerRepository.subjectPolicy(((Number)subject.get("subjectId")).intValue());
-            new TeachingSlots.Policy(policy.opensAt(),policy.closesAt(),policy.breakMinutes(),existing.durationMinutes(),existing.configuredStarts());
-        }
-        managerRepository.saveSlotPolicy(policy);
-        audit(actor,"UPDATE","SCHEDULE_POLICY",1,policy.toString());
+        var saved=new TeachingSlots.Policy(policy.opensAt(),policy.closesAt(),policy.breakMinutes(),policy.durationMinutes(),List.of());
+        managerRepository.saveSlotPolicy(saved);
+        audit(actor,"UPDATE","SCHEDULE_POLICY",1,"Giờ mở cửa " + saved.opensAt() + "–" + saved.closesAt() + ", mỗi buổi " + saved.durationMinutes() + " phút, chuyển ca " + saved.breakMinutes() + " phút");
         return slotPolicy();
     }
     private ManagerRequests.SchedulePlanRequest fixedRules(ManagerRequests.SchedulePlanRequest r) {

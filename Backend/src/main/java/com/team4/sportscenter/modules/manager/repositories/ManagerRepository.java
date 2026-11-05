@@ -355,9 +355,7 @@ public class ManagerRepository {
         return starts==null || starts.isBlank()?List.of():java.util.Arrays.stream(starts.split(",")).map(java.time.LocalTime::parse).toList();
     }
     public com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy subjectPolicy(Integer subjectId) {
-        var base=slotPolicy();
-        var row=jdbc.queryForMap("SELECT duration_minutes,slot_starts FROM SUBJECTS WHERE subject_id=?",subjectId);
-        return new com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy(base.opensAt(),base.closesAt(),base.breakMinutes(),((Number)row.get("duration_minutes")).intValue(),parseStarts((String)row.get("slot_starts")));
+        return slotPolicy(); // every subject follows the center's session length and slots
     }
     public com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy classSlotPolicy(Integer classId) {
         return subjectPolicy(jdbc.queryForObject("SELECT subject_id FROM CLASSES WHERE class_id=?",Integer.class,classId));
@@ -366,8 +364,7 @@ public class ManagerRepository {
         if(id==null)id=insert("INSERT INTO SUBJECTS(subject_name,description) VALUES (?,?)",request.subjectName(),request.description());
         else jdbc.update("UPDATE SUBJECTS SET subject_name=?,description=? WHERE subject_id=?",request.subjectName(),request.description(),id);
         if(request.status()!=null)jdbc.update("UPDATE SUBJECTS SET status=? WHERE subject_id=?",request.status(),id);
-        if(request.durationMinutes()!=null)jdbc.update("UPDATE SUBJECTS SET duration_minutes=? WHERE subject_id=?",request.durationMinutes(),id);
-        if(request.slotStarts()!=null)jdbc.update("UPDATE SUBJECTS SET slot_starts=? WHERE subject_id=?",String.join(",",request.slotStarts().stream().sorted().map(Object::toString).toList()),id);
+        jdbc.update("UPDATE SUBJECTS SET duration_minutes=(SELECT session_minutes FROM CENTER_SCHEDULE_POLICY WHERE policy_id=1),slot_starts=NULL WHERE subject_id=?",id);
         return id;
     }
 
@@ -557,8 +554,8 @@ public class ManagerRepository {
     }
 
     public com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy slotPolicy() {
-        return jdbc.queryForObject("SELECT opens_at,closes_at,break_minutes FROM CENTER_SCHEDULE_POLICY WHERE policy_id=1",
-            (rs,n)->new com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy(rs.getTime(1).toLocalTime(),rs.getTime(2).toLocalTime(),rs.getInt(3)));
+        return jdbc.queryForObject("SELECT opens_at,closes_at,break_minutes,session_minutes FROM CENTER_SCHEDULE_POLICY WHERE policy_id=1",
+            (rs,n)->new com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy(rs.getTime(1).toLocalTime(),rs.getTime(2).toLocalTime(),rs.getInt(3),rs.getInt(4),List.of()));
     }
     public int courseLeadDays() {
         Integer v = jdbc.queryForObject("SELECT course_lead_days FROM CENTER_SCHEDULE_POLICY WHERE policy_id=1", Integer.class);
@@ -570,7 +567,8 @@ public class ManagerRepository {
     }
 
     public void saveSlotPolicy(com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy p) {
-        jdbc.update("UPDATE CENTER_SCHEDULE_POLICY SET opens_at=?,closes_at=?,break_minutes=? WHERE policy_id=1",p.opensAt(),p.closesAt(),p.breakMinutes());
+        jdbc.update("UPDATE CENTER_SCHEDULE_POLICY SET opens_at=?,closes_at=?,break_minutes=?,session_minutes=? WHERE policy_id=1",p.opensAt(),p.closesAt(),p.breakMinutes(),p.durationMinutes());
+        jdbc.update("UPDATE SUBJECTS SET duration_minutes=?,slot_starts=NULL",p.durationMinutes());
     }
     public void setChangeover(int id,int minutes) { jdbc.update("UPDATE SCHEDULES SET changeover_minutes=? WHERE schedule_id=?",minutes,id); }
     public boolean hasScheduleConflict(Integer scheduleId, Integer coachId, Integer roomId, LocalDateTime start, LocalDateTime end) {

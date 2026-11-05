@@ -28,7 +28,7 @@ import { Occupancy, OperationStatus } from "./OperationsUI";
 import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
 import StaffAvatar from '../staff/StaffAvatar';
 import OperationPhotoField from './OperationPhotoField';
-import SubjectSlotFields from './SubjectSlotFields';
+import VnDateInput from '../../../components/VnDateInput';
 
 function useOperationDialog(onClose, busy) {
   const ref = useRef(null);
@@ -189,7 +189,6 @@ function validate(type, form) {
   if (form[name]?.length > 255) errors[name] = "Use at most 255 characters.";
   if (form.description?.length > 10000)
     errors.description = "Use at most 10,000 characters.";
-  if(type==='subject' && (!Number.isInteger(Number(form.durationMinutes ?? 90)) || Number(form.durationMinutes ?? 90)<15 || Number(form.durationMinutes ?? 90)>240))errors.durationMinutes='Choose a duration from 15 to 240 minutes.';
   for (const key of type === "class"
     ? ["maxSlots"]
     : type === "room"
@@ -376,7 +375,6 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
             {type === "subject" && (
               <>
                 {input("subjectName", "Subject name", { maxLength: 255 })}
-                <SubjectSlotFields form={form} set={set} policy={policy}/>
                 {select("status","Subject status",[["ACTIVE","Offered"],["INACTIVE","No longer offered"]],false,"Subjects no longer offered cannot be used for new classes. Existing classes keep running.")}
                 {errors.durationMinutes && <p role="alert" className="manager-field-error">{t(errors.durationMinutes)}</p>}
                 <Field
@@ -486,7 +484,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                 )}
                 <p className="ops-note">{t('{0} minutes per session',[policy?.durationMinutes || '—'])}</p>
                 {policyError && <p role="alert">{t(policyError)}</p>}
-                <label className="ops-field">{t('Date')}<input required type="date" value={form.startTime?.slice(0,10) || ''} onInput={e=>set('startTime',e.target.value+'T'+(form.startTime?.slice(11,16)||policy?.starts[0]?.slice(0,5)||'07:00'))} onChange={e=>set('startTime',e.target.value+'T'+(form.startTime?.slice(11,16)||policy?.starts[0]?.slice(0,5)||'07:00'))}/></label>
+                <label className="ops-field">{t('Date')}<VnDateInput required type="date" value={form.startTime?.slice(0,10) || ''} onInput={e=>set('startTime',e.target.value+'T'+(form.startTime?.slice(11,16)||policy?.starts[0]?.slice(0,5)||'07:00'))} onChange={e=>set('startTime',e.target.value+'T'+(form.startTime?.slice(11,16)||policy?.starts[0]?.slice(0,5)||'07:00'))}/></label>
                 <label className="ops-field">{t('Teaching slot')}<select required disabled={!policy} value={form.startTime?.slice(11,16)||''} onChange={e=>set('startTime',(form.startTime?.slice(0,10)||'')+'T'+e.target.value)}>
                   <option value="">{t('Select')}</option>
                   {editing && form.startTime===initialForm(type,config.item).startTime && !policy?.starts.some(time=>time.slice(0,5)===form.startTime?.slice(11,16)) && <option value={form.startTime?.slice(11,16)}>{t('Existing session')} · {form.startTime?.slice(11,16)}</option>}
