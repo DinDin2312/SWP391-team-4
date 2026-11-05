@@ -253,7 +253,7 @@ public class CoachWorkoutSubmissionTests {
         verify(notificationRepository).save(notifCaptor.capture());
         Notification notif = notifCaptor.getValue();
         assertEquals(student.getUserId(), notif.getUser().getUserId());
-        assertEquals("WORKOUT_FEEDBACK", notif.getType());
+        assertEquals("COACH", notif.getType());
         assertTrue(notif.getMessage().contains("5 ⭐"));
     }
 

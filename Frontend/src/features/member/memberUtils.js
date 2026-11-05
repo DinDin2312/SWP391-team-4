@@ -132,6 +132,7 @@ export function isMemberNotificationAllowed(notification, preferences = null) {
   if (
     type === 'COACH' ||
     type === 'WORKOUT' ||
+    type === 'WORKOUT_FEEDBACK' ||
     text.includes('đánh giá') ||
     text.includes('tiến độ') ||
     text.includes('thể lực') ||
@@ -139,7 +140,11 @@ export function isMemberNotificationAllowed(notification, preferences = null) {
     text.includes('giáo án') ||
     text.includes('workout plan') ||
     text.includes('feedback') ||
-    text.includes('huấn luyện viên')
+    text.includes('huấn luyện viên') ||
+    text.includes('bài tập') ||
+    text.includes('workout') ||
+    text.includes('hlv') ||
+    text.includes('nhận xét')
   ) {
     return prefs.coachFeedback !== false;
   }

@@ -263,7 +263,7 @@ export default function MemberNotificationDropdown({ isOpen, onClose, onUnreadCh
         ) : (
           notifications.slice(0, 10).map((n) => (
             <div
-              key={n.notificationId}
+              key={n.id || n.notificationId}
               className={`p-3 text-xs hover:bg-[var(--surface-hover)] transition-colors flex items-start gap-2.5 ${
                 !n.isRead ? 'bg-[var(--primary-soft)]/20' : ''
               }`}
@@ -271,7 +271,7 @@ export default function MemberNotificationDropdown({ isOpen, onClose, onUnreadCh
               <div className="w-2 h-2 rounded-full bg-[var(--primary)] shrink-0 mt-1.5" style={{ opacity: n.isRead ? 0 : 1 }} />
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-[var(--text)] leading-tight">{n.title}</p>
-                <p className="text-[11px] text-[var(--text-muted)] mt-0.5 line-clamp-2">{n.content}</p>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5 line-clamp-2">{n.message || n.content}</p>
                 <span className="text-[10px] text-[var(--text-muted)] opacity-70 mt-1 block">
                   {formatDateTime(n.createdAt)}
                 </span>

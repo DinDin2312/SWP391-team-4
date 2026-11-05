@@ -73,6 +73,19 @@ const createInitialWeekSchedule = (defaultExerciseId = '') => ({
   }
 });
 
+const getPaginationRange = (current, total) => {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, '...', total];
+  }
+  if (current >= total - 3) {
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, '...', current - 1, current, current + 1, '...', total];
+};
+
 const CoachWorkoutPlans = () => {
   const currentLang = useLanguage();
 
@@ -107,6 +120,8 @@ const CoachWorkoutPlans = () => {
   const [submissionStatusFilter, setSubmissionStatusFilter] = useState('ALL');
   const [submissionClassFilter, setSubmissionClassFilter] = useState('ALL');
   const [submissionSearch, setSubmissionSearch] = useState('');
+  const [submissionPage, setSubmissionPage] = useState(1);
+  const [submissionPageSize, setSubmissionPageSize] = useState(6);
   const [selectedSubmissionForReview, setSelectedSubmissionForReview] = useState(null);
 
   const fetchSubmissions = async (status = submissionStatusFilter, classId = submissionClassFilter) => {
@@ -130,6 +145,10 @@ const CoachWorkoutPlans = () => {
       fetchSubmissions(submissionStatusFilter, submissionClassFilter);
     }
   }, [activeTab, submissionStatusFilter, submissionClassFilter]);
+
+  useEffect(() => {
+    setSubmissionPage(1);
+  }, [submissionStatusFilter, submissionClassFilter, submissionSearch, submissionPageSize]);
 
   // ==================== FORM 1: GIAO BÀI TẬP ĐƠN (SINGLE) ====================
   const [targetType, setTargetType] = useState('INDIVIDUAL'); // 'INDIVIDUAL' | 'CLASS'
@@ -238,9 +257,16 @@ const CoachWorkoutPlans = () => {
   const [newExMuscleGroup, setNewExMuscleGroup] = useState('Chest (Ngực)');
   const [newExVideoUrl, setNewExVideoUrl] = useState('');
 
-  // History Filter
+  // History Filter & Pagination
   const [historyFilterStudent, setHistoryFilterStudent] = useState('');
   const [historyFilterType, setHistoryFilterType] = useState('ALL'); // 'ALL' | 'TRAINING_PLAN' | 'SINGLE'
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(6);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [historyFilterStudent, historyFilterType, historySearch, historyPageSize]);
 
   useEffect(() => {
     fetchInitialData();
@@ -910,6 +936,16 @@ const CoachWorkoutPlans = () => {
     }
     if (historyFilterType === 'SINGLE' && plan.planType === 'TRAINING_PLAN') {
       return false;
+    }
+    if (historySearch.trim()) {
+      const q = historySearch.toLowerCase().trim();
+      const matchTitle = plan.title?.toLowerCase().includes(q);
+      const matchStudent = plan.studentName?.toLowerCase().includes(q);
+      const matchClass = plan.className?.toLowerCase().includes(q);
+      const matchGoal = plan.goal?.toLowerCase().includes(q);
+      if (!matchTitle && !matchStudent && !matchClass && !matchGoal) {
+        return false;
+      }
     }
     return true;
   });
@@ -2511,7 +2547,19 @@ const CoachWorkoutPlans = () => {
           
           {/* Filters Bar */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[var(--border)]">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 flex-1">
+              {/* Search Box */}
+              <div className="relative min-w-[200px] flex-1 max-w-xs">
+                <input
+                  type="text"
+                  placeholder={t("Tìm kiếm kế hoạch, học viên...")}
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                  className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl pl-9 pr-3 py-2 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] placeholder-[var(--text-muted)] font-medium"
+                />
+                <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+
               <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-[var(--text-muted)]" />
                 <span className="text-xs font-bold text-[var(--text-muted)]">{t("Lọc:")}</span>
@@ -2561,9 +2609,18 @@ const CoachWorkoutPlans = () => {
               <h4 className="text-base font-bold text-[var(--text)]">{t("Chưa có kế hoạch hoặc bài tập nào phù hợp")}</h4>
               <p className="text-xs text-[var(--text-muted)] mt-1">{t("Hãy chọn tab 'Tạo Kế Hoạch Theo Tuần / Mốc' để tạo lộ trình cho học viên.")}</p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredPlans.map((plan) => {
+          ) : (() => {
+            const totalPages = Math.max(1, Math.ceil(filteredPlans.length / historyPageSize));
+            const validPage = Math.min(Math.max(1, historyPage), totalPages);
+            const startIndex = (validPage - 1) * historyPageSize;
+            const paginatedPlans = filteredPlans.slice(startIndex, startIndex + historyPageSize);
+            const startRecord = filteredPlans.length === 0 ? 0 : startIndex + 1;
+            const endRecord = Math.min(validPage * historyPageSize, filteredPlans.length);
+
+            return (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {paginatedPlans.map((plan) => {
                 const isTrainingPlan = plan.planType === 'TRAINING_PLAN';
 
                 return (
@@ -2672,8 +2729,94 @@ const CoachWorkoutPlans = () => {
                   </div>
                 );
               })}
-            </div>
-          )}
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="pt-4 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 order-2 sm:order-1">
+                    <div className="text-xs text-[var(--text-muted)] flex items-center gap-1.5 font-medium">
+                      <span>{t("Showing")}</span>
+                      <strong className="text-[var(--text)] font-bold">{startRecord}–{endRecord}</strong>
+                      <span>{t("of")}</span>
+                      <strong className="text-[var(--text)] font-bold">{filteredPlans.length}</strong>
+                      <span>{t("kế hoạch")}</span>
+                    </div>
+
+                    <div className="h-4 w-[1px] bg-[var(--border)] hidden sm:block" />
+
+                    <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                      <select
+                        id="history-page-size"
+                        value={historyPageSize}
+                        onChange={(e) => {
+                          setHistoryPageSize(Number(e.target.value));
+                          setHistoryPage(1);
+                        }}
+                        className="bg-[var(--surface-hover)] border border-[var(--border)] rounded-xl px-2.5 py-1 text-xs font-semibold text-[var(--text)] focus:outline-none focus:border-[var(--primary)] cursor-pointer transition-all shadow-xs"
+                      >
+                        <option value={6}>6 / {t("trang")}</option>
+                        <option value={12}>12 / {t("trang")}</option>
+                        <option value={24}>24 / {t("trang")}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-1.5 order-1 sm:order-2 select-none">
+                      <button
+                        type="button"
+                        onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                        disabled={validPage === 1}
+                        className="px-2.5 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] disabled:opacity-30 disabled:pointer-events-none text-xs text-[var(--text)] transition-all flex items-center gap-1 cursor-pointer font-medium shadow-2xs hover:bg-[var(--surface)]"
+                        title={t("Trang trước")}
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">{t("Previous")}</span>
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        {getPaginationRange(validPage, totalPages).map((p, idx) => {
+                          if (p === '...') {
+                            return (
+                              <span key={`dots-history-${idx}`} className="px-2 py-1 text-xs text-[var(--text-muted)] font-medium">
+                                ...
+                              </span>
+                            );
+                          }
+                          const isCurrent = p === validPage;
+                          return (
+                            <button
+                              key={`history-page-${p}`}
+                              type="button"
+                              onClick={() => setHistoryPage(p)}
+                              className={`min-w-[32px] h-8 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                isCurrent
+                                  ? "bg-[var(--primary)] text-[color:var(--on-primary)] shadow-xs ring-1 ring-[var(--primary)]"
+                                  : "border border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface)]"
+                              }`}
+                            >
+                              {p}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setHistoryPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={validPage === totalPages}
+                        className="px-2.5 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] disabled:opacity-30 disabled:pointer-events-none text-xs text-[var(--text)] transition-all flex items-center gap-1 cursor-pointer font-medium shadow-2xs hover:bg-[var(--surface)]"
+                        title={t("Trang sau")}
+                      >
+                        <span className="hidden sm:inline">{t("Next")}</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -2989,9 +3132,17 @@ const CoachWorkoutPlans = () => {
               );
             }
 
+            const totalPages = Math.max(1, Math.ceil(filtered.length / submissionPageSize));
+            const validPage = Math.min(Math.max(1, submissionPage), totalPages);
+            const startIndex = (validPage - 1) * submissionPageSize;
+            const paginatedSubmissions = filtered.slice(startIndex, startIndex + submissionPageSize);
+            const startRecord = filtered.length === 0 ? 0 : startIndex + 1;
+            const endRecord = Math.min(validPage * submissionPageSize, filtered.length);
+
             return (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filtered.map((sub) => (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {paginatedSubmissions.map((sub) => (
                   <div
                     key={sub.submissionId}
                     className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-[var(--shadow)] hover:border-[var(--primary)]/40 transition-all flex flex-col justify-between gap-4 group"
@@ -3091,8 +3242,93 @@ const CoachWorkoutPlans = () => {
                   </div>
                 ))}
               </div>
-            );
-          })()}
+
+              {/* Submissions Pagination Bar */}
+              <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-[var(--shadow)] flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3 order-2 sm:order-1">
+                  <div className="text-xs text-[var(--text-muted)] flex items-center gap-1.5 font-medium">
+                    <span>{t("Showing")}</span>
+                    <strong className="text-[var(--text)] font-bold">{startRecord}–{endRecord}</strong>
+                    <span>{t("of")}</span>
+                    <strong className="text-[var(--text)] font-bold">{filtered.length}</strong>
+                    <span>{t("bài nộp")}</span>
+                  </div>
+
+                  <div className="h-4 w-[1px] bg-[var(--border)] hidden sm:block" />
+
+                  <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                    <select
+                      id="submission-page-size"
+                      value={submissionPageSize}
+                      onChange={(e) => {
+                        setSubmissionPageSize(Number(e.target.value));
+                        setSubmissionPage(1);
+                      }}
+                      className="bg-[var(--surface-hover)] border border-[var(--border)] rounded-xl px-2.5 py-1 text-xs font-semibold text-[var(--text)] focus:outline-none focus:border-[var(--primary)] cursor-pointer transition-all shadow-xs"
+                    >
+                      <option value={6}>6 / {t("trang")}</option>
+                      <option value={12}>12 / {t("trang")}</option>
+                      <option value={24}>24 / {t("trang")}</option>
+                    </select>
+                  </div>
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1.5 order-1 sm:order-2 select-none">
+                    <button
+                      type="button"
+                      onClick={() => setSubmissionPage((p) => Math.max(1, p - 1))}
+                      disabled={validPage === 1}
+                      className="px-2.5 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] disabled:opacity-30 disabled:pointer-events-none text-xs text-[var(--text)] transition-all flex items-center gap-1 cursor-pointer font-medium shadow-2xs hover:bg-[var(--surface)]"
+                      title={t("Trang trước")}
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">{t("Previous")}</span>
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {getPaginationRange(validPage, totalPages).map((p, idx) => {
+                        if (p === '...') {
+                          return (
+                            <span key={`dots-${idx}`} className="px-2 py-1 text-xs text-[var(--text-muted)] font-medium">
+                              ...
+                            </span>
+                          );
+                        }
+                        const isCurrent = p === validPage;
+                        return (
+                          <button
+                            key={`page-${p}`}
+                            type="button"
+                            onClick={() => setSubmissionPage(p)}
+                            className={`min-w-[32px] h-8 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                              isCurrent
+                                ? "bg-[var(--primary)] text-[color:var(--on-primary)] shadow-xs ring-1 ring-[var(--primary)]"
+                                : "border border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface)]"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setSubmissionPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={validPage === totalPages}
+                      className="px-2.5 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] disabled:opacity-30 disabled:pointer-events-none text-xs text-[var(--text)] transition-all flex items-center gap-1 cursor-pointer font-medium shadow-2xs hover:bg-[var(--surface)]"
+                      title={t("Trang sau")}
+                    >
+                      <span className="hidden sm:inline">{t("Next")}</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
         </div>
       )}
 

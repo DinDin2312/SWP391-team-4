@@ -5066,7 +5066,14 @@ const workoutSubmissionTranslations = [
   ["Coach gave feedback - Click to view", "HLV đã góp ý - Bấm xem"],
   ["Reviewed", "Đã góp ý"],
   ["Waiting for coach review - Click to view submitted video", "Chờ HLV xem - Bấm xem video đã gửi"],
-  ["Waiting for coach - Click to view submitted video", "Chờ HLV xem - Bấm xem video đã gửi"]
+  ["Waiting for coach - Click to view submitted video", "Chờ HLV xem - Bấm xem video đã gửi"],
+  ["submissions", "bài nộp"],
+  ["/ page", "/ trang"],
+  ["Previous page", "Trang trước"],
+  ["Next page", "Trang sau"],
+  ["plans", "kế hoạch"],
+  ["plans / workouts", "kế hoạch & bài tập"],
+  ["Search plans, students...", "Tìm kiếm kế hoạch, học viên..."]
 ];
 
 for (const [en, vi] of workoutSubmissionTranslations) {

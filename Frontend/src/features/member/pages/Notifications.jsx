@@ -39,7 +39,7 @@ import { getReasonLabel, formatScheduleSlot } from '../../coach/coachRescheduleU
 const TABS = [
   { id: 'ALL', labelKey: 'All', shortLabelKey: 'All', icon: Bell, types: [] },
   { id: 'SCHEDULE', labelKey: 'Classes & Schedule', shortLabelKey: 'Schedule', icon: Calendar, types: ['BOOKING', 'SCHEDULE'] },
-  { id: 'COACH', labelKey: 'Coach & Workouts', shortLabelKey: 'Coach', icon: Dumbbell, types: ['COACH', 'WORKOUT'] },
+  { id: 'COACH', labelKey: 'Coach & Workouts', shortLabelKey: 'Coach', icon: Dumbbell, types: ['COACH', 'WORKOUT', 'WORKOUT_FEEDBACK'] },
   { id: 'PAYMENT', labelKey: 'Packages & Billing', shortLabelKey: 'Billing', icon: CreditCard, types: ['PAYMENT', 'MEMBERSHIP'] },
   { id: 'SUPPORT', labelKey: 'Support Desk', shortLabelKey: 'Support', icon: LifeBuoy, types: ['SUPPORT', 'SUPPORT_REVOKED'] },
   { id: 'SYSTEM', labelKey: 'System Alerts', shortLabelKey: 'System', icon: ShieldCheck, types: ['SYSTEM', 'URGENT', 'ANNOUNCEMENT'] }
@@ -60,12 +60,15 @@ const getNotificationMeta = (type, title = '', message = '') => {
         action: { label: t('View Schedule'), path: '/member/schedule' }
       };
     case 'COACH':
+    case 'WORKOUT_FEEDBACK':
       return {
         badge: t('Coach'),
         icon: UserCheck,
         badgeStyle: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
         iconStyle: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-        action: { label: t('View Dashboard'), path: '/member/dashboard' }
+        action: (lowerMsg.includes('bài tập') || lowerMsg.includes('nhận xét') || lowerMsg.includes('workout'))
+          ? { label: t('View Workouts'), path: '/member/schedule' }
+          : { label: t('View Dashboard'), path: '/member/dashboard' }
       };
     case 'WORKOUT':
       return {
@@ -141,6 +144,17 @@ const getNotificationMeta = (type, title = '', message = '') => {
           badgeStyle: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
           iconStyle: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
           action: { label: t('View Packages'), path: '/member/memberships' }
+        };
+      }
+      if (lowerMsg.includes('hlv') || lowerMsg.includes('huấn luyện viên') || lowerMsg.includes('coach') || lowerMsg.includes('nhận xét') || lowerMsg.includes('bài tập') || lowerMsg.includes('giáo án')) {
+        return {
+          badge: t('Coach'),
+          icon: UserCheck,
+          badgeStyle: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+          iconStyle: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+          action: (lowerMsg.includes('bài tập') || lowerMsg.includes('nhận xét') || lowerMsg.includes('workout'))
+            ? { label: t('View Workouts'), path: '/member/schedule' }
+            : { label: t('View Dashboard'), path: '/member/dashboard' }
         };
       }
       return {
@@ -362,11 +376,22 @@ const Notifications = () => {
       if (tab.id !== 'ALL') {
         matching = allowedNotifications.filter(n => {
           const normType = (n.type || 'SYSTEM').toUpperCase();
-          if (tab.types.includes(normType)) return true;
+          const combined = ((n.title || '') + ' ' + (n.message || '')).toLowerCase();
+
+          if (tab.types.includes(normType)) {
+            if (tab.id === 'SYSTEM' && normType === 'SYSTEM') {
+              const isContextual =
+                combined.includes('class') || combined.includes('lớp') || combined.includes('lịch') || combined.includes('booking') ||
+                combined.includes('membership') || combined.includes('gói') || combined.includes('check-in') ||
+                combined.includes('hlv') || combined.includes('huấn luyện viên') || combined.includes('coach') || combined.includes('nhận xét') || combined.includes('bài tập') || combined.includes('giáo án');
+              if (isContextual) return false;
+            }
+            return true;
+          }
           if (normType === 'SYSTEM') {
-            const combined = ((n.title || '') + ' ' + (n.message || '')).toLowerCase();
             if (tab.id === 'SCHEDULE' && (combined.includes('class') || combined.includes('lớp') || combined.includes('lịch') || combined.includes('booking'))) return true;
             if (tab.id === 'PAYMENT' && (combined.includes('membership') || combined.includes('gói') || combined.includes('check-in'))) return true;
+            if (tab.id === 'COACH' && (combined.includes('hlv') || combined.includes('huấn luyện viên') || combined.includes('coach') || combined.includes('nhận xét') || combined.includes('bài tập') || combined.includes('giáo án'))) return true;
           }
           return false;
         });
@@ -392,10 +417,19 @@ const Notifications = () => {
 
       if (activeTab !== 'ALL') {
         const matchesType = currentTab.types.includes(normType);
+        if (activeTab === 'SYSTEM' && normType === 'SYSTEM') {
+          const isContextual =
+            combined.includes('class') || combined.includes('lớp') || combined.includes('lịch') || combined.includes('booking') ||
+            combined.includes('membership') || combined.includes('gói') || combined.includes('check-in') ||
+            combined.includes('hlv') || combined.includes('huấn luyện viên') || combined.includes('coach') || combined.includes('nhận xét') || combined.includes('bài tập') || combined.includes('giáo án');
+          if (isContextual) return false;
+        }
+
         let matchesContext = false;
         if (normType === 'SYSTEM') {
           if (activeTab === 'SCHEDULE' && (combined.includes('class') || combined.includes('lớp') || combined.includes('lịch') || combined.includes('booking'))) matchesContext = true;
           if (activeTab === 'PAYMENT' && (combined.includes('membership') || combined.includes('gói') || combined.includes('check-in'))) matchesContext = true;
+          if (activeTab === 'COACH' && (combined.includes('hlv') || combined.includes('huấn luyện viên') || combined.includes('coach') || combined.includes('nhận xét') || combined.includes('bài tập') || combined.includes('giáo án'))) matchesContext = true;
         }
         if (!matchesType && !matchesContext) return false;
       }
