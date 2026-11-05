@@ -14,8 +14,10 @@ export default function TeachingSlotSettings() {
     catch(e){setError(e.response?.data?.message || 'Unable to save. Please try again.');}
     finally{setBusy(false);}
   }
-  return <details className="manager-panel" style={{padding:16,marginBottom:16}}>
-    <summary style={{cursor:'pointer',fontWeight:600}}>{t('Teaching slot settings')} · {t('Duration and slots are configured per subject')}</summary>
+  // Center-wide frame every subject's slots must fit in; set once, rarely edited.
+  return <details className="ops-hours">
+    <summary>{current ? <><strong>{t('Opening hours')}</strong><span>{String(current.opensAt).slice(0,5)}–{String(current.closesAt).slice(0,5)}</span><span>{t('Changeover {0} minutes',[current.breakMinutes])}</span></> : <strong>{t('Opening hours')}</strong>}<em>{t('Edit')}</em></summary>
+    <p className="ops-note">{t('Every subject’s teaching slots must fit inside these hours.')}</p>
     <p className="ops-note">{t('Changes apply to new or rescheduled sessions only. Existing sessions keep their times and reserved changeover.')}</p>
     {(loadError || error) && <p role="alert" className="manager-alert">{t(loadError || error)}</p>}
     {current && <form onSubmit={save}><fieldset disabled={busy} style={{border:0,padding:0}}>

@@ -5137,3 +5137,6 @@ const operationsFlowLabels = {
   'Step 4: the sessions of each class.':'Bước 4: các buổi học của từng lớp.',
 };
 for (const [en, vi] of Object.entries(operationsFlowLabels)) translations[en] = [en, vi];
+
+const operationsHoursLabels = { 'Opening hours':'Giờ hoạt động', 'Changeover {0} minutes':'Chuyển ca {0} phút', 'Every subject’s teaching slots must fit inside these hours.':'Các ca học của mọi bộ môn phải nằm trong khung giờ này. Thay đổi chỉ áp dụng cho buổi mới hoặc buổi đổi lịch.' };
+for (const [en, vi] of Object.entries(operationsHoursLabels)) translations[en] = [en, vi];

@@ -103,3 +103,12 @@
 .ops-page .ops-flow-tabs > button { position:relative; }
 .ops-page .ops-flow-tabs > button:not(:last-child)::after { content:'›'; position:absolute; right:-14px; top:50%; transform:translateY(-50%); font-size:18px; line-height:1; color:var(--text-muted); pointer-events:none; }
 .ops-page .ops-flow-tabs { column-gap:28px; }
+
+/* Center opening hours: one summary line at the top of the Subjects step. */
+.ops-page .ops-hours { margin:0 0 16px; padding:12px 16px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+.ops-page .ops-hours > summary { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; cursor:pointer; list-style:none; font-size:14px; color:var(--text-secondary); }
+.ops-page .ops-hours > summary::-webkit-details-marker { display:none; }
+.ops-page .ops-hours > summary strong { color:var(--text); font-weight:600; }
+.ops-page .ops-hours > summary em { margin-left:auto; font-style:normal; font-weight:600; color:var(--primary); }
+.ops-page .ops-hours[open] > summary em { visibility:hidden; }
+.ops-page .ops-hours form { margin-top:12px; }
