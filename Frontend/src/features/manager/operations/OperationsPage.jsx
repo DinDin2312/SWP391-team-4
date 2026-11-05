@@ -1,4 +1,5 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
+import SearchSelect from '../components/SearchSelect';
 import { useSearchParams } from 'react-router-dom';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, List, Plus, Search, Sparkles, Dumbbell, MapPin, Clock3, Users, AlertTriangle } from 'lucide-react';
@@ -26,7 +27,7 @@ const sectionIcons={schedules:CalendarDays,classes:Users,subjects:Dumbbell,rooms
 function SectionHeading({title,description,count}){return <div className="ops-section-heading"><div><h2>{t(title)}</h2><p>{t(description)}</p></div>{count!==undefined && <span>{t('{0} results',[count])}</span>}</div>;}
 export function OperationsSkeleton(){useLanguage();return <div className="ops-skeleton" role="status" aria-label={t('Loading Center Operations')}><div/><div/><div/></div>;}
 function Empty({title='No matching results',children,action}){return <div className="ops-empty"><CalendarDays size={24}/><strong>{t(title)}</strong>{children && <p>{children}</p>}{action}</div>;}
-function Filter({label,value,options,onChange,status=false,allowAll=true,allLabel='All'}){return <label>{t(label)}<select value={value} onChange={e=>onChange(e.target.value)}>{allowAll && <option value="">{t(allLabel)}</option>}{options.map(([id,name,count])=><option key={id} value={id}>{status?t(name):name}{count==null?'':` · ${count?t('{0} classes',[count]):t('no classes yet')}`}</option>)}</select></label>;}
+function Filter({label,value,options,onChange,status=false,allowAll=true,allLabel='All'}){if(!status && allowAll)return <SearchSelect label={label} options={options.map(([id,name,count])=>({value:id,label:name,hint:count!=null?t('{0} classes',[count]):undefined}))} value={value} onChange={onChange} allLabel={allLabel} placeholder={`${t('Search')} ${t(label).toLocaleLowerCase()}`}/>;return <label>{t(label)}<select value={value} onChange={e=>onChange(e.target.value)}>{allowAll && <option value="">{t(allLabel)}</option>}{options.map(([id,name,count])=><option key={id} value={id}>{status?t(name):name}{count==null?'':` · ${count?t('{0} classes',[count]):t('no classes yet')}`}</option>)}</select></label>;}
 function SearchField({value,onChange,label}){
   const [local,setLocal]=useState({source:value,draft:value});const timer=useRef();
   if(local.source!==value) setLocal({source:value,draft:value});

@@ -262,6 +262,7 @@ public class ManagerService {
             }
         }
         int savedId = managerRepository.saveRoom(id, request);
+        if (request.subjectIds() != null) managerRepository.replaceRoomSubjects(savedId, request.subjectIds());
         audit(actor, id == null ? "CREATE" : "UPDATE", "ROOM", savedId, request.roomName() + " - " + request.capacity() + " seats");
         return savedId;
     }
@@ -298,6 +299,7 @@ public class ManagerService {
         }
         if(id!=null) packageBenefits.validateClassRoom(id,request.roomId());
         int savedId = managerRepository.saveClass(id, request);
+        managerRepository.linkRoomSubject(request.roomId(), request.subjectId());
         audit(actor, id == null ? "CREATE" : "UPDATE", "CLASS", savedId, request.className() + " - HLV " + coach.getFullName());
         return savedId;
     }

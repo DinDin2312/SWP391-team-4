@@ -38,3 +38,11 @@
   .class-picker-check { display:none; }
   .class-picker-keys { display:none; }
 }
+
+/* SearchSelect: same control as the class picker, without the code column. */
+.search-select .class-picker-list li[role="option"] { grid-template-columns:minmax(0,1fr) auto; }
+.search-select-group { padding:8px 12px 4px; font-size:12px; font-weight:600; color:var(--text-muted); cursor:default; }
+.search-select-group:not(:first-child) { border-top:1px solid var(--border); margin-top:4px; }
+.search-select-more { padding:4px 6px; }
+.search-select-more button { width:100%; text-align:left; padding:8px 10px; border:0; border-radius:8px; background:none; color:var(--primary); font-size:13px; font-weight:600; cursor:pointer; }
+.search-select-more button:hover, .search-select-more button:focus-visible { background:var(--surface-hover); outline:none; }

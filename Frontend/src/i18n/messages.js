@@ -5073,3 +5073,15 @@ for (const [en, vi] of workoutSubmissionTranslations) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }
+
+const operationsUsabilityLabels = {
+  'Type to search':'Gõ để tìm','Clear selection':'Xóa lựa chọn','No match for "{0}".':'Không có kết quả cho "{0}".',
+  'Showing {0} of {1}. Keep typing to narrow down.':'Đang hiện {0}/{1}. Gõ thêm để thu hẹp.',
+  'Search subjects':'Tìm bộ môn','Search coaches':'Tìm huấn luyện viên','Search rooms':'Tìm phòng','Choose a subject first':'Chọn bộ môn trước',
+  'Rooms for this subject':'Phòng dành cho bộ môn này','Other rooms':'Phòng khác',
+  'No room is linked to this subject yet. Link subjects in the room settings.':'Chưa có phòng nào gắn với bộ môn này. Gắn bộ môn trong phần sửa phòng.',
+  'This room is not set up for the selected subject. Saving will link them.':'Phòng này chưa dành cho bộ môn đã chọn. Khi lưu, hệ thống sẽ gắn phòng với bộ môn.',
+  'Subjects taught in this room':'Bộ môn học tại phòng này','Rooms are suggested first when creating a class of these subjects.':'Phòng sẽ được gợi ý trước khi tạo lớp thuộc các bộ môn này.',
+  'Search':'Tìm','Show {0} other options':'Hiện {0} lựa chọn khác',
+};
+for (const [en, vi] of Object.entries(operationsUsabilityLabels)) translations[en] = [en, vi];

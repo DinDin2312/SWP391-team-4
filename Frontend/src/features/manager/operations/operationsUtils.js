@@ -100,6 +100,7 @@ export function operationPayload(type, form) {
       roomId: form.roomId,
       roomName: form.roomName.trim(),
       capacity: Number(form.capacity),
+      subjectIds: (form.subjectIds || []).map(Number),
     };
   if (type === "class")
     return {
@@ -165,3 +166,12 @@ export function cascadeFilterPatch(data, selection, key, value) {
   }
   return reset;
 }
+
+// Class form options: coaches who teach the subject; rooms set up for the subject first (group 0).
+const linked = (row, subjectId) => (row.subjectIds || []).map(String).includes(String(subjectId));
+export const roomFitsSubject = (rooms, roomId, subjectId) => Boolean(roomId) && linked(rooms.find(r => String(r.roomId) === String(roomId)) || {}, subjectId);
+export const classCoachOptions = (data, subjectId) => (subjectId ? data.coaches.filter(coach => linked(coach, subjectId)) : [])
+  .map(row => ({ value: row.userId, label: row.fullName, hint: row.email }));
+export const classRoomOptions = (data, subjectId) => data.rooms
+  .map(row => ({ value: row.roomId, label: row.roomName, hint: `${row.capacity}`, group: subjectId && linked(row, subjectId) ? 0 : 1 }))
+  .sort((a, b) => a.group - b.group);

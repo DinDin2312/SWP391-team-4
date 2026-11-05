@@ -1,4 +1,6 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
+import SearchSelect from '../components/SearchSelect';
+import ClassPicker from '../components/ClassPicker';
 import { useEffect, useId, useRef, useState } from "react";
 import { AlertTriangle, CalendarDays, MapPin, Users, X } from "lucide-react";
 import managerService from "../services/managerService";
@@ -14,6 +16,9 @@ import {
   eligibleClasses,
   operationPayload,
   sessionDay,
+  classCoachOptions,
+  classRoomOptions,
+  roomFitsSubject,
 } from "./operationsUtils";
 import { Occupancy, OperationStatus } from "./OperationsUI";
 import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
@@ -249,7 +254,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
   },[policy,editing,type]);
   const title = config.supplementary ? "Add supplementary session" : `${editing ? "Edit" : "Create"} ${type === "series" ? "repeating sessions" : type === "schedule" ? "session" : type}`;
   const set = (key, value) => {
-    setForm((current) => ({ ...current, [key]: value, ...(type==='class' && key==='subjectId'?{coachId:''}:{}), ...(['schedule','series'].includes(type) && key==='classId'?{startTime:'',endTime:''}:{}), ...((type==='schedule' || type==='series') && key==='startTime'?{endTime:slotEnd(value,policy?.durationMinutes || 90)}:{}) }));
+    setForm((current) => ({ ...current, [key]: value, ...(type==='class' && key==='subjectId'?{coachId:'',roomId:roomFits(current.roomId,value)?current.roomId:''}:{}), ...(['schedule','series'].includes(type) && key==='classId'?{startTime:'',endTime:''}:{}), ...((type==='schedule' || type==='series') && key==='startTime'?{endTime:slotEnd(value,policy?.durationMinutes || 90)}:{}) }));
     setErrors((current) => ({ ...current, [key]: undefined }));
   };
   const candidates =
@@ -260,6 +265,9 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
   const selectedRoom = data.rooms.find(
     (row) => String(row.roomId) === String(form.roomId),
   );
+  const roomFits=(roomId,subjectId)=>roomFitsSubject(data.rooms,roomId,subjectId);
+  const roomOptions = classRoomOptions(data,form.subjectId).map(option=>({...option,hint:t('{0} seats',[option.hint])}));
+  const searchSelect=(key,label,options,extra={})=><SearchSelect key={key} name={key} label={label} required options={options} value={form[key]} error={errors[key]} onChange={value=>set(key,value)} {...extra}/>;
   const coaches = data.coaches.filter(coach=>(coach.subjectIds || []).map(Number).includes(Number(form.subjectId)));
   const input = (key, label, attrs = {}, help) => (
     <Field key={key} name={key} label={t(label)} error={errors[key]} help={help}>
@@ -386,32 +394,22 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                   { type: "number", min: 1, step: 1 },
                   "Must accommodate the largest class assigned to this room.",
                 )}
+                <fieldset className="ops-room-subjects"><legend>{t('Subjects taught in this room')}</legend>
+                  <div>{data.subjects.map(row=>{const ids=(form.subjectIds || []).map(String),on=ids.includes(String(row.subjectId));return <label key={row.subjectId}><input type="checkbox" checked={on} onChange={()=>set('subjectIds',on?ids.filter(id=>id!==String(row.subjectId)):[...ids,String(row.subjectId)])}/>{row.subjectName}</label>;})}</div>
+                  <small className="ops-field-help">{t('Rooms are suggested first when creating a class of these subjects.')}</small>
+                </fieldset>
               </>
             )}
             {type === "class" && (
               <>
                 {input("className", "Class name", { maxLength: 255 })}
-                {select(
-                  "subjectId",
-                  "Subject",
-                  data.subjects.map((row) => [row.subjectId, row.subjectName]),
-                )}
+                {searchSelect("subjectId","Subject",data.subjects.map(row=>({value:row.subjectId,label:row.subjectName})),{placeholder:'Search subjects'})}
                 {form.subjectId && <p className="ops-note">{t('Inherited subject timetable')}: {t('{0} minutes per session',[data.subjects.find(subject=>String(subject.subjectId)===String(form.subjectId))?.durationMinutes || 90])}</p>}
                 {form.subjectId && !coaches.length && <p className="ops-warning" role="status">{t('No coaches are assigned to this subject. Assign teaching subjects in Staff & Roles first.')}</p>}
                 {form.coachId && !coaches.some(c=>String(c.userId)===String(form.coachId)) && <p className="ops-warning" role="alert">{t('The selected coach is not assigned to this subject.')}</p>}
-                {select(
-                  "coachId",
-                  "Coach",
-                  coaches.map((row) => [row.userId, row.fullName]),
-                )}
-                {select(
-                  "roomId",
-                  "Room",
-                  data.rooms.map((row) => [
-                    row.roomId,
-                    `${row.roomName} · ${t('{0} seats',[row.capacity])}`,
-                  ]),
-                )}
+                {searchSelect("coachId","Coach",classCoachOptions(data,form.subjectId),{disabled:!form.subjectId,placeholder:form.subjectId?'Search coaches':'Choose a subject first'})}
+                {searchSelect("roomId","Room",roomOptions,{groupLabels:form.subjectId?['Rooms for this subject','Other rooms']:[],collapseGroup:form.subjectId && roomOptions.some(o=>o.group===0)?1:undefined,placeholder:'Search rooms',help:form.subjectId && !roomOptions.some(o=>o.group===0)?'No room is linked to this subject yet. Link subjects in the room settings.':undefined})}
+                {form.roomId && form.subjectId && !roomFits(form.roomId,form.subjectId) && <p className="ops-warning" role="status">{t('This room is not set up for the selected subject. Saving will link them.')}</p>}
                 {input(
                   "maxSlots",
                   "Capacity per session",
@@ -442,7 +440,7 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
             )}
             {(type === "schedule" || type === "series") && (
               <>
-                {select(
+                {!editing ? <ClassPicker classes={candidates} value={form.classId || ''} onChange={value=>set('classId',value)} required/> : select(
                   "classId",
                   "Class",
                   (editing ? [config.item] : candidates).map((row) => [

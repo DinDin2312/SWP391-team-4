@@ -5,15 +5,17 @@ import { MemoryRouter } from 'react-router-dom';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 
-test('class editor only offers coaches assigned to the chosen subject',async()=>{
+test('class editor uses searchable subject, coach and room fields and locks coach until a subject is chosen',async()=>{
   const server=await createServer({server:{middlewareMode:true,ws:false},appType:'custom'});
   try {
     const {OperationEditor}=await server.ssrLoadModule('/src/features/manager/operations/OperationsDrawers.jsx');
-    const data={classes:[],subjects:[{subjectId:1,subjectName:'Swimming'},{subjectId:2,subjectName:'Yoga'}],rooms:[],coaches:[{userId:10,fullName:'Swim coach',subjectIds:[1]},{userId:11,fullName:'Yoga coach',subjectIds:[2]}]};
-    const render=subjectId=>renderToStaticMarkup(React.createElement(OperationEditor,{config:{type:'class',initial:{subjectId}},data,onClose:()=>{},onSaved:()=>{}}));
-    assert.ok(render(1).includes('Swim coach'));assert.ok(!render(1).includes('Yoga coach'));
-    assert.ok(render(2).includes('Yoga coach'));assert.ok(!render(2).includes('Swim coach'));
-    assert.ok(!render('').includes('Swim coach'));
+    const data={classes:[],subjects:[{subjectId:1,subjectName:'Swimming'}],rooms:[{roomId:6,roomName:'Pool',capacity:20,subjectIds:[1]}],coaches:[{userId:10,fullName:'Swim coach',subjectIds:[1]}]};
+    const render=initial=>renderToStaticMarkup(React.createElement(OperationEditor,{config:{type:'class',initial},data,onClose:()=>{},onSaved:()=>{}}));
+    const empty=render({});
+    assert.equal((empty.match(/role="combobox"/g)||[]).length,3);
+    assert.ok(/name="coachId"[^>]*disabled/.test(empty) || /disabled=""[^>]*name="coachId"/.test(empty));
+    const picked=render({subjectId:1,coachId:10,roomId:6});
+    assert.ok(picked.includes('Swim coach') && picked.includes('Pool'));
   } finally {await server.close();}
 });
 

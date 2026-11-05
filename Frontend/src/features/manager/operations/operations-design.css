@@ -71,3 +71,14 @@
 .ops-editor-dialog .ops-field { min-width:0; }
 @media(max-width:600px) { .ops-editor-dialog .ops-editor-fields { grid-template-columns:1fr; } }
 @media(max-width:767px) { .ops-page .ops-stat-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .ops-page .manager-tabs button { padding:10px 12px; } .ops-page .ops-class-toolbar { grid-template-columns:repeat(2,minmax(0,1fr)); } .ops-page .ops-query-field { grid-column:1/-1; } .ops-section-heading { align-items:flex-start; } .ops-section-heading > span { display:none; } .ops-backdrop { padding:12px; } .ops-backdrop .ops-drawer { max-height:calc(100dvh - 24px); border-radius:14px; } .ops-drawer > header,.ops-drawer .ops-drawer-body { padding:20px; } .ops-drawer > header h2 { font-size:21px; } .ops-drawer .ops-session-facts { grid-template-columns:1fr; } .ops-page .ops-resource-toolbar > label { width:100%; } }
+
+/* Room ↔ subject links in the room editor. */
+.ops-room-subjects { border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin:0; display:grid; gap:8px; }
+.ops-room-subjects legend { padding:0 6px; font-size:14px; font-weight:600; color:var(--text); }
+.ops-room-subjects > div { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:6px 12px; max-height:220px; overflow:auto; }
+.ops-room-subjects label { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); cursor:pointer; }
+.ops-page .search-select .class-picker-control { min-height:44px; }
+.ops-editor-dialog .ops-room-subjects { grid-column:1 / -1; }
+.ops-editor-dialog .ops-room-subjects input[type="checkbox"] { width:16px; height:16px; min-height:0; padding:0; margin:0; flex:none; accent-color:var(--primary); box-shadow:none; }
+.ops-editor-dialog .ops-room-subjects > div > label { display:flex; flex-direction:row; align-items:center; justify-content:flex-start; gap:8px; margin:0; font-size:14px; font-weight:400; text-transform:none; letter-spacing:0; }
+.ops-editor-dialog .ops-room-subjects input[type="checkbox"] { appearance:auto; -webkit-appearance:checkbox; border-radius:3px; background:none; }

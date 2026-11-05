@@ -131,7 +131,7 @@ test("operationPayload normalizes subject, room, class, schedule and series payl
   );
   assert.deepEqual(
     operationPayload("room", { roomId: 2, roomName: " Room A ", capacity: "30" }),
-    { roomId: 2, roomName: "Room A", capacity: 30 },
+    { roomId: 2, roomName: "Room A", capacity: 30, subjectIds: [] },
   );
   assert.deepEqual(
     operationPayload("class", {
@@ -220,4 +220,19 @@ test('cascading filters narrow coaches and rooms to the selected subject and coa
   assert.deepEqual(cascadeFilterPatch(data, { subject: '', coach: '4', room: '2' }, 'subject', '1'), { coach: true, room: true });
   assert.deepEqual(cascadeFilterPatch(data, { subject: '1', coach: '5', room: '4' }, 'coach', '5'), {});
   assert.deepEqual(cascadeFilterOptions({}, {}), { subject: [], coach: [], room: [] });
+});
+
+import { classCoachOptions, classRoomOptions, roomFitsSubject } from "./operationsUtils.js";
+test("class form offers subject coaches and puts the subject's rooms first", () => {
+  const data = {
+    coaches: [{ userId: 10, fullName: "Swim coach", subjectIds: [1] }, { userId: 11, fullName: "Yoga coach", subjectIds: [2] }],
+    rooms: [{ roomId: 5, roomName: "Gym", capacity: 40, subjectIds: [3] }, { roomId: 6, roomName: "Pool", capacity: 20, subjectIds: [1] }],
+  };
+  assert.deepEqual(classCoachOptions(data, 1).map(o => o.label), ["Swim coach"]);
+  assert.deepEqual(classCoachOptions(data, "").map(o => o.label), []);
+  assert.deepEqual(classRoomOptions(data, 1).map(o => [o.label, o.group]), [["Pool", 0], ["Gym", 1]]);
+  assert.deepEqual(classRoomOptions(data, "").map(o => o.group), [1, 1]);
+  assert.equal(roomFitsSubject(data.rooms, 6, 1), true);
+  assert.equal(roomFitsSubject(data.rooms, 5, 1), false);
+  assert.equal(roomFitsSubject(data.rooms, "", 1), false);
 });

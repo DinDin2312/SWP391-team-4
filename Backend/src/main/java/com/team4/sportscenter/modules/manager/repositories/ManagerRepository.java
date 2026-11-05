@@ -297,11 +297,26 @@ public class ManagerRepository {
     }
 
     public List<Map<String, Object>> rooms() {
-        return jdbc.queryForList("""
+        List<Map<String, Object>> rows = jdbc.queryForList("""
                 SELECT r.room_id roomId,r.room_name roomName,r.capacity,r.image_path imagePath,COUNT(c.class_id) classCount
                 FROM ROOMS r LEFT JOIN CLASSES c ON c.room_id=r.room_id
                 GROUP BY r.room_id,r.room_name,r.capacity,r.image_path ORDER BY r.room_name
                 """);
+        List<Map<String, Object>> links = jdbc.queryForList("SELECT room_id roomId,subject_id subjectId FROM ROOM_SUBJECTS");
+        rows.forEach(row -> row.put("subjectIds", links.stream().filter(l -> l.get("roomId").equals(row.get("roomId"))).map(l -> ((Number) l.get("subjectId")).intValue()).toList()));
+        return rows;
+    }
+
+    public void replaceRoomSubjects(int roomId, List<Integer> subjectIds) {
+        jdbc.update("DELETE FROM ROOM_SUBJECTS WHERE room_id=?", roomId);
+        for (Integer subjectId : new java.util.LinkedHashSet<>(subjectIds)) {
+            requireSubject(subjectId);
+            jdbc.update("INSERT INTO ROOM_SUBJECTS(room_id,subject_id) VALUES (?,?)", roomId, subjectId);
+        }
+    }
+
+    public void linkRoomSubject(int roomId, int subjectId) {
+        jdbc.update("INSERT IGNORE INTO ROOM_SUBJECTS(room_id,subject_id) VALUES (?,?)", roomId, subjectId);
     }
 
     public int saveRoom(Integer id, ManagerRequests.RoomRequest request) {

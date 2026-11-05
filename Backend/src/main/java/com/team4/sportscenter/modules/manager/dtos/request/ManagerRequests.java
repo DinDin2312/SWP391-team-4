@@ -46,7 +46,8 @@ public final class ManagerRequests {
         public SubjectRequest(String subjectName,String description) {this(subjectName,description,null,null);}
     }
 
-    public record RoomRequest(@NotBlank @Size(max = 255) String roomName, @NotNull @Min(1) Integer capacity) {
+    public record RoomRequest(@NotBlank @Size(max = 255) String roomName, @NotNull @Min(1) Integer capacity, java.util.List<Integer> subjectIds) {
+        public RoomRequest(String roomName, Integer capacity) { this(roomName, capacity, null); }
     }
 
     public record ClassRequest(

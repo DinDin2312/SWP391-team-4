@@ -40,3 +40,18 @@ test('code split, highlight and subject options', () => {
   assert.deepEqual(highlightParts('Yoga', ''), [{ text: 'Yoga', match: false }]);
   assert.deepEqual(subjectOptions(classes).map(row => [row.subjectName, row.count]), [['Bơi Lội', 2], ['Yoga Căn Bản', 1]]);
 });
+
+import { searchOptions } from './classSearch.js';
+test('searchOptions folds accents, keeps groups in order and caps results', () => {
+  const rooms = [
+    { value: 1, label: 'Phòng Gym', group: 1 },
+    { value: 2, label: 'Bể Bơi Olympic', hint: '100 chỗ', group: 0 },
+    { value: 3, label: 'Bể bơi trẻ em', group: 0 },
+  ];
+  assert.deepEqual(searchOptions(rooms, 'be boi').items.map(o => o.value), [2, 3]);
+  assert.deepEqual(searchOptions(rooms, '100').items.map(o => o.value), [2]);
+  assert.deepEqual(searchOptions(rooms, '').items.map(o => o.value), [1, 2, 3]);
+  assert.deepEqual(searchOptions([...rooms, { value: 4, label: 'Gym 2', group: 0 }], 'gym').items.map(o => o.value), [4, 1]);
+  const many = searchOptions(Array.from({ length: 80 }, (_, i) => ({ value: i, label: `Room ${i}` })), 'room', 50);
+  assert.equal(many.items.length, 50); assert.equal(many.total, 80);
+});
