@@ -269,7 +269,9 @@ class ManagerIntegrationTests {
             var policy = service.slotPolicy();
             assertEquals(30, ((Number) policy.get("courseLeadDays")).intValue());
             assertEquals(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(30).toString(), policy.get("earliestCourseStart"));
-            var error = assertThrows(IllegalArgumentException.class, () -> service.previewSchedulePlan(planRules()));
+            var soon = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(5);
+            var tooSoon = new SchedulePlanRequest(course,soon,soon.plusDays(14),3,90,List.of(1,2,3,4,5,6,7),java.time.LocalTime.of(6,0),java.time.LocalTime.of(12,0),java.time.LocalTime.of(6,0),15,List.of());
+            var error = assertThrows(IllegalArgumentException.class, () -> service.previewSchedulePlan(tooSoon));
             assertTrue(error.getMessage().contains("30 days notice"));
             assertThrows(IllegalArgumentException.class, () -> service.saveCourseLeadDays(-1, actor));
         } finally {
