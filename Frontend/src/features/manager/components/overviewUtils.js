@@ -29,3 +29,22 @@ export function sessionCountdown(value, now) {
   const minutes = Math.max(0, Math.ceil((parseCenterTime(value) - now) / 60000));
   return { hours: Math.floor(minutes / 60), minutes: minutes % 60 };
 }
+
+// Overview redesign helpers.
+const ratio = (a, b) => (Number(b) > 0 ? Math.round((Number(a) / Number(b)) * 100) : 0);
+export const fillPercent = pulse => ratio(pulse?.bookedSeatsToday, pulse?.totalSeatsToday);
+// Past sessions collapse; the rest keep their order and the first non-finished one is "next".
+export function splitTodaySchedule(rows, now) {
+  const sorted = [...(rows || [])].filter(r => r.status !== 'CANCELLED').sort((a, b) => parseCenterTime(a.startTime) - parseCenterTime(b.startTime));
+  const done = sorted.filter(r => r.status === 'COMPLETED' || parseCenterTime(r.endTime) <= now);
+  const live = sorted.filter(r => !done.includes(r));
+  const nowIndex = live.findIndex(r => parseCenterTime(r.startTime) > now);
+  return { done, live, nowIndex: nowIndex === -1 ? live.length : nowIndex };
+}
+export function decisionLink(item, today) {
+  if (item.type === 'RESCHEDULE') return '/admin/dashboard?view=reschedule';
+  if (item.type === 'ESCALATION') return '/admin/dashboard?view=support';
+  if (item.type === 'PAYMENT_REVIEW') return '/admin/dashboard?view=transactions&mode=invoices&status=REVIEW';
+  const day = item.dueAt ? centerDate(item.dueAt) : today;
+  return `/admin/dashboard?view=operations&tab=schedules&from=${day}&to=${day}&lowRegistration=true&status=SCHEDULED`;
+}

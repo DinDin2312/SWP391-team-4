@@ -51,6 +51,57 @@ public class ManagerRepository {
         return result;
     }
 
+    // One queue of items only the manager can resolve, ordered by deadline.
+    public List<Map<String, Object>> decisions() {
+        LocalDateTime now = centerNow();
+        List<Map<String, Object>> items = new java.util.ArrayList<>();
+        jdbc.queryForList("""
+                SELECT rr.request_id id,rr.action_type actionType,c.class_name className,u.full_name coachName,
+                       rr.original_start_time dueAt,rr.proposed_start_time proposedAt,rr.reason_details detail
+                FROM SCHEDULE_RESCHEDULE_REQUESTS rr JOIN CLASSES c ON c.class_id=rr.class_id JOIN USERS u ON u.user_id=rr.coach_id
+                WHERE rr.status='PENDING' ORDER BY rr.original_start_time LIMIT 20
+                """).forEach(r -> items.add(decision("RESCHEDULE", r)));
+        jdbc.queryForList("""
+                SELECT sr.request_id id,sr.title className,u.full_name coachName,sr.category actionType,
+                       sr.created_at createdAt,sr.priority detail
+                FROM SUPPORT_REQUESTS sr JOIN USERS u ON u.user_id=sr.user_id
+                WHERE sr.status='ESCALATED' ORDER BY sr.created_at LIMIT 20
+                """).forEach(r -> items.add(decision("ESCALATION", r)));
+        jdbc.queryForList("""
+                SELECT i.invoice_id id,u.full_name coachName,i.total_amount amount,i.created_at createdAt
+                FROM INVOICES i LEFT JOIN USERS u ON u.user_id=i.user_id
+                WHERE i.status='REVIEW' ORDER BY i.created_at LIMIT 20
+                """).forEach(r -> items.add(decision("PAYMENT_REVIEW", r)));
+        jdbc.queryForList(SESSION_SQL + "WHERE s.start_time>=? AND s.start_time<? AND s.status='SCHEDULED' AND c.max_slots>0 AND " + BOOKED_SQL + "<c.max_slots*? ORDER BY s.start_time",
+                now, now.plusHours(24), LOW_REGISTRATION_THRESHOLD).stream().map(this::localTimes)
+                .forEach(r -> { Map<String, Object> d = decision("LOW_FILL", r); d.put("id", r.get("scheduleId")); d.put("dueAt", r.get("startTime")); items.add(d); });
+        items.sort(java.util.Comparator.comparing(d -> String.valueOf(d.getOrDefault("dueAt", d.get("createdAt")))));
+        return items;
+    }
+
+    private Map<String, Object> decision(String type, Map<String, Object> row) {
+        Map<String, Object> d = new java.util.LinkedHashMap<>(row);
+        d.put("type", type);
+        d.replaceAll((k, v) -> v instanceof Timestamp ts ? ts.toLocalDateTime().toString() : v instanceof LocalDateTime ldt ? ldt.toString() : v);
+        if (!d.containsKey("dueAt")) d.put("dueAt", d.get("createdAt"));
+        return d;
+    }
+
+    // Live floor numbers for today. A front-desk check-in stays CHECK_IN until checked out.
+    public Map<String, Object> todayPulse() {
+        LocalDateTime now = centerNow();
+        LocalDateTime start = now.toLocalDate().atStartOfDay(), end = start.plusDays(1);
+        Map<String, Object> p = new java.util.LinkedHashMap<>();
+        p.put("checkInsToday", jdbc.queryForObject("SELECT COUNT(*) FROM AUDIT_LOGS WHERE entity_type='MEMBER_CHECKIN' AND created_at>=? AND created_at<?", Integer.class, start, end));
+        p.put("onSiteNow", jdbc.queryForObject("SELECT COUNT(*) FROM AUDIT_LOGS WHERE entity_type='MEMBER_CHECKIN' AND action='CHECK_IN' AND created_at>=? AND created_at<?", Integer.class, start, end));
+        Map<String, Object> fill = jdbc.queryForMap("SELECT COALESCE(SUM(" + BOOKED_SQL + "),0) booked,COALESCE(SUM(c.max_slots),0) seats FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id WHERE s.start_time>=? AND s.start_time<? AND s.status<>'CANCELLED'", start, end);
+        p.put("bookedSeatsToday", ((Number) fill.get("booked")).intValue());
+        p.put("totalSeatsToday", ((Number) fill.get("seats")).intValue());
+        p.put("roomsInUse", jdbc.queryForObject("SELECT COUNT(DISTINCT c.room_id) FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id WHERE s.start_time<=? AND s.end_time>? AND s.status<>'CANCELLED'", Integer.class, now, now));
+        p.put("totalRooms", jdbc.queryForObject("SELECT COUNT(*) FROM ROOMS", Integer.class));
+        return p;
+    }
+
     public Map<String,Object> attentionPage(int page,int size) {
         LocalDateTime now = centerNow();
         LocalDate today = now.toLocalDate();

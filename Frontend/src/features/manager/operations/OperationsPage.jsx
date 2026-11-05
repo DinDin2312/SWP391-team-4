@@ -8,7 +8,7 @@ import OverviewRowMenu from '../components/OverviewRowMenu';
 import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
 import TeachingSlotSettings from './TeachingSlotSettings';
 import AutomaticScheduleDialog from './AutomaticScheduleDialog';
-import { BookingProgress } from '../components/OperationalOverview';
+import { BookingProgress } from '../components/BookingProgress';
 import { formatDate, formatTime, formatMoney } from '../../../utils/displayFormat';
 import { localDateTime, isoDate } from '../managerUtils';
 import { addDays, cascadeFilterOptions, cascadeFilterPatch, eligibleClasses, weekRange, sessionDay, scheduleMetrics, subjectTone } from './operationsUtils';
