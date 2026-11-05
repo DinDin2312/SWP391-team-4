@@ -881,10 +881,10 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         var booked=bookingRepository.findAllById(bookingIds);
         try{
             boolean isExpired;
-            if ("AWAITING_CONFIRMATION".equals(invoice.getStatus()) || "PENDING".equals(invoice.getStatus())) {
+            if ("AWAITING_CONFIRMATION".equals(invoice.getStatus())) {
                 isExpired = invoice.getCreatedAt() != null && invoice.getCreatedAt().isBefore(LocalDateTime.now().minusHours(24));
             } else {
-                isExpired = !"PENDING".equals(invoice.getStatus());
+                isExpired = !"PENDING".equals(invoice.getStatus()) || (invoice.getCreatedAt() != null && invoice.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(15)));
             }
             if (isExpired) throw new IllegalArgumentException("Checkout expired or previously failed");
             Integer expected=jdbc.queryForObject("SELECT COUNT(*) FROM INVOICE_DETAILS WHERE invoice_id=? AND package_id IS NOT NULL",Integer.class,invoice.getInvoiceId());
