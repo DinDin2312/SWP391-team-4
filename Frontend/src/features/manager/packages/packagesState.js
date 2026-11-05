@@ -1,5 +1,5 @@
 export const PACKAGE_SIZES = [10, 20, 50, 100];
-export const PACKAGE_SORTS = ['packageName', 'price', 'durationDays', 'activeSubscribers'];
+export const PACKAGE_SORTS = ['newest', 'packageName', 'price', 'durationDays', 'activeSubscribers'];
 const positive = value => /^\d+$/.test(value || '') && Number.isSafeInteger(Number(value)) && Number(value) > 0 ? Number(value) : 1;
 
 export function readPackagesState(query, preferredView = 'table') {
@@ -8,7 +8,7 @@ export function readPackagesState(query, preferredView = 'table') {
     search: query.get('pkgSearch') || '',
     selling: ['SELLING','STOPPED'].includes(query.get('pkgSelling'))?query.get('pkgSelling'):'',
     type: /^[A-Za-z0-9_-]{1,100}$/.test(query.get('pkgType')||'') ? query.get('pkgType') : '',
-    sort: PACKAGE_SORTS.includes(query.get('pkgSort')) ? query.get('pkgSort') : 'packageName',
+    sort: PACKAGE_SORTS.includes(query.get('pkgSort')) ? query.get('pkgSort') : 'newest',
     direction: query.get('pkgDir') === 'desc' ? 'desc' : 'asc',
     page: positive(query.get('pkgPage')),
     size: PACKAGE_SIZES.includes(Number(query.get('pkgSize'))) ? Number(query.get('pkgSize')) : 20,
@@ -38,6 +38,7 @@ export function selectPackages(records, state, language = 'en') {
   for (const row of matchingSearch) counts[row.packageType]++;
   const collator = new Intl.Collator(language === 'vi' ? 'vi' : 'en', { numeric: true, sensitivity: 'base' });
   const filtered = matchingSearch.filter(row => !state.type || row.packageType === state.type).sort((a, b) => {
+    if (state.sort === 'newest') return Number(b.packageId) - Number(a.packageId); // just-created packages come first
     const difference = state.sort === 'packageName' ? collator.compare(a.packageName || '', b.packageName || '') : Number(a[state.sort] || 0) - Number(b[state.sort] || 0);
     return (state.direction === 'desc' ? -difference : difference) || Number(a.packageId) - Number(b.packageId);
   });
