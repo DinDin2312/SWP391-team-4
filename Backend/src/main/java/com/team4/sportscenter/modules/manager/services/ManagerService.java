@@ -96,12 +96,15 @@ public class ManagerService {
     }
 
     @Transactional(readOnly = true)
+    public List<Map<String, Object>> decisions() { return managerRepository.decisions(); }
+
+    @Transactional(readOnly = true)
     public Map<String, Object> dashboard() {
         Map<String, Object> result = new LinkedHashMap<>(managerRepository.dashboard());
         result.put("recentActivity", managerRepository.recentActivity());
         result.putAll(managerRepository.operationalOverview());
-        result.put("lowRegistrationList", managerRepository.lowRegistrationSessions());
-        result.put("expiringMembershipList", managerRepository.expiringMemberships());
+        result.put("pulse", managerRepository.todayPulse());
+        result.put("decisions", managerRepository.decisions());
         return result;
     }
 

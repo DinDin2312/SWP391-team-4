@@ -57,6 +57,9 @@ public class ManagerController {
     @GetMapping("/dashboard")
     public Map<String, Object> dashboard() { return managerService.dashboard(); }
 
+    @GetMapping("/dashboard/decisions")
+    public List<Map<String, Object>> decisions() { return managerService.decisions(); }
+
     @GetMapping("/dashboard/attention")
     public Map<String,Object> attention(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="6") int size) { return managerService.overviewPage("attention",page,size); }
     @GetMapping("/dashboard/renewals")
