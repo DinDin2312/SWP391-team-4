@@ -54,8 +54,14 @@ public class ManagerController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/classes/{id}/deactivate")
+    public Map<String, Integer> deactivateClass(@PathVariable Integer id, org.springframework.security.core.Authentication auth) { return Map.of("cancelledSessions", managerService.deactivateClass(id, auth.getName())); }
+
     @GetMapping("/dashboard")
     public Map<String, Object> dashboard() { return managerService.dashboard(); }
+
+    @GetMapping("/dashboard/decisions")
+    public List<Map<String, Object>> decisions() { return managerService.decisions(); }
 
     @GetMapping("/dashboard/attention")
     public Map<String,Object> attention(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="6") int size) { return managerService.overviewPage("attention",page,size); }
@@ -157,6 +163,8 @@ public class ManagerController {
         return managerService.schedules(from, to);
     }
     @PostMapping("/schedules") public Map<String, Integer> createSchedule(@Valid @RequestBody ManagerRequests.ScheduleRequest request, Authentication auth) { return Map.of("id", managerService.saveSchedule(null, request, auth.getName())); }
+    @PostMapping("/schedules/{id}/enroll-class-members")
+    public Map<String, Integer> enrollClassMembers(@PathVariable Integer id, Authentication auth) { return managerService.enrollClassMembers(id, auth.getName()); }
     @PostMapping("/schedules/series")
     public Map<String, List<Integer>> createScheduleSeries(@Valid @RequestBody ManagerRequests.ScheduleSeriesRequest request, Authentication auth) {
         return Map.of("ids", managerService.createScheduleSeries(request, auth.getName()));

@@ -64,3 +64,18 @@ export function subjectOptions(rows) {
   rows.forEach(row => { if (row.subjectId != null) { const entry = subjects.get(row.subjectId) || { subjectId: row.subjectId, subjectName: row.subjectName, count: 0 }; entry.count += 1; subjects.set(row.subjectId, entry); } });
   return [...subjects.values()].sort((a, b) => String(a.subjectName ?? '').localeCompare(String(b.subjectName ?? ''), 'vi'));
 }
+
+// Generic option search for SearchSelect: options are { value, label, hint?, group? }.
+// Every token must match label or hint; label-prefix matches rank first; group order is kept.
+export function searchOptions(options, query, limit = 50) {
+  const tokens = fold(query).split(/\s+/).filter(Boolean);
+  const matched = [];
+  options.forEach((option, order) => {
+    const label = fold(option.label), hay = `${label} ${fold(option.hint)}`;
+    if (!tokens.every(token => hay.includes(token))) return;
+    const score = tokens.reduce((sum, token) => sum + (label.startsWith(token) ? 3 : label.includes(token) ? 1 : 0), 0);
+    matched.push({ option, order, score });
+  });
+  if (tokens.length) matched.sort((a, b) => (a.option.group ?? 0) - (b.option.group ?? 0) || b.score - a.score || a.order - b.order);
+  return { total: matched.length, items: matched.slice(0, limit).map(item => item.option) };
+}

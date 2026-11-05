@@ -94,12 +94,15 @@ export function operationPayload(type, form) {
       description: form.description || "",
       durationMinutes:Number(form.durationMinutes || 90),
       slotStarts:form.slotStarts || [],
+      status: form.status || "ACTIVE",
     };
   if (type === "room")
     return {
       roomId: form.roomId,
       roomName: form.roomName.trim(),
       capacity: Number(form.capacity),
+      subjectIds: (form.subjectIds || []).map(Number),
+      status: form.status || "ACTIVE",
     };
   if (type === "class")
     return {
@@ -164,4 +167,30 @@ export function cascadeFilterPatch(data, selection, key, value) {
     if (next[child] && !options.some(([id]) => id === String(next[child]))) { next[child] = ""; reset[child] = true; }
   }
   return reset;
+}
+
+// Class form options: coaches who teach the subject; rooms set up for the subject first (group 0).
+const linked = (row, subjectId) => (row.subjectIds || []).map(String).includes(String(subjectId));
+export const roomFitsSubject = (rooms, roomId, subjectId) => Boolean(roomId) && linked(rooms.find(r => String(r.roomId) === String(roomId)) || {}, subjectId);
+export const classCoachOptions = (data, subjectId) => (subjectId ? data.coaches.filter(coach => linked(coach, subjectId)) : [])
+  .map(row => ({ value: row.userId, label: row.fullName, hint: row.email }));
+const usable = (row, id, keep) => (row.status || "ACTIVE") === "ACTIVE" || String(id) === String(keep);
+export const classSubjectOptions = (data, current) => data.subjects.filter(row => usable(row, row.subjectId, current)).map(row => ({ value: row.subjectId, label: row.subjectName }));
+export const classRoomOptions = (data, subjectId, current) => data.rooms
+  .filter(row => usable(row, row.roomId, current))
+  .map(row => ({ value: row.roomId, label: row.roomName, hint: `${row.capacity}`, group: subjectId && linked(row, subjectId) ? 0 : 1 }))
+  .sort((a, b) => a.group - b.group);
+
+// Seats default to the room capacity and may never exceed it.
+export function seatLimit(rooms, roomId) { const room = rooms.find(r => String(r.roomId) === String(roomId)); return room ? Number(room.capacity) : null; }
+export const duplicateClassName = (classes, name, classId) => { const key = String(name || "").trim().toLocaleLowerCase("vi"); return Boolean(key) && classes.some(c => String(c.classId) !== String(classId ?? "") && String(c.className).trim().toLocaleLowerCase("vi") === key); };
+// Backend conflict message: "Schedule conflict: the coach|room already has <class> at HH:mm dd/MM/yyyy."
+export function conflictParts(message) { const m = String(message || "").match(/^Schedule conflict: the (coach|room) already has (.+) at (\d\d:\d\d \d\d\/\d\d\/\d{4})\.$/); return m ? { who: m[1], className: m[2], at: m[3] } : null; }
+
+// Sessions in one calendar cell (same room or coach, same day) whose times overlap.
+export function overlappingIds(sessions = []) {
+  const live = sessions.filter(r => r.status !== "CANCELLED").map(r => ({ id: r.scheduleId, a: new Date(r.startTime).getTime(), b: new Date(r.endTime).getTime() }));
+  const ids = new Set();
+  live.forEach((x, i) => live.slice(i + 1).forEach(y => { if (x.a < y.b && y.a < x.b) { ids.add(x.id); ids.add(y.id); } }));
+  return ids;
 }

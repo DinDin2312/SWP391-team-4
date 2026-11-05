@@ -5,15 +5,15 @@ USE SportCenter;
 -- ================== 1. TẠO BẢNG (ĐÃ FIX AUTO_INCREMENT) ==================
 CREATE TABLE `ROLES` (`role_id` int PRIMARY KEY AUTO_INCREMENT, `role_name` varchar(255));
 CREATE TABLE `USERS` (`user_id` int PRIMARY KEY AUTO_INCREMENT, `role_id` int, `full_name` varchar(255), `email` varchar(255), `phone` varchar(255), `password_hash` varchar(255), `status` varchar(255), `bio` text, `avatar_path` varchar(255), `force_password_change` boolean NOT NULL DEFAULT false, `created_at` datetime DEFAULT CURRENT_TIMESTAMP, `loyalty_points` int DEFAULT 0, `gender` varchar(10) NULL, `date_of_birth` date NULL, KEY `idx_users_created_at` (`created_at`));
-CREATE TABLE `SUBJECTS` (`subject_id` int PRIMARY KEY AUTO_INCREMENT, `subject_name` varchar(255), `description` text, `image_path` varchar(255));
+CREATE TABLE `SUBJECTS` (`subject_id` int PRIMARY KEY AUTO_INCREMENT, `subject_name` varchar(255), `description` text, `image_path` varchar(255), `status` varchar(20) NOT NULL DEFAULT 'ACTIVE');
 CREATE TABLE `USER_SUBJECTS` (`user_id` int, `subject_id` int, PRIMARY KEY (`user_id`, `subject_id`));
-CREATE TABLE `ROOMS` (`room_id` int PRIMARY KEY AUTO_INCREMENT, `room_name` varchar(255), `capacity` int, `image_path` varchar(255));
+CREATE TABLE `ROOMS` (`room_id` int PRIMARY KEY AUTO_INCREMENT, `room_name` varchar(255), `capacity` int, `image_path` varchar(255), `status` varchar(20) NOT NULL DEFAULT 'ACTIVE');
 CREATE TABLE `PACKAGES` (`package_id` int PRIMARY KEY AUTO_INCREMENT, `package_name` varchar(255), `package_type` varchar(255), `duration_days` int, `price` decimal(10,2), `image_path` varchar(255));
 CREATE TABLE `USER_MEMBERSHIPS` (`membership_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` int, `package_id` int, `start_date` date, `end_date` date, `remaining_sessions` int, `status` varchar(255));
 CREATE TABLE `CLASSES` (`class_id` int PRIMARY KEY AUTO_INCREMENT, `subject_id` int, `coach_id` int, `room_id` int, `class_name` varchar(255), `price` decimal(10,2), `max_slots` int, `status` varchar(255), `image_path` varchar(255));
-CREATE TABLE `SCHEDULES` (`schedule_id` int PRIMARY KEY AUTO_INCREMENT, `class_id` int, `start_time` datetime, `end_time` datetime, `status` varchar(255));
+CREATE TABLE `SCHEDULES` (`schedule_id` int PRIMARY KEY AUTO_INCREMENT, `class_id` int, `start_time` datetime, `end_time` datetime, `status` varchar(255), `substitute_coach_id` int NULL);
 CREATE TABLE `BOOKINGS` (`booking_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` int, `schedule_id` int, `status` varchar(255), `attendance_status` varchar(255), `booking_time` datetime);
-CREATE TABLE `INVOICES` (`invoice_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` int, `total_amount` decimal(10,2), `status` varchar(255), `created_at` datetime);
+CREATE TABLE `INVOICES` (`invoice_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` int, `subtotal` decimal(10,2) NULL, `discount_amount` decimal(10,2) NOT NULL DEFAULT 0.00, `voucher_code` varchar(255) NULL, `total_amount` decimal(10,2), `status` varchar(255), `created_at` datetime);
 CREATE TABLE `INVOICE_DETAILS` (`detail_id` int PRIMARY KEY AUTO_INCREMENT, `invoice_id` int, `class_id` int, `package_id` int, `schedule_id` int, `unit_price` decimal(10,2));
 CREATE TABLE `PAYMENTS` (`payment_id` int PRIMARY KEY AUTO_INCREMENT, `invoice_id` int, `amount` decimal(10,2), `payment_method` varchar(255), `transaction_no` varchar(255), `status` varchar(255), `payment_date` datetime);
 CREATE TABLE `NOTIFICATIONS` (`notification_id` int PRIMARY KEY AUTO_INCREMENT, `user_id` int, `title` varchar(255), `message` text, `type` varchar(50) NOT NULL DEFAULT 'SYSTEM', `is_read` boolean NOT NULL DEFAULT false, `created_at` datetime);
@@ -455,4 +455,82 @@ CREATE TABLE IF NOT EXISTS `DOCUMENT_CHUNKS` (
     `embedding` JSON NOT NULL,
     KEY `idx_dc_document_id` (`document_id`),
     CONSTRAINT `fk_dc_document` FOREIGN KEY (`document_id`) REFERENCES `KNOWLEDGE_DOCUMENTS` (`document_id`) ON DELETE CASCADE
+);
+
+-- ================== 9. DỜI LỊCH & DẠY BÙ (COACH SCHEDULE RESCHEDULE & MAKEUP) ==================
+CREATE TABLE IF NOT EXISTS `SCHEDULE_RESCHEDULE_REQUESTS` (
+    `request_id` INT AUTO_INCREMENT PRIMARY KEY,
+    `schedule_id` INT NOT NULL,
+    `class_id` INT NOT NULL,
+    `coach_id` INT NOT NULL,
+    `substitute_coach_id` INT NULL,
+    `action_type` VARCHAR(30) NOT NULL DEFAULT 'MAKEUP_SESSION',
+    `original_start_time` DATETIME NOT NULL,
+    `original_end_time` DATETIME NOT NULL,
+    `proposed_start_time` DATETIME NULL,
+    `proposed_end_time` DATETIME NULL,
+    `proposed_room_id` INT NULL,
+    `reason_category` VARCHAR(50) NOT NULL DEFAULT 'NO_SUBSTITUTE_SICK',
+    `reason_details` TEXT NOT NULL,
+    `status` VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    `admin_response_note` TEXT NULL,
+    `reviewed_by` INT NULL,
+    `reviewed_at` DATETIME NULL,
+    `confirmation_deadline` DATETIME NULL,
+    `min_attendees` INT NOT NULL DEFAULT 2,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_srr_schedule` FOREIGN KEY (`schedule_id`) REFERENCES `SCHEDULES`(`schedule_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_srr_class` FOREIGN KEY (`class_id`) REFERENCES `CLASSES`(`class_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_srr_coach` FOREIGN KEY (`coach_id`) REFERENCES `USERS`(`user_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_srr_substitute_coach` FOREIGN KEY (`substitute_coach_id`) REFERENCES `USERS`(`user_id`) ON DELETE SET NULL,
+    CONSTRAINT `fk_srr_reviewed_by` FOREIGN KEY (`reviewed_by`) REFERENCES `USERS`(`user_id`) ON DELETE SET NULL,
+    CONSTRAINT `fk_srr_proposed_room` FOREIGN KEY (`proposed_room_id`) REFERENCES `ROOMS`(`room_id`) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS `RESCHEDULE_MEMBER_RESPONSES` (
+    `response_id` INT AUTO_INCREMENT PRIMARY KEY,
+    `request_id` INT NOT NULL,
+    `user_id` INT NOT NULL,
+    `booking_id` INT NOT NULL,
+    `response_status` VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    `responded_at` DATETIME NULL,
+    `credit_id` INT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_rmr_request` FOREIGN KEY (`request_id`) REFERENCES `SCHEDULE_RESCHEDULE_REQUESTS`(`request_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_rmr_user` FOREIGN KEY (`user_id`) REFERENCES `USERS`(`user_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_rmr_booking` FOREIGN KEY (`booking_id`) REFERENCES `BOOKINGS`(`booking_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_rmr_credit` FOREIGN KEY (`credit_id`) REFERENCES `USER_CREDITS`(`credit_id`) ON DELETE SET NULL,
+    CONSTRAINT `uq_request_user` UNIQUE (`request_id`, `user_id`)
+);
+
+-- ================== 10. BÀI TẬP VÀ BÀI NỘP HỌC VIÊN (COACH WORKOUT SUBMISSIONS) ==================
+CREATE TABLE IF NOT EXISTS `COACH_WORKOUT_SUBMISSIONS` (
+    `submission_id` INT AUTO_INCREMENT PRIMARY KEY,
+    `plan_id` INT NOT NULL,
+    `detail_id` INT NULL,
+    `user_id` INT NOT NULL,
+    `coach_id` INT NOT NULL,
+    `video_url` VARCHAR(500) NOT NULL,
+    `student_note` TEXT NULL,
+    `status` VARCHAR(30) NOT NULL DEFAULT 'SUBMITTED',
+    `coach_feedback` TEXT NULL,
+    `rating` INT NULL,
+    `submitted_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `reviewed_at` DATETIME NULL,
+    CONSTRAINT `fk_submission_plan` FOREIGN KEY (`plan_id`) REFERENCES `COACH_WORKOUT_PLANS` (`plan_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_submission_detail` FOREIGN KEY (`detail_id`) REFERENCES `COACH_PLAN_DETAILS` (`detail_id`) ON DELETE SET NULL,
+    CONSTRAINT `fk_submission_user` FOREIGN KEY (`user_id`) REFERENCES `USERS` (`user_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_submission_coach` FOREIGN KEY (`coach_id`) REFERENCES `USERS` (`user_id`) ON DELETE CASCADE
+);
+
+-- ================== 11. PHÒNG VÀ BỘ MÔN LIÊN KẾT (ROOM SUBJECTS) ==================
+CREATE TABLE IF NOT EXISTS `ROOM_SUBJECTS` (
+    `room_id` INT NOT NULL,
+    `subject_id` INT NOT NULL,
+    PRIMARY KEY (`room_id`, `subject_id`),
+    KEY `idx_room_subjects_subject` (`subject_id`),
+    CONSTRAINT `fk_room_subjects_room` FOREIGN KEY (`room_id`) REFERENCES `ROOMS`(`room_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_room_subjects_subject` FOREIGN KEY (`subject_id`) REFERENCES `SUBJECTS`(`subject_id`) ON DELETE CASCADE
 );

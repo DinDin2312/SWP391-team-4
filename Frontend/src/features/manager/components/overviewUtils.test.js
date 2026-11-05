@@ -33,3 +33,27 @@ test('status respects persisted values and exact ongoing time boundaries', () =>
   assert.equal(sessionDisplayStatus({...row,status:'COMPLETED'},now),'Completed');
   assert.equal(sessionDisplayStatus({...row,status:'CANCELLED'},now),'Cancelled');
 });
+
+import { fillPercent, splitTodaySchedule, decisionLink } from './overviewUtils.js';
+test('overview v2: fill, schedule split with now marker, and decision links', () => {
+  assert.equal(fillPercent({ bookedSeatsToday: 9, totalSeatsToday: 36 }), 25);
+  assert.equal(fillPercent({ bookedSeatsToday: 3, totalSeatsToday: 0 }), 0);
+  const rows = [
+    { scheduleId: 3, status: 'SCHEDULED', startTime: '2026-11-05T18:00:00', endTime: '2026-11-05T19:00:00' },
+    { scheduleId: 1, status: 'COMPLETED', startTime: '2026-11-05T07:00:00', endTime: '2026-11-05T08:00:00' },
+    { scheduleId: 2, status: 'SCHEDULED', startTime: '2026-11-05T09:30:00', endTime: '2026-11-05T10:30:00' },
+    { scheduleId: 4, status: 'CANCELLED', startTime: '2026-11-05T11:00:00', endTime: '2026-11-05T12:00:00' },
+  ];
+  const now = new Date('2026-11-05T10:00:00+07:00');
+  const split = splitTodaySchedule(rows, now);
+  assert.deepEqual(split.done.map(r => r.scheduleId), [1]);
+  assert.deepEqual(split.live.map(r => r.scheduleId), [2, 3]);
+  assert.equal(split.nowIndex, 1);
+  assert.equal(splitTodaySchedule(rows, new Date('2026-11-05T20:00:00+07:00')).nowIndex, 0);
+  assert.equal(splitTodaySchedule(null, now).live.length, 0);
+  assert.equal(decisionLink({ type: 'RESCHEDULE' }), '/admin/dashboard?view=reschedule');
+  assert.equal(decisionLink({ type: 'ESCALATION' }), '/admin/dashboard?view=support');
+  assert.match(decisionLink({ type: 'PAYMENT_REVIEW' }), /status=REVIEW/);
+  assert.match(decisionLink({ type: 'LOW_FILL', dueAt: '2026-11-06T06:00:00' }, '2026-11-05'), /from=2026-11-06&to=2026-11-06&lowRegistration=true/);
+  assert.match(decisionLink({ type: 'LOW_FILL' }, '2026-11-05'), /from=2026-11-05/);
+});
