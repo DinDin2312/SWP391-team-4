@@ -17,8 +17,14 @@ import {
   ShieldCheck,
   Search,
   ArrowRight,
-  FileText
+  FileText,
+  ChevronDown,
+  ChevronUp,
+  Tag,
+  Layers,
+  Printer
 } from 'lucide-react';
+import InvoiceReceiptModal from '../../receptionist/components/InvoiceReceiptModal';
 
 const getPaginationRange = (current, total) => {
   if (total <= 7) {
@@ -38,14 +44,14 @@ const getStatusBadgeStyle = (status) => {
     case 'SUCCESS':
     case 'COMPLETED':
     case 'PAID':
-      return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25';
+      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
     case 'PENDING':
-      return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25 animate-pulse';
+      return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
     case 'FAILED':
     case 'CANCELLED':
-      return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/25';
+      return 'bg-rose-500/20 text-rose-300 border-rose-500/30';
     default:
-      return 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20';
+      return 'bg-slate-700/50 text-slate-300 border-slate-600/50';
   }
 };
 
@@ -62,6 +68,26 @@ const BillingHistory = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
+
+  // Progressive Disclosure: Track which invoice's items are expanded
+  const [expandedInvoices, setExpandedInvoices] = useState({});
+
+  // Receipt Modal State
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+
+  const toggleExpand = (invoiceId) => {
+    setExpandedInvoices(prev => ({ ...prev, [invoiceId]: !prev[invoiceId] }));
+  };
+
+  const handleOpenReceipt = (invoice) => {
+    setSelectedReceipt({
+      ...invoice,
+      invoiceCode: invoice.invoiceCode || `INV-${String(invoice.invoiceId).padStart(6, '0')}`,
+      items: invoice.details || []
+    });
+    setIsReceiptModalOpen(true);
+  };
 
   const fetchInvoices = async () => {
     try {
@@ -181,7 +207,7 @@ const BillingHistory = () => {
   if (loading && invoices.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center w-full h-80 gap-3">
-        <RefreshCw className="w-8 h-8 text-[#0071E3] animate-spin" />
+        <RefreshCw className="w-8 h-8 text-[var(--primary)] animate-spin" />
         <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t("Loading Billing History...")}</span>
       </div>
     );
@@ -189,17 +215,18 @@ const BillingHistory = () => {
 
   return (
     <div className="flex flex-col w-full min-h-screen pb-16">
+      
       {/* Page Header */}
-      <div className="flex flex-col gap-4 pb-6 mb-8 border-b border-black/[0.06] dark:border-white/[0.08]">
+      <div className="flex flex-col gap-4 pb-5 mb-6 border-b border-[var(--border)]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-[#0071E3] flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-md bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--primary)] flex items-center justify-center shrink-0">
                 <Receipt className="w-5 h-5" />
               </div>
               <span>{t("Billing & Invoices")}</span>
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-normal">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
               {t("View your purchase history, membership payments, and class bookings.")}
             </p>
           </div>
@@ -207,7 +234,7 @@ const BillingHistory = () => {
           <button
             onClick={fetchInvoices}
             disabled={loading}
-            className="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-black/[0.03] dark:bg-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-200 border border-black/[0.06] dark:border-white/[0.08] transition-all cursor-pointer active:scale-95"
+            className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
             title={t("Refresh")}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -215,10 +242,10 @@ const BillingHistory = () => {
           </button>
         </div>
 
-        {/* Cupertino Segmented Control & Search Bar */}
+        {/* Filter Controls Row */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2">
-          {/* Segmented Control */}
-          <div className="inline-flex p-1 rounded-2xl bg-slate-200/60 dark:bg-slate-800/60 backdrop-blur-md border border-black/[0.04] dark:border-white/[0.05] self-start overflow-x-auto max-w-full">
+          {/* Segmented Filter Buttons */}
+          <div className="inline-flex p-1 rounded-md bg-[var(--surface)] border border-[var(--border)] self-start overflow-x-auto max-w-full">
             {[
               { id: 'ALL', label: t('All'), count: invoices.length },
               { id: 'PAID', label: t('Paid'), count: paidCount },
@@ -229,17 +256,17 @@ const BillingHistory = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => setStatusFilter(tab.id)}
-                className={`px-3 sm:px-4 py-1.5 text-xs font-semibold rounded-xl transition-all duration-200 flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                   statusFilter === tab.id
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-bold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-[var(--primary)] text-white'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]'
                 }`}
               >
                 <span>{tab.label}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-sm font-mono font-bold ${
                   statusFilter === tab.id
-                    ? 'bg-blue-500/15 text-[#0071E3] dark:text-[#0A84FF]'
-                    : 'bg-black/[0.05] dark:bg-white/[0.08] text-slate-500'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-[var(--surface-hover)] text-[var(--text-muted)]'
                 }`}>
                   {tab.count}
                 </span>
@@ -249,13 +276,13 @@ const BillingHistory = () => {
 
           {/* Search Input */}
           <div className="relative min-w-[260px] md:max-w-xs w-full">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("Search by invoice # or package...")}
-              className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0071E3]/50 transition-all"
+              className="w-full pl-9 pr-8 py-1.5 text-xs sm:text-sm rounded-md bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition-colors"
             />
             {searchQuery && (
               <button
@@ -271,266 +298,339 @@ const BillingHistory = () => {
       </div>
 
       {error ? (
-        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-2xl text-sm font-bold">
+        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-md text-sm font-semibold">
           {t(error)}
         </div>
       ) : invoices.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-16 bg-white/70 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 text-center backdrop-blur-xl">
-          <div className="w-16 h-16 rounded-3xl bg-blue-500/10 text-[#0071E3] flex items-center justify-center mb-4">
-            <Receipt className="w-8 h-8 opacity-70" />
+        <div className="flex flex-col items-center justify-center p-16 bg-[var(--surface)] rounded-md border border-[var(--border)] text-center">
+          <div className="w-12 h-12 rounded-md bg-[var(--surface-hover)] text-[var(--text-muted)] flex items-center justify-center mb-3">
+            <Receipt className="w-6 h-6" />
           </div>
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white">{t("No invoices found")}</h3>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-sm">
+          <h3 className="text-base font-bold text-[var(--text)]">{t("No invoices found")}</h3>
+          <p className="text-xs text-[var(--text-muted)] mt-1 max-w-sm">
             {t("You haven't made any purchases yet.")}
           </p>
         </div>
       ) : (
-        /* 2-Column Responsive Apple HIG Grid */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        /* 2-Column Responsive Layout */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* Main Column (8 cols): Invoices List */}
           <div className="lg:col-span-8 flex flex-col gap-6">
             {filteredInvoices.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-12 bg-white/70 dark:bg-slate-900/60 rounded-3xl border border-slate-200/80 dark:border-white/10 text-center backdrop-blur-xl">
-                <Receipt className="w-10 h-10 text-slate-400 mb-3 opacity-50" />
-                <h4 className="text-base font-bold text-slate-900 dark:text-white">{t("No matching invoices found")}</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <div className="flex flex-col items-center justify-center p-12 bg-[var(--surface)] rounded-md border border-[var(--border)] text-center">
+                <Receipt className="w-8 h-8 text-[var(--text-muted)] mb-2" />
+                <h4 className="text-sm font-bold text-[var(--text)]">{t("No matching invoices found")}</h4>
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   {t("Try adjusting your keyword filter or changing status tab.")}
                 </p>
                 <button
                   type="button"
                   onClick={() => { setStatusFilter('ALL'); setSearchQuery(''); }}
-                  className="mt-4 px-4 py-2 rounded-xl bg-[#0071E3] text-white text-xs font-bold hover:bg-[#0077ED] transition-all cursor-pointer shadow-sm"
+                  className="mt-3 px-3 py-1.5 rounded-md bg-[var(--primary)] text-white text-xs font-semibold cursor-pointer"
                 >
                   {t("Clear filters")}
                 </button>
               </div>
             ) : (
-              paginatedInvoices.map((invoice) => (
-                <div 
-                  key={invoice.invoiceId} 
-                  className="rounded-3xl bg-white/85 dark:bg-slate-900/80 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.45)] hover:-translate-y-0.5 hover:shadow-[0_16px_45px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden flex flex-col"
-                >
-                  {/* Card Header */}
-                  <div className="p-5 sm:p-6 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-200/60 dark:border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-[#0071E3] flex items-center justify-center shrink-0 border border-blue-500/20 shadow-xs">
-                        <Receipt className="w-6 h-6 shrink-0" />
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                          <span className="text-base font-extrabold text-slate-900 dark:text-white tracking-tight">
-                            {t("Invoice #")}{invoice.invoiceId.toString().padStart(6, '0')}
-                          </span>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider uppercase border ${getStatusBadgeStyle(invoice.status)}`}>
-                            {t(invoice.status || 'UNKNOWN')}
+              paginatedInvoices.map((invoice) => {
+                const isExpanded = !!expandedInvoices[invoice.invoiceId];
+                const details = invoice.details || [];
+                const hasMultiple = details.length > 1;
+                const visibleDetails = isExpanded || !hasMultiple ? details : [details[0]];
+
+                const originalSubtotal = (invoice.subtotal && Number(invoice.subtotal) > 0)
+                  ? Number(invoice.subtotal)
+                  : Number(invoice.totalAmount || 0);
+                const finalAmount = Number(invoice.totalAmount || 0);
+                const discount = (invoice.discountAmount && Number(invoice.discountAmount) > 0)
+                  ? Number(invoice.discountAmount)
+                  : Math.max(0, originalSubtotal - finalAmount);
+
+                const invCode = invoice.invoiceCode || `#INV-${invoice.invoiceId.toString().padStart(6, '0')}`;
+
+                return (
+                  <div 
+                    key={invoice.invoiceId} 
+                    className="rounded-md bg-[var(--surface)] border border-slate-300 dark:border-white/15 overflow-hidden flex flex-col transition-shadow shadow-xs hover:shadow-sm"
+                  >
+                    {/* 1. Card Header - Dark Header Cap for Maximum Contrast & Clear Separation */}
+                    <div className="p-4 bg-slate-900 dark:bg-black text-white border-b border-slate-800 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-md bg-slate-800 border border-slate-700 text-slate-200 flex items-center justify-center shrink-0 shadow-xs">
+                          <Receipt className="w-4 h-4 shrink-0 text-emerald-400" />
+                        </div>
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm sm:text-base font-bold text-white font-mono tracking-wide">
+                              {invCode}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-sm text-[11px] font-semibold border ${getStatusBadgeStyle(invoice.status)}`}>
+                              {t(invoice.status || 'UNKNOWN')}
+                            </span>
+                          </div>
+                          <span className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5 font-medium">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{formatDateTime(invoice.createdAt)}</span>
                           </span>
                         </div>
-                        <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 opacity-60" />
-                          <span>{formatDateTime(invoice.createdAt)}</span>
+                      </div>
+
+                      {/* Header Right: Payment Method & Ref (Replaces duplicated total payment) */}
+                      <div className="flex flex-col sm:items-end text-xs">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                          {t("Payment Method")}
                         </span>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap sm:justify-end">
+                          <span className="font-bold text-white">
+                            {invoice.paymentMethod || t("Bank Transfer")}
+                          </span>
+                          {invoice.transactionNo && (
+                            <span className="text-[11px] font-mono text-slate-400">
+                              (Ref: <strong className="text-slate-200 font-semibold">{invoice.transactionNo}</strong>)
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex flex-col sm:items-end bg-white/60 dark:bg-slate-900/40 p-2.5 sm:p-0 rounded-xl sm:bg-transparent">
-                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{t("Total Amount")}</span>
-                      <span className="text-xl sm:text-2xl font-black text-[#0071E3] dark:text-[#0A84FF] tracking-tight">{formatMoney(invoice.totalAmount)}</span>
-                    </div>
-                  </div>
 
-                  {/* Card Body */}
-                  <div className="p-5 sm:p-6 flex flex-col gap-5">
-                    
-                    {/* Purchased Items Sub-container */}
-                    <div className="rounded-2xl bg-slate-50/80 dark:bg-slate-950/40 border border-slate-200/60 dark:border-white/[0.05] p-4 flex flex-col gap-2.5">
-                      <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Dumbbell className="w-3.5 h-3.5" />
-                        <span>{t("Purchased Items")}</span>
-                      </span>
-                      {invoice.details && invoice.details.length > 0 ? (
-                        invoice.details.map((item, idx) => (
-                          <div 
-                            key={idx} 
-                            className="flex items-center justify-between p-3 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-slate-200/60 dark:border-white/[0.05] shadow-xs"
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-[#0071E3] flex items-center justify-center shrink-0">
-                                {item.itemType === 'CLASS' || item.itemType === 'CLASS_SCHEDULE' ? (
-                                  <Dumbbell className="w-4 h-4" />
-                                ) : (
-                                  <CreditCard className="w-4 h-4" />
-                                )}
+                    {/* 2. Card Body */}
+                    <div className="p-4 flex flex-col gap-3">
+                      
+                      {/* Section A: Purchased Items (Clean list with clear toggle) */}
+                      <div className="rounded-md bg-[var(--bg)] border border-[var(--border)] p-3 flex flex-col gap-2">
+                        <div className="flex items-center justify-between text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                          <span className="flex items-center gap-1.5">
+                            <Dumbbell className="w-3.5 h-3.5" />
+                            <span>{t("Purchased Items")} ({details.length} {t("items")})</span>
+                          </span>
+                          {hasMultiple && (
+                            <span className="text-[11px] font-normal text-[var(--text-muted)] lowercase">
+                              {isExpanded ? t("Showing all") : `1 / ${details.length}`}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Items rows */}
+                        {visibleDetails.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {visibleDetails.map((item, idx) => (
+                              <div 
+                                key={idx} 
+                                className="flex items-center justify-between p-2.5 rounded-md bg-[var(--surface)] border border-[var(--border)] text-xs"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="w-7 h-7 rounded-sm bg-[var(--surface-hover)] text-[var(--primary)] flex items-center justify-center shrink-0">
+                                    {item.itemType === 'CLASS' || item.itemType === 'CLASS_SCHEDULE' ? (
+                                      <Dumbbell className="w-3.5 h-3.5" />
+                                    ) : (
+                                      <CreditCard className="w-3.5 h-3.5" />
+                                    )}
+                                  </div>
+                                  <span className="font-semibold text-[var(--text)] truncate">{item.itemName}</span>
+                                </div>
+                                <span className="font-mono font-semibold text-[var(--text)] shrink-0 ml-2">
+                                  {formatMoney(item.unitPrice)}
+                                </span>
                               </div>
-                              <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{item.itemName}</span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-[var(--text-muted)] italic py-1">{t("No detailed items found for this invoice.")}</span>
+                        )}
+
+                        {/* Expand / Collapse Button if multiple items */}
+                        {hasMultiple && (
+                          <button
+                            type="button"
+                            onClick={() => toggleExpand(invoice.invoiceId)}
+                            className="mt-1 py-1.5 px-3 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-hover)] border border-[var(--border)] text-xs font-semibold text-[var(--primary)] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            {isExpanded ? (
+                              <>
+                                <span>{t("Hide items")}</span>
+                                <ChevronUp className="w-3.5 h-3.5" />
+                              </>
+                            ) : (
+                              <>
+                                <Layers className="w-3.5 h-3.5" />
+                                <span>+{details.length - 1} {t("more items")} • {t("Show all items")}</span>
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Section B: Financial Breakdown (The ONLY place displaying financial computation) */}
+                      <div className="rounded-md bg-[var(--surface-hover)]/60 border border-[var(--border)] p-3 text-xs space-y-1.5">
+                        <div className="flex justify-between items-center text-[var(--text)]">
+                          <span className="text-[var(--text-muted)]">
+                            {t("Total Items Price")} ({details.length} {t("items")}):
+                          </span>
+                          <span className="font-mono font-semibold">{formatMoney(originalSubtotal)}</span>
+                        </div>
+
+                        {discount > 0 && (
+                          <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <Tag className="w-3.5 h-3.5 shrink-0" />
+                              <span className="font-semibold">{t("Discount / Voucher")}:</span>
+                              {invoice.voucherCode && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-sm bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                                  {invoice.voucherCode}
+                                </span>
+                              )}
                             </div>
-                            <span className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white shrink-0 ml-3">{formatMoney(item.unitPrice)}</span>
+                            <span className="font-mono font-bold">-{formatMoney(discount)}</span>
                           </div>
-                        ))
-                      ) : (
-                        <span className="text-xs text-slate-400 italic py-1">{t("No detailed items found for this invoice.")}</span>
-                      )}
+                        )}
+
+                        <div className="pt-2 border-t border-[var(--border)] flex justify-between items-center font-bold">
+                          <span className="text-[var(--text)] uppercase tracking-wide text-[11px]">{t("Grand Total")}:</span>
+                          <span className="text-base sm:text-lg font-mono text-[var(--text)] font-extrabold">{formatMoney(finalAmount)}</span>
+                        </div>
+                      </div>
+
+                      {/* Section C: Card Footer - Action Buttons Only (No duplicated text) */}
+                      <div className="pt-2 border-t border-[var(--border)] flex items-center justify-end gap-2 text-xs">
+                        {invoice.status === 'PENDING' ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleCancelInvoice(invoice.invoiceId)}
+                              disabled={cancellingId === invoice.invoiceId}
+                              className="px-3 py-1.5 text-xs font-semibold rounded-md border border-rose-500/25 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              {cancellingId === invoice.invoiceId ? t('Cancelling...') : t('Cancel Order')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/member/vietqr-pay?invoiceId=${invoice.invoiceId}`)}
+                              className="px-3.5 py-1.5 text-xs font-bold rounded-md bg-[var(--primary)] hover:opacity-90 text-white transition-opacity flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>{t('Resume Payment')}</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenReceipt(invoice)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-[var(--surface-hover)] hover:bg-[var(--border)] text-[var(--text)] border border-[var(--border)] transition-colors cursor-pointer"
+                            title={t("View Receipt")}
+                          >
+                            <FileText className="w-3.5 h-3.5 text-[var(--primary)]" />
+                            <span>{t("View Receipt")}</span>
+                          </button>
+                        )}
+                      </div>
+
                     </div>
-
-                    {/* Payment Metadata Stripe */}
-                    {(invoice.paymentMethod || invoice.transactionNo || invoice.paymentDate) && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.05]">
-                        {invoice.paymentMethod && (
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{t("Payment Method")}</span>
-                            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{invoice.paymentMethod}</span>
-                          </div>
-                        )}
-                        {invoice.transactionNo && (
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{t("Transaction ID")}</span>
-                            <span className="text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{invoice.transactionNo}</span>
-                          </div>
-                        )}
-                        {invoice.paymentDate && (
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{t("Payment Date")}</span>
-                            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{formatDateTime(invoice.paymentDate)}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Actions for PENDING invoice */}
-                    {invoice.status === 'PENDING' && (
-                      <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-slate-200/60 dark:border-white/[0.06]">
-                        <button
-                          type="button"
-                          onClick={() => handleCancelInvoice(invoice.invoiceId)}
-                          disabled={cancellingId === invoice.invoiceId}
-                          className="px-4 py-2 text-xs font-semibold rounded-xl border border-rose-500/25 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-all cursor-pointer disabled:opacity-50"
-                        >
-                          {cancellingId === invoice.invoiceId ? t('Cancelling...') : t('Cancel Order')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/member/vietqr-pay?invoiceId=${invoice.invoiceId}`)}
-                          className="px-5 py-2 text-xs font-bold rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white shadow-md shadow-blue-500/25 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <span>{t('Resume Payment')}</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
 
             {/* Pagination Controls */}
-            {filteredInvoices.length > 0 && (
-              <div className="p-4 sm:p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
-                <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 order-2 sm:order-1">
+            {filteredInvoices.length > 0 && totalPages > 1 && (
+              <div className="p-3 rounded-md border border-[var(--border)] bg-[var(--surface)] flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs text-[var(--text-muted)] flex items-center gap-1 order-2 sm:order-1">
                   <span>{t("Showing")}</span>
-                  <strong className="text-slate-900 dark:text-white font-bold">{startRecord}–{endRecord}</strong>
+                  <strong className="text-[var(--text)] font-semibold">{startRecord}–{endRecord}</strong>
                   <span>{t("of")}</span>
-                  <strong className="text-slate-900 dark:text-white font-bold">{filteredInvoices.length}</strong>
+                  <strong className="text-[var(--text)] font-semibold">{filteredInvoices.length}</strong>
                   <span>{t("invoices")}</span>
                 </div>
 
-                {totalPages > 1 && (
-                  <div className="flex items-center gap-1.5 order-1 sm:order-2 select-none">
-                    {/* Previous button */}
-                    <button
-                      type="button"
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={validPage === 1}
-                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none text-xs text-slate-700 dark:text-slate-200 transition-all flex items-center gap-1 cursor-pointer"
-                      title={t("Previous")}
-                    >
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">{t("Previous")}</span>
-                    </button>
+                <div className="flex items-center gap-1 order-1 sm:order-2 select-none">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={validPage === 1}
+                    className="px-2 py-1 rounded-md border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] disabled:opacity-30 disabled:pointer-events-none text-xs text-[var(--text)] transition-colors flex items-center gap-1 cursor-pointer"
+                    title={t("Previous")}
+                  >
+                    <ChevronLeft className="w-3 h-3" />
+                    <span className="hidden sm:inline">{t("Previous")}</span>
+                  </button>
 
-                    {/* Page numbers (1, 2, 3...) */}
-                    <div className="flex items-center gap-1">
-                      {getPaginationRange(validPage, totalPages).map((p, idx) => {
-                        if (p === '...') {
-                          return (
-                            <span key={`dots-${idx}`} className="px-2 py-1 text-xs text-slate-400">
-                              ...
-                            </span>
-                          );
-                        }
-                        const isCurrent = p === validPage;
+                  <div className="flex items-center gap-1">
+                    {getPaginationRange(validPage, totalPages).map((p, idx) => {
+                      if (p === '...') {
                         return (
-                          <button
-                            key={`page-${p}`}
-                            type="button"
-                            onClick={() => setCurrentPage(p)}
-                            className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                              isCurrent
-                                ? "bg-[#0071E3] text-white shadow-xs shadow-blue-500/30 ring-1 ring-blue-500"
-                                : "border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-750"
-                            }`}
-                          >
-                            {p}
-                          </button>
+                          <span key={`dots-${idx}`} className="px-1.5 py-0.5 text-xs text-[var(--text-muted)]">
+                            ...
+                          </span>
                         );
-                      })}
-                    </div>
-
-                    {/* Next button */}
-                    <button
-                      type="button"
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={validPage === totalPages}
-                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none text-xs text-slate-700 dark:text-slate-200 transition-all flex items-center gap-1 cursor-pointer"
-                      title={t("Next")}
-                    >
-                      <span className="hidden sm:inline">{t("Next")}</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
+                      }
+                      const isCurrent = p === validPage;
+                      return (
+                        <button
+                          key={`page-${p}`}
+                          type="button"
+                          onClick={() => setCurrentPage(p)}
+                          className={`min-w-[28px] h-7 px-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                            isCurrent
+                              ? "bg-[var(--primary)] text-white"
+                              : "border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    })}
                   </div>
-                )}
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={validPage === totalPages}
+                    className="px-2 py-1 rounded-md border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] disabled:opacity-30 disabled:pointer-events-none text-xs text-[var(--text)] transition-colors flex items-center gap-1 cursor-pointer"
+                    title={t("Next")}
+                  >
+                    <span className="hidden sm:inline">{t("Next")}</span>
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Sidebar Column (4 cols): Apple Glass Widgets */}
-          <div className="lg:col-span-4 flex flex-col gap-5 lg:sticky lg:top-6">
+          {/* Sidebar Column (4 cols) */}
+          <div className="lg:col-span-4 flex flex-col gap-4 lg:sticky lg:top-6">
             
-            {/* Widget 1: Spending Overview (Apple Gradient Card) */}
-            <div className="rounded-3xl p-6 bg-gradient-to-br from-[#0071E3] via-blue-700 to-indigo-800 text-white shadow-xl shadow-blue-500/20 relative overflow-hidden flex flex-col justify-between min-h-[190px]">
-              {/* Diffused specular glow */}
-              <div className="absolute -top-12 -right-12 w-36 h-36 bg-cyan-400/30 rounded-full blur-2xl pointer-events-none" />
-              
-              <div className="relative z-10 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white/80">
-                  <Wallet className="w-4 h-4" />
+            {/* Widget 1: Spending Overview Card */}
+            <div className="rounded-md p-5 bg-[var(--surface)] border border-[var(--border)] flex flex-col justify-between min-h-[170px]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                  <Wallet className="w-4 h-4 text-[var(--primary)]" />
                   <span>{t("Total Spending")}</span>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-white/20 backdrop-blur-md text-white border border-white/20">
+                <span className="px-2 py-0.5 rounded-sm text-[11px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                   {paidCount} {t("paid")}
                 </span>
               </div>
 
-              <div className="relative z-10 my-3">
-                <span className="text-2xl sm:text-3xl font-black tracking-tight">{formatMoney(totalSpent)}</span>
-                <p className="text-[11px] text-white/80 mt-1 font-normal">{t("Lifetime verified membership & course investment")}</p>
+              <div className="my-3">
+                <span className="text-2xl font-black font-mono tracking-tight text-[var(--text)]">{formatMoney(totalSpent)}</span>
+                <p className="text-[11px] text-[var(--text-muted)] mt-1">{t("Lifetime verified membership & course investment")}</p>
               </div>
 
-              <div className="relative z-10 pt-3 border-t border-white/15 flex items-center justify-between text-xs font-medium text-white/90">
-                <span>{t("Active Invoices")}: {invoices.length}</span>
-                <span className="flex items-center gap-1 text-emerald-300 font-bold">
+              <div className="pt-2.5 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--text-muted)]">
+                <span>{t("Active Invoices")}: <strong className="text-[var(--text)]">{invoices.length}</strong></span>
+                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>{t("100% Protected")}</span>
                 </span>
               </div>
             </div>
 
-            {/* Widget 2: Pending Quick-Pay Action Alert (if any PENDING invoices exist) */}
+            {/* Widget 2: Pending Quick-Pay Action Alert */}
             {pendingInvoices.length > 0 && (
-              <div className="rounded-3xl p-5 bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/25 text-amber-900 dark:text-amber-200 shadow-sm flex flex-col gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold shrink-0">
-                    <Clock className="w-4 h-4" />
-                  </div>
+              <div className="rounded-md p-4 bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-200 flex flex-col gap-2.5">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                   <div>
                     <h4 className="text-xs font-bold uppercase tracking-wider">{t("Pending Action Required")}</h4>
                     <span className="text-[11px] opacity-80">{pendingInvoices.length} {t("order(s) waiting for payment")}</span>
@@ -542,7 +642,7 @@ const BillingHistory = () => {
                 <button
                   type="button"
                   onClick={() => navigate(`/member/vietqr-pay?invoiceId=${pendingInvoices[0].invoiceId}`)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 active:scale-95 transition-all cursor-pointer"
+                  className="w-full py-2 px-3 rounded-md bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <span>{t("Pay Invoice Now")}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -551,61 +651,61 @@ const BillingHistory = () => {
             )}
 
             {/* Widget 3: Transaction Breakdown & Legal VAT Note */}
-            <div className="rounded-3xl p-5 bg-white/70 dark:bg-slate-900/65 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-sm space-y-4">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5 text-[#0071E3]" />
+            <div className="rounded-md p-4 bg-[var(--surface)] border border-[var(--border)] space-y-3">
+              <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-[var(--primary)]" />
                 <span>{t("Transaction Breakdown")}</span>
               </h4>
 
-              <div className="space-y-2 text-xs">
+              <div className="space-y-1.5 text-xs">
                 <div 
                   onClick={() => setStatusFilter('PAID')}
-                  className={`flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition-all ${
+                  className={`flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors ${
                     statusFilter === 'PAID'
-                      ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/40 font-bold'
+                      ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/40'
                       : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-500/15 hover:bg-emerald-500/15'
                   }`}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>{t("Paid Orders")}</span>
                   </span>
-                  <strong className="font-bold">{paidCount}</strong>
+                  <strong className="font-mono">{paidCount}</strong>
                 </div>
 
                 <div 
                   onClick={() => setStatusFilter('PENDING')}
-                  className={`flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition-all ${
+                  className={`flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors ${
                     statusFilter === 'PENDING'
-                      ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 ring-1 ring-amber-500/40 font-bold'
+                      ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold border border-amber-500/40'
                       : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold border border-amber-500/15 hover:bg-amber-500/15'
                   }`}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5" />
                     <span>{t("Pending Orders")}</span>
                   </span>
-                  <strong className="font-bold">{pendingCount}</strong>
+                  <strong className="font-mono">{pendingCount}</strong>
                 </div>
 
                 <div 
                   onClick={() => setStatusFilter('CANCELLED')}
-                  className={`flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition-all ${
+                  className={`flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors ${
                     statusFilter === 'CANCELLED'
-                      ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 ring-1 ring-rose-500/40 font-bold'
+                      ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 font-bold border border-rose-500/40'
                       : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 font-semibold border border-rose-500/15 hover:bg-rose-500/15'
                   }`}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5">
                     <XCircle className="w-3.5 h-3.5" />
                     <span>{t("Cancelled / Expired")}</span>
                   </span>
-                  <strong className="font-bold">{cancelledCount}</strong>
+                  <strong className="font-mono">{cancelledCount}</strong>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-200/60 dark:border-white/[0.06] text-[11px] text-slate-500 dark:text-slate-400 space-y-2 leading-relaxed">
-                <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
+              <div className="pt-2.5 border-t border-[var(--border)] text-[11px] text-[var(--text-muted)] space-y-1.5 leading-relaxed">
+                <div className="flex items-center gap-1 font-semibold text-[var(--text)]">
                   <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
                   <span>{t("Official Electronic Invoices")}</span>
                 </div>
@@ -618,6 +718,14 @@ const BillingHistory = () => {
           </div>
         </div>
       )}
+
+      {/* Official White Paper Invoice & Payment Receipt Modal */}
+      <InvoiceReceiptModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        receipt={selectedReceipt}
+      />
+
     </div>
   );
 };

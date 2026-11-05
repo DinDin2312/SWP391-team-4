@@ -23,6 +23,17 @@ test('chatMarkdown tests', async (t) => {
     assert.ok(html.includes('<em') && html.includes('chữ nghiêng</em>'), `Expected <em> in: ${html}`);
   });
 
+  await t.test('renders unclosed bold tags during streaming as strong without raw asterisks', () => {
+    const html = renderToStaticMarkup(React.createElement('div', null, renderChatMarkdown('• **Bơi Lội Giải Tỏa Căng Th')));
+    assert.ok(html.includes('<strong') && html.includes('Bơi Lội Giải Tỏa Căng Th</strong>'), `Expected auto-closed <strong> in: ${html}`);
+    assert.ok(!html.includes('**'), `Should not leak raw asterisks: ${html}`);
+  });
+
+  await t.test('renders unicode bullet • as <ul> and <li>', () => {
+    const html = renderToStaticMarkup(React.createElement('div', null, renderChatMarkdown('• Lớp bơi ếch\n• Lớp bơi sải')));
+    assert.ok(html.includes('<ul') && html.includes('<li') && html.includes('Lớp bơi ếch'), `Expected <ul> and <li> in: ${html}`);
+  });
+
   await t.test('renders unordered list with <ul> and <li>', () => {
     const html = renderToStaticMarkup(React.createElement('div', null, renderChatMarkdown('- Mục 1\n- Mục 2')));
     assert.ok(html.includes('<ul') && html.includes('</ul>'), `Expected <ul> in: ${html}`);
@@ -71,6 +82,21 @@ test('chatMarkdown tests', async (t) => {
     assert.equal(htmlNull, '<div></div>');
     const htmlEmpty = renderToStaticMarkup(React.createElement('div', null, renderChatMarkdown('')));
     assert.equal(htmlEmpty, '<div></div>');
+  });
+
+  await t.test('renders markdown table with thead, tbody, th, td and internal link button', () => {
+    const tableMd = `| Lớp học & HLV | Số buổi | Lịch học (Thứ) | Học phí | Đăng ký |
+| :--- | :---: | :--- | :---: | :---: |
+| **Bơi Ếch**<br>HLV: Tuấn | 6 buổi | T2, T4, T6 (15:45) | 1.200.000 đ | [Đăng ký](/member/book-class?classId=139) |`;
+
+    const html = renderToStaticMarkup(React.createElement('div', null, renderChatMarkdown(tableMd)));
+    assert.ok(html.includes('<table'), `Expected <table> in: ${html}`);
+    assert.ok(html.includes('<thead') && html.includes('Lớp học &amp; HLV'), `Expected <thead> with title in: ${html}`);
+    assert.ok(html.includes('<tbody'), `Expected <tbody> in: ${html}`);
+    assert.ok(html.includes('Bơi Ếch'), `Expected class name in: ${html}`);
+    assert.ok(html.includes('<br/>') || html.includes('<br />') || html.includes('<br>'), `Expected <br> in: ${html}`);
+    assert.ok(html.includes('href="/member/book-class?classId=139"'), `Expected deep-link href in: ${html}`);
+    assert.ok(html.includes('cursor-pointer'), `Expected cursor-pointer for interactive row in: ${html}`);
   });
 
   await t.test('ChatMarkdown component wrapper works', () => {

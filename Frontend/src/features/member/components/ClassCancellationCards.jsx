@@ -126,13 +126,20 @@ export const ClassCancellationPreviewCard = ({
       {/* Status Header Badge */}
       <div
         className={`p-4 rounded-xl border ${
-          !preview.hasStarted
+          preview.exceedsEightyPercent
+            ? 'bg-rose-500/10 border-rose-500/25 text-rose-800 dark:text-rose-300'
+            : !preview.hasStarted
             ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-800 dark:text-emerald-300'
             : 'bg-amber-500/10 border-amber-500/20 text-amber-800 dark:text-amber-300'
         }`}
       >
         <div className="flex items-center gap-2.5 font-bold text-sm mb-1">
-          {!preview.hasStarted ? (
+          {preview.exceedsEightyPercent ? (
+            <>
+              <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
+              <span>{t('Class Attendance Exceeded 80% - Ineligible for Refund or Perks')}</span>
+            </>
+          ) : !preview.hasStarted ? (
             <>
               <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>{t('Class Has Not Started Yet - 100% Credit Eligible')}</span>
@@ -145,7 +152,7 @@ export const ClassCancellationPreviewCard = ({
           )}
         </div>
         <p className="text-xs leading-relaxed opacity-90">
-          {preview.policyNotice}
+          {(preview.policyNotice || preview.message)}
         </p>
       </div>
 
@@ -186,7 +193,7 @@ export const ClassCancellationPreviewCard = ({
               {t('Estimated Prorated Credit Value:')}
             </span>
             <span className="text-base font-extrabold text-[var(--primary)]">
-              {formatMoney(preview.proratedCredit)}
+              {formatMoney((preview.proratedCredit ?? preview.estimatedCreditAmount))}
             </span>
           </div>
         )}
@@ -204,53 +211,100 @@ export const ClassCancellationPreviewCard = ({
           </span>
         </div>
 
+        {preview.exceedsEightyPercent && (
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-800 dark:text-rose-300 flex items-start gap-2.5 mb-2.5">
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+            <div className="text-xs space-y-1">
+              <span className="font-extrabold block">
+                {t('Ineligible for Tuition Retention or Benefit Exchange')}
+              </span>
+              <p className="opacity-90 leading-relaxed font-medium">
+                {t('Per center policy, courses with attendance exceeding 80% cannot be refunded or exchanged for vouchers/passes. All compensation options are closed.')}
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-2.5">
           <BenefitOptionCard
             optionKey="ISSUE_CREDIT"
-            selectedKey={preferredResolution}
+            selectedKey={preview.exceedsEightyPercent ? '' : preferredResolution}
             onSelect={onSelectResolution}
+            disabled={preview.exceedsEightyPercent}
             icon={CreditCard}
             title={t('Course Credit Voucher (Recommended)')}
             badgeText={
-              !preview.hasStarted
+              preview.exceedsEightyPercent
+                ? t('Not Eligible (>80%)')
+                : !preview.hasStarted
                 ? `100% ${t('Tuition Value')}`
-                : formatMoney(preview.proratedCredit)
+                : formatMoney((preview.proratedCredit ?? preview.estimatedCreditAmount))
             }
-            desc={t('100% or prorated value credited for 60 days to book any other class or gym package.')}
+            desc={
+              preview.exceedsEightyPercent
+                ? t('Ineligible per center policy (>80% attended).')
+                : t('100% or prorated value credited for 60 days to book any other class or gym package.')
+            }
             subtext={
-              !preview.hasStarted
+              preview.exceedsEightyPercent
+                ? t('Ineligible per center policy')
+                : !preview.hasStarted
                 ? t('Auto-issued instantly (1-click)')
                 : t('Quick reception review')
             }
-            themeKey="emerald"
+            themeKey={preview.exceedsEightyPercent ? 'rose' : 'emerald'}
           />
 
           <BenefitOptionCard
             optionKey="GYM_PASS"
-            selectedKey={preferredResolution}
+            selectedKey={preview.exceedsEightyPercent ? '' : preferredResolution}
             onSelect={onSelectResolution}
+            disabled={preview.exceedsEightyPercent}
             icon={Dumbbell}
             title={t('Free 1-Month Gym Pass')}
-            badgeText={`1 ${t('Month')} VIP`}
-            desc={t('Exchange remaining sessions for 1 full month of unlimited gym & fitness access.')}
-            subtext={t('Instant activation upon review')}
-            themeKey="blue"
+            badgeText={
+              preview.exceedsEightyPercent
+                ? t('Not Eligible (>80%)')
+                : `1 ${t('Month')} VIP`
+            }
+            desc={
+              preview.exceedsEightyPercent
+                ? t('Ineligible per center policy (>80% attended).')
+                : t('Exchange remaining sessions for 1 full month of unlimited gym & fitness access.')
+            }
+            subtext={
+              preview.exceedsEightyPercent
+                ? t('Ineligible per center policy')
+                : t('Instant activation upon review')
+            }
+            themeKey={preview.exceedsEightyPercent ? 'rose' : 'blue'}
           />
 
           <BenefitOptionCard
             optionKey="CASH_REFUND"
-            selectedKey={preferredResolution}
+            selectedKey={preview.exceedsEightyPercent ? '' : preferredResolution}
             onSelect={onSelectResolution}
+            disabled={preview.exceedsEightyPercent}
             icon={DollarSign}
             title={t('Cash / Bank Refund Request')}
             badgeText={
-              !preview.hasStarted
+              preview.exceedsEightyPercent
+                ? t('Not Eligible (>80%)')
+                : !preview.hasStarted
                 ? formatMoney(preview.classPrice)
-                : formatMoney(preview.proratedCredit)
+                : formatMoney((preview.proratedCredit ?? preview.estimatedCreditAmount))
             }
-            desc={t('Request remaining class tuition refunded via bank transfer or cash at counter.')}
-            subtext={t('Requires Center Manager approval')}
-            themeKey="purple"
+            desc={
+              preview.exceedsEightyPercent
+                ? t('Ineligible per center policy (>80% attended).')
+                : t('Request remaining class tuition refunded via bank transfer or cash at counter.')
+            }
+            subtext={
+              preview.exceedsEightyPercent
+                ? t('Ineligible per center policy')
+                : t('Requires Center Manager approval')
+            }
+            themeKey={preview.exceedsEightyPercent ? 'rose' : 'purple'}
           />
         </div>
       </div>
@@ -451,7 +505,11 @@ export const ClassCancellationFormSection = ({
           rows={3}
           value={reasonContent}
           onChange={(e) => onChangeReasonContent(e.target.value)}
-          placeholder={t('Please specify your reason (e.g. medical reason, work relocation). Receptionist will review and approve your credit voucher or compensation.')}
+          placeholder={
+            preview?.exceedsEightyPercent
+              ? t('Class attendance exceeded 80% (ineligible for refund/perks). Please state your personal reason or circumstances for requesting class withdrawal for reception review.')
+              : t('Please specify your reason (e.g. medical reason, work relocation). Receptionist will review and approve your credit voucher or compensation.')
+          }
           className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
           required
         />

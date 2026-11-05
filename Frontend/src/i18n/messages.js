@@ -3086,6 +3086,21 @@ const supportTranslations = [
   ["Select Enrolled Class","Chọn lớp học đang tham gia"],
   ["You are not enrolled in any active classes to request cancellation or retention.","Bạn hiện chưa tham gia lớp học nào để yêu cầu hủy hoặc bảo lưu."],
   ["Submit Feedback to Reception","Gửi góp ý tới Lễ tân"],
+  ["Submit Feedback directly to Management","Gửi phản hồi trực tiếp tới Quản lý"],
+  ["Coach Feedback Topic","Chủ đề góp ý HLV"],
+  ["Associated Target","Đối tượng liên quan"],
+  ["Student Feedback & Comments","Nội dung phản ánh từ học viên"],
+  ["Confidential Feedback","Ý kiến bảo mật"],
+  ["General Coaching","Chuyên môn chung"],
+  ["Please share your detailed feedback regarding the instructor (teaching method, attitude, punctualness, or suggestions for improvement)...","Vui lòng mô tả chi tiết ý kiến góp ý của bạn về giáo viên/HLV (phương pháp giảng dạy, thái độ, sự đúng giờ hoặc đề xuất cải tiến)..."],
+  ["Please provide your feedback description.","Vui lòng nhập nội dung phản ánh hoặc góp ý của bạn."],
+  ["No additional comments provided.","Không có nội dung ghi chú bổ sung."],
+
+  ["Coach Feedback Directly Routed to Management","Phản hồi HLV chuyển thẳng tới Quản lý"],
+  ["This ticket reports issues regarding a Coach / Instructor and has been routed directly to Center Management for review. Receptionists have view-only access.","Đơn phản ánh về Giáo viên/HLV được gửi thẳng tới Quản lý trung tâm để trực tiếp thẩm định. Lễ tân chỉ có quyền xem thông tin, không được duyệt."],
+  ["Direct Routing to Center Management","Chuyển thẳng tới Quản lý trung tâm"],
+  ["Coach feedback and complaints are sent directly to Center Management for objective assessment and confidential handling.","Ý kiến đóng góp và khiếu nại về Giáo viên/HLV được gửi thẳng đến Quản lý trung tâm để trực tiếp thẩm định và bảo mật thông tin."],
+
   ["Submit Incident Report","Gửi báo cáo sự cố"],
   ["Submit Schedule Request","Gửi yêu cầu lịch học"],
   ["Submit Complaint to Reception","Gửi khiếu nại tới Lễ tân"],
@@ -3553,7 +3568,7 @@ const receptionistModuleTranslations = [
   ["Awaiting Check-in", "Chờ Check-in (Chưa đến)"],
   ["Session Completed", "Đã Hoàn Thành Ca"],
   ["All", "Tất cả"],
-  ["Pending", "Chưa đến"],
+  ["Pending", "Chờ duyệt"],
   ["Present", "Đã có mặt"],
   ["Done", "Đã xong"],
   ["Search coach, phone, class...", "Tìm HLV, SĐT, tên lớp..."],
@@ -4036,6 +4051,9 @@ const managerSettingsTranslations = [
   ["Active Classes", "Lớp đang phụ trách"],
   ["Eligible to Switch", "Đủ điều kiện đổi môn"],
   ["Specialty Locked", "Đang khóa đổi môn"],
+  ["Manager-Assigned Subjects", "Bộ môn do Quản lý phân công"],
+  ["Teaching subjects are assigned by the Center Manager. Your assigned disciplines are listed below.", "Bộ môn giảng dạy do Quản lý trung tâm phân công. Các bộ môn bạn phụ trách được hiển thị bên dưới."],
+  ["You have not been assigned any teaching subjects yet. Please contact the Center Manager to assign your subjects in Staff & Permissions.", "Bạn chưa được phân công bộ môn giảng dạy. Vui lòng liên hệ Quản lý trung tâm để được thiết lập bộ môn tại mục Nhân sự & phân quyền."],
   ["Eligible to switch: You currently have no ongoing classes in this subject.", "Đủ điều kiện đổi môn: Hiện tại bạn không có lớp học nào đang hoạt động thuộc môn này."],
   ["Subject locked: You have active teaching classes. Please complete or hand over classes before switching.", "Đang bị khóa đổi môn: Bạn đang có lớp học giảng dạy dở. Vui lòng kết thúc hoặc bàn giao lớp trước khi đổi."],
   ["Select Teaching Subject", "Chọn bộ môn giảng dạy"],
@@ -5077,6 +5095,288 @@ const workoutSubmissionTranslations = [
 ];
 
 for (const [en, vi] of workoutSubmissionTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+
+// ==========================================
+// INVOICE & BILLING REDESIGN TRANSLATIONS
+// ==========================================
+const invoiceRedesignTranslations = [
+  ["Original Amount", "Tiền gốc"],
+  ["Actual Amount", "Thực thu"],
+  ["Actual Payment", "Thực thu"],
+  ["Payment Channel", "Kênh thanh toán"],
+  ["Channel", "Kênh thu"],
+  ["Online Checkout", "Trực tuyến (Hệ thống)"],
+  ["Front Desk", "Quầy lễ tân"],
+  ["Front Desk Counter", "Quầy lễ tân"],
+  ["Cashier Staff", "Thu ngân"],
+  ["View Details", "Xem chi tiết"],
+  ["Receipt Details", "Chi tiết phiếu thu"],
+  ["Invoice Details", "Chi tiết hóa đơn"],
+  ["Print Receipt", "In HĐ"],
+  ["more items", "mục khác"],
+  ["more services", "dịch vụ khác"],
+  ["services", "dịch vụ"],
+  ["Discount / Voucher", "Giảm giá / Voucher"],
+  ["Discount Amount", "Số tiền giảm"],
+  ["Voucher / Credit Applied", "Ưu đãi / Voucher áp dụng"],
+  ["Financial Breakdown", "Tổng kết tài chính"],
+  ["Total Original Price", "Tổng tiền gốc ban đầu"],
+  ["Total Deductions", "Tổng khấu trừ"],
+  ["Final Total Paid", "Tổng thực thanh toán"],
+  ["Invoice Reference", "Mã tham chiếu"],
+  ["Customer Information", "Thông tin khách hàng"],
+  ["Issued At", "Thời gian tạo"],
+  ["Items Breakdown", "Danh mục thanh toán"],
+  ["View Items List", "Xem danh sách mục"],
+  ["Hide Items List", "Thu gọn danh sách"],
+  ["No discounts applied", "Không áp dụng ưu đãi"],
+  ["Total Original Amount", "Tổng tiền gốc"],
+  ["Voucher Deductions", "Khấu trừ voucher"],
+  ["Grand Total", "Tổng thực thu"],
+  ["Itemized Services", "Danh mục dịch vụ thanh toán"],
+  ["Official Receipt", "Phiếu thu dịch vụ"],
+  ["View Receipt", "Xem phiếu thu"],
+  ["Show all items", "Xem toàn bộ danh sách"],
+  ["Discount Applied", "Đã giảm"],
+  ["Order Summary", "Tổng kết thanh toán"],
+  ["Total Items Price", "Tổng tiền hàng"],
+  ["Item", "mục"],
+  ["Items", "mục"]
+];
+
+for (const [en, vi] of invoiceRedesignTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+// ==========================================
+// BOOK CLASS & SUBJECT FILTERS TRANSLATIONS
+// ==========================================
+const bookClassTranslations = [
+  ["Any Selected Day", "Khớp bất kỳ ngày nào"],
+  ["Only These Days", "Chỉ trong các ngày này"],
+  ["Filter Mode:", "Chế độ lọc:"],
+  ["Only show classes whose sessions fall strictly within selected days", "Chỉ hiện các lớp có lịch học hoàn toàn nằm trong các ngày đã chọn"],
+
+  ["select one or more days", "chọn một hoặc nhiều thứ"],
+  ["select one or more slots", "chọn một hoặc nhiều ca"],
+  ["Show all days", "Xem tất cả các thứ"],
+  ["Show all times", "Xem tất cả khung giờ"],
+
+  ["Filter by Day of Week:", "Lọc theo Thứ trong tuần:"],
+  ["Filter by Time Slot:", "Lọc theo Khung giờ:"],
+  ["All Days", "Tất cả các thứ"],
+  ["All Times", "Tất cả khung giờ"],
+  ["Morning", "Buổi sáng"],
+  ["Afternoon", "Buổi chiều"],
+  ["Evening", "Buổi tối"],
+  ["Reset Filters", "Đặt lại bộ lọc"],
+  ["Clear all filters", "Xóa bộ lọc"],
+  ["Active Filters:", "Bộ lọc đang chọn:"],
+  ["AWAITING_CONFIRMATION", "Chờ xác nhận"],
+  ["Awaiting Confirmation", "Chờ xác nhận"],
+  ["awaiting_confirmation", "Chờ xác nhận"],
+  ["PAID", "Đã thanh toán"],
+  ["FAILED", "Thất bại"],
+  ["CANCELLED", "Đã hủy"],
+  ["Monday", "Thứ 2"],
+  ["Tuesday", "Thứ 3"],
+  ["Wednesday", "Thứ 4"],
+  ["Thursday", "Thứ 5"],
+  ["Friday", "Thứ 6"],
+  ["Saturday", "Thứ 7"],
+  ["Sunday", "Chủ nhật"],
+  ["Mon", "T2"],
+  ["Tue", "T3"],
+  ["Wed", "T4"],
+  ["Thu", "T5"],
+  ["Fri", "T6"],
+  ["Sat", "T7"],
+  ["Sun", "CN"],
+  ["No courses match your filter criteria (Day of week, Time slot, or Start date). Try clearing some filters.", "Không có lớp học nào khớp với tiêu chí lọc (Thứ trong tuần, Khung giờ hoặc Ngày). Hãy thử đặt lại bộ lọc."],
+
+  ["View all scheduled sessions", "Xem toàn bộ lịch học chi tiết"],
+  ["Hide course schedule", "Thu gọn lịch học chi tiết"],
+  ["Complete session timeline:", "Lịch học chi tiết từng buổi:"],
+  ["sessions loaded", "buổi đã sẵn sàng"],
+  ["Session", "Buổi"],
+  ["Select Start Date:", "Chọn ngày khai giảng:"],
+  ["Select Start Date", "Chọn ngày khai giảng"],
+  ["Show all dates", "Xem tất cả các ngày"],
+  ["Class Schedule & Courses", "Lịch học & Khóa tập"],
+  ["Member Enrollment", "Đăng ký khóa học"],
+  ["Book Courses", "Đăng ký khóa học"],
+  ["Explore upcoming courses, select your start date, and reserve your spot.", "Khám phá các khóa học sắp diễn ra, chọn ngày khai giảng và giữ chỗ ngay."],
+  ["Search by sport (Yoga, Gym, Cycling, Swim...), coach or room...", "Tìm theo môn (Yoga, Gym, Đạp xe, Bơi...), HLV hoặc phòng tập..."],
+  ["Search by class name, coach, or room...", "Tìm theo môn (Yoga, Gym, Đạp xe, Bơi...), HLV hoặc phòng tập..."],
+  ["Full Course:", "Toàn bộ khóa:"],
+  ["Starts:", "Khai giảng:"],
+  ["min", "phút"],
+  ["Students Enrolled", "học viên đăng ký"],
+  ["Repeats:", "Lịch học:"],
+  ["All Sports", "Tất cả môn"],
+  ["All Categories", "Tất cả phân loại"],
+  ["Filter by Sport:", "Bộ môn giảng dạy:"],
+  ["Filter by Subject:", "Bộ môn giảng dạy:"],
+  ["Subject:", "Bộ môn:"],
+  ["Other Sports", "Bộ môn khác"],
+  ["Cycling & Spinning", "Đạp xe Spinning"],
+  ["Đạp xe Spinning", "Đạp xe Spinning"],
+  ["Boxing & Kickfit", "Boxing & Kickfit"],
+  ["Pilates Reformer", "Pilates Reformer"],
+  ["Zumba Dance", "Zumba Dance"],
+  ["Gym & Fitness", "Thể hình / Gym"],
+  ["Swimming", "Bơi lội"],
+  ["classes available", "lớp đang mở"],
+  ["Active Sports", "Bộ môn đang mở"],
+  ["Sport Discipline", "Bộ môn thể thao"],
+  ["Sport Disciplines", "Bộ môn thể thao"],
+  ["classes", "lớp"],
+  ["Back to all sports", "Quay lại tất cả bộ môn"],
+  ["Selected Sport", "Bộ môn đang chọn"],
+  ["classes matching", "lớp học phù hợp"],
+  ["Tuition from", "Học phí từ"],
+  ["View classes", "Xem danh sách lớp"],
+  ["View all classes", "Xem tất cả lớp học"],
+  ["Choose a sport discipline to explore schedules and enroll in available classes.", "Chọn bộ môn bạn quan tâm để xem lịch khai giảng và danh sách lớp học đang mở."],
+  ["Available Sports Disciplines", "Các bộ môn đang mở tại trung tâm"],
+  ["Total Disciplines", "Tổng số bộ môn"],
+  ["Browse by Sport", "Khám phá theo bộ môn"],
+  ["All Active Classes", "Tất cả lớp học đang mở"],
+  ["Tuition Fee", "Học phí"],
+  ["Pending Checkout", "Chờ thanh toán"],
+  ["Schedule conflict! The session at {0} overlaps with your existing course: '{1}'.", "Trùng lịch học! Buổi học lúc {0} bị trùng với khóa học bạn đã đăng ký: '{1}'."],
+  ["You have already booked this course.", "Bạn đã đăng ký khóa học này rồi."],
+  ["This class is fully booked.", "Lớp học này đã hết chỗ trống."],
+  ["No future sessions found for this class.", "Không tìm thấy buổi học nào sắp tới cho lớp này."]
+];
+
+for (const [en, vi] of bookClassTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+
+
+// ==========================================
+// SUPPORT DESK TABLE REDESIGN TRANSLATIONS
+// ==========================================
+const supportTableRedesignTranslations = [
+  ["Request Details", "Chi tiết yêu cầu"],
+  ["Submitted At", "Ngày gửi"],
+  ["Settlement / Progress", "Bảo lưu & Tiến độ"],
+  ["Attended", "Đã học"],
+  ["Refund", "Bảo lưu"],
+  ["Facility & Equipment", "CSVC & Thiết bị"],
+  ["Coach & Training", "HLV & Đào tạo"]
+];
+
+for (const [en, vi] of supportTableRedesignTranslations) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+
+
+// ==========================================
+// VIETQR AUTO CONFIRMATION & CART TRANSLATIONS
+// ==========================================
+const vietqrAutoConfirmTranslations = [
+  ["Class Attendance Exceeded 80% - Ineligible for Refund or Perks", "Khóa học đã diễn ra quá 80% số buổi - Không áp dụng hoàn tiền hoặc bồi hoàn phúc lợi"],
+  ["Ineligible for Tuition Retention or Benefit Exchange", "Không đủ điều kiện bảo lưu học phí hoặc đổi quyền lợi"],
+  ["Per center policy, courses with attendance exceeding 80% cannot be refunded or exchanged for vouchers/passes. All compensation options are closed.", "Theo quy chế trung tâm, khóa học đã diễn ra quá 80% số buổi không áp dụng hoàn tiền hoặc đổi voucher/thẻ tập. Toàn bộ tùy chọn bồi hoàn đã bị khóa."],
+  ["Submit Class Withdrawal Request", "Gửi yêu cầu xin thôi học"],
+  ["Class attendance exceeded 80% (ineligible for refund/perks). Please state your personal reason or circumstances for requesting class withdrawal for reception review.", "Khóa học đã diễn ra quá 80% số buổi (không áp dụng bồi hoàn/đổi thẻ). Bạn vui lòng nêu rõ hoàn cảnh cá nhân xin thôi học để Lễ tân thẩm định."],
+  ["Class Withdrawal Request for", "Đơn xin thôi học lớp"],
+  ["Center Policy: Exceeded 80% attendance - No refund/perks requested", "Quy chế trung tâm: Đã học quá 80% thời lượng - Không yêu cầu hoàn tiền/phúc lợi"],
+  ["No Compensation (Exceeded 80% Attendance)", "Không bồi hoàn (Đã học quá 80% thời lượng)"],
+  ["Reject Request (Policy Enforced)", "Từ chối yêu cầu (Thực thi quy chế)"],
+  ["Class attended sessions exceeded 80%. Center policy strictly prohibits refunds or perks.", "Lớp đã học quá 80% số buổi. Quy chế trung tâm nghiêm cấm hoàn tiền hoặc bồi hoàn phúc lợi."],
+  ["Cannot approve refund or perks: this class exceeded 80% attendance per center policy.", "Không thể phê duyệt bồi hoàn hoặc phúc lợi: lớp học đã diễn ra quá 80% số buổi theo quy chế trung tâm."],
+  ["Class Attendance Exceeded 80% - Ineligible for Voucher Refund", "Lớp học đã diễn ra quá 80% số buổi - Không đủ điều kiện hoàn voucher bảo lưu"],
+  ["Not Eligible (>80%)", "Không đủ điều kiện (>80%)"],
+  ["You have attended over 80% of class sessions. Under center policy, course credit voucher refund is not applicable.", "Khóa học đã diễn ra quá 80% số buổi. Theo quy định của trung tâm, không áp dụng hoàn voucher bảo lưu học phí."],
+  ["Ineligible per center policy", "Không áp dụng theo quy chế trung tâm"],
+  ["Ineligible per center policy (>80% attended).", "Không đủ điều kiện theo quy chế trung tâm (đã học >80%)."],
+  ["Class attendance exceeded 80%. Under center policy, member is not eligible for voucher refund.", "Lớp đã học quá 80% số buổi. Theo quy chế trung tâm, học viên không đủ điều kiện hoàn voucher."],
+  ["Warning: This class exceeded 80% attendance. Issuing voucher violates center policy.", "Cảnh báo: Lớp học này đã diễn ra quá 80% số buổi. Việc cấp voucher là trái quy chế trung tâm."],
+  ["Approve Cash / Bank Refund", "Phê Duyệt Hoàn Tiền Mặt / Chuyển Khoản"],
+  ["Authorizes cash disbursement or bank transfer to refund tuition to member.", "Duyệt lệnh xuất quỹ/kế toán chuyển khoản hoàn trả học phí cho học viên."],
+  ["Escalate to Training Management for Review & Resolution", "Chuyển Quản lý Chuyên môn thẩm định & xử lý"],
+  ["Coach complaints fall under the Center Manager's authority. Reception logs and routes directly.", "Đơn khiếu nại HLV thuộc thẩm quyền xử lý kỷ luật của Quản lý trung tâm. Lễ tân tiếp nhận và chuyển tiếp."],
+  ["Coach complaints fall under Manager authority", "Đơn khiếu nại HLV thuộc thẩm quyền Quản lý"],
+  ["Reception does not have authority to handle Coach performance or discipline. Please escalate to Center Management.", "Lễ tân không có thẩm quyền xử lý chuyên môn hoặc kỷ luật Huấn luyện viên. Vui lòng chuyển tiếp đơn này lên cấp Quản lý trung tâm để trực tiếp xác minh và làm việc."],
+  ["Confirm cash / bank refund order (Manager Authority)", "Xác nhận lệnh hoàn tiền mặt / chuyển khoản (Thẩm quyền Quản lý)"],
+  ["Approved Refund Amount (VND)", "Số tiền duyệt hoàn (VNĐ)"],
+
+  ["Payment Instructions", "Hướng dẫn thanh toán"],
+  ["Important instructions", "Lưu ý quan trọng"],
+  ["I have transferred successfully", "Tôi đã chuyển khoản thành công"],
+  ["I have successfully transferred", "Tôi đã chuyển khoản thành công"],
+  ["below to activate your package/course immediately.", "bên dưới để hệ thống kích hoạt gói/khóa học ngay lập tức."],
+  ["below. Your order will be automatically verified and activated immediately.", "bên dưới. Đơn hàng của bạn sẽ được tự động xác nhận và kích hoạt ngay lập tức."],
+  ["Verifying payment...", "Đang xác nhận thanh toán..."],
+  ["Payment Verified", "Đã xác nhận thanh toán"],
+  ["Payment Successful!", "Thanh toán thành công!"],
+  ["Your bank transfer has been received and confirmed. Your memberships and classes have been activated.", "Chuyển khoản của bạn đã được ghi nhận và xác nhận thành công. Gói hội viên và lớp học đã được kích hoạt."],
+  ["Redirecting back to your cart...", "Đang chuyển hướng về giỏ hàng..."],
+  ["Return to Cart Now", "Quay lại giỏ hàng ngay"],
+  ["Order Awaiting Payment / Confirmation", "Đơn hàng đang chờ thanh toán / xác nhận"],
+  ["Pending Checkout Session", "Phiên thanh toán đang chờ xử lý"],
+  ["You have a checkout session awaiting payment. You can confirm your transfer immediately to activate your services, view QR code, or cancel this order to unlock your cart.", "Bạn có phiên thanh toán đang chờ xử lý. Bạn có thể xác nhận đã chuyển khoản ngay để kích hoạt dịch vụ, quét mã QR hoặc hủy đơn để mở khóa giỏ hàng."],
+  ["View QR Code", "Xem mã QR"],
+  ["Cancel Order", "Hủy đơn hàng"],
+  ["I Have Paid (Confirm Now)", "Tôi đã thanh toán (Xác nhận ngay)"],
+  ["Confirming...", "Đang xác nhận..."],
+  ["Your payment has been confirmed and services have been activated.", "Thanh toán của bạn đã được xác nhận thành công và dịch vụ đã được kích hoạt."],
+  ["Unable to confirm payment.", "Không thể xác nhận thanh toán. Vui lòng thử lại."],
+  ["Keep this exact content for reception verification", "Giữ nguyên nội dung này để xác nhận tự động"],
+  ["Keep this content unchanged for automatic confirmation", "Giữ nguyên nội dung này để xác nhận tự động"],
+  ["Acknowledge & Work with Coach", "Ghi nhận & Làm việc với HLV"],
+  ["Remind coach and review with Department Head to enhance teaching quality.", "Nhắc nhở HLV, làm việc cùng Trưởng bộ môn để nâng cao chất lượng bài giảng."],
+  ["Suggest Class / Coach Transfer", "Đề xuất đổi lớp / HLV khác"],
+  ["Consult and support member to transfer to a more suitable class or coach.", "Tư vấn hỗ trợ học viên chuyển sang lớp của HLV khác phù hợp với phong cách học."],
+  ["Escalate to Discipline Management", "Chuyển Quản lý Chuyên môn"],
+  ["Serious conduct or policy violation requiring management action.", "Phản ánh nghiêm trọng về vi phạm kỷ luật hoặc thái độ cần cấp quản lý xử lý."],
+  ["Dismiss Feedback (Unsubstantiated)", "Đóng phản ánh (Không có cơ sở)"],
+  ["After reviewing history/cameras, coach followed all standard protocols.", "Sau khi kiểm tra camera/lịch sử thấy HLV thực hiện đúng giáo án chuẩn."],
+  ["Dispatch Maintenance Immediately", "Báo Kỹ thuật / Bảo trì ngay"],
+  ["Issue repair order to maintenance team and post equipment inspection notices.", "Chuyển ngay lệnh sửa chữa tới đội bảo trì, gắn biển kiểm tra thiết bị."],
+  ["Announce Repair Schedule", "Thông báo lịch sửa chữa"],
+  ["Equipment under maintenance, expected to be back in service within 24-48 hours.", "Báo lịch máy đang sửa chữa, dự kiến hoàn thành đưa vào sử dụng trong 24-48h."],
+  ["Escalate to Facility Management (Replacement)", "Chuyển Quản lý CSVC (Thay mới)"],
+  ["Severely damaged equipment requiring manager approval for full replacement.", "Thiết bị hỏng nặng không thể sửa, cần Quản lý duyệt mua mới thay thế."],
+  ["Inspection Complete (Normal Operation)", "Đã kiểm tra (Máy hoạt động tốt)"],
+  ["Technicians verified equipment works properly; staff will guide member on usage.", "Kỹ thuật đã test máy bình thường, lễ tân sẽ hướng dẫn hội viên thao tác đúng."],
+  ["Support Session Swap / Makeup", "Hỗ trợ đổi buổi / Xếp lịch bù"],
+  ["Receptionist has updated new class schedule for member on management system.", "Lễ tân đã cập nhật lịch học mới cho học viên trên hệ thống quản lý."],
+  ["Guide App Self-Reschedule", "Hướng dẫn tự đổi lịch trên App"],
+  ["Instruct member on how to reschedule sessions via app 24h in advance.", "Hướng dẫn học viên chủ động đổi lịch trên app trước 24h quy định."],
+  ["Escalate to Manager (Special Slot Allocation)", "Chuyển Quản lý (Đặc cách xếp ca)"],
+  ["Out-of-policy session schedule requests requiring management approval.", "Yêu cầu xếp ca ngoài lịch học chuẩn cần cấp quản lý phê duyệt."],
+  ["Decline Reschedule (Full / Expired)", "Từ chối đổi lịch (Hết chỗ / Quá hạn)"],
+  ["Desired session is fully booked or notification was submitted after cutoff deadline.", "Ca học mong muốn đã đầy sĩ số hoặc báo trễ không thỏa mãn điều kiện."],
+  ["Apologize & Resolve Issue", "Tiếp nhận xin lỗi & Khắc phục sự cố"],
+  ["Apologize to member, record shortcomings, and implement corrective workflows.", "Xin lỗi học viên, ghi nhận thiếu sót và đưa ra biện pháp khắc phục quy trình."],
+  ["Contact Directly to Reconcile", "Đã liên hệ trực tiếp hòa giải"],
+  ["Duty manager/receptionist has met or called member directly to resolve satisfactorily.", "Lễ tân/Trưởng ca đã gặp trực tiếp hoặc gọi điện trao đổi thỏa đáng với hội viên."],
+  ["Dismiss Complaint (No Violation)", "Bác bỏ khiếu nại (Không vi phạm)"],
+  ["Investigation confirmed procedures were followed with no misconduct by center.", "Xác minh quy trình đúng quy chế, không có sai sót từ phía trung tâm."],
+  ["Answer & Guide Member", "Giải đáp & Hướng dẫn hội viên"],
+  ["Provide complete answers and instructions addressing member inquiry.", "Phản hồi câu trả lời giải đáp đầy đủ thông tin hội viên cần hỗ trợ."],
+  ["Consult Directly / via Phone", "Đã tư vấn trực tiếp / Qua điện thoại"],
+  ["Receptionist has contacted member directly at the front desk or via hotline.", "Lễ tân đã liên hệ trực tiếp hỗ trợ chi tiết tại quầy hoặc qua hotline."],
+  ["Escalate to Manager for Answer", "Chuyển Quản lý giải đáp"],
+  ["Policy questions exceeding front desk receptionist authority.", "Câu hỏi chính sách vượt quá thẩm quyền của nhân viên lễ tân."],
+  ["Close Support Request", "Đóng yêu cầu hỗ trợ"],
+  ["Inquiry has been addressed or closed per member request.", "Nội dung đã được xử lý hoặc đóng theo yêu cầu hội viên."],
+  ["Cash at desk / Bank transfer", "Tiền mặt tại quầy / Chuyển khoản ngân hàng"],
+];
+
+for (const [en, vi] of vietqrAutoConfirmTranslations) {
   translations[en] = [en, vi];
   translations[vi] = [en, vi];
 }

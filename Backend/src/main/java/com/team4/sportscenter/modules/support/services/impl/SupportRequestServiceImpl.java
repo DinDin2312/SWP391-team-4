@@ -104,9 +104,14 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         int remainingSessions = Math.max(0, totalSessions - attendedSessions);
         BigDecimal classPrice = gymClass.getPrice() != null ? gymClass.getPrice() : BigDecimal.ZERO;
 
+        double attendanceRate = totalSessions > 0 ? ((double) attendedSessions / totalSessions) : 0.0;
+        boolean exceedsEightyPercent = totalSessions > 0 && attendanceRate > 0.8;
+
         BigDecimal estimatedCreditAmount;
         if (!hasStarted) {
             estimatedCreditAmount = classPrice;
+        } else if (exceedsEightyPercent) {
+            estimatedCreditAmount = BigDecimal.ZERO;
         } else if (totalSessions > 0) {
             BigDecimal raw = classPrice
                     .multiply(BigDecimal.valueOf(remainingSessions))
@@ -122,6 +127,8 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         String message;
         if (!hasStarted) {
             message = "Khóa học chưa khai giảng. Bạn có thể hủy trực tiếp và nhận Credit bảo lưu 100% học phí có hạn 60 ngày.";
+        } else if (exceedsEightyPercent) {
+            message = "Khóa học đã diễn ra quá 80% số buổi (" + attendedSessions + "/" + totalSessions + " buổi). Theo quy chế trung tâm, học viên không đủ điều kiện nhận hoàn học phí, voucher bảo lưu hay bất kỳ phúc lợi bồi hoàn nào.";
         } else {
             message = "Khóa học đã diễn ra " + attendedSessions + "/" + totalSessions + " buổi. Bạn có thể gửi phiếu hỗ trợ để Lễ tân xét duyệt bảo lưu số buổi còn lại.";
         }
@@ -136,8 +143,13 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                 .firstSessionTime(firstSessionTime)
                 .hasStarted(hasStarted)
                 .canDirectCancelWithCredit(!hasStarted && hasActiveBookings)
+                .exceedsEightyPercent(exceedsEightyPercent)
+                .eligibleForVoucher(!exceedsEightyPercent)
+                .eligibleForCompensation(!exceedsEightyPercent)
                 .estimatedCreditAmount(estimatedCreditAmount)
+                .proratedCredit(estimatedCreditAmount)
                 .message(message)
+                .policyNotice(message)
                 .build();
     }
 
@@ -646,9 +658,10 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                         + " cho lớp học này đang chờ xử lý. Vui lòng không gửi lặp lại yêu cầu để tránh làm chậm tiến độ hỗ trợ.");
             }
 
-            // 3. Check if user already had an approved/resolved ticket for this class
+            // 3. Check if user already had an approved/resolved cancellation/refund ticket for this class
             List<SupportRequest> resolvedWithComp = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
                     .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), request.getClassId()))
+                    .filter(r -> r.getCategory() == SupportCategory.CLASS_CANCELLATION || r.getCategory() == SupportCategory.REFUND_REQUEST)
                     .filter(r -> r.getStatus() == SupportStatus.APPROVED || r.getStatus() == SupportStatus.RESOLVED)
                     .toList();
             if (!resolvedWithComp.isEmpty()) {
@@ -664,9 +677,24 @@ public class SupportRequestServiceImpl implements SupportRequestService {
             prefRes = "ISSUE_CREDIT";
         }
 
+        // Strict 80% policy: if class exceeded 80% attendance, clear any compensation benefit
+        if (isCancellationCategory && request.getClassId() != null) {
+            try {
+                CancelClassPreviewResponse preview = getCancelClassPreview(request.getClassId(), user.getEmail());
+                if (preview.isExceedsEightyPercent()) {
+                    prefRes = "NONE";
+                }
+            } catch (Exception ignored) {}
+        }
+
+        boolean isCoachFeedback = request.getCategory() == SupportCategory.COACH_FEEDBACK;
+        SupportStatus initialStatus = isCoachFeedback ? SupportStatus.ESCALATED : SupportStatus.PENDING;
+
         // Auto-priority intelligence
         SupportPriority calculatedPriority = request.getPriority();
-        if (calculatedPriority == null || calculatedPriority == SupportPriority.NORMAL) {
+        if (isCoachFeedback) {
+            calculatedPriority = SupportPriority.HIGH;
+        } else if (calculatedPriority == null || calculatedPriority == SupportPriority.NORMAL) {
             if ("CASH_REFUND".equalsIgnoreCase(prefRes) || "MANAGER_REFUND".equalsIgnoreCase(prefRes)) {
                 calculatedPriority = SupportPriority.HIGH;
             } else if (request.getCategory() == SupportCategory.COMPLAINT) {
@@ -690,29 +718,49 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                 .preferredResolution(prefRes)
                 .title(request.getTitle())
                 .content(request.getContent())
-                .status(SupportStatus.PENDING)
+                .status(initialStatus)
                 .priority(calculatedPriority)
                 .build();
 
         SupportRequest saved = supportRequestRepository.save(entity);
 
         // Notify member that ticket was received
+        String memberMsg = isCoachFeedback
+                ? "Trung tâm đã tiếp nhận phản hồi về HLV #" + saved.getRequestId() + ": \"" + saved.getTitle() + "\". Yêu cầu được chuyển thẳng tới Quản lý trung tâm để trực tiếp thẩm định và bảo mật thông tin."
+                : "Trung tâm đã tiếp nhận yêu cầu #" + saved.getRequestId() + ": \"" + saved.getTitle() + "\". Lễ tân sẽ phản hồi và xử lý trong thời gian sớm nhất.";
+
         Notification notif = Notification.builder()
                 .user(user)
-                .title("Yêu cầu hỗ trợ đã được tiếp nhận")
-                .message("Trung tâm đã tiếp nhận yêu cầu #" + saved.getRequestId() + ": \"" + saved.getTitle() + "\". Lễ tân sẽ phản hồi và xử lý trong thời gian sớm nhất.")
+                .title(isCoachFeedback ? "Phản hồi HLV đã chuyển Quản lý xử lý" : "Yêu cầu hỗ trợ đã được tiếp nhận")
+                .message(memberMsg)
                 .type("SUPPORT")
                 .isRead(false)
                 .build();
         notificationRepository.save(notif);
 
-        // Notify receptionists about new member support ticket
         String memberName = user.getFullName() != null ? user.getFullName() : "Hội viên";
-        notifyReceptionists(
-                "Yêu cầu hỗ trợ mới #" + saved.getRequestId(),
-                "Hội viên " + memberName + " (#" + user.getUserId() + ") vừa gửi yêu cầu: \"" + saved.getTitle() + "\". Vui lòng kiểm tra và xử lý tại Bàn hỗ trợ.",
-                "SUPPORT"
-        );
+
+        if (isCoachFeedback) {
+            // Direct notification to Center Managers and Admins
+            notifyManagers(
+                    "Khiếu nại/Phản hồi HLV #" + saved.getRequestId(),
+                    "Hội viên " + memberName + " (#" + user.getUserId() + ") vừa gửi phản hồi về Giáo viên/HLV: \"" + saved.getTitle() + "\". Đơn đã chuyển thẳng tới Quản lý để thẩm định.",
+                    "SUPPORT_COACH"
+            );
+            // Also notify receptionists for awareness (view-only)
+            notifyReceptionists(
+                    "Đơn phản hồi HLV mới #" + saved.getRequestId() + " (Đã chuyển Quản lý)",
+                    "Hội viên " + memberName + " (#" + user.getUserId() + ") vừa gửi phản hồi HLV: \"" + saved.getTitle() + "\". Đơn chuyển thẳng Quản lý xử lý (Lễ tân chỉ xem thông tin).",
+                    "SUPPORT"
+            );
+        } else {
+            // Notify receptionists about new member support ticket
+            notifyReceptionists(
+                    "Yêu cầu hỗ trợ mới #" + saved.getRequestId(),
+                    "Hội viên " + memberName + " (#" + user.getUserId() + ") vừa gửi yêu cầu: \"" + saved.getTitle() + "\". Vui lòng kiểm tra và xử lý tại Bàn hỗ trợ.",
+                    "SUPPORT"
+            );
+        }
 
         return mapToResponse(saved);
     }
@@ -776,6 +824,10 @@ public class SupportRequestServiceImpl implements SupportRequestService {
             throw new IllegalStateException("Đơn yêu cầu này đã được chuyển lên Quản lý trung tâm. Chỉ Quản lý mới có thẩm quyền giải quyết.");
         }
 
+        if (request.getCategory() == SupportCategory.COACH_FEEDBACK && !isManagerStaff) {
+            throw new IllegalStateException("Đơn phản hồi/khiếu nại Huấn luyện viên thuộc thẩm quyền giải quyết trực tiếp của Quản lý trung tâm. Lễ tân chỉ có quyền xem thông tin, không có quyền duyệt hoặc xử lý.");
+        }
+
         request.setStatus(dto.getStatus() != null ? dto.getStatus() : SupportStatus.RESOLVED);
         request.setResponseNote(dto.getResponseNote());
         request.setRespondedBy(staff);
@@ -808,10 +860,23 @@ public class SupportRequestServiceImpl implements SupportRequestService {
             Integer classId = request.getGymClass().getClassId();
             Integer memberUserId = request.getUser().getUserId();
 
+            // 0. Safeguard: Strict 80% rule - strictly prohibit refund or perks
+            try {
+                CancelClassPreviewResponse preview = getCancelClassPreview(classId, request.getUser().getEmail());
+                if (preview.isExceedsEightyPercent()) {
+                    throw new IllegalStateException("Khóa học đã diễn ra quá 80% số buổi (" 
+                            + preview.getAttendedSessions() + "/" + preview.getTotalSessions() 
+                            + " buổi). Theo quy chế trung tâm, nghiêm cấm bồi hoàn tiền hoặc cấp phúc lợi cho lớp học này.");
+                }
+            } catch (IllegalStateException e) {
+                throw e;
+            } catch (Exception ignored) {}
+
             // 1. Safeguard: Check if this user and class was already compensated in another ticket
             List<SupportRequest> alreadyResolvedTickets = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(memberUserId).stream()
                     .filter(r -> !Objects.equals(r.getRequestId(), request.getRequestId()))
                     .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), classId))
+                    .filter(r -> r.getCategory() == SupportCategory.CLASS_CANCELLATION || r.getCategory() == SupportCategory.REFUND_REQUEST)
                     .filter(r -> r.getStatus() == SupportStatus.APPROVED || r.getStatus() == SupportStatus.RESOLVED)
                     .toList();
 
@@ -1089,27 +1154,43 @@ public class SupportRequestServiceImpl implements SupportRequestService {
             }
         }
 
+        boolean isCoachFeedback = request.getCategory() == SupportCategory.COACH_FEEDBACK;
+        SupportStatus initialStatus = isCoachFeedback ? SupportStatus.ESCALATED : SupportStatus.IN_PROGRESS;
+        SupportPriority priority = isCoachFeedback ? SupportPriority.HIGH : (request.getPriority() != null ? request.getPriority() : SupportPriority.NORMAL);
+
         SupportRequest entity = SupportRequest.builder()
                 .user(member)
                 .gymClass(gymClass)
                 .category(request.getCategory() != null ? request.getCategory() : SupportCategory.GENERAL_INQUIRY)
                 .title(request.getTitle())
                 .content(request.getContent() + " (Lễ tân ghi nhận tại quầy: " + staff.getFullName() + ")")
-                .status(SupportStatus.IN_PROGRESS)
-                .priority(request.getPriority() != null ? request.getPriority() : SupportPriority.NORMAL)
-                .respondedBy(staff)
+                .status(initialStatus)
+                .priority(priority)
+                .respondedBy(isCoachFeedback ? null : staff)
                 .build();
 
         SupportRequest saved = supportRequestRepository.save(entity);
 
+        String memberMsg = isCoachFeedback
+                ? "Lễ tân " + staff.getFullName() + " đã ghi nhận ý kiến về HLV: \"" + saved.getTitle() + "\". Đơn đã chuyển thẳng tới Quản lý trung tâm để trực tiếp thẩm định."
+                : "Lễ tân " + staff.getFullName() + " đã ghi nhận yêu cầu hỗ trợ: \"" + saved.getTitle() + "\" tại quầy tiếp đón.";
+
         Notification notif = Notification.builder()
                 .user(member)
-                .title("Lễ tân tiếp nhận yêu cầu tại quầy")
-                .message("Lễ tân " + staff.getFullName() + " đã ghi nhận yêu cầu hỗ trợ: \"" + saved.getTitle() + "\" tại quầy tiếp đón.")
+                .title(isCoachFeedback ? "Phản hồi HLV đã chuyển Quản lý xử lý" : "Lễ tân tiếp nhận yêu cầu tại quầy")
+                .message(memberMsg)
                 .type("SUPPORT")
                 .isRead(false)
                 .build();
         notificationRepository.save(notif);
+
+        if (isCoachFeedback) {
+            notifyManagers(
+                    "Khiếu nại/Phản hồi HLV #" + saved.getRequestId() + " (Ghi nhận tại quầy)",
+                    "Lễ tân " + staff.getFullName() + " vừa tiếp nhận tại quầy phản hồi về HLV từ hội viên " + member.getFullName() + ": \"" + saved.getTitle() + "\". Đơn chuyển thẳng Quản lý.",
+                    "SUPPORT_COACH"
+            );
+        }
 
         return mapToResponse(saved);
     }
@@ -1223,6 +1304,29 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         return mapToResponse(saved);
     }
 
+    private void notifyManagers(String title, String message, String type) {
+        try {
+            List<User> managers = new ArrayList<>();
+            managers.addAll(userRepository.findByRoleNameIgnoreCase("Center Manager"));
+            managers.addAll(userRepository.findByRoleNameIgnoreCase("Admin"));
+            Set<Integer> seen = new HashSet<>();
+            for (User manager : managers) {
+                if (manager != null && manager.getUserId() != null && seen.add(manager.getUserId())) {
+                    Notification staffNotif = Notification.builder()
+                            .user(manager)
+                            .title(title)
+                            .message(message)
+                            .type(type)
+                            .isRead(false)
+                            .build();
+                    notificationRepository.save(staffNotif);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to notify managers: " + e.getMessage());
+        }
+    }
+
     private void notifyReceptionists(String title, String message, String type) {
         try {
             List<User> receptionists = userRepository.findByRoleNameIgnoreCase("Receptionist");
@@ -1276,11 +1380,16 @@ public class SupportRequestServiceImpl implements SupportRequestService {
 
                     // ONLY calculate prorated credit if this request is a cancellation/refund request
                     if (isCancellationOrRefund && classPrice != null && totalSessions > 0) {
-                        BigDecimal raw = classPrice
-                                .multiply(BigDecimal.valueOf(remainingSessions))
-                                .divide(BigDecimal.valueOf(totalSessions), 0, RoundingMode.HALF_UP);
-                        calculatedCredit = raw.divide(BigDecimal.valueOf(1000), 0, RoundingMode.HALF_UP)
-                                .multiply(BigDecimal.valueOf(1000));
+                        double attendanceRate = (double) attendedSessions / totalSessions;
+                        if (attendanceRate > 0.8) {
+                            calculatedCredit = BigDecimal.ZERO;
+                        } else {
+                            BigDecimal raw = classPrice
+                                    .multiply(BigDecimal.valueOf(remainingSessions))
+                                    .divide(BigDecimal.valueOf(totalSessions), 0, RoundingMode.HALF_UP);
+                            calculatedCredit = raw.divide(BigDecimal.valueOf(1000), 0, RoundingMode.HALF_UP)
+                                    .multiply(BigDecimal.valueOf(1000));
+                        }
                     }
                 }
             } catch (Exception ignored) {

@@ -12,6 +12,7 @@ import com.team4.sportscenter.modules.payment.services.InvoiceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -57,6 +58,9 @@ public class InvoiceServiceImpl implements InvoiceService {
             
             return InvoiceResponse.builder()
                     .invoiceId(invoice.getInvoiceId())
+                    .subtotal(invoice.getSubtotal() != null ? invoice.getSubtotal() : invoice.getTotalAmount())
+                    .discountAmount(invoice.getDiscountAmount() != null ? invoice.getDiscountAmount() : BigDecimal.ZERO)
+                    .voucherCode(invoice.getVoucherCode())
                     .totalAmount(invoice.getTotalAmount())
                     .status(invoice.getStatus())
                     .createdAt(invoice.getCreatedAt())

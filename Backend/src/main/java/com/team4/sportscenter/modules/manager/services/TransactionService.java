@@ -42,7 +42,7 @@ public class TransactionService {
             where.append(")");
         }
         long total=jdbc.queryForObject("SELECT COUNT(*)"+source+where,Long.class,args.toArray());
-        String columns="i.invoice_id invoiceId,i.status invoiceStatus,i.total_amount totalAmount,i.created_at createdAt,u.full_name memberName,u.email memberEmail";
+        String columns="i.invoice_id invoiceId,i.status invoiceStatus,COALESCE(i.subtotal,i.total_amount) subtotal,COALESCE(i.discount_amount,0) discountAmount,i.voucher_code voucherCode,i.total_amount totalAmount,i.created_at createdAt,u.full_name memberName,u.email memberEmail";
         columns += payments ? ",p.payment_id paymentId,p.amount,p.payment_method paymentMethod,p.transaction_no transactionNo,p.status rawPaymentStatus,"+PAYMENT_STATE+" paymentStatus,p.payment_date paymentDate" : ",(SELECT COUNT(*) FROM PAYMENTS pc WHERE pc.invoice_id=i.invoice_id) paymentCount";
         List<Object> paged=new ArrayList<>(args);paged.add(size);paged.add((long)page*size);
         var rows=jdbc.queryForList("SELECT "+columns+source+where+" ORDER BY "+date+" DESC,"+(payments?"p.payment_id":"i.invoice_id")+" DESC LIMIT ? OFFSET ?",paged.toArray()).stream().map(this::times).toList();
@@ -50,7 +50,7 @@ public class TransactionService {
     }
 
     public Map<String,Object> detail(int id) {
-        var invoice=times(jdbc.queryForMap("SELECT i.invoice_id invoiceId,i.status invoiceStatus,i.total_amount totalAmount,i.created_at createdAt,u.full_name memberName,u.email memberEmail FROM INVOICES i LEFT JOIN USERS u ON u.user_id=i.user_id WHERE i.invoice_id=?",id));
+        var invoice=times(jdbc.queryForMap("SELECT i.invoice_id invoiceId,i.status invoiceStatus,COALESCE(i.subtotal,i.total_amount) subtotal,COALESCE(i.discount_amount,0) discountAmount,i.voucher_code voucherCode,i.total_amount totalAmount,i.created_at createdAt,u.full_name memberName,u.email memberEmail FROM INVOICES i LEFT JOIN USERS u ON u.user_id=i.user_id WHERE i.invoice_id=?",id));
         invoice.put("items",jdbc.queryForList("SELECT d.detail_id detailId,d.unit_price unitPrice,COALESCE(pk.package_name,c.class_name,sc.class_name,'Unknown item') itemName,CASE WHEN d.package_id IS NOT NULL THEN 'PACKAGE' ELSE 'CLASS' END itemType FROM INVOICE_DETAILS d LEFT JOIN PACKAGES pk ON pk.package_id=d.package_id LEFT JOIN CLASSES c ON c.class_id=d.class_id LEFT JOIN SCHEDULES s ON s.schedule_id=d.schedule_id LEFT JOIN CLASSES sc ON sc.class_id=s.class_id WHERE d.invoice_id=? ORDER BY d.detail_id",id));
         invoice.put("payments",jdbc.queryForList("SELECT p.payment_id paymentId,p.amount,p.payment_method paymentMethod,p.transaction_no transactionNo,p.status rawPaymentStatus,"+PAYMENT_STATE+" paymentStatus,p.payment_date paymentDate FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id WHERE p.invoice_id=? ORDER BY p.payment_date DESC,p.payment_id DESC",id).stream().map(this::times).toList());
         return invoice;

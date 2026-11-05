@@ -169,18 +169,37 @@ public class AiChatServiceImpl implements AiChatService {
             .toList();
 
         // Slimming live data: limit to top 15 classes matching question keywords
-        if (openClasses.size() > 15) {
+        if (openClasses.size() > 8) {
             String q = (userMessage != null) ? userMessage.toLowerCase() : "";
             openClasses = openClasses.stream()
                 .sorted((c1, c2) -> Integer.compare(scoreClassMatch(c2, q), scoreClassMatch(c1, q)))
-                .limit(15)
+                .limit(8)
                 .toList();
         }
 
         String classesListString = openClasses.isEmpty() ? "No classes currently available for booking." : openClasses.stream()
             .map(c -> {
                 Optional<String> conflictOpt = findConflictNote(c.getClassId(), myExistingBookings);
-                String base = "[" + c.getClassId() + "] " + c.getClassName() + " | HLV: " + c.getCoachName() + " | Lịch: " + (c.getNextSessionTime() != null ? c.getNextSessionTime().format(timeFormatter) : "N/A") + " | Còn: " + (c.getMaxSlots() - c.getBookedSlots()) + " chỗ | Giá: " + (c.getPrice() != null ? String.format("%,d đ", c.getPrice().longValue()) : "0 đ");
+                String pattern = (c.getSchedulePattern() != null && !c.getSchedulePattern().isBlank())
+                        ? c.getSchedulePattern()
+                        : "Lịch linh hoạt";
+                int sessions = (c.getTotalSessions() != null && c.getTotalSessions() > 0)
+                        ? c.getTotalSessions()
+                        : 6;
+                String nextTime = (c.getNextSessionTime() != null)
+                        ? c.getNextSessionTime().format(timeFormatter)
+                        : "Sắp khai giảng";
+                String priceStr = (c.getPrice() != null)
+                        ? String.format("%,d đ", c.getPrice().longValue())
+                        : "0 đ";
+                int remaining = Math.max(0, (c.getMaxSlots() != null ? c.getMaxSlots() : 0) - (c.getBookedSlots() != null ? c.getBookedSlots() : 0));
+
+                String base = "[" + c.getClassId() + "] Tên: " + c.getClassName()
+                        + " | HLV: " + c.getCoachName()
+                        + " | Số buổi: " + sessions + " buổi"
+                        + " | Lịch: " + pattern + " (" + nextTime + ")"
+                        + " | Còn: " + remaining + " chỗ"
+                        + " | Giá: " + priceStr;
                 if (conflictOpt.isPresent()) {
                     return base + " | ⚠️ BỊ TRÙNG LỊCH: " + conflictOpt.get() + " (CẤM CHÈN ACTION:BOOK_CLASS CHO LỚP NÀY)";
                 }
@@ -222,6 +241,17 @@ public class AiChatServiceImpl implements AiChatService {
                 "Your tone must be natural, engaging, and conversational (like a human gym buddy). Do NOT sound like a robotic customer service bot.\n" +
                 "Keep responses concise, lively, and directly to the point (2 to 4 sentences unless the user explicitly asks for a detailed plan/routine).\n" +
                 "Use short, modern phrasing, and sprinkle a few emojis naturally. Always answer in the exact same language the user speaks (e.g. Vietnamese or English).\n\n" +
+                "=== CLASS PRESENTATION AS AN INTERACTIVE TABLE (MANDATORY FORMAT) ===\n" +
+                "When the user asks for available classes, courses, or schedule options (e.g. asking for 'lớp bơi', 'lớp yoga', 'lớp gym', 'có lớp nào...'):\n" +
+                "1. Always present the top 3 to 4 best matching classes as a clean, standard Markdown table using this EXACT header and column structure:\n\n" +
+                "| Lớp học & HLV | Số buổi | Lịch học (Thứ) | Học phí | Đăng ký |\n" +
+                "| :--- | :---: | :--- | :---: | :---: |\n" +
+                "| **[Tên lớp]**<br>HLV: [Tên HLV] | [Số buổi] buổi | [Thứ / Lịch học] | [Học phí] | [Đăng ký](/member/book-class?classId=[ID]) |\n\n" +
+                "2. CRITICAL REQUIREMENTS FOR THE TABLE:\n" +
+                "   - The 'Đăng ký' column MUST contain a markdown link with the relative URL `/member/book-class?classId=[ID]` where [ID] is the numeric classId from brackets (e.g. [Đăng ký](/member/book-class?classId=139)). The user can click anywhere on that row to jump directly to book that class!\n" +
+                "   - Do NOT display raw database ID brackets like '[139]' inside the visible class name or price cells.\n" +
+                "   - Before or after the table, give a warm, brief 1-sentence tip encouraging the member to click on any row in the table to view details and enroll.\n" +
+                "   - If the user specifically asks you to auto-add or register a specific class directly into their cart, append [ACTION:BOOK_CLASS:class_id] at the VERY END as instructed below.\n\n" +
                 "=== STRICT SCOPE & TOKEN-SAVING POLICY (ANTI-ABUSE GUARDRAIL) ===\n" +
                 "1. ALLOWED TOPICS ONLY:\n" +
                 "   - NEXUS Sports Lab services: membership packages, class bookings, schedules, coaches, gym facilities, cart/checkout, account settings.\n" +

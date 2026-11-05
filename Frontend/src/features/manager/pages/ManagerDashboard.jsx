@@ -103,8 +103,8 @@ function ManagerDashboard() {
       }
       if (active === 'dashboard') publish(await managerService.dashboard());
       if (active === 'people') {
-        const [users, roles] = await Promise.all([managerService.users(appliedFilters), managerService.roles()]);
-        publish({ users, roles });
+        const [users, roles, subjects] = await Promise.all([managerService.users(appliedFilters), managerService.roles(), managerService.subjects()]);
+        publish({ users, roles, subjects });
       }
       if (active === 'operations') {
         const [lookups,schedules] = await Promise.all([
@@ -257,7 +257,7 @@ function ManagerView(props) {
   if (props.active === 'packages') return <PackagesPage {...props} />;
   if (props.active === 'reports') return <ReportsPage {...props} />;
   if (props.active === 'transactions') return <TransactionsPage {...props} />;
-  if (props.active === 'support') return <SupportDeskView {...props} />;
+  if (props.active === 'support') return <SupportDeskView {...props} isManager={true} />;
   if (props.active === 'settings') return <ManagerSettingsView {...props} />;
   return <AuditPage {...props} />;
 }
@@ -267,7 +267,19 @@ function EditorModal({ config, dictionaries, onClose, onSaved }) {
   const { userInfo, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const item = config.item || {};
-  const [form, setForm] = useState(() => initialForm(config.type, item));
+  const [form, setForm] = useState(() => {
+    const init = initialForm(config.type, item);
+    if (config.type === 'user') {
+      init.subjectIds = Array.isArray(item.subjectIds) ? [...item.subjectIds] : [];
+    }
+    return init;
+  });
+  const [subjectsList, setSubjectsList] = useState(() => dictionaries?.subjects || []);
+  useEffect(() => {
+    if (config.type === 'user' && (!dictionaries?.subjects || dictionaries.subjects.length === 0)) {
+      managerService.subjects().then(setSubjectsList).catch(() => {});
+    }
+  }, [config.type]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [avatarFile, setAvatarFile] = useState(null);
@@ -300,6 +312,7 @@ function EditorModal({ config, dictionaries, onClose, onSaved }) {
       ['roleId', 'capacity', 'subjectId', 'coachId', 'roomId', 'maxSlots', 'classId', 'durationDays', 'occurrences', 'intervalWeeks'].forEach((key) => { if (payload[key] !== undefined && payload[key] !== '') payload[key] = Number(payload[key]); });
       ['price'].forEach((key) => { if (payload[key] !== undefined && payload[key] !== '') payload[key] = Number(payload[key]); });
       if (config.type === 'user') {
+                const selectedRole = dictionaries?.roles?.find((r) => String(r.roleId) === String(payload.roleId));
         const userPayload = {
           fullName: payload.fullName,
           email: payload.email,
@@ -308,6 +321,7 @@ function EditorModal({ config, dictionaries, onClose, onSaved }) {
           roleId: payload.roleId,
           status: payload.status,
           forcePasswordChange: Boolean(payload.forcePasswordChange),
+          subjectIds: selectedRole?.roleName === 'Coach' ? (form.subjectIds || []) : [],
         };
         if (!userPayload.password) delete userPayload.password;
         let userId = item.userId;
@@ -340,7 +354,7 @@ function EditorModal({ config, dictionaries, onClose, onSaved }) {
     } catch (err) { setError(apiError(err, err.message || 'Unable to save changes.')); } finally { setSaving(false); }
   };
 
-  return <div className="manager-modal-backdrop" role="presentation" onMouseDown={(e) => !saving && e.target === e.currentTarget && onClose()}><section ref={dialogRef} className={`manager-modal ${isUserEditor ? 'manager-account-modal' : ''}`} role="dialog" aria-modal="true" aria-labelledby="manager-editor-title" tabIndex={-1}><header><div><span>{t(isEditing ? t('Edit') : t('Create'))}</span><h3 id="manager-editor-title">{t(isUserEditor ? (isEditing ? t('Edit account') : t('Add new account')) : titles[config.type])}</h3></div><button type="button" disabled={saving} aria-label={t("Close")} onClick={onClose}><X size={20} /></button></header><form onSubmit={submit} noValidate={isUserEditor}>{error && <div className="manager-form-error" role="alert">{t(error)}</div>}<fieldset disabled={saving}><EditorFields type={config.type} form={form} set={set} data={dictionaries} editing={isEditing} avatarPreview={avatarPreview} onAvatarSelect={selectAvatar} errors={userErrors} touched={touched} onBlur={blur} focusPassword={config.focusPassword} /></fieldset><footer><button type="button" className="manager-secondary" disabled={saving} onClick={onClose}>{t("Cancel")}</button><button className="manager-primary" disabled={saving || userInvalid}>{t(saving ? t('Saving...') : isUserEditor && !isEditing ? t('Create Account') : t('Save Changes'))}</button></footer></form></section></div>;
+  return <div className="manager-modal-backdrop" role="presentation" onMouseDown={(e) => !saving && e.target === e.currentTarget && onClose()}><section ref={dialogRef} className={`manager-modal ${isUserEditor ? 'manager-account-modal' : ''}`} role="dialog" aria-modal="true" aria-labelledby="manager-editor-title" tabIndex={-1}><header><div><span>{t(isEditing ? t('Edit') : t('Create'))}</span><h3 id="manager-editor-title">{t(isUserEditor ? (isEditing ? t('Edit account') : t('Add new account')) : titles[config.type])}</h3></div><button type="button" disabled={saving} aria-label={t("Close")} onClick={onClose}><X size={20} /></button></header><form onSubmit={submit} noValidate={isUserEditor}>{error && <div className="manager-form-error" role="alert">{t(error)}</div>}<fieldset disabled={saving}><EditorFields type={config.type} form={form} set={set} data={{ ...dictionaries, subjects: dictionaries?.subjects || subjectsList }} editing={isEditing} avatarPreview={avatarPreview} onAvatarSelect={selectAvatar} errors={userErrors} touched={touched} onBlur={blur} focusPassword={config.focusPassword} /></fieldset><footer><button type="button" className="manager-secondary" disabled={saving} onClick={onClose}>{t("Cancel")}</button><button className="manager-primary" disabled={saving || userInvalid}>{t(saving ? t('Saving...') : isUserEditor && !isEditing ? t('Create Account') : t('Save Changes'))}</button></footer></form></section></div>;
 }
 
 function validateUserForm(form, editing) {
@@ -376,6 +390,33 @@ function EditorFields({ type, form, set, data, editing, avatarPreview, onAvatarS
           <Field label={t("Status")} required error={touched.status && errors.status}><ManagerSelect aria-invalid={Boolean(touched.status && errors.status)} value={form.status || 'ACTIVE'} onBlur={() => onBlur('status')} onChange={(e) => set('status', e.target.value)}><option value="ACTIVE">{t("Active")}</option><option value="INACTIVE">{t("Inactive")}</option><option value="PENDING">{t("Pending")}</option></ManagerSelect></Field>
           <Field label={t(editing ? 'New password' : 'Temporary password')} required={!editing} error={touched.password && errors.password}><PasswordInput value={form.password || ''} onChange={(e) => set('password', e.target.value)} onBlur={() => onBlur('password')} invalid={Boolean(touched.password && errors.password)} autoFocus={focusPassword} /><small className="manager-field-help">{t("6–72 characters")}</small></Field>
           <label className="manager-force-password wide"><input type="checkbox" checked={Boolean(form.forcePasswordChange)} onChange={(event) => set('forcePasswordChange', event.target.checked)} /><span>{t("Force password change on first login")}</span></label>
+          {selectedRole?.roleName === 'Coach' && (
+            <fieldset className="manager-coach-subjects wide">
+              <legend>{t('Teaching subjects')}</legend>
+              <p>{t('Only assigned subjects can be selected when assigning this coach to a class.')}</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
+                {(data?.subjects || []).map((sub) => {
+                  const checked = (form.subjectIds || []).includes(sub.subjectId);
+                  return (
+                    <label key={sub.subjectId} style={{ cursor: 'pointer', margin: '4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const currentIds = form.subjectIds || [];
+                          const nextIds = e.target.checked
+                            ? [...currentIds, sub.subjectId]
+                            : currentIds.filter((id) => id !== sub.subjectId);
+                          set('subjectIds', nextIds);
+                        }}
+                      />
+                      <span>{sub.subjectName}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          )}
         </div>
       </section>
     </div>;

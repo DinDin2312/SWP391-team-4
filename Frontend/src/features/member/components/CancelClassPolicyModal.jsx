@@ -33,6 +33,12 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
   const [copiedCode, setCopiedCode] = useState(false);
 
   useEffect(() => {
+    if (preview?.exceedsEightyPercent) {
+      setPreferredResolution('NONE');
+    }
+  }, [preview]);
+
+  useEffect(() => {
     if (isOpen && classId) {
       void loadPreview(classId);
     } else {
@@ -64,19 +70,25 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
     try {
       setSubmitting(true);
       setError('');
-      const title = t('Cancellation & Retention Request for') + ` ${preview?.className || ''}`;
+      const title = preview?.exceedsEightyPercent
+        ? t('Class Withdrawal Request for') + ' ' + (preview?.className || '')
+        : t('Cancellation & Retention Request for') + ' ' + (preview?.className || '');
+      const effectiveResolution = preview?.exceedsEightyPercent ? 'NONE' : preferredResolution;
       const res = await memberService.createSupportRequest({
         classId,
         category: 'CLASS_CANCELLATION',
-        preferredResolution,
+        preferredResolution: effectiveResolution,
         title,
-        content: `[${t('Reason')}: ${getReasonLabel(reasonCategory)}] ${reasonContent.trim()}`,
+        content: preview?.exceedsEightyPercent
+          ? `[${t('Center Policy: Exceeded 80% attendance - No refund/perks requested')}] [${t('Reason')}: ${getReasonLabel(reasonCategory)}] ${reasonContent.trim()}`
+          : `[${t('Reason')}: ${getReasonLabel(reasonCategory)}] ${reasonContent.trim()}`,
         priority: 'NORMAL'
       });
 
       let prefLabel = t('Course Credit Voucher');
-      if (preferredResolution === 'GYM_PASS') prefLabel = t('Free 1-Month Gym Pass');
-      if (preferredResolution === 'CASH_REFUND') prefLabel = t('Cash / Bank Refund');
+      if (effectiveResolution === 'NONE') prefLabel = t('No Compensation (Exceeded 80% Attendance)');
+      else if (effectiveResolution === 'GYM_PASS') prefLabel = t('Free 1-Month Gym Pass');
+      else if (effectiveResolution === 'CASH_REFUND') prefLabel = t('Cash / Bank Refund');
 
       setSuccessResult({
         type: 'SUPPORT_REQUEST_SUBMITTED',

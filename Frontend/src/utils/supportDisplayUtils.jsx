@@ -182,7 +182,7 @@ export const getStatusBadge = (status, options = {}) => {
     case 'PENDING':
       return (
         <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 inline-flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5" /> {isMember ? t('Pending Reception Review') : t('Pending')}
+          <Clock className="w-3.5 h-3.5" /> {isMember ? t('Pending Reception Review') : t('Pending Review')}
         </span>
       );
     case 'IN_PROGRESS':
@@ -218,6 +218,99 @@ export const getStatusBadge = (status, options = {}) => {
 export const getDisplayTitle = (title) => {
   if (!title) return '';
   return title.replace('Cancellation & Retention Request for', t('Cancellation & Retention Request for'));
+};
+
+
+/**
+ * Strips redundant automated prefixes from support ticket titles
+ */
+/**
+ * Parses structured coach feedback metadata from content string
+ */
+export const parseCoachFeedback = (content, req = {}) => {
+  if (!content && !req.title) return { aspect: '', targetInfo: '', comment: '' };
+  const rawContent = String(content || '').trim();
+
+  const greedyMatch = rawContent.match(/^\[([\s\S]*)\]\s*([\s\S]*)$/);
+  if (greedyMatch) {
+    const metaStr = greedyMatch[1];
+    const comment = greedyMatch[2].trim();
+
+    let aspect = '';
+    let targetInfo = '';
+
+    const parts = metaStr.split('|').map(s => s.trim());
+    for (const part of parts) {
+      if (/^(Feedback Aspect|Nội dung góp ý HLV|Chủ đề|Aspect):/i.test(part)) {
+        aspect = part.replace(/^(Feedback Aspect|Nội dung góp ý HLV|Chủ đề|Aspect):\s*/i, '').trim();
+      } else if (/^(Associated Class|Lớp học liên quan|Lớp học|HLV|Coach):/i.test(part)) {
+        targetInfo = part.replace(/^(Associated Class|Lớp học liên quan|Lớp học|HLV|Coach):\s*/i, '').trim();
+      } else if (!aspect) {
+        aspect = part;
+      }
+    }
+
+    if (!targetInfo && req.className) {
+      targetInfo = req.className;
+    }
+
+    return { aspect, targetInfo, comment: comment || req.title || '' };
+  }
+
+  return {
+    aspect: t('Coach & Training Feedback'),
+    targetInfo: req.className || '',
+    comment: rawContent || req.title || ''
+  };
+};
+
+export const cleanSupportTitle = (req) => {
+  if (!req) return '';
+  if (req.category === 'COACH_FEEDBACK') {
+    const parsed = parseCoachFeedback(req.content, req);
+    const aspectName = parsed.aspect ? t(parsed.aspect) : t('Coach & Training Feedback');
+    return `${t('Coach Feedback')}: ${aspectName}`;
+  }
+  const raw = req.title || '';
+  const cleaned = raw
+    .replace(/^Bảo lưu học phí tự động:\s*/i, '')
+    .replace(/^Cancellation & Retention Request for:?\s*/i, '')
+    .replace(/^Yêu cầu hủy & bảo lưu lớp:?\s*/i, '')
+    .replace(/^Chuyển lớp tự động:\s*/i, '')
+    .replace(/^Yêu cầu hỗ trợ:\s*/i, '')
+    .trim();
+  return cleaned || raw || req.className || '';
+};
+
+/**
+ * Extracts compact 2-letter uppercase initials from full member name
+ */
+export const getMemberInitials = (name) => {
+  if (!name) return 'HV';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+/**
+ * Formats ISO date string to DD/MM/YYYY HH:mm
+ */
+export const formatSupportDate = (val) => {
+  if (!val) return '—';
+  try {
+    const d = new Date(val);
+    if (!Number.isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      return `${day}/${month}/${year} ${hours}:${mins}`;
+    }
+  } catch {
+    // fallback
+  }
+  return String(val).replace('T', ' ').slice(0, 16);
 };
 
 export const formatRespondedAt = (val) => {
