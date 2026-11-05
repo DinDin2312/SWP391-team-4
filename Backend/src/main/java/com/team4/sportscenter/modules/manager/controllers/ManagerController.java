@@ -227,6 +227,14 @@ public class ManagerController {
         return managerService.coachTeachingReport(from, to, coachId);
     }
 
+    @GetMapping("/audit-logs/search")
+    public Map<String, Object> auditSearch(@RequestParam(required = false) String q, @RequestParam(required = false) String type,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "30") int size) {
+        return managerService.auditSearch(q, type, from, to, page, size);
+    }
+
     @GetMapping("/audit-logs")
     public List<AuditLog> auditLogs() { return managerService.auditLogs(); }
 }

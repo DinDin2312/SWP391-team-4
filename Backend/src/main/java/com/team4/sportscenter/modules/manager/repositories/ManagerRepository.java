@@ -437,6 +437,55 @@ public class ManagerRepository {
         return id;
     }
 
+    // Audit log for managers: admin changes only (check-ins live at reception), newest first, with a readable target name.
+    public Map<String, Object> auditSearch(String q, String type, LocalDate from, LocalDate to, int page, int size) {
+        StringBuilder where = new StringBuilder(" WHERE a.entity_type NOT LIKE '%CHECKIN%'");
+        List<Object> args = new java.util.ArrayList<>();
+        if (type != null && !type.isBlank()) {
+            List<String> types = auditTypes(type);
+            where.append(" AND a.entity_type IN (").append(String.join(",", java.util.Collections.nCopies(types.size(), "?"))).append(")");
+            args.addAll(types);
+        }
+        if (from != null) { where.append(" AND a.created_at>=?"); args.add(from.atStartOfDay()); }
+        if (to != null) { where.append(" AND a.created_at<?"); args.add(to.plusDays(1).atStartOfDay()); }
+        String target = "COALESCE(sc_c.class_name,cl.class_name,ro.room_name,su.subject_name,us.full_name,pk.package_name)";
+        String joins = " FROM AUDIT_LOGS a"
+                + " LEFT JOIN USERS actor ON actor.email=a.actor_email"
+                + " LEFT JOIN SCHEDULES sc ON a.entity_type='SCHEDULE' AND sc.schedule_id=a.entity_id"
+                + " LEFT JOIN CLASSES sc_c ON sc_c.class_id=sc.class_id"
+                + " LEFT JOIN CLASSES cl ON a.entity_type IN ('CLASS','CLASSES') AND cl.class_id=a.entity_id"
+                + " LEFT JOIN ROOMS ro ON a.entity_type IN ('ROOM','ROOMS') AND ro.room_id=a.entity_id"
+                + " LEFT JOIN SUBJECTS su ON a.entity_type IN ('SUBJECT','SUBJECTS') AND su.subject_id=a.entity_id"
+                + " LEFT JOIN USERS us ON a.entity_type='USER' AND us.user_id=a.entity_id"
+                + " LEFT JOIN PACKAGES pk ON a.entity_type IN ('PACKAGE','PACKAGES') AND pk.package_id=a.entity_id";
+        if (q != null && !q.isBlank()) {
+            where.append(" AND CONCAT_WS(' ',a.actor_email,actor.full_name,a.details,").append(target).append(") LIKE ?");
+            args.add("%" + q.trim() + "%");
+        }
+        Integer total = jdbc.queryForObject("SELECT COUNT(*)" + joins + where, Integer.class, args.toArray());
+        List<Object> pageArgs = new java.util.ArrayList<>(args);
+        pageArgs.add(size);
+        pageArgs.add(page * size);
+        List<Map<String, Object>> items = jdbc.queryForList("SELECT a.audit_id id,a.created_at at,a.actor_email actorEmail,actor.full_name actorName,a.action,a.entity_type entityType,a.entity_id entityId,"
+                + target + " targetName,DATE_FORMAT(sc.start_time,'%d/%m %H:%i') sessionTime,a.details" + joins + where
+                + " ORDER BY a.created_at DESC,a.audit_id DESC LIMIT ? OFFSET ?", pageArgs.toArray());
+        items.forEach(r -> { if (r.get("at") instanceof Timestamp ts) r.put("at", ts.toLocalDateTime().toString()); });
+        return Map.of("items", items, "total", total == null ? 0 : total, "page", page, "size", size);
+    }
+
+    private static List<String> auditTypes(String type) {
+        return switch (type) {
+            case "schedule" -> List.of("SCHEDULE", "SCHEDULE_POLICY");
+            case "class" -> List.of("CLASS", "CLASSES");
+            case "room" -> List.of("ROOM", "ROOMS");
+            case "subject" -> List.of("SUBJECT", "SUBJECTS");
+            case "account" -> List.of("USER", "ROLE");
+            case "package" -> List.of("PACKAGE", "PACKAGES");
+            case "payment" -> List.of("INVOICE", "PAYMENT", "REVIEW");
+            default -> List.of(type.toUpperCase());
+        };
+    }
+
     public void setScheduleStatus(Integer scheduleId, String status) {
         jdbc.update("UPDATE SCHEDULES SET status=? WHERE schedule_id=?", status, scheduleId);
     }

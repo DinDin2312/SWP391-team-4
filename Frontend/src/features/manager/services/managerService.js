@@ -73,7 +73,7 @@ const managerService = {
   },
   reports: (from, to) => axiosClient.get('/manager/reports', { params: { from, to } }),
   coachTeachingReport: (from, to, coachId) => axiosClient.get('/manager/reports/coach-teaching', { params: { from, to, ...(coachId ? { coachId } : {}) } }),
-  auditLogs: () => axiosClient.get('/manager/audit-logs'),
+  auditSearch: params => axiosClient.get('/manager/audit-logs/search', { params }),
 };
 
 export default managerService;

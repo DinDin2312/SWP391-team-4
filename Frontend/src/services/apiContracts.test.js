@@ -274,7 +274,7 @@ test('managerService contracts cover JSON and multipart endpoints across operati
     await managerService.savePackage({ packageName: 'Starter' }, { file: new Blob(['p']) });
     await managerService.savePackage({ packageId: 6, packageName: 'Starter' }, { remove: true });
     await managerService.reports('2026-04-01', '2026-04-30');
-    await managerService.auditLogs();
+    await managerService.auditSearch({ page: 0 });
 
     assert.equal(calls.length, 46);
     assert.deepEqual(calls[0], { method: 'get', args: ['/manager/schedule-policy'] });

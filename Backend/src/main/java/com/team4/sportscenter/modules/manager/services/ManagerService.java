@@ -388,6 +388,13 @@ public class ManagerService {
         return r;
     }
     public int saveSchedule(Integer id, ManagerRequests.ScheduleRequest request, String actor) {
+        return saveSchedule(id, request, actor, true);
+    }
+
+    private static final java.time.format.DateTimeFormatter AUDIT_TIME = java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm");
+
+    // record=false when the caller writes one summary entry for a whole batch.
+    private int saveSchedule(Integer id, ManagerRequests.ScheduleRequest request, String actor, boolean record) {
         managerRepository.lockOperations();
         validateStatus(request.status(), SCHEDULE_STATUSES);
         if (!request.endTime().isAfter(request.startTime())) {
@@ -460,8 +467,15 @@ public class ManagerService {
             managerRepository.notifyScheduleBookings(id, "Thay đổi lịch học",
                     assignment.get("className") + " chuyển sang " + request.startTime() + " - " + request.endTime());
         }
-        audit(actor, id == null ? "CREATE" : "UPDATE", "SCHEDULE", savedId,
-                request.startTime() + " - " + request.endTime() + " / " + request.status());
+        if (record) {
+            String change;
+            if (id == null) change = request.startTime().format(AUDIT_TIME) + "–" + request.endTime().toLocalTime();
+            else if (cancelled) change = "Hủy buổi " + request.startTime().format(AUDIT_TIME);
+            else if (completed) change = "Hoàn thành buổi " + request.startTime().format(AUDIT_TIME);
+            else if (timingChanged) change = ((LocalDateTime) previous.get("startTime")).format(AUDIT_TIME) + " → " + request.startTime().format(AUDIT_TIME);
+            else change = "Cập nhật buổi " + request.startTime().format(AUDIT_TIME);
+            audit(actor, id == null ? "CREATE" : cancelled ? "CANCEL" : "UPDATE", "SCHEDULE", savedId, change);
+        }
         return savedId;
     }
 
@@ -474,8 +488,9 @@ public class ManagerService {
         for (int i = 0; i < request.occurrences(); i++) {
             long weeks = (long) i * request.intervalWeeks();
             ids.add(saveSchedule(null, new ManagerRequests.ScheduleRequest(request.classId(),
-                    request.startTime().plusWeeks(weeks), request.endTime().plusWeeks(weeks), "SCHEDULED"), actor));
+                    request.startTime().plusWeeks(weeks), request.endTime().plusWeeks(weeks), "SCHEDULED"), actor, false));
         }
+        audit(actor, "CREATE_SERIES", "CLASS", request.classId(), ids.size() + " buổi từ " + request.startTime().format(AUDIT_TIME));
         return ids;
     }
 
@@ -500,10 +515,10 @@ public class ManagerService {
         for (Integer scheduleId : upcoming) {
             var s = managerRepository.schedule(scheduleId);
             saveSchedule(scheduleId, new ManagerRequests.ScheduleRequest(id, LocalDateTime.parse(String.valueOf(s.get("startTime"))),
-                    LocalDateTime.parse(String.valueOf(s.get("endTime"))), "CANCELLED"), actor);
+                    LocalDateTime.parse(String.valueOf(s.get("endTime"))), "CANCELLED"), actor, false);
         }
         managerRepository.setClassStatus(id, "INACTIVE");
-        audit(actor, "DEACTIVATE", "CLASS", id, assignment.get("className") + " - cancelled " + upcoming.size() + " upcoming sessions");
+        audit(actor, "DEACTIVATE", "CLASS", id, upcoming.isEmpty() ? "Ngừng lớp" : "Ngừng lớp, hủy " + upcoming.size() + " buổi sắp tới");
         return upcoming.size();
     }
 
@@ -572,7 +587,8 @@ public class ManagerService {
             busy.add(new SchedulePlanner.BusyPeriod(session.startTime(),session.endTime().plusMinutes(rules.breakMinutes())));
         }
         List<Integer> ids=new ArrayList<>();
-        for(var session:request.sessions()) ids.add(saveSchedule(null,new ManagerRequests.ScheduleRequest(rules.classId(),session.startTime(),session.endTime(),"SCHEDULED"),actor));
+        for(var session:request.sessions()) ids.add(saveSchedule(null,new ManagerRequests.ScheduleRequest(rules.classId(),session.startTime(),session.endTime(),"SCHEDULED"),actor,false));
+        if(!ids.isEmpty()) audit(actor,"SCHEDULE_COURSE","CLASS",rules.classId(),ids.size()+" buổi từ "+request.sessions().get(0).startTime().format(AUDIT_TIME));
         return ids;
     }
 
@@ -634,6 +650,10 @@ public class ManagerService {
     }
 
     @Transactional(readOnly = true)
+    public Map<String, Object> auditSearch(String q, String type, java.time.LocalDate from, java.time.LocalDate to, int page, int size) {
+        return managerRepository.auditSearch(q, type, from, to, Math.max(0, page), Math.min(100, Math.max(1, size)));
+    }
+
     public List<AuditLog> auditLogs() { return auditLogRepository.findTop100ByOrderByCreatedAtDesc(); }
 
     private User findUser(Integer id) {
