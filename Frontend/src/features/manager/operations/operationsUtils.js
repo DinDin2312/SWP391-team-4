@@ -21,9 +21,12 @@ export function weekRange(value = new Date()) {
   return { from, to: addDays(from, 6) };
 }
 
+// Sessions that will still take place: a substitute coach or a make-up time keeps them on the timetable.
+export const ACTIVE_SESSION_STATUSES = ["SCHEDULED", "SUBSTITUTE_ASSIGNED", "RESCHEDULED"];
+export const isActiveSession = (row) => ACTIVE_SESSION_STATUSES.includes(row?.status);
 export const sessionDay = (value) => localDateTime(value).slice(0, 10);
 export const isOngoing = (row, now = new Date()) =>
-  row.status === "SCHEDULED" &&
+  isActiveSession(row) &&
   new Date(row.startTime) <= now &&
   new Date(row.endTime) > now;
 
@@ -38,7 +41,10 @@ export function filterSchedules(rows, classes, filters) {
           subjects.get(String(row.classId)) === filters.subject) &&
         (!filters.coach || String(row.coachId) === filters.coach) &&
         (!filters.room || String(row.roomId) === filters.room) &&
-        (!filters.status || row.status === filters.status),
+        (!filters.status ||
+          (filters.status === "SCHEDULED"
+            ? isActiveSession(row) && new Date(`${localDateTime(row.startTime)}+07:00`) >= new Date()
+            : row.status === filters.status)),
     )
     .sort(
       (a, b) =>
@@ -66,7 +72,7 @@ export function scheduleMetrics(rows, today = isoDate(new Date())) {
     occupancy: capacity ? booked / capacity : 0,
     low: available.filter(
       (row) =>
-        row.status === "SCHEDULED" &&
+        isActiveSession(row) &&
         Number(row.maxSlots) > 0 &&
         Number(row.booked || 0) / Number(row.maxSlots) <
           LOW_OCCUPANCY_THRESHOLD,

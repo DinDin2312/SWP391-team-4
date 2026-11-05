@@ -76,9 +76,9 @@ test("subject join and all filters retain adjacent sessions in chronological ord
   ];
   const session = { classId: 1, roomId: 2, coachId: 5, status: "SCHEDULED" };
   const rows = [
-    { ...session, scheduleId: 2, startTime: "2026-10-04T10:00:00" },
-    { ...session, scheduleId: 1, startTime: "2026-10-04T09:00:00" },
-    { ...session, scheduleId: 3, classId: 2, startTime: "2026-10-04T11:00:00" },
+    { ...session, scheduleId: 2, startTime: "2099-10-04T10:00:00" },
+    { ...session, scheduleId: 1, startTime: "2099-10-04T09:00:00" },
+    { ...session, scheduleId: 3, classId: 2, startTime: "2099-10-04T11:00:00" },
   ];
   assert.deepEqual(
     filterSchedules(rows, classes, {
@@ -260,4 +260,16 @@ test("inactive rooms and subjects are hidden unless already assigned; limits, du
     { scheduleId: 4, startTime: "2026-11-05T09:30", endTime: "2026-11-05T10:00", status: "CANCELLED" },
   ]);
   assert.deepEqual([...ids].sort(), [1, 2]);
+});
+
+test("upcoming filter drops past sessions and keeps substitute and make-up sessions", () => {
+  const classes = [{ classId: 1, subjectId: 3 }];
+  const rows = [
+    { scheduleId: 1, classId: 1, status: "SCHEDULED", startTime: "2020-01-01T09:00:00" },
+    { scheduleId: 2, classId: 1, status: "SUBSTITUTE_ASSIGNED", startTime: "2099-01-01T09:00:00" },
+    { scheduleId: 3, classId: 1, status: "RESCHEDULED", startTime: "2099-01-02T09:00:00" },
+    { scheduleId: 4, classId: 1, status: "CANCELLED", startTime: "2099-01-03T09:00:00" },
+  ];
+  assert.deepEqual(filterSchedules(rows, classes, { status: "SCHEDULED" }).map(r => r.scheduleId), [2, 3]);
+  assert.deepEqual(filterSchedules(rows, classes, { status: "CANCELLED" }).map(r => r.scheduleId), [4]);
 });

@@ -1,0 +1,5 @@
+.vn-date { position:relative; display:block; min-width:0; }
+.vn-date > .vn-date-text { width:100%; padding-right:36px; font-variant-numeric:tabular-nums; }
+.vn-date-picker { position:absolute; top:50%; right:6px; transform:translateY(-50%); display:grid; place-items:center; width:26px; height:26px; padding:0; border:0; border-radius:6px; background:none; color:var(--text-muted, #6b7280); cursor:pointer; }
+.vn-date-picker:hover:not(:disabled) { color:var(--text, inherit); background:var(--surface-muted, rgba(127,127,127,.12)); }
+.vn-date-native { position:absolute; right:6px; bottom:0; width:26px; height:1px; opacity:0; pointer-events:none; border:0; padding:0; }

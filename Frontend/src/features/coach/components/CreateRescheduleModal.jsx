@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { REASON_CATEGORIES, getReasonLabel, formatScheduleSlot, isMakeupSession } from '../coachRescheduleUtils';
+import VnDateInput from '../../../components/VnDateInput';
 
 const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }) => {
   const currentLang = useLanguage();
@@ -654,7 +655,7 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
                     <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1">
                       {t('Make-up Date')}
                     </label>
-                    <input
+                    <VnDateInput
                       type="date"
                       min={todayStr}
                       value={proposedDate}
@@ -668,7 +669,7 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
                     <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1">
                       {t('Start Time')}
                     </label>
-                    <input
+                    <VnDateInput
                       type="time"
                       value={proposedStartTime}
                       onChange={(e) => setProposedStartTime(e.target.value)}
@@ -679,7 +680,7 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
                     <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1">
                       {t('End Time')}
                     </label>
-                    <input
+                    <VnDateInput
                       type="time"
                       value={proposedEndTime}
                       onChange={(e) => setProposedEndTime(e.target.value)}

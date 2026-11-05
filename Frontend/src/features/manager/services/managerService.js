@@ -12,6 +12,7 @@ function saveOperationResource(resource,id,payload,photo={}) {
 
 const managerService = {
   schedulePolicy: classId => axiosClient.get(classId?`/manager/classes/${classId}/schedule-policy`:'/manager/schedule-policy'),
+  saveCourseLeadDays: (days) => axiosClient.put('/manager/schedule-policy/course-lead-days', { days }),
   saveSchedulePolicy: payload => axiosClient.put('/manager/schedule-policy',payload),
   uploadResourceImage: (resource, id, image) => {
     const body = new FormData();
@@ -72,7 +73,7 @@ const managerService = {
   },
   reports: (from, to) => axiosClient.get('/manager/reports', { params: { from, to } }),
   coachTeachingReport: (from, to, coachId) => axiosClient.get('/manager/reports/coach-teaching', { params: { from, to, ...(coachId ? { coachId } : {}) } }),
-  auditLogs: () => axiosClient.get('/manager/audit-logs'),
+  auditSearch: params => axiosClient.get('/manager/audit-logs/search', { params }),
 };
 
 export default managerService;

@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import CoachReviewSubmissionModal from '../components/CoachReviewSubmissionModal';
 import { coachService } from '../services/coachService';
+import VnDateInput from '../../../components/VnDateInput';
+import { vnToday } from '../../../utils/vnTime';
 
 const API_BASE = 'http://localhost:8080/api/v1/coach';
 
@@ -33,7 +35,7 @@ const GOAL_SUGGESTIONS = [
   'Phục hồi cơ bắp & Tăng độ linh hoạt'
 ];
 
-const getTodayStr = () => new Date().toISOString().split('T')[0];
+const getTodayStr = () => vnToday();
 const getFutureDateStr = (days) => {
   const d = new Date();
   d.setDate(d.getDate() + days);
@@ -1376,7 +1378,7 @@ const CoachWorkoutPlans = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">{t("Ngày Bắt Đầu")}</label>
-                  <input
+                  <VnDateInput
                     type="date"
                     value={tpStartDate}
                     onChange={(e) => handleStartDateChange(e.target.value)}
@@ -1385,7 +1387,7 @@ const CoachWorkoutPlans = () => {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">{t("Ngày Kết Thúc")}</label>
-                  <input
+                  <VnDateInput
                     type="date"
                     value={tpEndDate}
                     onChange={(e) => setTpEndDate(e.target.value)}

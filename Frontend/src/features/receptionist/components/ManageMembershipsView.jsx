@@ -26,6 +26,8 @@ import InvoiceReceiptModal from './InvoiceReceiptModal';
 import ClassRenewalModal from './ClassRenewalModal';
 import RenewalNoticeModal from './RenewalNoticeModal';
 import PaymentMethodSelector from './PaymentMethodSelector';
+import VnDateInput from '../../../components/VnDateInput';
+import { vnToday } from '../../../utils/vnTime';
 
 export default function ManageMembershipsView({ initialKeyword = '' } = {}) {
   useLanguage();
@@ -37,7 +39,7 @@ export default function ManageMembershipsView({ initialKeyword = '' } = {}) {
     const [packagesList, setPackagesList] = useState([]);
     const [packageModalOpen, setPackageModalOpen] = useState(false);
     const [selectedPackageId, setSelectedPackageId] = useState('');
-    const [startDateInput, setStartDateInput] = useState(new Date().toISOString().split('T')[0]);
+    const [startDateInput, setStartDateInput] = useState(vnToday());
     const [subscribing, setSubscribing] = useState(false);
     const [pkgFeedback, setPkgFeedback] = useState(null);
 
@@ -951,7 +953,7 @@ export default function ManageMembershipsView({ initialKeyword = '' } = {}) {
 
                             <div>
                                 <label style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>{t("Activation Date")}</label>
-                                <input
+                                <VnDateInput
                                     type="date"
                                     value={startDateInput}
                                     onChange={(e) => setStartDateInput(e.target.value)}

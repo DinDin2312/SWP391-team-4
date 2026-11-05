@@ -196,7 +196,7 @@ export function formatNotificationTime(dateString, locale = 'vi') {
     if (diffDays < 7) {
       return isVi ? `${diffDays} ngày trước` : `${diffDays}d ago`;
     }
-    return date.toLocaleDateString(isVi ? 'vi-VN' : 'en-US');
+    return date.toLocaleDateString(isVi ? 'vi-VN' : 'en-GB');
   } catch {
     return dateString;
   }

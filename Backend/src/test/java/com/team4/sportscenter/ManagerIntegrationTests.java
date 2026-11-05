@@ -55,7 +55,7 @@ class ManagerIntegrationTests {
     }
 
     @BeforeEach void fixtures() {
-        jdbc.update("UPDATE CENTER_SCHEDULE_POLICY SET opens_at='06:00:00',closes_at='22:00:00',break_minutes=15 WHERE policy_id=1");
+        jdbc.update("UPDATE CENTER_SCHEDULE_POLICY SET opens_at='06:00:00',closes_at='22:00:00',break_minutes=15,course_lead_days=0 WHERE policy_id=1");
         actor = "-qa-" + UUID.randomUUID() + "@example.test";
         admin = user("admin", "Center Manager");
         coach = user("coach", "Coach");
@@ -244,28 +244,38 @@ class ManagerIntegrationTests {
         } finally {jdbc.update("UPDATE CLASSES SET subject_id=? WHERE class_id=?",subject,course);jdbc.update("DELETE FROM USER_SUBJECTS WHERE subject_id=?",other);jdbc.update("DELETE FROM SUBJECTS WHERE subject_id=?",other);}
     }
 
-    @Test void subjectTimetablesControlClassSlotsAndCheckConflictsAcrossDurations() {
-        int other=service.saveSubject(null,new SubjectRequest("Short "+actor,"",60,List.of(java.time.LocalTime.of(7,30),java.time.LocalTime.of(9,0))),actor);
+    @Test void sessionLengthIsSetOnceForTheWholeCenter() {
+        var before=service.slotPolicy();
+        int other=service.saveSubject(null,new SubjectRequest("Short "+actor,"",60,List.of(java.time.LocalTime.of(7,30))),actor);
         try {
-            jdbc.update("INSERT INTO USER_SUBJECTS(user_id,subject_id) VALUES (?,?)",coach,other);
-            int shortClass=service.saveClass(null,new ClassRequest("Short class",other,coach,room,BigDecimal.TEN,5,"ACTIVE"),actor);classIds.add(shortClass);
-            service.saveSubject(subject,new SubjectRequest("Long "+actor,"",135,List.of(java.time.LocalTime.of(6,0),java.time.LocalTime.of(8,30))),actor);
-            assertEquals(135,service.classSlotPolicy(course).get("durationMinutes"));
-            int longSession=service.saveSchedule(null,new ScheduleRequest(course,start,start.plusMinutes(135),"SCHEDULED"),actor);
-            assertThrows(IllegalArgumentException.class,()->service.saveSchedule(null,new ScheduleRequest(shortClass,start.plusMinutes(90),start.plusMinutes(150),"SCHEDULED"),actor));
-            assertDoesNotThrow(()->service.saveSchedule(null,new ScheduleRequest(shortClass,start.plusHours(3),start.plusHours(4),"SCHEDULED"),actor));
-            assertThrows(IllegalArgumentException.class,()->service.saveSchedule(null,new ScheduleRequest(course,start.plusDays(1),start.plusDays(1).plusMinutes(90),"SCHEDULED"),actor));
-            assertThrows(IllegalArgumentException.class,()->service.saveSubject(subject,new SubjectRequest("Invalid","",135,List.of(java.time.LocalTime.of(6,0),java.time.LocalTime.of(7,0))),actor));
-            assertEquals(135,service.classSlotPolicy(course).get("durationMinutes"));
-            service.saveSubject(subject,new SubjectRequest("Changed "+actor,"",60,List.of()),actor);
-            assertEquals(start.plusMinutes(135),repository.schedule(longSession).get("endTime"));
-            assertDoesNotThrow(()->service.saveSchedule(longSession,new ScheduleRequest(course,start,start.plusMinutes(135),"CANCELLED"),actor));
+            assertEquals(before.get("durationMinutes"),service.classSlotPolicy(course).get("durationMinutes"));
+            assertEquals(before.get("durationMinutes"),repository.subjectPolicy(other).durationMinutes());
+            int session=service.saveSchedule(null,new ScheduleRequest(course,start,start.plusMinutes(90),"SCHEDULED"),actor);
+            service.saveSlotPolicy(new com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy(java.time.LocalTime.of(7,0),java.time.LocalTime.of(22,0),15,60,List.of()),actor);
+            assertEquals(60,service.classSlotPolicy(course).get("durationMinutes"));
+            assertEquals(60,repository.subjectPolicy(other).durationMinutes());
+            assertEquals(start.plusMinutes(90),repository.schedule(session).get("endTime"));
+            assertDoesNotThrow(()->service.saveSchedule(session,new ScheduleRequest(course,start,start.plusMinutes(90),"CANCELLED"),actor));
         } finally {
-            jdbc.update("DELETE b FROM BOOKINGS b JOIN SCHEDULES s ON s.schedule_id=b.schedule_id JOIN CLASSES c ON c.class_id=s.class_id WHERE c.subject_id=?",other);
-            jdbc.update("DELETE s FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id WHERE c.subject_id=?",other);
-            jdbc.update("DELETE FROM CLASSES WHERE subject_id=?",other);
-            jdbc.update("DELETE FROM USER_SUBJECTS WHERE subject_id=?",other);
+            jdbc.update("UPDATE CENTER_SCHEDULE_POLICY SET opens_at=?,closes_at=?,break_minutes=?,session_minutes=? WHERE policy_id=1",before.get("opensAt"),before.get("closesAt"),before.get("breakMinutes"),before.get("durationMinutes"));
+            jdbc.update("UPDATE SUBJECTS SET duration_minutes=?",before.get("durationMinutes"));
             jdbc.update("DELETE FROM SUBJECTS WHERE subject_id=?",other);
+        }
+    }
+
+    @Test void newCoursesNeedTheConfiguredNotice() {
+        service.saveCourseLeadDays(30, actor);
+        try {
+            var policy = service.slotPolicy();
+            assertEquals(30, ((Number) policy.get("courseLeadDays")).intValue());
+            assertEquals(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(30).toString(), policy.get("earliestCourseStart"));
+            var soon = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(5);
+            var tooSoon = new SchedulePlanRequest(course,soon,soon.plusDays(14),3,90,List.of(1,2,3,4,5,6,7),java.time.LocalTime.of(6,0),java.time.LocalTime.of(12,0),java.time.LocalTime.of(6,0),15,List.of());
+            var error = assertThrows(IllegalArgumentException.class, () -> service.previewSchedulePlan(tooSoon));
+            assertTrue(error.getMessage().contains("30 days notice"));
+            assertThrows(IllegalArgumentException.class, () -> service.saveCourseLeadDays(-1, actor));
+        } finally {
+            service.saveCourseLeadDays(0, actor);
         }
     }
 
@@ -468,6 +478,18 @@ class ManagerIntegrationTests {
             assertEquals(java.time.LocalDate.now().plusDays(29),purchase.getEndDate());
             assertTrue(purchase.getBenefits().isEmpty());
         }
+    }
+
+    @Test void upcomingFilterSkipsPastSessionsAndKeepsSubstituteAndMakeupSessions() {
+        LocalDateTime now = LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        java.time.LocalDate today = now.toLocalDate();
+        jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,'SCHEDULED')", course, now.minusDays(1), now.minusDays(1).plusMinutes(90));
+        jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,'SUBSTITUTE_ASSIGNED')", course, now.plusDays(1), now.plusDays(1).plusMinutes(90));
+        jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,'RESCHEDULED')", course, now.plusDays(2), now.plusDays(2).plusMinutes(90));
+        jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,'CANCELLED_INSUFFICIENT_ATTENDEES')", course, now.plusDays(3), now.plusDays(3).plusMinutes(90));
+        var rows = repository.filteredSchedules(today.minusDays(2), today.plusDays(5), false, "SCHEDULED", false).stream()
+            .filter(r -> ((Number) r.get("classId")).intValue() == course).map(r -> r.get("status")).toList();
+        assertEquals(List.of("SUBSTITUTE_ASSIGNED", "RESCHEDULED"), rows);
     }
 
     @Test void overviewDoesNotCapTotalsOrDropUrgentItemsAndFiltersMatch() {

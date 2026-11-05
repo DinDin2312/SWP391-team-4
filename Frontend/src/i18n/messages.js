@@ -5129,3 +5129,93 @@ const overviewV2Labels = {
   'In progress':'Đang diễn ra','Now':'Bây giờ',
 };
 for (const [en, vi] of Object.entries(overviewV2Labels)) translations[en] = [en, vi];
+
+const operationsFlowLabels = {
+  'Step 1: the disciplines the center teaches.':'Bước 1: các bộ môn trung tâm giảng dạy.',
+  'Step 2: the spaces, and which subjects each room is set up for.':'Bước 2: các phòng và bộ môn mỗi phòng dùng được.',
+  'Step 3: a subject taught by a coach in a room.':'Bước 3: lớp = bộ môn + HLV + phòng.',
+  'Step 4: the sessions of each class.':'Bước 4: các buổi học của từng lớp.',
+};
+for (const [en, vi] of Object.entries(operationsFlowLabels)) translations[en] = [en, vi];
+
+const operationsHoursLabels = { 'Opening hours':'Giờ hoạt động', 'Changeover {0} minutes':'Chuyển ca {0} phút', 'Every subject’s teaching slots must fit inside these hours.':'Các ca học của mọi bộ môn phải nằm trong khung giờ này. Thay đổi chỉ áp dụng cho buổi mới hoặc buổi đổi lịch.' };
+for (const [en, vi] of Object.entries(operationsHoursLabels)) translations[en] = [en, vi];
+
+const courseLeadLabels = {
+  'New courses {0} days ahead':'Mở khóa mới trước {0} ngày',
+  'Notice for new courses (days)':'Báo trước khi mở khóa mới (ngày)',
+  'New courses open at least {0} days ahead so members can register. Earliest start: {1}.':'Khóa mới phải mở trước ít nhất {0} ngày để hội viên kịp đăng ký. Ngày bắt đầu sớm nhất: {1}.',
+};
+for (const [en, vi] of Object.entries(courseLeadLabels)) translations[en] = [en, vi];
+
+const substituteLabels = { 'substituting for {0}':'dạy thay cho {0}', 'Substitute: {0}':'Dạy thay: {0}', 'Moved make-up session':'Buổi bù (đã dời)', 'Substitute assigned':'Có HLV dạy thay', 'Cancelled: too few confirmed':'Đã hủy: không đủ học viên xác nhận' };
+for (const [en, vi] of Object.entries(substituteLabels)) translations[en] = [en, vi];
+
+const absenceLabels = {
+  'Report an absence':'Báo vắng buổi dạy','Absence reports':'Báo vắng buổi dạy',
+  'The manager will find a substitute, move the session or cancel it and refund members.':'Quản lý sẽ cử HLV dạy thay, dời buổi hoặc hủy buổi và hoàn tiền cho học viên.',
+  'Tell the manager which sessions you cannot teach. They arrange a substitute, a make-up session or a refund.':'Báo cho quản lý những buổi bạn không dạy được. Quản lý sẽ sắp xếp HLV dạy thay, buổi bù hoặc hoàn tiền.',
+  'Sessions you cannot teach':'Buổi bạn không dạy được','You have no upcoming sessions.':'Bạn chưa có buổi dạy sắp tới.',
+  'already reported':'đã báo vắng','Select all {0} sessions':'Chọn cả {0} buổi','Reason':'Lý do',
+  'Note for the manager (optional)':'Ghi chú cho quản lý (không bắt buộc)',
+  'E.g. who could cover for you, or a time that suits a make-up session':'Ví dụ: ai có thể dạy thay, hoặc giờ phù hợp để dạy bù',
+  'Choose at least one session.':'Chọn ít nhất một buổi.','Send absence report':'Gửi báo vắng','Report {0} sessions':'Báo vắng {0} buổi',
+  'Sending…':'Đang gửi…','Could not load your upcoming sessions. Try again.':'Không tải được lịch dạy sắp tới. Thử lại.',
+  'Could not send the absence report. Try again.':'Không gửi được báo vắng. Thử lại.',
+  'No absence reports yet':'Chưa có báo vắng nào','Absence report sent to the manager.':'Đã gửi báo vắng cho quản lý.',
+  'Withdraw absence report':'Rút báo vắng','Withdraw this absence report? The session goes back to you.':'Rút báo vắng này? Buổi học sẽ quay về do bạn dạy.',
+  'Absence reported':'Đã báo vắng','The manager will arrange a substitute, a make-up session or a refund.':'Quản lý sẽ sắp xếp HLV dạy thay, buổi bù hoặc hoàn tiền.',
+  'Absence reported, waiting for the manager':'Đã báo vắng, chờ quản lý xử lý',
+  'Waiting for the manager to decide':'Chờ quản lý xử lý','Session cancelled, members refunded':'Đã hủy buổi, học viên được hoàn tiền',
+};
+for (const [en, vi] of Object.entries(absenceLabels)) translations[en] = [en, vi];
+
+const absenceManagerLabels = {
+  'Coaches report sessions they cannot teach. Choose how each one is covered.':'HLV báo những buổi không dạy được. Chọn cách xử lý cho từng buổi.',
+  'To handle':'Cần xử lý','Handled':'Đã xử lý','No absence to handle.':'Không có báo vắng cần xử lý.','Nothing handled yet.':'Chưa xử lý báo vắng nào.',
+  'Could not load absence reports.':'Không tải được danh sách báo vắng.','{0} members booked':'{0} học viên đã đăng ký',
+  'How to handle this session':'Cách xử lý buổi này',
+  'Assign a substitute':'Cử HLV dạy thay','Same time and room':'Giữ nguyên giờ và phòng',
+  'No coach who teaches this subject is free then':'Không có HLV cùng bộ môn rảnh giờ này',
+  'Move to a make-up session':'Dời sang buổi bù','Members confirm the new time':'Học viên xác nhận giờ mới',
+  'Cancel and refund':'Hủy buổi và hoàn tiền','Each member gets 1 session back':'Mỗi học viên được hoàn 1 buổi',
+  'Substitute coach':'HLV dạy thay','Choose a coach':'Chọn HLV','Make-up start':'Bắt đầu buổi bù','Minimum to run':'Sĩ số tối thiểu',
+  '{0} minutes, same room. Members confirm within 24 hours before; others are refunded.':'{0} phút, cùng phòng. Học viên xác nhận trước 24 giờ; ai không xác nhận được hoàn tiền.',
+  '{0} members will each get 1 session credited back and be notified.':'{0} học viên sẽ được hoàn 1 buổi vào ví và nhận thông báo.',
+  'Reason for the coach':'Lý do gửi HLV','Decline report':'Từ chối báo vắng','Assign substitute':'Cử HLV dạy thay','Move session':'Dời buổi',
+  'Choose an option':'Chọn cách xử lý','Could not save. Try again.':'Không lưu được. Thử lại.',
+  'Moved to a make-up session':'Đã dời sang buổi bù','Moved to':'Dời sang','Declined':'Đã từ chối','Withdrawn or expired':'Đã rút hoặc hết hạn',
+};
+for (const [en, vi] of Object.entries(absenceManagerLabels)) translations[en] = [en, vi];
+
+const auditLabels = {
+  'added a session to': 'đã thêm buổi cho', 'changed a session of': 'đã đổi buổi của', 'cancelled a session of': 'đã hủy buổi của',
+  'booked class members into a session of': 'đã xếp học viên vào buổi của', 'created class': 'đã tạo lớp', 'edited class': 'đã sửa lớp',
+  'deactivated class': 'đã ngừng lớp', 'scheduled the course of': 'đã xếp lịch khóa của', 'added repeating sessions to': 'đã thêm lịch lặp cho',
+  'added room': 'đã thêm phòng', 'edited room': 'đã sửa phòng', 'added subject': 'đã thêm bộ môn', 'edited subject': 'đã sửa bộ môn',
+  'created package': 'đã tạo gói', 'edited package': 'đã sửa gói', 'deleted package': 'đã xóa gói',
+  'created account': 'đã tạo tài khoản', 'edited account': 'đã sửa tài khoản', 'deleted account': 'đã xóa tài khoản',
+  'changed the status of account': 'đã đổi trạng thái tài khoản', 'changed the photo of': 'đã đổi ảnh của', 'removed the photo of': 'đã gỡ ảnh của',
+  'changed the opening hours': 'đã đổi giờ mở cửa', 'cancelled a checkout': 'đã hủy thanh toán', 'flagged a payment for review': 'đã đánh dấu giao dịch cần xem lại',
+  'Audit log': 'Nhật ký hệ thống', 'Who changed what, and when.': 'Ai đã thay đổi gì, vào lúc nào.', 'Today': 'Hôm nay',
+  'Sensitive': 'Quan trọng', 'Sensitive change': 'Thay đổi quan trọng', 'Everything': 'Tất cả', 'Sessions': 'Buổi học', 'Classes': 'Lớp học',
+  'Rooms': 'Phòng', 'Subjects': 'Bộ môn', 'Accounts': 'Tài khoản', 'Packages': 'Gói tập', 'Payments': 'Thanh toán',
+  'Search by person, class, room or account': 'Tìm theo người, lớp, phòng hoặc tài khoản', 'Clear': 'Xóa lọc',
+  'Could not load the audit log.': 'Không tải được nhật ký.', 'No changes match these filters.': 'Không có thay đổi nào khớp bộ lọc.',
+  'No changes recorded yet.': 'Chưa có thay đổi nào.', 'Show older changes ({0} more)': 'Xem cũ hơn (còn {0})', '{0} changes': '{0} thay đổi',
+};
+for (const [en, vi] of Object.entries(auditLabels)) translations[en] = [en, vi];
+
+translations['already moved'] = ['already moved', 'đã dời lịch'];
+translations['Center opening hours'] = ['Center opening hours', 'Giờ hoạt động của trung tâm'];
+translations['Applies to the whole center: every subject, room and class is scheduled inside these hours.'] = ['Applies to the whole center: every subject, room and class is scheduled inside these hours.', 'Áp dụng cho toàn trung tâm: mọi bộ môn, phòng và lớp đều được xếp lịch trong khung giờ này.'];
+translations['Session length (minutes)'] = ['Session length (minutes)', 'Thời lượng mỗi buổi (phút)'];
+const coachSubjectLabels = {
+  'Subjects this coach teaches': 'Bộ môn HLV này dạy',
+  'Only these subjects can be assigned to the coach’s classes and substitute sessions.': 'Chỉ những bộ môn này mới được giao lớp hoặc dạy thay cho HLV.',
+  'Could not load subjects.': 'Không tải được danh sách bộ môn.',
+  'No subjects yet. Add one in Center operations first.': 'Chưa có bộ môn nào. Hãy thêm ở trang Vận hành trung tâm trước.',
+  'With no subjects, this coach cannot be assigned to any class.': 'Chưa chọn bộ môn nào thì HLV này không được giao lớp nào.',
+};
+for (const [en, vi] of Object.entries(coachSubjectLabels)) translations[en] = [en, vi];
+translations['Newest first'] = ['Newest first', 'Mới tạo trước'];

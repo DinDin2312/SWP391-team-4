@@ -7,6 +7,7 @@ import { apiError, isoDate } from '../managerUtils';
 import managerService from '../services/managerService';
 import ManagerPageHeader from '../components/ManagerPageHeader';
 import './transactions.css';
+import VnDateInput from '../../../components/VnDateInput';
 
 const paymentStates = ['ALL', 'SUCCESS', 'PENDING', 'FAILED', 'CANCELLED', 'REVIEW'];
 const invoiceStates = ['ALL', 'PAID', 'PENDING', 'FAILED', 'CANCELLED', 'REVIEW'];
@@ -68,7 +69,7 @@ export default function TransactionsPage({ updatedAt }) {
       <label className="tx-search">{t('Search')}<div><Search size={17} /><input value={draft.keyword} maxLength={200} placeholder={t('Invoice, transaction ID, member name or email')} onChange={event => setDraft(current => ({ ...current, keyword: event.target.value }))} /></div></label>
       <label>{t('Status')}<select value={draft.status} onChange={event => setDraft(current => ({ ...current, status: event.target.value }))}>{states.map(value => <option key={value} value={value}>{t(value === 'ALL' ? 'All' : value)}</option>)}</select></label>
       <label>{t('Payment Method')}<select value={draft.method} onChange={event => setDraft(current => ({ ...current, method: event.target.value }))}>{['ALL', 'PAYOS', 'VNPAY', 'MOMO', 'CASH', 'FREE'].map(value => <option key={value} value={value}>{t(value === 'ALL' ? 'All' : value === 'PAYOS' ? 'VietQR (PayOS)' : value)}</option>)}</select></label>
-      <label>{t('From')}<input type="date" required max={draft.to} value={draft.from} onInput={event => setDraft(current => ({ ...current, from: event.target.value }))} /></label><label>{t('To')}<input type="date" required min={draft.from} value={draft.to} onInput={event => setDraft(current => ({ ...current, to: event.target.value }))} /></label><button type="submit" className="manager-primary" disabled={!valid}>{t('Apply filters')}</button>
+      <label>{t('From')}<VnDateInput type="date" required max={draft.to} value={draft.from} onInput={event => setDraft(current => ({ ...current, from: event.target.value }))} /></label><label>{t('To')}<VnDateInput type="date" required min={draft.from} value={draft.to} onInput={event => setDraft(current => ({ ...current, to: event.target.value }))} /></label><button type="submit" className="manager-primary" disabled={!valid}>{t('Apply filters')}</button>
     </form>
     <p className="tx-note">{t(mode === 'payments' ? 'Dates filter payment records. Each row is one payment attempt.' : 'Dates filter invoice creation. An invoice may have several payment attempts.')}</p>
     {error && <div className="manager-alert" role="alert">{t(error)}<button onClick={() => setRetry(value => value + 1)}>{t('Retry')}</button></div>}

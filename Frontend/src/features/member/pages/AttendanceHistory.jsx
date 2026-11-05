@@ -408,7 +408,7 @@ const AttendanceHistory = () => {
                     const monthText = lang === 'vi' 
                       ? `Thg ${start.getMonth() + 1}` 
                       : start.toLocaleString('en-US', { month: 'short' });
-                    const weekdayText = start.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { weekday: 'short' });
+                    const weekdayText = start.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-GB', { weekday: 'short' });
 
                     return (
                       <tr key={booking.bookingId} className="hover:bg-[var(--surface-hover)]/60 transition-colors">

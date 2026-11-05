@@ -35,6 +35,7 @@ import {
   formatFacilityName,
 } from '../receptionistUtils';
 import { locale } from '../../../i18n/languageStore';
+import VnDateInput from '../../../components/VnDateInput';
 
 const getTodayDateString = () => {
   const now = new Date();
@@ -1488,7 +1489,7 @@ const MemberCheckInView = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: 'var(--bg)', padding: '0.35rem 0.65rem', borderRadius: '0.6rem', border: '1px solid var(--border)' }}>
                 <Calendar style={{ width: '15px', height: '15px', color: 'var(--text-muted)' }} />
-                <input
+                <VnDateInput
                   type="date"
                   value={historyDate}
                   onChange={(e) => setHistoryDate(e.target.value)}
