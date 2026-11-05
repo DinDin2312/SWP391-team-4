@@ -65,15 +65,15 @@ export const formatScheduleSlot = (startTime, endTime, lang = 'vi') => {
   if (!startTime) return '--';
   const start = new Date(startTime);
   if (isNaN(start.getTime())) return startTime;
-  const timeStart = start.toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const timeStart = start.toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
   let timeEnd = '';
   if (endTime) {
     const end = new Date(endTime);
     if (!isNaN(end.getTime())) {
-      timeEnd = end.toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      timeEnd = end.toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
     }
   }
-  const dateFormatted = start.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', {
+  const dateFormatted = start.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-GB', {
     weekday: 'short',
     day: '2-digit',
     month: '2-digit',

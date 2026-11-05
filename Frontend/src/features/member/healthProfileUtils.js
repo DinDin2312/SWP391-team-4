@@ -1,3 +1,4 @@
+import { vnToday } from '../../utils/vnTime.js';
 export const HEALTH_CONDITIONS = [
   { code: 'CARDIOVASCULAR', vi: 'Tim mạch / Huyết áp cao', en: 'Heart disease / High blood pressure' },
   { code: 'DIABETES', vi: 'Tiểu đường', en: 'Diabetes' },
@@ -47,7 +48,7 @@ export const PARQ_QUESTIONS = [
   },
 ];
 
-export function calcAge(dobString, todayString = new Date().toISOString().slice(0, 10)) {
+export function calcAge(dobString, todayString = vnToday()) {
   if (!dobString || typeof dobString !== 'string') return null;
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dobString.trim());
   if (!match) return null;

@@ -8,6 +8,7 @@ import { bucketDays, fillDays } from './revenueSeries';
 import ManagerPageHeader from '../components/ManagerPageHeader';
 import CoachTeachingReport from './CoachTeachingReport';
 import './reports.css';
+import VnDateInput from '../../../components/VnDateInput';
 
 const LOW_OCCUPANCY = 25;
 
@@ -285,7 +286,7 @@ export default function ReportsPage({ data, filters, appliedFilters, setFilters,
         <form className="reports-filter" onSubmit={event => { event.preventDefault(); if (valid && !loading) reload(); }}>
           <div className="reports-filter-title"><CalendarDays size={18} aria-hidden="true" /><span>{t('Reporting period')}</span></div>
           <div className="reports-presets">{presets.map(label => { const range = presetRange(label); return <button type="button" key={label} disabled={loading} aria-pressed={filters.from === range.from && filters.to === range.to} onClick={() => setFilters(current => ({ ...current, ...range }))}>{t(label)}</button>; })}</div>
-          <div className="reports-date-inputs"><label>{t('From')}<input type="date" value={filters.from} max={filters.to || undefined} onChange={event => setFilters(current => ({ ...current, from: event.target.value }))} /></label><span aria-hidden="true">–</span><label>{t('To')}<input type="date" value={filters.to} min={filters.from || undefined} onChange={event => setFilters(current => ({ ...current, to: event.target.value }))} /></label><button className="manager-primary" type="submit" disabled={!valid || loading}>{t(loading ? 'Loading...' : 'View')}</button></div>
+          <div className="reports-date-inputs"><label>{t('From')}<VnDateInput type="date" value={filters.from} max={filters.to || undefined} onChange={event => setFilters(current => ({ ...current, from: event.target.value }))} /></label><span aria-hidden="true">–</span><label>{t('To')}<VnDateInput type="date" value={filters.to} min={filters.from || undefined} onChange={event => setFilters(current => ({ ...current, to: event.target.value }))} /></label><button className="manager-primary" type="submit" disabled={!valid || loading}>{t(loading ? 'Loading...' : 'View')}</button></div>
           {(!valid || pendingRange) && <p className="reports-filter-hint" role="status">{t(!valid ? 'Select a valid date range: the start date cannot be after the end date.' : 'Apply the date range to update this report.')}</p>}
         </form>
 
