@@ -33,6 +33,8 @@ public class ManagerService {
     private static final Set<String> USER_STATUSES = Set.of("ACTIVE", "INACTIVE", "PENDING");
     private static final Set<String> CLASS_STATUSES = Set.of("ACTIVE", "INACTIVE");
     private static final Set<String> SCHEDULE_STATUSES = Set.of("SCHEDULED", "COMPLETED", "CANCELLED");
+    // Sessions that will still take place: a substitute coach or a make-up time does not cancel them.
+    public static final Set<String> ACTIVE_SESSION_STATUSES = Set.of("SCHEDULED", "SUBSTITUTE_ASSIGNED", "RESCHEDULED");
 
     private final ManagerRepository managerRepository;
     private final UserRepository userRepository;
@@ -398,7 +400,7 @@ public class ManagerService {
         boolean timingChanged = previous == null || !request.startTime().equals(previous.get("startTime"))
                 || !request.endTime().equals(previous.get("endTime"));
         if (previous != null) {
-            if (!"SCHEDULED".equals(previous.get("status"))) {
+            if (!ACTIVE_SESSION_STATUSES.contains(String.valueOf(previous.get("status")))) {
                 throw new IllegalArgumentException("Completed or cancelled sessions cannot be edited; create a new session instead");
             }
             if (!request.classId().equals(((Number) previous.get("classId")).intValue())
@@ -445,6 +447,10 @@ public class ManagerService {
         }
         int savedId = managerRepository.saveSchedule(id, request);
         managerRepository.setChangeover(savedId,changeover);
+        // Editing a session that has a substitute coach or a make-up time keeps that status.
+        if (previous != null && !cancelled && !completed && !"SCHEDULED".equals(previous.get("status"))
+                && ACTIVE_SESSION_STATUSES.contains(String.valueOf(previous.get("status"))))
+            managerRepository.setScheduleStatus(savedId, String.valueOf(previous.get("status")));
         if (id != null && cancelled) {
             managerRepository.notifyScheduleBookings(id, "Buổi học đã hủy",
                     assignment.get("className") + " lúc " + request.startTime()
@@ -476,7 +482,7 @@ public class ManagerService {
     public Map<String, Integer> enrollClassMembers(Integer scheduleId, String actor) {
         managerRepository.lockOperations();
         var schedule = managerRepository.schedule(scheduleId);
-        if (!"SCHEDULED".equals(schedule.get("status"))) throw new IllegalArgumentException("Only scheduled sessions can receive members");
+        if (!ACTIVE_SESSION_STATUSES.contains(String.valueOf(schedule.get("status")))) throw new IllegalArgumentException("Only scheduled sessions can receive members");
         var result = managerRepository.enrollClassMembers(scheduleId);
         if (result.get("added") > 0) {
             var assignment = managerRepository.classAssignment(((Number) schedule.get("classId")).intValue());

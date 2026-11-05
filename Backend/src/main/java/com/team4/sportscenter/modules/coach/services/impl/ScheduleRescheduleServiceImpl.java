@@ -149,6 +149,7 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
         User substituteCoach = null;
         if (dto.getRequestedSubstituteCoachId() != null) {
             substituteCoach = userRepository.findById(dto.getRequestedSubstituteCoachId()).orElse(null);
+            requireQualifiedSubstitute(substituteCoach, schedule);
         }
 
         String reasonDetails = (dto.getReasonDetails() != null && !dto.getReasonDetails().trim().isEmpty())
@@ -493,6 +494,7 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
             }
         } else if ("SUBSTITUTE_COACH".equalsIgnoreCase(request.getAction_type())) {
             if (request.getSubstituteCoach() != null) {
+                requireQualifiedSubstitute(request.getSubstituteCoach(), schedule);
                 schedule.setSubstituteCoach(request.getSubstituteCoach());
                 schedule.setStatus("SUBSTITUTE_ASSIGNED");
                 scheduleRepository.save(schedule);
@@ -610,6 +612,7 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
 
         GymClass gymClass = schedule.getGymClass();
 
+        requireQualifiedSubstitute(substituteCoach, schedule);
         long collisions = requestRepository.countCoachCollisions(
                 substituteCoachId, finalScheduleId, schedule.getStartTime(), schedule.getEndTime());
         if (collisions > 0) {
@@ -683,6 +686,20 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
         return mapToDto(saved);
     }
 
+    // A substitute must be an active coach, not the class's own coach, and qualified for the class's subject.
+    private boolean canSubstitute(User candidate, Schedule schedule) {
+        GymClass gymClass = schedule.getGymClass();
+        if (candidate == null || gymClass == null || !candidate.isEnabled()) return false;
+        if (gymClass.getCoach() != null && gymClass.getCoach().getUserId().equals(candidate.getUserId())) return false;
+        Integer subjectId = gymClass.getSubjectId() != null ? gymClass.getSubjectId() : (gymClass.getSubject() != null ? gymClass.getSubject().getSubjectId() : null);
+        return candidate.getSpecialties() != null && candidate.getSpecialties().stream().anyMatch(sub -> sub.getSubjectId().equals(subjectId));
+    }
+
+    private void requireQualifiedSubstitute(User candidate, Schedule schedule) {
+        if (!canSubstitute(candidate, schedule))
+            throw new IllegalArgumentException("HLV dạy thay phải là HLV khác, đang hoạt động và được phân công dạy bộ môn của lớp này.");
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getAvailableCoachesForSchedule(Integer scheduleId) {
@@ -693,6 +710,7 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
         List<Map<String, Object>> available = new ArrayList<>();
 
         for (User c : allCoaches) {
+            if (!canSubstitute(c, schedule)) continue;
             long collisions = requestRepository.countCoachCollisions(
                     c.getUserId(), scheduleId, schedule.getStartTime(), schedule.getEndTime());
             if (collisions == 0) {

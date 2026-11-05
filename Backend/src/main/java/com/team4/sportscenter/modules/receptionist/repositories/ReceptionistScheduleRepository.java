@@ -28,7 +28,7 @@ public interface ReceptionistScheduleRepository extends JpaRepository<Schedule, 
             "LEFT JOIN FETCH c.room r " +
             "WHERE LOWER(c.className) = LOWER(:className) " +
             "AND s.startTime >= :afterTime " +
-            "AND s.status = 'SCHEDULED' " +
+            "AND s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') " +
             "ORDER BY s.startTime ASC")
     List<Schedule> findUpcomingSchedulesByClassName(
             @Param("className") String className,
@@ -42,7 +42,7 @@ public interface ReceptionistScheduleRepository extends JpaRepository<Schedule, 
             "AND c.status = 'ACTIVE' " +
             "AND c.classId <> :excludeClassId " +
             "AND s.startTime >= :afterTime " +
-            "AND s.status = 'SCHEDULED' " +
+            "AND s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') " +
             "ORDER BY s.startTime ASC")
     List<Schedule> findUpcomingSchedulesByBaseName(
             @Param("baseName") String baseName,
@@ -58,7 +58,7 @@ public interface ReceptionistScheduleRepository extends JpaRepository<Schedule, 
             "AND c.status = 'ACTIVE' " +
             "AND c.classId <> :excludeClassId " +
             "AND s.startTime >= :afterTime " +
-            "AND s.status = 'SCHEDULED' " +
+            "AND s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') " +
             "ORDER BY s.startTime ASC")
     List<Schedule> findUpcomingSchedulesBySubjectId(
             @Param("subjectId") Integer subjectId,
@@ -70,7 +70,7 @@ public interface ReceptionistScheduleRepository extends JpaRepository<Schedule, 
             "LEFT JOIN FETCH c.coach coach " +
             "LEFT JOIN FETCH c.room r " +
             "WHERE c.classId = :classId " +
-            "AND s.status = 'SCHEDULED' " +
+            "AND s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') " +
             "ORDER BY s.startTime ASC")
     List<Schedule> findAllSchedulesByClassId(@Param("classId") Integer classId);
 }

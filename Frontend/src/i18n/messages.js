@@ -5147,3 +5147,6 @@ const courseLeadLabels = {
   'New courses open at least {0} days ahead so members can register. Earliest start: {1}.':'Khóa mới phải mở trước ít nhất {0} ngày để hội viên kịp đăng ký. Ngày bắt đầu sớm nhất: {1}.',
 };
 for (const [en, vi] of Object.entries(courseLeadLabels)) translations[en] = [en, vi];
+
+const substituteLabels = { 'substituting for {0}':'dạy thay cho {0}', 'Substitute: {0}':'Dạy thay: {0}', 'Moved make-up session':'Buổi bù (đã dời)', 'Substitute assigned':'Có HLV dạy thay', 'Cancelled: too few confirmed':'Đã hủy: không đủ học viên xác nhận' };
+for (const [en, vi] of Object.entries(substituteLabels)) translations[en] = [en, vi];

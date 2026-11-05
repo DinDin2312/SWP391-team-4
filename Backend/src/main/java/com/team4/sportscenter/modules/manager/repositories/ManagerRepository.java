@@ -25,14 +25,14 @@ public class ManagerRepository {
 
     // Pending and confirmed bookings both reserve seats; the threshold is strictly below 25%.
     private static final String BOOKED_SQL = "(SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id=s.schedule_id AND b.status IN ('CONFIRMED','PENDING'))";
-    private static final String SESSION_SQL = "SELECT s.schedule_id scheduleId,s.class_id classId,c.coach_id coachId,c.room_id roomId,c.class_name className,c.image_path classImagePath,u.avatar_path coachAvatarPath,u.full_name coachName,r.image_path roomImagePath,r.room_name roomName,s.start_time startTime,s.end_time endTime,s.status," + BOOKED_SQL + " booked,c.max_slots maxSlots FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id JOIN USERS u ON u.user_id=c.coach_id JOIN ROOMS r ON r.room_id=c.room_id ";
+    private static final String SESSION_SQL = "SELECT s.schedule_id scheduleId,s.class_id classId,COALESCE(s.substitute_coach_id,c.coach_id) coachId,c.room_id roomId,c.class_name className,c.image_path classImagePath,COALESCE(sub.avatar_path,u.avatar_path) coachAvatarPath,COALESCE(sub.full_name,u.full_name) coachName,IF(sub.user_id IS NULL,NULL,u.full_name) originalCoachName,r.image_path roomImagePath,r.room_name roomName,s.start_time startTime,s.end_time endTime,s.status," + BOOKED_SQL + " booked,c.max_slots maxSlots FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id JOIN USERS u ON u.user_id=c.coach_id LEFT JOIN USERS sub ON sub.user_id=s.substitute_coach_id JOIN ROOMS r ON r.room_id=c.room_id ";
 
     public Map<String, Object> operationalOverview() {
         LocalDateTime now = centerNow();
         LocalDate today = now.toLocalDate();
-        String low = "s.status='SCHEDULED' AND c.max_slots>0 AND " + BOOKED_SQL + "<c.max_slots*?";
+        String low = "s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND c.max_slots>0 AND " + BOOKED_SQL + "<c.max_slots*?";
         String future = "s.start_time>=? AND s.start_time<? AND " + low;
-        List<Map<String, Object>> todayRows = jdbc.queryForList(SESSION_SQL + "WHERE s.start_time>=? AND s.start_time<? AND s.status<>'CANCELLED' ORDER BY s.start_time,s.schedule_id", today.atStartOfDay(),today.plusDays(1).atStartOfDay()).stream().map(this::localTimes).toList();
+        List<Map<String, Object>> todayRows = jdbc.queryForList(SESSION_SQL + "WHERE s.start_time>=? AND s.start_time<? AND s.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES') ORDER BY s.start_time,s.schedule_id", today.atStartOfDay(),today.plusDays(1).atStartOfDay()).stream().map(this::localTimes).toList();
         List<Map<String, Object>> urgent = jdbc.queryForList(SESSION_SQL + "WHERE " + future + " ORDER BY s.start_time,s.schedule_id", now,now.plusHours(URGENT_WINDOW_HOURS),LOW_REGISTRATION_THRESHOLD).stream().map(this::localTimes).toList();
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("sessionsToday", todayRows.size());
@@ -72,7 +72,7 @@ public class ManagerRepository {
                 FROM INVOICES i LEFT JOIN USERS u ON u.user_id=i.user_id
                 WHERE i.status='REVIEW' ORDER BY i.created_at LIMIT 20
                 """).forEach(r -> items.add(decision("PAYMENT_REVIEW", r)));
-        jdbc.queryForList(SESSION_SQL + "WHERE s.start_time>=? AND s.start_time<? AND s.status='SCHEDULED' AND c.max_slots>0 AND " + BOOKED_SQL + "<c.max_slots*? ORDER BY s.start_time",
+        jdbc.queryForList(SESSION_SQL + "WHERE s.start_time>=? AND s.start_time<? AND s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND c.max_slots>0 AND " + BOOKED_SQL + "<c.max_slots*? ORDER BY s.start_time",
                 now, now.plusHours(24), LOW_REGISTRATION_THRESHOLD).stream().map(this::localTimes)
                 .forEach(r -> { Map<String, Object> d = decision("LOW_FILL", r); d.put("id", r.get("scheduleId")); d.put("dueAt", r.get("startTime")); items.add(d); });
         items.sort(java.util.Comparator.comparing(d -> String.valueOf(d.getOrDefault("dueAt", d.get("createdAt")))));
@@ -94,10 +94,10 @@ public class ManagerRepository {
         Map<String, Object> p = new java.util.LinkedHashMap<>();
         p.put("checkInsToday", jdbc.queryForObject("SELECT COUNT(*) FROM AUDIT_LOGS WHERE entity_type='MEMBER_CHECKIN' AND created_at>=? AND created_at<?", Integer.class, start, end));
         p.put("onSiteNow", jdbc.queryForObject("SELECT COUNT(*) FROM AUDIT_LOGS WHERE entity_type='MEMBER_CHECKIN' AND action='CHECK_IN' AND created_at>=? AND created_at<?", Integer.class, start, end));
-        Map<String, Object> fill = jdbc.queryForMap("SELECT COALESCE(SUM(" + BOOKED_SQL + "),0) booked,COALESCE(SUM(c.max_slots),0) seats FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id WHERE s.start_time>=? AND s.start_time<? AND s.status<>'CANCELLED'", start, end);
+        Map<String, Object> fill = jdbc.queryForMap("SELECT COALESCE(SUM(" + BOOKED_SQL + "),0) booked,COALESCE(SUM(c.max_slots),0) seats FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id WHERE s.start_time>=? AND s.start_time<? AND s.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES')", start, end);
         p.put("bookedSeatsToday", ((Number) fill.get("booked")).intValue());
         p.put("totalSeatsToday", ((Number) fill.get("seats")).intValue());
-        p.put("roomsInUse", jdbc.queryForObject("SELECT COUNT(DISTINCT c.room_id) FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id WHERE s.start_time<=? AND s.end_time>? AND s.status<>'CANCELLED'", Integer.class, now, now));
+        p.put("roomsInUse", jdbc.queryForObject("SELECT COUNT(DISTINCT c.room_id) FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id WHERE s.start_time<=? AND s.end_time>? AND s.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES')", Integer.class, now, now));
         p.put("totalRooms", jdbc.queryForObject("SELECT COUNT(*) FROM ROOMS", Integer.class));
         return p;
     }
@@ -105,7 +105,7 @@ public class ManagerRepository {
     public Map<String,Object> attentionPage(int page,int size) {
         LocalDateTime now = centerNow();
         LocalDate today = now.toLocalDate();
-        String where = "WHERE s.start_time>=? AND s.start_time<? AND s.status='SCHEDULED' AND c.max_slots>0 AND " + BOOKED_SQL + "<c.max_slots*? AND NOT(s.start_time>=? AND s.start_time<?)";
+        String where = "WHERE s.start_time>=? AND s.start_time<? AND s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND c.max_slots>0 AND " + BOOKED_SQL + "<c.max_slots*? AND NOT(s.start_time>=? AND s.start_time<?)";
         Object[] args = {today.plusDays(1).atStartOfDay(),today.plusDays(8).atStartOfDay(),LOW_REGISTRATION_THRESHOLD,now,now.plusHours(URGENT_WINDOW_HOURS)};
         int total = jdbc.queryForObject("SELECT COUNT(*) FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id " + where,Integer.class,args);
         java.util.List<Object> params = new java.util.ArrayList<>(java.util.Arrays.asList(args)); params.add(size); params.add(page*size);
@@ -124,8 +124,9 @@ public class ManagerRepository {
     public List<Map<String,Object>> filteredSchedules(LocalDate from,LocalDate to,boolean lowRegistration,String status,boolean excludeUrgent) {
         String where = "WHERE s.start_time>=? AND s.start_time<?";
         java.util.List<Object> args = new java.util.ArrayList<>(List.of(from.atStartOfDay(),to.plusDays(1).atStartOfDay()));
-        if(status!=null && !status.isBlank()) { where += " AND s.status=?";args.add(status); }
-        if(lowRegistration) { where += " AND s.status='SCHEDULED' AND s.start_time>=? AND c.max_slots>0 AND " + BOOKED_SQL + "<c.max_slots*?"; args.add(centerNow());args.add(LOW_REGISTRATION_THRESHOLD); }
+        if("SCHEDULED".equals(status)) { where += " AND s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND s.start_time>=?";args.add(centerNow()); }
+        else if(status!=null && !status.isBlank()) { where += " AND s.status=?";args.add(status); }
+        if(lowRegistration) { where += " AND s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND s.start_time>=? AND c.max_slots>0 AND " + BOOKED_SQL + "<c.max_slots*?"; args.add(centerNow());args.add(LOW_REGISTRATION_THRESHOLD); }
         if(excludeUrgent) { LocalDateTime now=centerNow();where += " AND NOT(s.start_time>=? AND s.start_time<?)";args.add(now);args.add(now.plusHours(URGENT_WINDOW_HOURS)); }
         return jdbc.queryForList(SESSION_SQL + where + " ORDER BY s.start_time,s.schedule_id",args.toArray()).stream().map(this::localTimes).toList();
     }
@@ -161,7 +162,7 @@ public class ManagerRepository {
         return jdbc.queryForObject("""
                 SELECT COUNT(*) FROM CLASSES c WHERE c.coach_id=? AND
                 (c.status='ACTIVE' OR EXISTS (SELECT 1 FROM SCHEDULES s WHERE s.class_id=c.class_id
-                  AND s.status='SCHEDULED' AND s.end_time>NOW()))
+                  AND s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND s.end_time>NOW()))
                 """, Integer.class, id) > 0;
     }
 
@@ -174,14 +175,14 @@ public class ManagerRepository {
         return jdbc.queryForObject("""
                 SELECT COALESCE(MAX(n),0) FROM (
                   SELECT COUNT(*) n FROM BOOKINGS b JOIN SCHEDULES s ON s.schedule_id=b.schedule_id
-                  WHERE s.class_id=? AND s.status<>'CANCELLED' AND b.status IN ('CONFIRMED','PENDING')
+                  WHERE s.class_id=? AND s.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES') AND b.status IN ('CONFIRMED','PENDING')
                   GROUP BY s.schedule_id
                 ) counts
                 """, Integer.class, id);
     }
 
     public boolean hasUpcomingSchedules(Integer id) {
-        return jdbc.queryForObject("SELECT COUNT(*) FROM SCHEDULES WHERE class_id=? AND status='SCHEDULED' AND end_time>NOW()",
+        return jdbc.queryForObject("SELECT COUNT(*) FROM SCHEDULES WHERE class_id=? AND status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND end_time>NOW()",
                 Integer.class, id) > 0;
     }
 
@@ -201,7 +202,7 @@ public class ManagerRepository {
                 SELECT COUNT(*) FROM BOOKINGS own_b JOIN BOOKINGS other_b ON other_b.user_id=own_b.user_id
                 JOIN SCHEDULES s ON s.schedule_id=other_b.schedule_id
                 WHERE own_b.schedule_id=? AND other_b.schedule_id<>? AND own_b.status IN ('CONFIRMED','PENDING')
-                  AND other_b.status IN ('CONFIRMED','PENDING') AND s.status<>'CANCELLED'
+                  AND other_b.status IN ('CONFIRMED','PENDING') AND s.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES')
                   AND s.start_time<? AND s.end_time>?
                 """, Integer.class, id, id, end, start) > 0;
     }
@@ -219,14 +220,14 @@ public class ManagerRepository {
         var s = jdbc.queryForMap("SELECT sc.class_id classId,sc.start_time startTime,sc.end_time endTime,c.max_slots maxSlots FROM SCHEDULES sc JOIN CLASSES c ON c.class_id=sc.class_id WHERE sc.schedule_id=?", scheduleId);
         List<Integer> members = jdbc.queryForList("""
                 SELECT DISTINCT b.user_id FROM BOOKINGS b JOIN SCHEDULES x ON x.schedule_id=b.schedule_id
-                WHERE x.class_id=? AND x.schedule_id<>? AND b.status='CONFIRMED' AND x.status<>'CANCELLED'
+                WHERE x.class_id=? AND x.schedule_id<>? AND b.status='CONFIRMED' AND x.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES')
                 """, Integer.class, s.get("classId"), scheduleId);
         int added = 0, skipped = 0;
         int seats = ((Number) s.get("maxSlots")).intValue() - jdbc.queryForObject("SELECT COUNT(*) FROM BOOKINGS WHERE schedule_id=? AND status IN ('CONFIRMED','PENDING')", Integer.class, scheduleId);
         for (Integer userId : members) {
             Integer busy = jdbc.queryForObject("""
                     SELECT COUNT(*) FROM BOOKINGS b JOIN SCHEDULES x ON x.schedule_id=b.schedule_id
-                    WHERE b.user_id=? AND b.status IN ('CONFIRMED','PENDING') AND x.status<>'CANCELLED'
+                    WHERE b.user_id=? AND b.status IN ('CONFIRMED','PENDING') AND x.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES')
                       AND (x.schedule_id=? OR (x.start_time<? AND x.end_time>?))
                     """, Integer.class, userId, scheduleId, s.get("endTime"), s.get("startTime"));
             if (busy > 0 || seats <= 0) { skipped++; continue; }
@@ -253,11 +254,11 @@ public class ManagerRepository {
                   (SELECT COUNT(*) FROM CLASSES WHERE status='ACTIVE') activeClasses,
                   (SELECT COUNT(*) FROM USER_MEMBERSHIPS WHERE status='ACTIVE' AND start_date<=CURDATE() AND end_date >= CURDATE()) activeMemberships,
                   (SELECT COALESCE(SUM(amount),0) FROM PAYMENTS WHERE status IN ('SUCCESS','COMPLETED') AND YEAR(payment_date)=YEAR(CURDATE()) AND MONTH(payment_date)=MONTH(CURDATE())) monthlyRevenue,
-                  (SELECT COUNT(*) FROM SCHEDULES WHERE status='SCHEDULED' AND start_time BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)) upcomingSchedules,
-                  (SELECT COUNT(*) FROM SCHEDULES WHERE status<>'CANCELLED' AND start_time>=CURDATE() AND start_time<DATE_ADD(CURDATE(), INTERVAL 1 DAY)) sessionsToday,
+                  (SELECT COUNT(*) FROM SCHEDULES WHERE status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND start_time BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)) upcomingSchedules,
+                  (SELECT COUNT(*) FROM SCHEDULES WHERE status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES') AND start_time>=CURDATE() AND start_time<DATE_ADD(CURDATE(), INTERVAL 1 DAY)) sessionsToday,
                   (SELECT COUNT(*) FROM USER_MEMBERSHIPS WHERE status='ACTIVE' AND start_date<=CURDATE() AND end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)) expiringMemberships,
                   (SELECT COUNT(*) FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id
-                   WHERE s.status='SCHEDULED' AND s.start_time>=NOW() AND s.start_time<DATE_ADD(CURDATE(), INTERVAL 8 DAY)
+                   WHERE s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND s.start_time>=NOW() AND s.start_time<DATE_ADD(CURDATE(), INTERVAL 8 DAY)
                    AND c.max_slots>0 AND (SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id=s.schedule_id AND b.status IN ('CONFIRMED','PENDING'))<c.max_slots*0.25) lowRegistrationSessions
                 """);
     }
@@ -269,7 +270,7 @@ public class ManagerRepository {
                        (SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id=s.schedule_id AND b.status IN ('CONFIRMED','PENDING')) booked,c.max_slots maxSlots
                 FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id
                 JOIN USERS u ON u.user_id=c.coach_id JOIN ROOMS r ON r.room_id=c.room_id
-                WHERE s.status<>'CANCELLED' AND s.start_time>=CURDATE() AND s.start_time<DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+                WHERE s.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES') AND s.start_time>=CURDATE() AND s.start_time<DATE_ADD(CURDATE(), INTERVAL 1 DAY)
                 ORDER BY CASE WHEN s.end_time>NOW() THEN 0 ELSE 1 END,s.start_time,s.schedule_id LIMIT 6
                 """).stream().map(this::localTimes).toList();
     }
@@ -279,7 +280,7 @@ public class ManagerRepository {
                 SELECT s.schedule_id scheduleId,c.class_name className,s.start_time startTime,r.room_name roomName,
                        (SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id=s.schedule_id AND b.status IN ('CONFIRMED','PENDING')) booked,c.max_slots maxSlots
                 FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id JOIN ROOMS r ON r.room_id=c.room_id
-                WHERE s.status='SCHEDULED' AND s.start_time>=NOW() AND s.start_time<DATE_ADD(CURDATE(), INTERVAL 8 DAY)
+                WHERE s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND s.start_time>=NOW() AND s.start_time<DATE_ADD(CURDATE(), INTERVAL 8 DAY)
                   AND c.max_slots>0
                   AND (SELECT COUNT(*) FROM BOOKINGS b WHERE b.schedule_id=s.schedule_id AND b.status IN ('CONFIRMED','PENDING'))<c.max_slots*0.25
                 ORDER BY s.start_time,s.schedule_id LIMIT 6
@@ -412,11 +413,11 @@ public class ManagerRepository {
     public List<Map<String, Object>> classes() {
         return jdbc.queryForList("""
                 SELECT c.class_id classId,c.class_name className,c.subject_id subjectId,s.subject_name subjectName,
-                       c.coach_id coachId,u.full_name coachName,u.avatar_path coachAvatarPath,c.room_id roomId,r.room_name roomName,r.image_path roomImagePath,
+                       COALESCE(sc.substitute_coach_id,c.coach_id) coachId,COALESCE(sub.full_name,u.full_name) coachName,IF(sub.user_id IS NULL,NULL,u.full_name) originalCoachName,COALESCE(sub.avatar_path,u.avatar_path) coachAvatarPath,c.room_id roomId,r.room_name roomName,r.image_path roomImagePath,
                        c.price,c.max_slots maxSlots,c.status,c.image_path imagePath,
                        COALESCE((SELECT MAX(booked) FROM (
                          SELECT sx.class_id,COUNT(*) booked FROM SCHEDULES sx JOIN BOOKINGS bx ON bx.schedule_id=sx.schedule_id
-                         WHERE sx.status<>'CANCELLED' AND bx.status IN ('CONFIRMED','PENDING') GROUP BY sx.class_id,sx.schedule_id
+                         WHERE sx.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES') AND bx.status IN ('CONFIRMED','PENDING') GROUP BY sx.class_id,sx.schedule_id
                        ) counts WHERE counts.class_id=c.class_id),0) enrolled
                 FROM CLASSES c JOIN SUBJECTS s ON s.subject_id=c.subject_id
                 JOIN USERS u ON u.user_id=c.coach_id JOIN ROOMS r ON r.room_id=c.room_id
@@ -436,6 +437,10 @@ public class ManagerRepository {
         return id;
     }
 
+    public void setScheduleStatus(Integer scheduleId, String status) {
+        jdbc.update("UPDATE SCHEDULES SET status=? WHERE schedule_id=?", status, scheduleId);
+    }
+
     public void setClassStatus(Integer classId, String status) {
         jdbc.update("UPDATE CLASSES SET status=? WHERE class_id=?", status, classId);
     }
@@ -451,7 +456,7 @@ public class ManagerRepository {
     }
 
     public List<Integer> upcomingScheduleIds(Integer classId) {
-        return jdbc.queryForList("SELECT schedule_id FROM SCHEDULES WHERE class_id=? AND status='SCHEDULED' AND end_time>NOW() ORDER BY start_time", Integer.class, classId);
+        return jdbc.queryForList("SELECT schedule_id FROM SCHEDULES WHERE class_id=? AND status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND end_time>NOW() ORDER BY start_time", Integer.class, classId);
     }
 
     // First session that would clash if the class moved to this coach/room, for a precise error message.
@@ -460,10 +465,10 @@ public class ManagerRepository {
                 SELECT other_c.class_name otherClass,other_sc.start_time startTime,IF(other_c.coach_id=?,'coach','room') clash
                 FROM SCHEDULES own_sc
                 JOIN SCHEDULES other_sc ON other_sc.schedule_id <> own_sc.schedule_id
-                  AND other_sc.status <> 'CANCELLED'
+                  AND other_sc.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES')
                   AND other_sc.start_time < TIMESTAMPADD(MINUTE,own_sc.changeover_minutes,own_sc.end_time) AND TIMESTAMPADD(MINUTE,other_sc.changeover_minutes,other_sc.end_time) > own_sc.start_time
                 JOIN CLASSES other_c ON other_c.class_id=other_sc.class_id
-                WHERE own_sc.class_id=? AND own_sc.status <> 'CANCELLED' AND own_sc.end_time>NOW()
+                WHERE own_sc.class_id=? AND own_sc.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES') AND own_sc.end_time>NOW()
                   AND other_c.class_id <> ? AND (other_c.coach_id=? OR other_c.room_id=?)
                 ORDER BY other_sc.start_time LIMIT 1
                 """, coachId, classId, classId, coachId, roomId);
@@ -474,10 +479,10 @@ public class ManagerRepository {
         Integer count = jdbc.queryForObject("""
                 SELECT COUNT(*) FROM SCHEDULES own_sc
                 JOIN SCHEDULES other_sc ON other_sc.schedule_id <> own_sc.schedule_id
-                  AND other_sc.status <> 'CANCELLED'
+                  AND other_sc.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES')
                   AND other_sc.start_time < TIMESTAMPADD(MINUTE,own_sc.changeover_minutes,own_sc.end_time) AND TIMESTAMPADD(MINUTE,other_sc.changeover_minutes,other_sc.end_time) > own_sc.start_time
                 JOIN CLASSES other_c ON other_c.class_id=other_sc.class_id
-                WHERE own_sc.class_id=? AND own_sc.status <> 'CANCELLED'
+                WHERE own_sc.class_id=? AND own_sc.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES')
                   AND other_c.class_id <> ? AND (other_c.coach_id=? OR other_c.room_id=?)
                 """, Integer.class, classId, classId, coachId, roomId);
         return count != null && count > 0;
@@ -490,9 +495,10 @@ public class ManagerRepository {
                        sc.start_time startTime,sc.end_time endTime,sc.status,
                        COUNT(CASE WHEN b.status IN ('CONFIRMED','PENDING') THEN 1 END) booked,c.max_slots maxSlots
                 FROM SCHEDULES sc JOIN CLASSES c ON c.class_id=sc.class_id JOIN USERS u ON u.user_id=c.coach_id
+                LEFT JOIN USERS sub ON sub.user_id=sc.substitute_coach_id
                 JOIN ROOMS r ON r.room_id=c.room_id LEFT JOIN BOOKINGS b ON b.schedule_id=sc.schedule_id
                 WHERE sc.start_time >= ? AND sc.start_time < ?
-                GROUP BY sc.schedule_id,sc.class_id,c.class_name,c.coach_id,u.full_name,u.avatar_path,c.room_id,r.room_name,c.image_path,r.image_path,sc.start_time,sc.end_time,sc.status,c.max_slots
+                GROUP BY sc.schedule_id,sc.class_id,c.class_name,c.coach_id,sc.substitute_coach_id,sub.user_id,sub.full_name,sub.avatar_path,u.full_name,u.avatar_path,c.room_id,r.room_name,c.image_path,r.image_path,sc.start_time,sc.end_time,sc.status,c.max_slots
                 ORDER BY sc.start_time
                 """, from.atStartOfDay(), to.plusDays(1).atStartOfDay()).stream().map(this::localTimes).toList();
     }
@@ -521,7 +527,7 @@ public class ManagerRepository {
     public boolean hasScheduleConflict(Integer scheduleId, Integer coachId, Integer roomId, LocalDateTime start, LocalDateTime end) {
         Integer count = jdbc.queryForObject("""
                 SELECT COUNT(*) FROM SCHEDULES sc JOIN CLASSES c ON c.class_id=sc.class_id
-                WHERE sc.status <> 'CANCELLED' AND sc.schedule_id <> COALESCE(?, -1)
+                WHERE sc.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES') AND sc.schedule_id <> COALESCE(?, -1)
                   AND (c.coach_id=? OR c.room_id=?) AND sc.start_time < ? AND TIMESTAMPADD(MINUTE,sc.changeover_minutes,sc.end_time) > ?
                 """, Integer.class, scheduleId, coachId, roomId, end, start);
         return count != null && count > 0;
@@ -564,7 +570,7 @@ public class ManagerRepository {
 
     public List<com.team4.sportscenter.modules.manager.services.SchedulePlanner.BusyPeriod> occupiedSlots(
             Integer coachId, Integer roomId, LocalDateTime from, LocalDateTime to) {
-        return jdbc.query("SELECT s.start_time,TIMESTAMPADD(MINUTE,s.changeover_minutes,s.end_time) FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id WHERE s.status<>'CANCELLED' AND (c.coach_id=? OR c.room_id=?) AND s.start_time < ? AND TIMESTAMPADD(MINUTE,s.changeover_minutes,s.end_time) > ?",
+        return jdbc.query("SELECT s.start_time,TIMESTAMPADD(MINUTE,s.changeover_minutes,s.end_time) FROM SCHEDULES s JOIN CLASSES c ON c.class_id=s.class_id WHERE s.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES') AND (c.coach_id=? OR c.room_id=?) AND s.start_time < ? AND TIMESTAMPADD(MINUTE,s.changeover_minutes,s.end_time) > ?",
                 (rs,n)->new com.team4.sportscenter.modules.manager.services.SchedulePlanner.BusyPeriod(rs.getTimestamp(1).toLocalDateTime(),rs.getTimestamp(2).toLocalDateTime()),coachId,roomId,to,from);
     }
 
@@ -629,7 +635,7 @@ public class ManagerRepository {
                 SELECT c.class_id classId,c.class_name label,s.subject_name subject,u.full_name coach,
                        COUNT(DISTINCT CASE WHEN b.status='CONFIRMED' THEN b.user_id END) students,
                        COUNT(DISTINCT CASE WHEN b.status='CONFIRMED' AND b.booking_time>=? AND b.booking_time<? THEN b.user_id END) newStudents
-                FROM CLASSES c JOIN SCHEDULES sc ON sc.class_id=c.class_id AND sc.status<>'CANCELLED'
+                FROM CLASSES c JOIN SCHEDULES sc ON sc.class_id=c.class_id AND sc.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES')
                   AND sc.start_time>=? AND sc.start_time<?
                 JOIN BOOKINGS b ON b.schedule_id=sc.schedule_id
                 LEFT JOIN SUBJECTS s ON s.subject_id=c.subject_id
@@ -643,7 +649,7 @@ public class ManagerRepository {
                        c.max_slots*COUNT(DISTINCT sc.schedule_id) capacity,COUNT(DISTINCT sc.schedule_id) sessions,
                        COUNT(CASE WHEN b.status='CONFIRMED' THEN 1 END) value,
                        COUNT(DISTINCT CASE WHEN b.status='CONFIRMED' THEN b.user_id END) students
-                FROM CLASSES c JOIN SCHEDULES sc ON sc.class_id=c.class_id AND sc.status<>'CANCELLED'
+                FROM CLASSES c JOIN SCHEDULES sc ON sc.class_id=c.class_id AND sc.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES')
                   AND sc.start_time>=? AND sc.start_time<?
                 LEFT JOIN BOOKINGS b ON b.schedule_id=sc.schedule_id
                 LEFT JOIN SUBJECTS s ON s.subject_id=c.subject_id
@@ -733,7 +739,7 @@ public class ManagerRepository {
                 FROM BOOKINGS b
                 JOIN SCHEDULES s ON s.schedule_id = b.schedule_id
                 JOIN CLASSES c ON c.class_id = s.class_id
-                WHERE b.status = 'CONFIRMED' AND s.status <> 'CANCELLED' AND s.end_time <= ?
+                WHERE b.status = 'CONFIRMED' AND s.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES') AND s.end_time <= ?
                   AND s.start_time >= ? AND s.start_time < ?
                 GROUP BY COALESCE(s.substitute_coach_id, c.coach_id)
                 """, now, fromTime, toTime);

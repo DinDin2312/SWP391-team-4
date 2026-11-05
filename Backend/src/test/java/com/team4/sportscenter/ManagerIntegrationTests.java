@@ -484,6 +484,18 @@ class ManagerIntegrationTests {
         }
     }
 
+    @Test void upcomingFilterSkipsPastSessionsAndKeepsSubstituteAndMakeupSessions() {
+        LocalDateTime now = LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        java.time.LocalDate today = now.toLocalDate();
+        jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,'SCHEDULED')", course, now.minusDays(1), now.minusDays(1).plusMinutes(90));
+        jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,'SUBSTITUTE_ASSIGNED')", course, now.plusDays(1), now.plusDays(1).plusMinutes(90));
+        jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,'RESCHEDULED')", course, now.plusDays(2), now.plusDays(2).plusMinutes(90));
+        jdbc.update("INSERT INTO SCHEDULES(class_id,start_time,end_time,status) VALUES (?,?,?,'CANCELLED_INSUFFICIENT_ATTENDEES')", course, now.plusDays(3), now.plusDays(3).plusMinutes(90));
+        var rows = repository.filteredSchedules(today.minusDays(2), today.plusDays(5), false, "SCHEDULED", false).stream()
+            .filter(r -> ((Number) r.get("classId")).intValue() == course).map(r -> r.get("status")).toList();
+        assertEquals(List.of("SUBSTITUTE_ASSIGNED", "RESCHEDULED"), rows);
+    }
+
     @Test void overviewDoesNotCapTotalsOrDropUrgentItemsAndFiltersMatch() {
         LocalDateTime now = LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
         java.time.LocalDate today = now.toLocalDate();

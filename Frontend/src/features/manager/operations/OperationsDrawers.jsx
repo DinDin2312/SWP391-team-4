@@ -582,7 +582,7 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
       current = false;
     };
   }, [schedule.scheduleId, retry]);
-  const scheduled = schedule.status === "SCHEDULED";
+  const scheduled = ["SCHEDULED", "SUBSTITUTE_ASSIGNED", "RESCHEDULED"].includes(schedule.status);
   const canComplete = scheduled && new Date(schedule.endTime) <= new Date();
   const attendance = {
     PRESENT: "Present",
@@ -605,7 +605,7 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
           </p>
           <div className="ops-coach-identity">
             <StaffAvatar user={{fullName:schedule.coachName,avatarPath:schedule.coachAvatarPath}} className="ops-coach-avatar"/>
-            {schedule.coachName}
+            {schedule.coachName}{schedule.originalCoachName && <small className="ops-sub-tag"> {t('substituting for {0}',[schedule.originalCoachName])}</small>}
           </div>
           <p>
             <MapPin size={18} />

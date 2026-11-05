@@ -112,3 +112,4 @@
 .ops-page .ops-hours > summary em { margin-left:auto; font-style:normal; font-weight:600; color:var(--primary); }
 .ops-page .ops-hours[open] > summary em { visibility:hidden; }
 .ops-page .ops-hours form { margin-top:12px; }
+.ops-sub-tag { display:block; font-style:normal; font-size:11px; font-weight:600; color:var(--warning-text); }

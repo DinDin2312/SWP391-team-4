@@ -12,7 +12,7 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
            "JOIN FETCH s.gymClass c " +
            "JOIN FETCH c.coach u " +
            "JOIN FETCH c.room r " +
-           "WHERE s.startTime >= :currentTime AND s.status='SCHEDULED' AND c.status='ACTIVE' " +
+           "WHERE s.startTime >= :currentTime AND s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND c.status='ACTIVE' " +
            "ORDER BY s.startTime ASC")
     List<Schedule> findAvailableSchedules(@Param("currentTime") LocalDateTime currentTime);
 
@@ -20,7 +20,7 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
            "JOIN FETCH s.gymClass c " +
            "JOIN FETCH c.coach u " +
            "JOIN FETCH c.room r " +
-           "WHERE c.classId = :classId AND s.startTime >= :currentTime AND s.status='SCHEDULED' AND c.status='ACTIVE' " +
+           "WHERE c.classId = :classId AND s.startTime >= :currentTime AND s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND c.status='ACTIVE' " +
            "ORDER BY s.startTime ASC")
     List<Schedule> findAvailableSchedulesByClassId(@Param("classId") Integer classId, @Param("currentTime") LocalDateTime currentTime);
 
