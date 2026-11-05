@@ -5129,3 +5129,11 @@ const overviewV2Labels = {
   'In progress':'Đang diễn ra','Now':'Bây giờ',
 };
 for (const [en, vi] of Object.entries(overviewV2Labels)) translations[en] = [en, vi];
+
+const operationsFlowLabels = {
+  'Step 1: the disciplines the center teaches.':'Bước 1: các bộ môn trung tâm giảng dạy.',
+  'Step 2: the spaces, and which subjects each room is set up for.':'Bước 2: các phòng và bộ môn mỗi phòng dùng được.',
+  'Step 3: a subject taught by a coach in a room.':'Bước 3: lớp = bộ môn + HLV + phòng.',
+  'Step 4: the sessions of each class.':'Bước 4: các buổi học của từng lớp.',
+};
+for (const [en, vi] of Object.entries(operationsFlowLabels)) translations[en] = [en, vi];

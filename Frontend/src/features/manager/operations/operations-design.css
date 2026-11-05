@@ -98,3 +98,8 @@
 .ops-editor-dialog .ops-check-row { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); grid-column:1 / -1; }
 .ops-editor-dialog .ops-check-row input[type="checkbox"] { width:16px; height:16px; min-height:0; padding:0; margin:0; flex:none; appearance:auto; accent-color:var(--primary); }
 .ops-page .ops-resource-toolbar .class-picker-label, .ops-page .ops-class-toolbar .class-picker-label, .ops-page .ops-resource-filters .class-picker-label { font-size:13px; font-weight:600; color:var(--text-secondary); }
+
+/* Tabs follow the setup order subject → room → class → schedule; a chevron shows the dependency. */
+.ops-page .ops-flow-tabs > button { position:relative; }
+.ops-page .ops-flow-tabs > button:not(:last-child)::after { content:'›'; position:absolute; right:-14px; top:50%; transform:translateY(-50%); font-size:18px; line-height:1; color:var(--text-muted); pointer-events:none; }
+.ops-page .ops-flow-tabs { column-gap:28px; }
