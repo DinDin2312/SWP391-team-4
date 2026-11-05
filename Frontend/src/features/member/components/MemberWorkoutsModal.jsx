@@ -102,6 +102,73 @@ const MemberWorkoutsModal = ({ isOpen, onClose, initialClassId = null }) => {
     });
   };
 
+  const renderSubmissionStatusButton = (plan, exercise) => {
+    const sub = findLatestSubmission(plan.planId, exercise?.detailId);
+    if (!sub) {
+      return (
+        <button
+          type="button"
+          onClick={() => handleOpenSubmitModal(plan, exercise)}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white font-bold text-[11px] transition-all cursor-pointer"
+          title={t("Nộp video thực hành cho HLV")}
+        >
+          <UploadCloud className="w-3.5 h-3.5" />
+          <span>{t("Nộp bài")}</span>
+        </button>
+      );
+    }
+    if (sub.status === 'APPROVED') {
+      return (
+        <button
+          type="button"
+          onClick={() => handleOpenSubmitModal(plan, exercise)}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 font-bold text-[11px] transition-all cursor-pointer border border-emerald-500/20"
+          title={t("Đạt chuẩn kỹ thuật - Bấm xem chi tiết")}
+        >
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+          <span>{sub.rating ? `⭐ ${sub.rating}` : t("Đạt")}</span>
+        </button>
+      );
+    }
+    if (sub.status === 'REVISION_REQUESTED') {
+      return (
+        <button
+          type="button"
+          onClick={() => handleOpenSubmitModal(plan, exercise)}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 font-bold text-[11px] transition-all cursor-pointer border border-rose-500/20"
+          title={t("HLV yêu cầu tập lại - Bấm xem góp ý")}
+        >
+          <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+          <span>{t("Cần tập lại")}</span>
+        </button>
+      );
+    }
+    if (sub.status === 'REVIEWED') {
+      return (
+        <button
+          type="button"
+          onClick={() => handleOpenSubmitModal(plan, exercise)}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 font-bold text-[11px] transition-all cursor-pointer border border-blue-500/20"
+          title={t("HLV đã góp ý - Bấm xem")}
+        >
+          <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
+          <span>{sub.rating ? `⭐ ${sub.rating}` : t("Đã góp ý")}</span>
+        </button>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => handleOpenSubmitModal(plan, exercise)}
+        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 font-bold text-[11px] transition-all cursor-pointer border border-amber-500/20"
+        title={t("Chờ HLV xem - Bấm xem video đã gửi")}
+      >
+        <Clock className="w-3.5 h-3.5 text-amber-500" />
+        <span>{t("Chờ duyệt")}</span>
+      </button>
+    );
+  };
+
   // Load enrolled classes on modal open
   useEffect(() => {
     if (isOpen) {
@@ -792,72 +859,7 @@ const MemberWorkoutsModal = ({ isOpen, onClose, initialClassId = null }) => {
                                               )}
                                             </td>
                                             <td className="py-3 text-center">
-                                              {(() => {
-                                                const sub = findLatestSubmission(plan.planId, ex.detailId);
-                                                if (!sub) {
-                                                  return (
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleOpenSubmitModal(plan, ex)}
-                                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white font-bold text-[11px] transition-all cursor-pointer"
-                                                      title={t("Nộp video thực hành cho HLV")}
-                                                    >
-                                                      <UploadCloud className="w-3.5 h-3.5" />
-                                                      <span>{t("Nộp bài")}</span>
-                                                    </button>
-                                                  );
-                                                }
-                                                if (sub.status === 'APPROVED') {
-                                                  return (
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleOpenSubmitModal(plan, ex)}
-                                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 font-bold text-[11px] transition-all cursor-pointer border border-emerald-500/20"
-                                                      title={t("Đạt chuẩn kỹ thuật - Bấm xem chi tiết")}
-                                                    >
-                                                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                                                      <span>{sub.rating ? `⭐ ${sub.rating}` : t("Đạt")}</span>
-                                                    </button>
-                                                  );
-                                                }
-                                                if (sub.status === 'REVISION_REQUESTED') {
-                                                  return (
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleOpenSubmitModal(plan, ex)}
-                                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 font-bold text-[11px] transition-all cursor-pointer border border-rose-500/20"
-                                                      title={t("HLV yêu cầu tập lại - Bấm xem góp ý")}
-                                                    >
-                                                      <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
-                                                      <span>{t("Cần tập lại")}</span>
-                                                    </button>
-                                                  );
-                                                }
-                                                if (sub.status === 'REVIEWED') {
-                                                  return (
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleOpenSubmitModal(plan, ex)}
-                                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 font-bold text-[11px] transition-all cursor-pointer border border-blue-500/20"
-                                                      title={t("HLV đã góp ý - Bấm xem")}
-                                                    >
-                                                      <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
-                                                      <span>{sub.rating ? `⭐ ${sub.rating}` : t("Đã góp ý")}</span>
-                                                    </button>
-                                                  );
-                                                }
-                                                return (
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => handleOpenSubmitModal(plan, ex)}
-                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 font-bold text-[11px] transition-all cursor-pointer border border-amber-500/20"
-                                                    title={t("Chờ HLV xem - Bấm xem video đã gửi")}
-                                                  >
-                                                    <Clock className="w-3.5 h-3.5 text-amber-500" />
-                                                    <span>{t("Chờ duyệt")}</span>
-                                                  </button>
-                                                );
-                                              })()}
+                                              {renderSubmissionStatusButton(plan, ex)}
                                             </td>
                                           </tr>
                                         ))}
@@ -886,6 +888,7 @@ const MemberWorkoutsModal = ({ isOpen, onClose, initialClassId = null }) => {
                                   <th className="pb-2.5 text-center">{t("Số Lần (Reps)")}</th>
                                   <th className="pb-2.5 text-center">{t("Nghỉ Giữa Hiệp")}</th>
                                   <th className="pb-2.5 text-right pr-1">{t("Hướng Dẫn")}</th>
+                                  <th className="pb-2.5 text-center">{t("Nộp bài / Quá trình")}</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-[var(--border)]/50">
@@ -945,15 +948,21 @@ const MemberWorkoutsModal = ({ isOpen, onClose, initialClassId = null }) => {
                                           </span>
                                         )}
                                       </td>
+                                      <td className="py-3 text-center">
+                                        {renderSubmissionStatusButton(plan, ex)}
+                                      </td>
                                     </tr>
                                   ))
                                 ) : (
                                   <tr>
                                     <td
                                       colSpan={7}
-                                      className="py-4 text-center text-[var(--text-muted)] text-xs"
+                                      className="py-5 text-center text-[var(--text-muted)] text-xs"
                                     >
-                                      {t("Giáo án chưa có động tác cụ thể.")}
+                                      <div className="flex flex-col items-center justify-center gap-2">
+                                        <span>{t("Giáo án chưa có động tác cụ thể.")}</span>
+                                        <div>{renderSubmissionStatusButton(plan, null)}</div>
+                                      </div>
                                     </td>
                                   </tr>
                                 )}
