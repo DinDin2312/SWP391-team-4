@@ -5066,7 +5066,14 @@ const workoutSubmissionTranslations = [
   ["Coach gave feedback - Click to view", "HLV đã góp ý - Bấm xem"],
   ["Reviewed", "Đã góp ý"],
   ["Waiting for coach review - Click to view submitted video", "Chờ HLV xem - Bấm xem video đã gửi"],
-  ["Waiting for coach - Click to view submitted video", "Chờ HLV xem - Bấm xem video đã gửi"]
+  ["Waiting for coach - Click to view submitted video", "Chờ HLV xem - Bấm xem video đã gửi"],
+  ["submissions", "bài nộp"],
+  ["/ page", "/ trang"],
+  ["Previous page", "Trang trước"],
+  ["Next page", "Trang sau"],
+  ["plans", "kế hoạch"],
+  ["plans / workouts", "kế hoạch & bài tập"],
+  ["Search plans, students...", "Tìm kiếm kế hoạch, học viên..."]
 ];
 
 for (const [en, vi] of workoutSubmissionTranslations) {
@@ -5109,3 +5116,16 @@ const operationsRound2Labels = {
   'The class room is under maintenance or no longer in use. Move the class to another room first.':'Phòng của lớp đang bảo trì hoặc ngừng sử dụng. Hãy chuyển lớp sang phòng khác trước.',
 };
 for (const [en, vi] of Object.entries(operationsRound2Labels)) translations[en] = [en, vi];
+const overviewV2Labels = {
+  'Needs your decision':'Cần bạn quyết định','Nothing needs your decision':'Không có việc cần bạn quyết định',
+  'Requests, escalations and low-fill sessions will appear here.':'Yêu cầu đổi lịch, khiếu nại chuyển cấp và buổi vắng học viên sẽ hiện ở đây.',
+  'Review request':'Xem và duyệt','Handle complaint':'Xử lý khiếu nại','Reconcile invoice':'Đối soát','Keep or cancel':'Giữ hay hủy buổi',
+  'Substitute coach':'Cần HLV thay','Make-up session':'Xin dạy bù','session':'buổi','escalated':'chuyển cấp lúc',
+  'Invoice':'Hóa đơn','needs reconciling':'cần đối soát','Walk-in':'Khách lẻ','at':'lúc','seats booked':'chỗ đã đặt',
+  'Today at a glance':'Tình hình hôm nay','Sessions':'Buổi học','finished today':'đã xong hôm nay','On site now':'Đang ở trung tâm',
+  'check-ins today':'lượt check-in hôm nay','Seats filled':'Lấp đầy hôm nay','seats':'chỗ','Rooms in use':'Phòng đang dùng','right now':'ngay lúc này',
+  "Today's schedule":'Lịch hôm nay','Open in Operations':'Mở trong Vận hành','No sessions scheduled today.':'Hôm nay không có buổi nào.',
+  'session finished':'buổi đã xong','sessions finished':'buổi đã xong','All sessions for today are finished.':'Các buổi hôm nay đã xong hết.',
+  'In progress':'Đang diễn ra','Now':'Bây giờ',
+};
+for (const [en, vi] of Object.entries(overviewV2Labels)) translations[en] = [en, vi];

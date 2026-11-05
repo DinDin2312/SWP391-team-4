@@ -167,10 +167,13 @@ test('isMemberNotificationAllowed: validates permissions correctly for all categ
   const coach1 = { type: 'COACH', title: 'Nhận xét HLV', message: 'Tốt' };
   const coach2 = { type: 'WORKOUT', title: 'Giáo án mới', message: 'InBody cập nhật' };
   const coach3 = { type: 'SYSTEM', title: 'Đánh giá thể lực', message: 'Từ HLV' };
+  const coach4 = { type: 'WORKOUT_FEEDBACK', title: '[Nhận xét bài tập] HLV', message: '5 ⭐' };
   assert.equal(isMemberNotificationAllowed(coach1, allEnabled), true);
   assert.equal(isMemberNotificationAllowed(coach1, allDisabled), false);
   assert.equal(isMemberNotificationAllowed(coach2, allDisabled), false);
   assert.equal(isMemberNotificationAllowed(coach3, allDisabled), false);
+  assert.equal(isMemberNotificationAllowed(coach4, allEnabled), true);
+  assert.equal(isMemberNotificationAllowed(coach4, allDisabled), false);
 
   // 3. Workout Reminder
   const schedule1 = { type: 'BOOKING', title: 'Lịch tập', message: 'Đã đặt' };

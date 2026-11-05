@@ -437,7 +437,7 @@ public class CoachWorkoutServiceImpl implements CoachWorkoutService {
                     .user(student)
                     .title("[Nhận xét bài tập] HLV " + coach.getFullName())
                     .message("HLV " + coach.getFullName() + " đã nhận xét bài tập: " + exerciseName + ratingText + ". Góp ý: " + request.getCoachFeedback().trim())
-                    .type("WORKOUT_FEEDBACK")
+                    .type("COACH")
                     .isRead(false)
                     .createdAt(LocalDateTime.now())
                     .build();

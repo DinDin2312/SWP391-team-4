@@ -525,8 +525,10 @@ class ManagerIntegrationTests {
             jdbc.update("UPDATE USER_MEMBERSHIPS SET end_date=DATE_ADD(CURDATE(),INTERVAL 8 DAY) WHERE user_id=?", member);
             assertEquals(expiryBefore, ((Number) repository.dashboard().get("expiringMemberships")).intValue());
             Map<String, Object> overview = service.dashboard();
-            for (String key : List.of("lowRegistrationList", "expiringMembershipList")) {
-                assertTrue(((List<?>) overview.get(key)).size() <= 6);
+            assertNotNull(overview.get("decisions"), "Overview lists items that need a manager decision");
+            Map<?, ?> pulse = (Map<?, ?>) overview.get("pulse");
+            for (String key : List.of("checkInsToday", "onSiteNow", "bookedSeatsToday", "totalSeatsToday", "roomsInUse", "totalRooms")) {
+                assertNotNull(pulse.get(key), key);
             }
         } finally {
             jdbc.update("DELETE FROM USER_MEMBERSHIPS WHERE user_id=?", member);
