@@ -32,3 +32,7 @@ Thumbs.db
 Fix*.java
 fix*.py
 fix*.js
+
+# Presentations & Slides
+presentation/
+*.pptx

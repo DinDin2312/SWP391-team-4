@@ -8,6 +8,7 @@ import {
   MessageSquare, Sparkles, Plus, Trash2, Clock, History, RefreshCw, Send, TrendingUp
 } from 'lucide-react';
 import BodyTransformationModal from '../../member/components/BodyTransformationModal';
+import { resolveAvatarUrl } from '../../../utils/avatarUtils';
 
 const API_BASE = 'http://localhost:8080/api/v1/coach';
 
@@ -387,12 +388,20 @@ const TraineeAssessmentModal = ({
                       }`}
                     >
                       <div className="flex items-center gap-2.5 truncate">
-                        <div className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center shrink-0 border ${
+                        <div className={`relative w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center shrink-0 border overflow-hidden ${
                           isSelected
                             ? 'bg-[var(--primary)] text-[color:var(--on-primary)] border-[var(--primary)]'
                             : 'bg-[var(--surface-hover)] text-[var(--text-muted)] border-[var(--border)]'
                         }`}>
-                          {initials}
+                          <span>{initials}</span>
+                          {resolveAvatarUrl(st.avatarPath || st.avatarUrl) && (
+                            <img
+                              src={resolveAvatarUrl(st.avatarPath || st.avatarUrl)}
+                              alt={st.fullName}
+                              className="absolute inset-0 w-full h-full object-cover"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          )}
                         </div>
                         <div className="flex flex-col truncate">
                           <span className="font-bold text-xs truncate leading-snug">{st.fullName}</span>

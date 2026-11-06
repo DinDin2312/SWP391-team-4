@@ -18,6 +18,8 @@ public class MemberSummaryResponse {
     private String phone;
     private String status;
     private String bio;
+    private String avatarPath;
+    private String avatarUrl;
 
     // Current active membership info
     private Integer currentMembershipId;

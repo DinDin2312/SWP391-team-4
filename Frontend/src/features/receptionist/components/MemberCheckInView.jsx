@@ -28,6 +28,7 @@ import receptionistService from '../services/receptionistService';
 import { AuthContext } from '../../../context/AuthContext';
 import MemberDetailModal from './MemberDetailModal';
 import CoachCheckInTab from './CoachCheckInTab';
+import MemberTierAvatar from '../../../components/MemberTierAvatar';
 import {
   formatCheckInNote,
   formatCheckInAnomaly,
@@ -897,17 +898,25 @@ const MemberCheckInView = ({
                         transition: 'background-color 0.15s',
                       }}
                     >
-                      <div style={{ overflow: 'hidden' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                          <span style={{ fontWeight: 700, fontSize: '0.86rem', color: 'var(--text)' }}>
-                            {m.fullName}
-                          </span>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                            #{m.userId}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                          {m.phone || t('No phone')} • {m.email}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0, overflow: 'hidden' }}>
+                        <MemberTierAvatar
+                          avatarUrl={m.avatarPath || m.avatarUrl}
+                          fullName={m.fullName}
+                          size="sm"
+                          showBadge={false}
+                        />
+                        <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.86rem', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {m.fullName}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0 }}>
+                              #{m.userId}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {m.phone || t('No phone')} • {m.email}
+                          </div>
                         </div>
                       </div>
 
@@ -970,23 +979,33 @@ const MemberCheckInView = ({
               >
                 {/* Top Row: Full Name + ID + Active Badge */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0, flex: 1 }}>
-                    <span
-                      style={{
-                        fontWeight: 800,
-                        fontSize: '0.95rem',
-                        color: 'var(--text)',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                      title={selectedMember.fullName}
-                    >
-                      {selectedMember.fullName}
-                    </span>
-                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0 }}>
-                      #{selectedMember.userId}
-                    </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0, flex: 1 }}>
+                    <MemberTierAvatar
+                      avatarUrl={selectedMember.avatarPath || selectedMember.avatarUrl}
+                      fullName={selectedMember.fullName}
+                      size="sm"
+                      showBadge={false}
+                    />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                        <span
+                          style={{
+                            fontWeight: 800,
+                            fontSize: '0.95rem',
+                            color: 'var(--text)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                          title={selectedMember.fullName}
+                        >
+                          {selectedMember.fullName}
+                        </span>
+                        <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0 }}>
+                          #{selectedMember.userId}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
                   <span
@@ -1650,14 +1669,24 @@ const MemberCheckInView = ({
                         }}
                       >
                         <td style={{ padding: '0.85rem 1rem' }}>
-                          <div style={{ fontWeight: 700, color: 'var(--text)' }}>
-                            {rec.memberName}{' '}
-                            <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                              #{rec.userId}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                            {rec.memberPhone || '—'} • {rec.memberEmail}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                            <MemberTierAvatar
+                              avatarUrl={rec.memberAvatar || rec.avatarPath || rec.avatarUrl}
+                              fullName={rec.memberName}
+                              size="sm"
+                              showBadge={false}
+                            />
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, color: 'var(--text)' }}>
+                                {rec.memberName}{' '}
+                                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                                  #{rec.userId}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                                {rec.memberPhone || '—'} • {rec.memberEmail}
+                              </div>
+                            </div>
                           </div>
                         </td>
 

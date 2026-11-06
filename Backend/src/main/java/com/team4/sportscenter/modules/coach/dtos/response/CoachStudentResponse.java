@@ -20,6 +20,8 @@ public class CoachStudentResponse {
     private String email;
     private String phone;
     private String bio;
+    private String avatarPath;
+    private String avatarUrl;
     private Integer totalBookings;
     private List<String> enrolledClasses;
     private List<Integer> enrolledClassIds;

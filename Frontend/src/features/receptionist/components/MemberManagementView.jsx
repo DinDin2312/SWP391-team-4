@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
 import MemberDetailModal from './MemberDetailModal';
+import { resolveAvatarUrl } from '../../../utils/avatarUtils';
 
 // Dữ liệu mẫu chuẩn từ database_init.sql để fallback khi Backend chưa kết nối
 const FALLBACK_MEMBERS = [
@@ -821,9 +822,19 @@ const MemberManagementView = ({ onQuickCheckIn, initialKeyword = '' }) => {
                               fontSize: '0.85rem',
                               color: 'var(--text)',
                               flexShrink: 0,
+                              overflow: 'hidden',
+                              position: 'relative',
                             }}
                           >
-                            {getInitials(member.fullName)}
+                            <span>{getInitials(member.fullName)}</span>
+                            {resolveAvatarUrl(member.avatarPath || member.avatarUrl) && (
+                              <img
+                                src={resolveAvatarUrl(member.avatarPath || member.avatarUrl)}
+                                alt={member.fullName}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            )}
                           </div>
                           <div>
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace', display: 'block' }}>{t("#MEM-")}{String(member.userId).padStart(4, '0')}
