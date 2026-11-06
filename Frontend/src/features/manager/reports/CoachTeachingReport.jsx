@@ -11,6 +11,7 @@ import { isoDate } from '../managerUtils';
 import managerService from '../services/managerService';
 import { exportCoachTeachingToExcel } from './coachTeachingExport';
 import StaffAvatar from '../staff/StaffAvatar';
+import VnDateInput from '../../../components/VnDateInput';
 
 const LOW_OCCUPANCY = 40;
 
@@ -224,7 +225,7 @@ export default function CoachTeachingReport({ initialFrom, initialTo }) {
         <div className="reports-date-inputs">
           <label>
             {t('From')}
-            <input
+            <VnDateInput
               type="date"
               value={dateRange.from}
               max={dateRange.to || undefined}
@@ -234,7 +235,7 @@ export default function CoachTeachingReport({ initialFrom, initialTo }) {
           <span aria-hidden="true">–</span>
           <label>
             {t('To')}
-            <input
+            <VnDateInput
               type="date"
               value={dateRange.to}
               min={dateRange.from || undefined}

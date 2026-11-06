@@ -33,6 +33,8 @@ public class ManagerService {
     private static final Set<String> USER_STATUSES = Set.of("ACTIVE", "INACTIVE", "PENDING");
     private static final Set<String> CLASS_STATUSES = Set.of("ACTIVE", "INACTIVE");
     private static final Set<String> SCHEDULE_STATUSES = Set.of("SCHEDULED", "COMPLETED", "CANCELLED");
+    // Sessions that will still take place: a substitute coach or a make-up time does not cancel them.
+    public static final Set<String> ACTIVE_SESSION_STATUSES = Set.of("SCHEDULED", "SUBSTITUTE_ASSIGNED", "RESCHEDULED");
 
     private final ManagerRepository managerRepository;
     private final UserRepository userRepository;
@@ -244,12 +246,8 @@ public class ManagerService {
         if (request.status() != null) validateStatus(request.status(), CLASS_STATUSES);
         managerRepository.lockOperations();
         if (id != null) managerRepository.requireSubject(id);
-        var existing=id==null?managerRepository.slotPolicy():managerRepository.subjectPolicy(id);
-        new TeachingSlots.Policy(existing.opensAt(),existing.closesAt(),existing.breakMinutes(),
-            request.durationMinutes()==null?existing.durationMinutes():request.durationMinutes(),
-            request.slotStarts()==null?existing.configuredStarts():request.slotStarts());
+        // Session length and slots are set once for the whole center, not per subject.
         int savedId = managerRepository.saveSubject(id, request);
-        managerRepository.subjectPolicy(savedId);
         audit(actor, id == null ? "CREATE" : "UPDATE", "SUBJECT", savedId, request.subjectName());
         return savedId;
     }
@@ -342,20 +340,38 @@ public class ManagerService {
     @Transactional(readOnly=true)
     public Map<String,Object> classSlotPolicy(Integer classId) {
         var p=managerRepository.classSlotPolicy(classId);
-        return Map.of("classId",classId,"opensAt",p.opensAt(),"closesAt",p.closesAt(),"breakMinutes",p.breakMinutes(),"durationMinutes",p.durationMinutes(),"starts",p.starts());
+        return Map.of("classId",classId,"opensAt",p.opensAt(),"closesAt",p.closesAt(),"breakMinutes",p.breakMinutes(),"durationMinutes",p.durationMinutes(),"starts",p.starts(),
+            "courseLeadDays",managerRepository.courseLeadDays(),"earliestCourseStart",earliestCourseStart().toString());
     }
     public Map<String,Object> slotPolicy() {
         var p=managerRepository.slotPolicy();
-        return Map.of("opensAt",p.opensAt(),"closesAt",p.closesAt(),"breakMinutes",p.breakMinutes(),"durationMinutes",p.durationMinutes(),"starts",p.starts());
+        return Map.of("opensAt",p.opensAt(),"closesAt",p.closesAt(),"breakMinutes",p.breakMinutes(),"durationMinutes",p.durationMinutes(),"starts",p.starts(),
+            "courseLeadDays",managerRepository.courseLeadDays(),"earliestCourseStart",earliestCourseStart().toString());
+    }
+
+    // A new course may start no earlier than today + the configured lead time.
+    private java.time.LocalDate earliestCourseStart() {
+        return java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(managerRepository.courseLeadDays());
+    }
+
+    private void requireCourseLead(java.time.LocalDate fromDate) {
+        var earliest = earliestCourseStart();
+        if (fromDate.isBefore(earliest))
+            throw new IllegalArgumentException("A new course must start on or after " + earliest.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                + " (" + managerRepository.courseLeadDays() + " days notice).");
+    }
+
+    public Map<String,Object> saveCourseLeadDays(int days, String actor) {
+        if (days < 0 || days > 180) throw new IllegalArgumentException("Choose 0 to 180 days of notice.");
+        managerRepository.saveCourseLeadDays(days);
+        audit(actor,"UPDATE","SCHEDULE_POLICY",1,"courseLeadDays=" + days);
+        return slotPolicy();
     }
     public Map<String,Object> saveSlotPolicy(TeachingSlots.Policy policy,String actor) {
         managerRepository.lockOperations();
-        for(var subject:managerRepository.subjects()) {
-            var existing=managerRepository.subjectPolicy(((Number)subject.get("subjectId")).intValue());
-            new TeachingSlots.Policy(policy.opensAt(),policy.closesAt(),policy.breakMinutes(),existing.durationMinutes(),existing.configuredStarts());
-        }
-        managerRepository.saveSlotPolicy(policy);
-        audit(actor,"UPDATE","SCHEDULE_POLICY",1,policy.toString());
+        var saved=new TeachingSlots.Policy(policy.opensAt(),policy.closesAt(),policy.breakMinutes(),policy.durationMinutes(),List.of());
+        managerRepository.saveSlotPolicy(saved);
+        audit(actor,"UPDATE","SCHEDULE_POLICY",1,"Giờ mở cửa " + saved.opensAt() + "–" + saved.closesAt() + ", mỗi buổi " + saved.durationMinutes() + " phút, chuyển ca " + saved.breakMinutes() + " phút");
         return slotPolicy();
     }
     private ManagerRequests.SchedulePlanRequest fixedRules(ManagerRequests.SchedulePlanRequest r) {
@@ -365,6 +381,13 @@ public class ManagerService {
         return r;
     }
     public int saveSchedule(Integer id, ManagerRequests.ScheduleRequest request, String actor) {
+        return saveSchedule(id, request, actor, true);
+    }
+
+    private static final java.time.format.DateTimeFormatter AUDIT_TIME = java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm");
+
+    // record=false when the caller writes one summary entry for a whole batch.
+    private int saveSchedule(Integer id, ManagerRequests.ScheduleRequest request, String actor, boolean record) {
         managerRepository.lockOperations();
         validateStatus(request.status(), SCHEDULE_STATUSES);
         if (!request.endTime().isAfter(request.startTime())) {
@@ -377,7 +400,7 @@ public class ManagerService {
         boolean timingChanged = previous == null || !request.startTime().equals(previous.get("startTime"))
                 || !request.endTime().equals(previous.get("endTime"));
         if (previous != null) {
-            if (!"SCHEDULED".equals(previous.get("status"))) {
+            if (!ACTIVE_SESSION_STATUSES.contains(String.valueOf(previous.get("status")))) {
                 throw new IllegalArgumentException("Completed or cancelled sessions cannot be edited; create a new session instead");
             }
             if (!request.classId().equals(((Number) previous.get("classId")).intValue())
@@ -424,6 +447,10 @@ public class ManagerService {
         }
         int savedId = managerRepository.saveSchedule(id, request);
         managerRepository.setChangeover(savedId,changeover);
+        // Editing a session that has a substitute coach or a make-up time keeps that status.
+        if (previous != null && !cancelled && !completed && !"SCHEDULED".equals(previous.get("status"))
+                && ACTIVE_SESSION_STATUSES.contains(String.valueOf(previous.get("status"))))
+            managerRepository.setScheduleStatus(savedId, String.valueOf(previous.get("status")));
         if (id != null && cancelled) {
             managerRepository.notifyScheduleBookings(id, "Buổi học đã hủy",
                     assignment.get("className") + " lúc " + request.startTime()
@@ -433,8 +460,15 @@ public class ManagerService {
             managerRepository.notifyScheduleBookings(id, "Thay đổi lịch học",
                     assignment.get("className") + " chuyển sang " + request.startTime() + " - " + request.endTime());
         }
-        audit(actor, id == null ? "CREATE" : "UPDATE", "SCHEDULE", savedId,
-                request.startTime() + " - " + request.endTime() + " / " + request.status());
+        if (record) {
+            String change;
+            if (id == null) change = request.startTime().format(AUDIT_TIME) + "–" + request.endTime().toLocalTime();
+            else if (cancelled) change = "Hủy buổi " + request.startTime().format(AUDIT_TIME);
+            else if (completed) change = "Hoàn thành buổi " + request.startTime().format(AUDIT_TIME);
+            else if (timingChanged) change = ((LocalDateTime) previous.get("startTime")).format(AUDIT_TIME) + " → " + request.startTime().format(AUDIT_TIME);
+            else change = "Cập nhật buổi " + request.startTime().format(AUDIT_TIME);
+            audit(actor, id == null ? "CREATE" : cancelled ? "CANCEL" : "UPDATE", "SCHEDULE", savedId, change);
+        }
         return savedId;
     }
 
@@ -447,15 +481,16 @@ public class ManagerService {
         for (int i = 0; i < request.occurrences(); i++) {
             long weeks = (long) i * request.intervalWeeks();
             ids.add(saveSchedule(null, new ManagerRequests.ScheduleRequest(request.classId(),
-                    request.startTime().plusWeeks(weeks), request.endTime().plusWeeks(weeks), "SCHEDULED"), actor));
+                    request.startTime().plusWeeks(weeks), request.endTime().plusWeeks(weeks), "SCHEDULED"), actor, false));
         }
+        audit(actor, "CREATE_SERIES", "CLASS", request.classId(), ids.size() + " buổi từ " + request.startTime().format(AUDIT_TIME));
         return ids;
     }
 
     public Map<String, Integer> enrollClassMembers(Integer scheduleId, String actor) {
         managerRepository.lockOperations();
         var schedule = managerRepository.schedule(scheduleId);
-        if (!"SCHEDULED".equals(schedule.get("status"))) throw new IllegalArgumentException("Only scheduled sessions can receive members");
+        if (!ACTIVE_SESSION_STATUSES.contains(String.valueOf(schedule.get("status")))) throw new IllegalArgumentException("Only scheduled sessions can receive members");
         var result = managerRepository.enrollClassMembers(scheduleId);
         if (result.get("added") > 0) {
             var assignment = managerRepository.classAssignment(((Number) schedule.get("classId")).intValue());
@@ -473,10 +508,10 @@ public class ManagerService {
         for (Integer scheduleId : upcoming) {
             var s = managerRepository.schedule(scheduleId);
             saveSchedule(scheduleId, new ManagerRequests.ScheduleRequest(id, LocalDateTime.parse(String.valueOf(s.get("startTime"))),
-                    LocalDateTime.parse(String.valueOf(s.get("endTime"))), "CANCELLED"), actor);
+                    LocalDateTime.parse(String.valueOf(s.get("endTime"))), "CANCELLED"), actor, false);
         }
         managerRepository.setClassStatus(id, "INACTIVE");
-        audit(actor, "DEACTIVATE", "CLASS", id, assignment.get("className") + " - cancelled " + upcoming.size() + " upcoming sessions");
+        audit(actor, "DEACTIVATE", "CLASS", id, upcoming.isEmpty() ? "Ngừng lớp" : "Ngừng lớp, hủy " + upcoming.size() + " buổi sắp tới");
         return upcoming.size();
     }
 
@@ -506,7 +541,7 @@ public class ManagerService {
     @Transactional(readOnly=true)
     public Map<String,Object> previewSchedulePlan(ManagerRequests.SchedulePlanRequest request) {
         var now=LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
-        fixedRules(request); SchedulePlanner.validateRules(request,now);
+        fixedRules(request); SchedulePlanner.validateRules(request,now); requireCourseLead(request.fromDate());
         var assignment=planningAssignment(request.classId());
         int coachId=((Number)assignment.get("coachId")).intValue(), roomId=((Number)assignment.get("roomId")).intValue();
         var busy=managerRepository.occupiedSlots(coachId,roomId,request.fromDate().atStartOfDay().minusMinutes(request.breakMinutes()),request.toDate().plusDays(1).atStartOfDay().plusMinutes(request.breakMinutes()));
@@ -522,7 +557,7 @@ public class ManagerService {
     public List<Integer> commitSchedulePlan(ManagerRequests.SchedulePlanCommitRequest request, String actor) {
         managerRepository.lockOperations();
         var now=LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
-        var rules=fixedRules(request.rules()); SchedulePlanner.validateRules(rules,now);
+        var rules=fixedRules(request.rules()); SchedulePlanner.validateRules(rules,now); requireCourseLead(rules.fromDate());
         var assignment=planningAssignment(rules.classId());
         int coachId=((Number)assignment.get("coachId")).intValue(), roomId=((Number)assignment.get("roomId")).intValue();
         if (!java.util.Objects.equals(request.coachId(),coachId) || !java.util.Objects.equals(request.roomId(),roomId))
@@ -545,7 +580,8 @@ public class ManagerService {
             busy.add(new SchedulePlanner.BusyPeriod(session.startTime(),session.endTime().plusMinutes(rules.breakMinutes())));
         }
         List<Integer> ids=new ArrayList<>();
-        for(var session:request.sessions()) ids.add(saveSchedule(null,new ManagerRequests.ScheduleRequest(rules.classId(),session.startTime(),session.endTime(),"SCHEDULED"),actor));
+        for(var session:request.sessions()) ids.add(saveSchedule(null,new ManagerRequests.ScheduleRequest(rules.classId(),session.startTime(),session.endTime(),"SCHEDULED"),actor,false));
+        if(!ids.isEmpty()) audit(actor,"SCHEDULE_COURSE","CLASS",rules.classId(),ids.size()+" buổi từ "+request.sessions().get(0).startTime().format(AUDIT_TIME));
         return ids;
     }
 
@@ -607,6 +643,10 @@ public class ManagerService {
     }
 
     @Transactional(readOnly = true)
+    public Map<String, Object> auditSearch(String q, String type, java.time.LocalDate from, java.time.LocalDate to, int page, int size) {
+        return managerRepository.auditSearch(q, type, from, to, Math.max(0, page), Math.min(100, Math.max(1, size)));
+    }
+
     public List<AuditLog> auditLogs() { return auditLogRepository.findTop100ByOrderByCreatedAtDesc(); }
 
     private User findUser(Integer id) {

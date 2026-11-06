@@ -1,22 +1,42 @@
-export const actionLabels = { CREATE: 'Created', UPDATE: 'Updated', DELETE: 'Deleted', STATUS_CHANGE: 'Status changed', UPDATE_IMAGE: 'Image updated', REMOVE_IMAGE: 'Image removed', UPDATE_AVATAR: 'Avatar updated', PAYMENT_REVIEW: 'Payment needs review', CLASS_TRANSFER: 'Class transferred', CANCEL_BOOKING_SUPPORT: 'Session cancelled by reception', CANCEL_COURSE_SUPPORT: 'Course cancelled by reception', CHECK_IN: 'Check-in', CHECK_OUT: 'Check-out' };
-export const entityLabels = { USER: 'Account', SUBJECT: 'Subject', ROOM: 'Room', CLASS: 'Class', SCHEDULE: 'Session', PACKAGE: 'Membership package', PACKAGE_TYPE: 'Package type', INVOICE: 'Invoice' };
-export function entityKey(value = '') { const code = String(value).toUpperCase(); return ({ PACKAGES: 'PACKAGE', SUBJECTS: 'SUBJECT', ROOMS: 'ROOM', CLASSES: 'CLASS', USERS: 'USER' })[code] || code; }
-export function changeFields(log) {
-  try { const json = typeof log.changesJson === 'string' ? JSON.parse(log.changesJson) : log.changesJson; return json?.fields && typeof json.fields === 'object' && !Array.isArray(json.fields) ? Object.entries(json.fields) : []; } catch { return []; }
+// Turns raw audit rows into short sentences a manager can scan.
+const ENTITY = { CLASSES: 'CLASS', ROOMS: 'ROOM', SUBJECTS: 'SUBJECT', PACKAGES: 'PACKAGE', USERS: 'USER' };
+export const entityKey = value => ENTITY[String(value || '').toUpperCase()] || String(value || '').toUpperCase();
+
+const VERBS = {
+  'SCHEDULE/CREATE': 'added a session to', 'SCHEDULE/UPDATE': 'changed a session of', 'SCHEDULE/CANCEL': 'cancelled a session of',
+  'SCHEDULE/ENROLL': 'booked class members into a session of',
+  'CLASS/CREATE': 'created class', 'CLASS/UPDATE': 'edited class', 'CLASS/DEACTIVATE': 'deactivated class',
+  'CLASS/SCHEDULE_COURSE': 'scheduled the course of', 'CLASS/CREATE_SERIES': 'added repeating sessions to',
+  'ROOM/CREATE': 'added room', 'ROOM/UPDATE': 'edited room', 'SUBJECT/CREATE': 'added subject', 'SUBJECT/UPDATE': 'edited subject',
+  'PACKAGE/CREATE': 'created package', 'PACKAGE/UPDATE': 'edited package', 'PACKAGE/DELETE': 'deleted package',
+  'USER/CREATE': 'created account', 'USER/UPDATE': 'edited account', 'USER/DELETE': 'deleted account', 'USER/STATUS_CHANGE': 'changed the status of account',
+  'USER/UPDATE_AVATAR': 'changed the photo of',
+  'SCHEDULE_POLICY/UPDATE': 'changed the opening hours',
+  'INVOICE/CHECKOUT_CANCELLED': 'cancelled a checkout', 'INVOICE/PAYMENT_REVIEW': 'flagged a payment for review',
+};
+const IMAGE = { UPDATE_IMAGE: 'changed the photo of', REMOVE_IMAGE: 'removed the photo of' };
+const SENSITIVE = new Set(['DELETE', 'DEACTIVATE', 'CANCEL', 'STATUS_CHANGE', 'PAYMENT_REVIEW', 'REFUND']);
+
+// "2026-11-06T19:15" -> "06/11 19:15" so older entries read like new ones.
+export const tidy = text => String(text ?? '').replace(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2})?/g, '$3/$2 $4:$5').replace(/ \/ SCHEDULED$/, '').replace(/(\d{2}\/\d{2}) (\d{2}:\d{2}) - \1 /, '$1 $2 - ');
+
+export function describe(entry) {
+  const kind = entityKey(entry.entityType), action = String(entry.action || '');
+  const verb = VERBS[`${kind}/${action}`] || IMAGE[action] || null;
+  const target = entry.targetName || (entry.entityId ? `#${entry.entityId}` : '');
+  let detail = tidy(entry.details);
+  if (IMAGE[action] || action === 'UPDATE_AVATAR' || detail === entry.targetName) detail = '';
+  if (kind === 'SCHEDULE' && entry.sessionTime && !/\d{2}\/\d{2}/.test(detail)) detail = entry.sessionTime;
+  if (/^Policy\[/.test(detail)) detail = detail.replace(/^Policy\[|\]$/g, '').replace(/opensAt=|closesAt=|breakMinutes=/g, '');
+  return { verb, fallback: verb ? null : `${action.toLowerCase().replace(/_/g, ' ')} ${kind.toLowerCase()}`, target: kind === 'SCHEDULE_POLICY' ? '' : target, detail, sensitive: SENSITIVE.has(action) || /\bprice\b|\brole\b/i.test(entry.details || '') };
 }
-const normalized = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
-export function filterLogs(logs, filters, translate = value => value) {
-  const keyword = normalized(filters.keyword).trim();
-  return logs.filter(log => {
-    const date = String(log.createdAt || '').slice(0, 10), resource = entityKey(log.entityType);
-    return (!filters.action || log.action === filters.action) && (!filters.entity || resource === filters.entity)
-      && (!filters.from || date >= filters.from) && (!filters.to || date <= filters.to)
-      && (!keyword || normalized([log.auditId, log.actorEmail, log.action, translate(actionLabels[log.action] || log.action), log.entityType, translate(entityLabels[resource] || resource), log.entityId, log.details].join(' ')).includes(keyword));
-  }).sort((a,b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')) || Number(b.auditId) - Number(a.auditId));
-}
-export function changeValue(value, translate = value => value) {
-  if (value == null) return '—';
-  if (typeof value === 'boolean') return translate(value ? 'Yes' : 'No');
-  if (typeof value === 'object') return JSON.stringify(value, null, 2);
-  return String(value);
+
+export function groupByDay(entries) {
+  const groups = [];
+  for (const entry of entries) {
+    const day = String(entry.at || '').slice(0, 10);
+    const last = groups[groups.length - 1];
+    if (last && last.day === day) last.items.push(entry); else groups.push({ day, items: [entry] });
+  }
+  return groups;
 }

@@ -1,0 +1,7 @@
+.manager-form-grid .coach-subjects { grid-column:1 / -1; border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin:0; display:grid; gap:8px; min-width:0; }
+.manager-form-grid .coach-subjects legend { padding:0 6px; font-size:14px; font-weight:600; color:var(--text); }
+.manager-form-grid .coach-subjects p { margin:0; font-size:13px; font-weight:400; color:var(--text-muted); }
+.manager-form-grid .coach-subjects > div { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:8px 16px; max-height:220px; overflow:auto; }
+.manager-form-grid .coach-subjects label { flex-direction:row; align-items:center; gap:8px; font-size:14px; font-weight:400; color:var(--text); cursor:pointer; }
+.manager-form-grid .coach-subjects input[type=checkbox] { appearance:auto; -webkit-appearance:checkbox; width:16px; height:16px; min-height:0; padding:0; margin:0; flex:none; accent-color:var(--primary); }
+.manager-form-grid .coach-subjects .coach-subjects-warn { color:var(--warning-text); }

@@ -1653,7 +1653,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             List<Map<String, Object>> scheduleRows = jdbcTemplate.queryForList("""
                 SELECT schedule_id, start_time, end_time, status
                 FROM SCHEDULES
-                WHERE class_id = ? AND start_time >= NOW() AND status = 'SCHEDULED'
+                WHERE class_id = ? AND start_time >= NOW() AND status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED')
                 ORDER BY start_time
             """, classId);
 
@@ -2028,7 +2028,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         for (Schedule s : schedules) {
             GymClass gymClass = s.getGymClass();
             if (gymClass == null) continue;
-            User coach = gymClass.getCoach();
+            User coach = s.getSubstituteCoach() != null ? s.getSubstituteCoach() : gymClass.getCoach(); // substitute is the coach expected at the desk
             if (coach == null) continue;
 
             String coachName = coach.getFullName() != null ? coach.getFullName() : "HLV #" + coach.getUserId();
@@ -2124,7 +2124,8 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca dạy với ID: " + request.getScheduleId()));
 
         GymClass gymClass = schedule.getGymClass();
-        if (gymClass == null || gymClass.getCoach() == null || !gymClass.getCoach().getUserId().equals(coach.getUserId())) {
+        User expectedCoach = schedule.getSubstituteCoach() != null ? schedule.getSubstituteCoach() : (gymClass == null ? null : gymClass.getCoach());
+        if (gymClass == null || expectedCoach == null || !expectedCoach.getUserId().equals(coach.getUserId())) {
             throw new IllegalArgumentException("Huấn luyện viên " + coach.getFullName() + " không phụ trách ca dạy này.");
         }
 

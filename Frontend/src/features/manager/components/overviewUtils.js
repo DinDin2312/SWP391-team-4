@@ -2,9 +2,9 @@ export const LOW_REGISTRATION_THRESHOLD = 0.25;
 export const URGENT_WINDOW_HOURS = 6;
 export const parseCenterTime = value => new Date(typeof value === 'string' && !/Z$|[+-]\d\d:\d\d$/.test(value) ? `${value}+07:00` : value);
 export const centerDate = value => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(parseCenterTime(value));
-export const isLowRegistration = (row, now) => row.status === 'SCHEDULED' && parseCenterTime(row.startTime) >= now && Number(row.booked || 0) / Math.max(1, Number(row.maxSlots)) < LOW_REGISTRATION_THRESHOLD;
+export const isLowRegistration = (row, now) => ['SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED'].includes(row.status) && parseCenterTime(row.startTime) >= now && Number(row.booked || 0) / Math.max(1, Number(row.maxSlots)) < LOW_REGISTRATION_THRESHOLD;
 export function sessionDisplayStatus(row, now) {
-  if (row.status === 'SCHEDULED') return parseCenterTime(row.startTime) <= now && now < parseCenterTime(row.endTime) ? 'Ongoing' : null;
+  if (['SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED'].includes(row.status)) return parseCenterTime(row.startTime) <= now && now < parseCenterTime(row.endTime) ? 'Ongoing' : null;
   return row.status === 'COMPLETED' ? 'Completed' : row.status === 'CANCELLED' ? 'Cancelled' : null;
 }
 // Today and urgent arrays are complete. Attention is a server total, never a page length.

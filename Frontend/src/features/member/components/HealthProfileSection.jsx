@@ -17,6 +17,8 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
+import VnDateInput from '../../../components/VnDateInput';
+import { vnToday } from '../../../utils/vnTime';
 
 export default function HealthProfileSection({ initialProfile = null }) {
   const currentLang = useLanguage();
@@ -329,7 +331,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
                   </span>
                 )}
               </div>
-              <input
+              <VnDateInput
                 ref={dobInputRef}
                 type="date"
                 value={dateOfBirth}
@@ -338,7 +340,7 @@ export default function HealthProfileSection({ initialProfile = null }) {
                   const err = validateField('dateOfBirth', dateOfBirth);
                   setErrors(prev => ({ ...prev, dateOfBirth: err }));
                 }}
-                max={new Date().toISOString().slice(0, 10)}
+                max={vnToday()}
                 className={`w-full px-3.5 py-2 rounded-xl text-xs sm:text-sm border transition-all ${
                   errors.dateOfBirth
                     ? 'border-rose-500 focus:ring-2 focus:ring-rose-500/30 bg-rose-500/5 text-slate-800 dark:text-white'

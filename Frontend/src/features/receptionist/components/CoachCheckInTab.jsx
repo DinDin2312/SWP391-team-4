@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
 import { AuthContext } from '../../../context/AuthContext';
+import VnDateInput from '../../../components/VnDateInput';
 
 const getTodayDateString = () => {
   const now = new Date();
@@ -174,7 +175,7 @@ const CoachCheckInTab = () => {
           {/* Date Picker */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-xs text-[var(--text)]">
             <Calendar className="w-3.5 h-3.5 text-amber-500" />
-            <input
+            <VnDateInput
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}

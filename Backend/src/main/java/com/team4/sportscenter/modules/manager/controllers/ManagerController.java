@@ -26,6 +26,8 @@ public class ManagerController {
     public Map<String,Object> classSlotPolicy(@PathVariable Integer id) {return managerService.classSlotPolicy(id);}
     @GetMapping("/schedule-policy")
     public Map<String,Object> schedulePolicy(){return managerService.slotPolicy();}
+    @PutMapping("/schedule-policy/course-lead-days")
+    public Map<String,Object> courseLeadDays(@RequestBody Map<String,Integer> body,java.security.Principal principal){return managerService.saveCourseLeadDays(body.getOrDefault("days",30),principal.getName());}
     @PutMapping("/schedule-policy")
     public Map<String,Object> schedulePolicy(@RequestBody com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy policy,java.security.Principal principal){return managerService.saveSlotPolicy(policy,principal.getName());}
 
@@ -223,6 +225,14 @@ public class ManagerController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) Integer coachId) {
         return managerService.coachTeachingReport(from, to, coachId);
+    }
+
+    @GetMapping("/audit-logs/search")
+    public Map<String, Object> auditSearch(@RequestParam(required = false) String q, @RequestParam(required = false) String type,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "30") int size) {
+        return managerService.auditSearch(q, type, from, to, page, size);
     }
 
     @GetMapping("/audit-logs")
