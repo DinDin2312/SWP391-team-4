@@ -25,6 +25,7 @@ const PaymentCart = () => {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [pendingInvoice, setPendingInvoice] = useState(null);
   const [cancellingCheckout, setCancellingCheckout] = useState(false);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
   const [toast, setToast] = useState({ visible: false, type: 'success', title: '', message: '' });
 
@@ -165,6 +166,37 @@ const PaymentCart = () => {
     }
   };
 
+  const handleConfirmPayment = async (targetInvoiceId = null) => {
+    try {
+      setConfirmingPayment(true);
+      const token = localStorage.getItem('token');
+      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+      const invId = targetInvoiceId || pendingInvoice?.invoiceId;
+
+      await axios.post(`http://localhost:8080/api/v1/payment/vietqr-submit-transfer/${invId}`, {}, { headers: authHeader });
+
+      setToast({
+        visible: true,
+        type: 'success',
+        title: t('Payment Successful!'),
+        message: t('Your payment has been confirmed and services have been activated.')
+      });
+
+      window.dispatchEvent(new Event('cartUpdated'));
+      window.dispatchEvent(new Event('notificationUpdated'));
+
+      setPendingInvoice(null);
+      await fetchCartItems();
+      navigate('/member/cart?paymentSuccess=true');
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data || t('Unable to confirm payment.');
+      setToast({ visible: true, type: 'error', title: t('Error'), message: t(msg) });
+      setTimeout(() => setToast({ visible: false, type: 'error', title: '', message: '' }), 4000);
+    } finally {
+      setConfirmingPayment(false);
+    }
+  };
+
   const handleRemoveItem = async (id, type) => {
     try {
       const token = localStorage.getItem('token');
@@ -280,76 +312,61 @@ const PaymentCart = () => {
 
       {/* Pending Checkout Alert Banner */}
       {pendingInvoice && (
-        pendingInvoice.status === 'AWAITING_CONFIRMATION' ? (
-          <div className="mb-8 p-5 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
-            <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
-                <Clock className="w-5 h-5 animate-pulse" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
-                  {t("Order Awaiting Reception Confirmation")}
-                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold">
-                    #{pendingInvoice.invoiceId}
-                  </span>
-                </span>
-                <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
-                  {t("Your transfer notification has been submitted. Reception is currently verifying your payment. You can freely navigate to other pages while waiting for approval.")}
-                </p>
-              </div>
+        <div className="mb-8 p-5 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
+              <Clock className="w-5 h-5 animate-pulse" />
             </div>
-            <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 justify-end">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/15 text-blue-700 dark:text-blue-300 font-bold text-xs border border-blue-500/30">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                {t("Please wait for confirmation")}
+            <div className="flex flex-col">
+              <span className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
+                {pendingInvoice.status === 'AWAITING_CONFIRMATION'
+                  ? t("Order Awaiting Payment / Confirmation")
+                  : t("Pending Checkout Session")}
+                <span className="font-mono text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold">
+                  #{pendingInvoice.invoiceId}
+                </span>
               </span>
+              <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
+                {t("You have a checkout session awaiting payment. You can confirm your transfer immediately to activate your services, view QR code, or cancel this order to unlock your cart.")}
+              </p>
             </div>
           </div>
-        ) : (
-          <div className="mb-8 p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
-            <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-                <Clock className="w-5 h-5 animate-pulse" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
-                  {t("Pending Checkout Session")}
-                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">
-                    #{pendingInvoice.invoiceId}
-                  </span>
-                </span>
-                <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
-                  {t("You have a checkout session awaiting payment. The cart is temporarily locked. You can resume payment or cancel the session to edit your cart.")}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 justify-end">
-              <button
-                type="button"
-                onClick={() => handleCancelPendingCheckout(pendingInvoice.invoiceId)}
-                disabled={cancellingCheckout}
-                className="px-4 py-2 text-xs font-semibold rounded-xl border border-[var(--border)] text-[var(--danger-text)] hover:bg-[var(--danger-soft)] transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                {cancellingCheckout ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-                {t("Cancel Pending Checkout")}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (pendingInvoice.paymentUrl) {
-                    navigate(pendingInvoice.paymentUrl);
-                  } else {
-                    navigate(`/member/vietqr-pay?invoiceId=${pendingInvoice.invoiceId}`);
-                  }
-                }}
-                className="px-4 py-2 text-xs font-bold rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[color:var(--on-primary)] transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
-              >
-                {t("Resume Payment")}
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto shrink-0 justify-end">
+            <button
+              type="button"
+              onClick={() => handleCancelPendingCheckout(pendingInvoice.invoiceId)}
+              disabled={cancellingCheckout || confirmingPayment}
+              className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-[var(--border)] text-[var(--danger-text)] hover:bg-[var(--danger-soft)] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              {cancellingCheckout ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+              {t("Cancel Order")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (pendingInvoice.paymentUrl) {
+                  navigate(pendingInvoice.paymentUrl);
+                } else {
+                  navigate(`/member/vietqr-pay?invoiceId=${pendingInvoice.invoiceId}`);
+                }
+              }}
+              disabled={cancellingCheckout || confirmingPayment}
+              className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text)] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <QrCode className="w-3.5 h-3.5 text-blue-500" />
+              {t("View QR Code")}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleConfirmPayment(pendingInvoice.invoiceId)}
+              disabled={cancellingCheckout || confirmingPayment}
+              className="px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white transition-all shadow-md shadow-emerald-500/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              {confirmingPayment ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+              {confirmingPayment ? t("Confirming...") : t("I Have Paid (Confirm Now)")}
+            </button>
           </div>
-        )
+        </div>
       )}
 
       {error ? (

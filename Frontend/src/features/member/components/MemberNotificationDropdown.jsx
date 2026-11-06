@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 
 import {
   Bell, Check, Clock, CheckCheck, RefreshCw,
@@ -10,7 +11,7 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import { getReasonLabel, formatDateTime, formatScheduleSlot } from '../../coach/coachRescheduleUtils';
 import { getSavedMemberNotificationPreferences, getMemberUnreadCount } from '../memberUtils';
 
-export default function MemberNotificationDropdown({ isOpen, onClose, onUnreadChange }) {
+export default function MemberNotificationDropdown({ isOpen = true, onClose, onUnreadChange, anchorRef }) {
   const currentLang = useLanguage();
   const lang = (currentLang === 'vi' || globalThis.localStorage?.getItem('nexusLanguage') === 'vi') ? 'vi' : 'en';
   const navigate = useNavigate();
@@ -64,20 +65,29 @@ export default function MemberNotificationDropdown({ isOpen, onClose, onUnreadCh
     }
   }, [isOpen]);
 
-  // Click outside listener
+  // Click outside & Escape listener (ignores clicks on anchorRef to prevent toggle conflicts)
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        onClose();
+      if (dropdownRef.current && dropdownRef.current.contains(e.target)) {
+        return;
       }
+      if (anchorRef?.current && anchorRef.current.contains(e.target)) {
+        return;
+      }
+      onClose();
     };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [onClose, anchorRef]);
 
   // Member responds: ACCEPT or DECLINE
   const handleRespond = async (requestId, action) => {
@@ -115,15 +125,19 @@ export default function MemberNotificationDropdown({ isOpen, onClose, onUnreadCh
     }
   };
 
-  if (!isOpen) return null;
+  if (isOpen === false) return null;
 
   const pendingReschedules = reschedules.filter(r => r.responseStatus === 'PENDING' && !r.isExpired);
 
   return (
-    <div
+    <motion.div
       ref={dropdownRef}
-      className="absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-2rem)] rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-2xl z-50 overflow-hidden flex flex-col text-[var(--text)]"
-      style={{ maxHeight: '80vh' }}
+      initial={{ opacity: 0, scale: 0.82, y: -8 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.82, y: -8, transition: { duration: 0.16, ease: 'easeIn' } }}
+      transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+      className="absolute right-0 top-full mt-2 w-96 max-w-[calc(100vw-2rem)] rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-2xl z-50 overflow-hidden flex flex-col text-[var(--text)] origin-top-right"
+      style={{ maxHeight: '80vh', transformOrigin: 'top right' }}
     >
       {/* Header */}
       <div className="p-4 border-b border-[var(--border)] bg-[var(--surface-hover)] flex items-center justify-between">
@@ -294,6 +308,6 @@ export default function MemberNotificationDropdown({ isOpen, onClose, onUnreadCh
           <ExternalLink className="w-3 h-3" />
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }

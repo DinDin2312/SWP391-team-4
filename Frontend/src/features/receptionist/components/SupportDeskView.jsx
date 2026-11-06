@@ -4,7 +4,7 @@ import {
   LifeBuoy, Search, Filter, RefreshCw, CheckCircle2,
   Clock, AlertTriangle, ChevronLeft,
   ChevronRight, MessageSquare, ArrowUpRight,
-  Eye, Phone, Mail
+  Eye
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
@@ -12,7 +12,11 @@ import {
   getPriorityBadge,
   getStatusBadge,
   getCategoryBadge,
-  getPreferredResolutionBadge
+  getPreferredResolutionBadge,
+  cleanSupportTitle,
+  parseCoachFeedback,
+  getMemberInitials,
+  formatSupportDate
 } from '../../../utils/supportDisplayUtils';
 import receptionistService from '../services/receptionistService';
 import RespondSupportModal from './RespondSupportModal';
@@ -20,7 +24,7 @@ import RespondSupportModal from './RespondSupportModal';
 const SupportDeskView = (props) => {
   useLanguage();
   const { userRole, userInfo } = useContext(AuthContext);
-  const isManager = Boolean(props.isManager || userRole === 'Center Manager' || userInfo?.role === 'Center Manager');
+  const isManager = Boolean(props.isManager || userRole === 'Center Manager' || userRole === 'Admin' || userInfo?.role === 'Center Manager' || userInfo?.role === 'Admin');
 
   const [stats, setStats] = useState({
     pending: 0,
@@ -302,78 +306,149 @@ const SupportDeskView = (props) => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[var(--surface-hover)] border-b border-[var(--border)] text-[var(--text-muted)] font-semibold uppercase tracking-wider">
+              <thead className="bg-[var(--surface-hover)] border-b border-[var(--border)] text-[var(--text-muted)] font-semibold uppercase tracking-wider text-[11px]">
                 <tr>
-                  <th className="px-5 py-3.5">ID & {t('Priority')}</th>
-                  <th className="px-5 py-3.5">{t('Member Info')}</th>
-                  <th className="px-5 py-3.5">{t('Category & Title')}</th>
-                  <th className="px-5 py-3.5">{t('Class & Proration')}</th>
-                  <th className="px-5 py-3.5">{t('Submitted')}</th>
-                  <th className="px-5 py-3.5">{t('Status')}</th>
-                  <th className="px-5 py-3.5 text-right">{t('Action')}</th>
+                  <th className="px-5 py-3.5 whitespace-nowrap">ID</th>
+                  <th className="px-5 py-3.5 whitespace-nowrap">{t('Member')}</th>
+                  <th className="px-5 py-3.5">{t('Request Details')}</th>
+                  <th className="px-5 py-3.5 whitespace-nowrap">{t('Class & Proration')}</th>
+                  <th className="px-5 py-3.5 whitespace-nowrap">{t('Submitted At')}</th>
+                  <th className="px-5 py-3.5 whitespace-nowrap">{t('Status')}</th>
+                  <th className="px-5 py-3.5 text-right whitespace-nowrap">{t('Action')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)] text-[var(--text)]">
-                {requests.map((req) => (
-                  <tr key={req.requestId} className="hover:bg-[var(--surface-hover)]/70 transition-colors">
-                    <td className="px-5 py-4 font-mono font-bold text-[var(--primary)]">
-                      #{req.requestId}
-                      {getPriorityBadge(req.priority, req.preferredResolution)}
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="font-bold">{req.userFullName || req.memberName}</div>
-                      <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1 mt-0.5">
-                        <Mail className="w-3 h-3" /> {req.userEmail || req.memberEmail}
-                      </div>
-                      {(req.userPhone || req.memberPhone) && (
-                        <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">
-                          <Phone className="w-3 h-3" /> {req.userPhone || req.memberPhone}
+                {requests.map((req) => {
+                  const isHighPriority = req.priority === 'HIGH' || req.priority === 'URGENT' || req.preferredResolution === 'CASH_REFUND';
+                  const memberName = req.userFullName || req.memberName || '—';
+                  const memberContact = req.userPhone || req.memberPhone || req.userEmail || req.memberEmail || '';
+                  const memberEmail = req.userEmail || req.memberEmail || '';
+                  const isCoachFeedbackForReceptionist = !isManager && req.category === 'COACH_FEEDBACK';
+                  const isPendingAction = !isCoachFeedbackForReceptionist && (req.status === 'PENDING' || (isManager && req.status === 'ESCALATED'));
+
+                  return (
+                    <tr key={req.requestId} className="hover:bg-[var(--surface-hover)]/70 transition-colors">
+                      {/* Cột 1: ID & Priority */}
+                      <td className="px-5 py-3.5 whitespace-nowrap align-middle">
+                        <div className="font-mono font-bold text-sm text-[var(--primary)]">
+                          #{req.requestId}
                         </div>
-                      )}
-                    </td>
-                    <td className="px-5 py-4 max-w-xs">
-                      <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                        {getCategoryBadge(req.category)}
-                        {getPreferredResolutionBadge(req.preferredResolution)}
-                      </div>
-                      <div className="font-semibold line-clamp-1">{req.title}</div>
-                      <div className="text-[11px] text-[var(--text-muted)] line-clamp-1">{req.content}</div>
-                    </td>
-                    <td className="px-5 py-4">
-                      {req.className ? (
-                        <div>
-                          <div className="font-semibold text-[var(--text)]">{req.className}</div>
-                          <div className="text-[11px] text-[var(--text-muted)]">
-                            {req.attendedSessions || 0}/{req.totalSessions || 0} {t('taken')}
+                        {isHighPriority && (
+                          <div className="mt-1">
+                            {getPriorityBadge(req.priority, req.preferredResolution)}
                           </div>
-                          {(req.category === 'CLASS_CANCELLATION' || req.category === 'REFUND_REQUEST' || req.preferredResolution) && (req.calculatedCreditAmount != null || req.proratedCredit != null) && (
-                            <div className="text-[11px] font-bold text-[var(--primary)] mt-0.5">
-                              {t('Est. Credit')}: {formatMoney(req.calculatedCreditAmount ?? req.proratedCredit)}
+                        )}
+                      </td>
+
+                      {/* Cột 2: Hội viên với Avatar viết tắt */}
+                      <td className="px-5 py-3.5 align-middle">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center shrink-0">
+                            {getMemberInitials(memberName)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm text-[var(--text)] truncate max-w-[150px]" title={memberEmail}>
+                              {memberName}
                             </div>
-                          )}
+                            {memberContact && (
+                              <div className="text-[11px] text-[var(--text-muted)] font-mono truncate max-w-[150px]" title={memberContact}>
+                                {memberContact}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      ) : (
-                        <span className="text-[var(--text-muted)] italic">--</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-4 text-[var(--text-muted)] whitespace-nowrap">
-                      {req.createdAt}
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      {getStatusBadge(req.status)}
-                    </td>
-                    <td className="px-5 py-4 text-right whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenModal(req)}
-                        className="px-3.5 py-1.5 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white font-semibold transition-colors inline-flex items-center gap-1.5"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>{(req.status === 'PENDING' || (isManager && req.status === 'ESCALATED')) ? t('Review & Resolve') : t('View Details')}</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+
+                      {/* Cột 3: Loại yêu cầu & Tiêu đề cốt lõi */}
+                      <td className="px-5 py-3.5 max-w-sm align-middle">
+                        <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                          {getCategoryBadge(req.category)}
+                          {getPreferredResolutionBadge(req.preferredResolution)}
+                        </div>
+                        <div className="font-semibold text-xs text-[var(--text)] line-clamp-1" title={cleanSupportTitle(req)}>
+                          {cleanSupportTitle(req)}
+                        </div>
+                        {req.category === 'COACH_FEEDBACK' ? (
+                          <div className="text-[11px] text-[var(--text-muted)] line-clamp-1 mt-0.5 flex items-center gap-1.5">
+                            {(() => {
+                              const parsed = parseCoachFeedback(req.content, req);
+                              return (
+                                <>
+                                  <span className="font-medium text-[var(--text)] truncate max-w-[220px]" title={parsed.targetInfo || req.className}>
+                                    {parsed.targetInfo || req.className || t('General Coaching')}
+                                  </span>
+                                  <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold bg-purple-500/10 px-1.5 py-0.5 rounded shrink-0">
+                                    {t('Confidential Feedback')}
+                                  </span>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          req.category !== 'CLASS_CANCELLATION' && req.content && (
+                            <div className="text-[11px] text-[var(--text-muted)] line-clamp-1 mt-0.5" title={req.content}>
+                              {req.content}
+                            </div>
+                          )
+                        )}
+                      </td>
+
+                      {/* Cột 4: Lớp học & Bảo lưu */}
+                      <td className="px-5 py-3.5 whitespace-nowrap align-middle">
+                        {req.className ? (
+                          <div>
+                            <div className="text-xs text-[var(--text-muted)]">
+                              {t('Attended')}: <strong className="text-[var(--text)]">{req.attendedSessions || 0}/{req.totalSessions || 0}</strong> {t('sessions')}
+                            </div>
+                            {(req.calculatedCreditAmount != null || req.proratedCredit != null) && (
+                              <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                {t('Refund')}: {formatMoney(req.calculatedCreditAmount ?? req.proratedCredit)}
+                              </div>
+                            )}
+                          </div>
+                        ) : req.category === 'FACILITY_ISSUE' ? (
+                          <div className="text-xs text-[var(--text-muted)]">
+                            {t('Facility & Equipment')}
+                          </div>
+                        ) : req.category === 'COACH_FEEDBACK' ? (
+                          <div className="text-xs text-[var(--text-muted)]">
+                            {t('Coach & Training')}
+                          </div>
+                        ) : (
+                          <span className="text-[var(--text-muted)] italic">—</span>
+                        )}
+                      </td>
+
+                      {/* Cột 5: Ngày gửi format chuẩn */}
+                      <td className="px-5 py-3.5 text-xs text-[var(--text-muted)] whitespace-nowrap font-mono align-middle">
+                        {formatSupportDate(req.createdAt)}
+                      </td>
+
+                      {/* Cột 6: Trạng thái */}
+                      <td className="px-5 py-3.5 whitespace-nowrap align-middle">
+                        {getStatusBadge(req.status)}
+                      </td>
+
+                      {/* Cột 7: Thao tác */}
+                      <td className="px-5 py-3.5 text-right whitespace-nowrap align-middle">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenModal(req)}
+                          className={`px-3.5 py-1.5 rounded-lg font-semibold transition-colors inline-flex items-center gap-1.5 text-xs ${
+                            isPendingAction
+                              ? 'bg-[var(--primary)] text-white hover:opacity-90 shadow-sm'
+                              : 'bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white'
+                          }`}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>
+                            {isPendingAction ? t('Review & Resolve') : t('View Details')}
+                          </span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

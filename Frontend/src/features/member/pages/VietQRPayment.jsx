@@ -47,16 +47,15 @@ const VietQRPayment = () => {
     try {
       setSubmitting(true);
       const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:8080/api/v1/payment/vietqr-submit-transfer/${invoiceId}`, {}, {
+      const response = await axios.post(`http://localhost:8080/api/v1/payment/vietqr-submit-transfer/${invoiceId}`, {}, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
-      // Lưu lại ID hóa đơn đang chờ lễ tân duyệt để theo dõi toàn hệ thống
-      sessionStorage.setItem('awaitingInvoiceId', String(invoiceId));
       window.dispatchEvent(new Event('cartUpdated'));
 
-      // Chuyển member về trang giỏ hàng với trạng thái đang chờ xác nhận
-      navigate('/member/cart?awaitingConfirmation=true');
+      window.dispatchEvent(new Event('cartUpdated'));
+      window.dispatchEvent(new Event('notificationUpdated'));
+      handlePaymentSuccess();
     } catch (err) {
       alert(err.response?.data?.message || t('An error occurred while submitting payment confirmation.'));
       setSubmitting(false);
@@ -95,10 +94,6 @@ const VietQRPayment = () => {
         // If invoice is already paid, trigger success flow
         if (data.status === 'PAID') {
           handlePaymentSuccess();
-        } else if (data.status === 'AWAITING_CONFIRMATION') {
-          // Nếu đã bấm chuyển khoản rồi thì đưa về giỏ hàng luôn
-          sessionStorage.setItem('awaitingInvoiceId', String(invoiceId));
-          navigate('/member/cart?awaitingConfirmation=true');
         }
       } catch (err) {
         setError(err.response?.data?.message || t('Unable to load VietQR payment information.'));
@@ -358,10 +353,7 @@ const VietQRPayment = () => {
 
               {/* Transfer Content */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 gap-2">
-                <div>
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold block">{t('Transfer Content (Required)')}</span>
-                  <span className="text-[11px] text-[var(--text-muted)]">{t('Keep this exact content for reception verification')}</span>
-                </div>
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold block">{t('Transfer Content (Required)')}</span>
                 <div className="flex items-center gap-2 sm:justify-end">
                   <span className="text-base font-black text-emerald-700 dark:text-emerald-300 font-mono tracking-wider">
                     {paymentInfo.description}
@@ -377,21 +369,6 @@ const VietQRPayment = () => {
               </div>
             </div>
 
-            {/* User Action Instructions */}
-            <div className="mt-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-3.5">
-              <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
-                <AlertCircle className="w-5 h-5" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-bold text-amber-900 dark:text-amber-200">
-                  {t('Important instructions')}
-                </p>
-                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-                  {t('After completing the transfer on your banking app, please click')} <strong>"{t('I have transferred successfully')}"</strong> {t('below. Your order will be sent to Front Desk Reception for approval, and you can freely view other pages in the meantime.')}
-                </p>
-              </div>
-            </div>
-
             {/* Bottom Actions */}
             <div className="mt-8 flex flex-col sm:flex-row items-center gap-4">
               <button
@@ -402,7 +379,7 @@ const VietQRPayment = () => {
                 {submitting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>{t('Sending confirmation to reception...')}</span>
+                    <span>{t('Verifying payment...')}</span>
                   </>
                 ) : (
                   <>

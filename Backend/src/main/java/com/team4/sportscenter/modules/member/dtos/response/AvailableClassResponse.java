@@ -14,6 +14,7 @@ import java.util.List;
 public class AvailableClassResponse {
     private Integer classId;
     private Integer subjectId;
+    private String subjectName;
     private Integer roomId;
     private LocalDateTime lastSessionTime;
     private String className;

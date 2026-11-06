@@ -35,6 +35,7 @@ const MemberLayout = () => {
   const [isTopbarDockGlow, setIsTopbarDockGlow] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
+  const notifBellRef = useRef(null);
   const [hasAiAccess, setHasAiAccess] = useState(false);
   const [aiNoticeVisible, setAiNoticeVisible] = useState(false);
   const aiPopoverRef = useRef(null);
@@ -468,14 +469,20 @@ const MemberLayout = () => {
             </button>
 
             {/* Topbar Notification Bell */}
-            <div className="relative">
+            <div className="relative" ref={notifBellRef}>
               <button
                 type="button"
                 onClick={() => setIsNotifDropdownOpen((prev) => !prev)}
-                className="relative p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)] text-[var(--text)] hover:scale-105 transition-all cursor-pointer"
+                className={`relative p-2.5 rounded-xl border transition-all cursor-pointer ${
+                  isNotifDropdownOpen
+                    ? 'bg-[var(--primary-soft)] border-[var(--primary)] text-[var(--primary)] shadow-sm'
+                    : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)] text-[var(--text)] hover:scale-105'
+                }`}
                 title={t("Notifications")}
+                aria-label={t("Notifications")}
+                aria-expanded={isNotifDropdownOpen}
               >
-                <Bell className="w-4 h-4" />
+                <Bell className={`w-4 h-4 transition-transform duration-300 ${isNotifDropdownOpen ? 'rotate-12 scale-110' : ''}`} />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 z-20 min-w-[18px] h-[18px] px-0.5 rounded-full text-[10px] font-black bg-[#0071E3] text-white flex items-center justify-center border-2 border-[var(--surface)] animate-pulse">
                     {unreadCount > 9 ? '9+' : unreadCount}
@@ -483,11 +490,16 @@ const MemberLayout = () => {
                 )}
               </button>
 
-              <MemberNotificationDropdown
-                isOpen={isNotifDropdownOpen}
-                onClose={() => setIsNotifDropdownOpen(false)}
-                onUnreadChange={(cnt) => setUnreadCount(cnt)}
-              />
+              <AnimatePresence>
+                {isNotifDropdownOpen && (
+                  <MemberNotificationDropdown
+                    isOpen={isNotifDropdownOpen}
+                    onClose={() => setIsNotifDropdownOpen(false)}
+                    onUnreadChange={(cnt) => setUnreadCount(cnt)}
+                    anchorRef={notifBellRef}
+                  />
+                )}
+              </AnimatePresence>
             </div>
 
             <button onClick={handleLogout} className="px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border)] text-[var(--text)] hover:text-[var(--text)] text-xs font-medium transition-colors">{t("Logout")}</button>

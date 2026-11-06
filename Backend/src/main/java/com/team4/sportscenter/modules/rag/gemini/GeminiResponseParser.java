@@ -46,7 +46,7 @@ public class GeminiResponseParser {
         }
 
         Object textObj = partMap.get("text");
-        if (textObj instanceof String text && !text.trim().isEmpty()) {
+        if (textObj instanceof String text && !text.isEmpty()) {
             return Optional.of(text);
         }
 

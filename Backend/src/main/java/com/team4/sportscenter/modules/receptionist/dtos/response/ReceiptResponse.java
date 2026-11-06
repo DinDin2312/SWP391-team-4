@@ -18,6 +18,9 @@ public class ReceiptResponse {
     private String invoiceCode;
     private LocalDateTime createdAt;
     private String status;
+    private BigDecimal subtotal;
+    private BigDecimal discountAmount;
+    private String voucherCode;
     private BigDecimal totalAmount;
 
     // Member Information

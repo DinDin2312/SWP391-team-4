@@ -695,30 +695,34 @@ const CoachSettings = () => {
 
                   {/* System Constraint Banner (Apple Callout) */}
                   <div className={`p-4 rounded-2xl border transition-all ${
-                    profile.canChangeSubject
-                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                      : 'bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300'
+                    profile.activeClassesCount > 0
+                      ? 'bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300'
+                      : (profile.availableSubjects && profile.availableSubjects.length > 0)
+                        ? 'bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-300'
+                        : 'bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-300'
                   }`}>
                     <div className="flex items-start gap-3">
-                      {profile.canChangeSubject ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                      ) : (
+                      {profile.activeClassesCount > 0 ? (
                         <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                      ) : (
+                        <ShieldCheck className="w-5 h-5 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
                       )}
                       <div className="flex flex-col gap-1 text-xs">
                         <strong className="font-bold text-sm">
-                          {profile.canChangeSubject
-                            ? t('Eligible to Switch')
-                            : t('Specialty Locked')}
+                          {profile.activeClassesCount > 0
+                            ? t('Specialty Locked')
+                            : t('Manager-Assigned Subjects')}
                         </strong>
                         <p className="leading-relaxed opacity-90">
-                          {profile.canChangeSubject ? (
-                            t('Eligible to switch: You currently have no ongoing classes in this subject.')
-                          ) : (
+                          {profile.activeClassesCount > 0 ? (
                             <>
                               {t('Subject locked: You have active teaching classes. Please complete or hand over classes before switching.')}{' '}
                               <strong>({profile.activeClassesCount} {t('lớp')}: {profile.activeClassNames?.join(', ') || ''})</strong>
                             </>
+                          ) : (profile.availableSubjects && profile.availableSubjects.length > 0) ? (
+                            t('Teaching subjects are assigned by the Center Manager. Your assigned disciplines are listed below.')
+                          ) : (
+                            t('You have not been assigned any teaching subjects yet. Please contact the Center Manager to assign your subjects in Staff & Permissions.')
                           )}
                         </p>
                       </div>
@@ -789,7 +793,7 @@ const CoachSettings = () => {
                         })
                       ) : (
                         <div className="col-span-2 p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/40 text-center text-xs text-slate-400">
-                          {t('No subjects registered on system.')}
+                          {t('You have not been assigned any teaching subjects yet. Please contact the Center Manager to assign your subjects in Staff & Permissions.')}
                         </div>
                       )}
                     </div>

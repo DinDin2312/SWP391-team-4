@@ -109,6 +109,7 @@ public class GeminiClient {
         Map<String, Object> generationConfig = new HashMap<>();
         generationConfig.put("maxOutputTokens", maxOutputTokens);
         generationConfig.put("temperature", 0.7);
+        generationConfig.put("thinkingConfig", Map.of("thinkingBudget", 0));
         requestBody.put("generationConfig", generationConfig);
 
         HttpHeaders headers = new HttpHeaders();
@@ -180,6 +181,7 @@ public class GeminiClient {
         Map<String, Object> generationConfig = new HashMap<>();
         generationConfig.put("maxOutputTokens", maxOutputTokens);
         generationConfig.put("temperature", 0.7);
+        generationConfig.put("thinkingConfig", Map.of("thinkingBudget", 0));
         requestBody.put("generationConfig", generationConfig);
 
         String jsonPayload;
@@ -212,7 +214,7 @@ public class GeminiClient {
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(url))
                         .header("Content-Type", "application/json")
-                        .timeout(Duration.ofMillis(readTimeoutMs * 2))
+                        .timeout(Duration.ofMillis(Math.max(60000, readTimeoutMs * 2)))
                         .POST(HttpRequest.BodyPublishers.ofString(jsonPayload, StandardCharsets.UTF_8))
                         .build();
 
@@ -229,6 +231,9 @@ public class GeminiClient {
                                 if (!dataStr.isEmpty()) {
                                     try {
                                         Map<String, Object> bodyMap = mapper.readValue(dataStr, new TypeReference<Map<String, Object>>() {});
+                                        if (bodyMap.containsKey("error")) {
+                                            log.warn("Gemini stream chunk error: model={}, err={}", model, bodyMap.get("error"));
+                                        }
                                         responseParser.text(bodyMap).ifPresent(delta -> {
                                             onDelta.accept(delta);
                                             fullText.append(delta);

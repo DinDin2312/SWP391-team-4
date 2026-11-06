@@ -10,6 +10,9 @@ import java.util.List;
 @Builder
 public class InvoiceResponse {
     private Integer invoiceId;
+    private BigDecimal subtotal;
+    private BigDecimal discountAmount;
+    private String voucherCode;
     private BigDecimal totalAmount;
     private String status;
     private LocalDateTime createdAt;

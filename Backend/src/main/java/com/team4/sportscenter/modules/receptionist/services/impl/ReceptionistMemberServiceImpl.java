@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -1613,7 +1614,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
 
         // Get all active classes
         List<Map<String, Object>> activeClassRows = jdbcTemplate.queryForList("""
-            SELECT c.class_id, c.class_name, c.price, c.max_slots, c.subject_id,
+            SELECT c.class_id, c.class_name, c.price, c.max_slots, c.subject_id, sub.subject_name,
                    sub.duration_minutes as subject_duration_minutes,
                    u.user_id as coach_id, u.full_name as coach_name,
                    r.room_id, r.room_name
@@ -1717,6 +1718,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             results.add(com.team4.sportscenter.modules.member.dtos.response.AvailableClassResponse.builder()
                     .classId(classId)
                     .subjectId(subjectId)
+                    .subjectName((String) crow.get("subject_name"))
                     .roomId(roomId)
                     .lastSessionTime(lastSessionTime)
                     .className(className)
@@ -1937,24 +1939,35 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                     .build());
         }
 
-        String cashier = "Lễ tân quầy / Front Desk";
-        try {
-            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.getName() != null && !auth.getName().equalsIgnoreCase("anonymousUser")) {
-                User cashierUser = userRepository.findByEmail(auth.getName()).orElse(null);
-                if (cashierUser != null && cashierUser.getFullName() != null && !cashierUser.getFullName().isBlank()) {
-                    cashier = cashierUser.getFullName();
-                } else if (auth.getName() != null) {
-                    cashier = auth.getName();
+        String method = (payment != null && payment.getPaymentMethod() != null) ? payment.getPaymentMethod().toUpperCase() : "CASH";
+        String transNo = (payment != null && payment.getTransactionNo() != null) ? payment.getTransactionNo().toUpperCase() : "";
+
+        // Phân biệt chính xác Người lập: Nếu hội viên thanh toán online (VNPAY, MOMO, PAYOS, VIETQR, v.v.) thì người lập là Trực tuyến (Hệ thống), không gán tên lễ tân đang xem màn hình
+        boolean isCounterDesk = "CASH".equals(method) || transNo.startsWith("COUNTER") || "TIỀN MẶT".equals(method);
+        String cashier = "Trực tuyến (Hệ thống)";
+        if (isCounterDesk) {
+            cashier = "Lễ tân quầy";
+            try {
+                org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null && auth.getName() != null && !auth.getName().equalsIgnoreCase("anonymousUser")) {
+                    User cashierUser = userRepository.findByEmail(auth.getName()).orElse(null);
+                    if (cashierUser != null && cashierUser.getFullName() != null && !cashierUser.getFullName().isBlank()) {
+                        cashier = cashierUser.getFullName();
+                    } else if (auth.getName() != null) {
+                        cashier = auth.getName();
+                    }
                 }
-            }
-        } catch (Exception ignored) {}
+            } catch (Exception ignored) {}
+        }
 
         return ReceiptResponse.builder()
                 .invoiceId(invoice.getInvoiceId())
                 .invoiceCode(String.format("INV-%06d", invoice.getInvoiceId()))
                 .createdAt(invoice.getCreatedAt())
                 .status(invoice.getStatus())
+                .subtotal(invoice.getSubtotal() != null ? invoice.getSubtotal() : invoice.getTotalAmount())
+                .discountAmount(invoice.getDiscountAmount() != null ? invoice.getDiscountAmount() : BigDecimal.ZERO)
+                .voucherCode(invoice.getVoucherCode())
                 .totalAmount(invoice.getTotalAmount())
                 .userId(user != null ? user.getUserId() : null)
                 .memberName(user != null ? user.getFullName() : null)

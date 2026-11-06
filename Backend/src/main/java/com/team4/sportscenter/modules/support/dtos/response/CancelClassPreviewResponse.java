@@ -19,6 +19,11 @@ public class CancelClassPreviewResponse {
     private LocalDateTime firstSessionTime;
     private boolean hasStarted;
     private boolean canDirectCancelWithCredit; // true if !hasStarted
+    private boolean exceedsEightyPercent;
+    private boolean eligibleForVoucher;
+    private boolean eligibleForCompensation;
     private BigDecimal estimatedCreditAmount;
+    private BigDecimal proratedCredit;
     private String message;
+    private String policyNotice;
 }

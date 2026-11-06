@@ -258,6 +258,7 @@ public class MemberServiceImpl implements MemberService {
             response.add(AvailableClassResponse.builder()
                     .classId(gymClass.getClassId())
                     .subjectId(gymClass.getSubjectId())
+                    .subjectName(gymClass.getSubject() != null ? gymClass.getSubject().getSubjectName() : null)
                     .roomId(gymClass.getRoom().getRoomId())
                     .lastSessionTime(classScheds.stream().map(Schedule::getEndTime).max(LocalDateTime::compareTo)
                             .orElseThrow().minusNanos(1))

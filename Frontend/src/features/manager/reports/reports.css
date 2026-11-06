@@ -388,6 +388,17 @@
   align-items: center;
   gap: 12px;
 }
+.coach-cell-profile .staff-table-avatar,
+.staff-table-avatar {
+  width: 36px;
+  height: 36px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
 .coach-cell-profile strong {
   display: block;
   font-size: 13px;

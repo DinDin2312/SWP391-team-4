@@ -17,7 +17,11 @@ import {
   CheckCircle2,
   XCircle,
   Phone,
-  Clock
+  Clock,
+  Eye,
+  Layers,
+  Globe,
+  Building
 } from 'lucide-react';
 import { receptionistService } from '../services/receptionistService';
 import InvoiceReceiptModal from './InvoiceReceiptModal';
@@ -51,6 +55,7 @@ export default function InvoiceManagementView(props) {
       setCurrentPage(1);
     }
   }, [initialKeyword]);
+
   const [paymentFilter, setPaymentFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('ALL');
@@ -159,10 +164,6 @@ export default function InvoiceManagementView(props) {
     return result;
   }, [invoices, searchKeyword, paymentFilter, statusFilter, dateFilter, sortOrder]);
 
-  const awaitingCount = useMemo(() => {
-    return invoices.filter((i) => i.status === 'AWAITING_CONFIRMATION').length;
-  }, [invoices]);
-
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
@@ -217,16 +218,17 @@ export default function InvoiceManagementView(props) {
   };
 
   return (
-    <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-5 max-w-7xl mx-auto w-full">
-      {/* Front Desk Header - Clean & Focused */}
+    <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-4 max-w-7xl mx-auto w-full">
+      
+      {/* Front Desk Header - Structured & Sharp */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)]">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-md bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--primary)] flex items-center justify-center shrink-0">
               <Receipt className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-black text-[var(--text)] tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-bold text-[var(--text)] tracking-tight">
                 {t('Front Desk Invoices & Receipts')}
               </h2>
               <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-0.5">
@@ -240,54 +242,54 @@ export default function InvoiceManagementView(props) {
           <button
             onClick={fetchInvoices}
             disabled={loading}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors shadow-sm disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>{t('Refresh')}</span>
           </button>
         </div>
       </div>
 
-      {/* Filter and Quick Search Bar */}
-      <div className="p-3.5 sm:p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      {/* Filter and Quick Search Bar - Flat & Square */}
+      <div className="p-3 rounded-md bg-[var(--surface)] border border-[var(--border)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
+        
         {/* Search Input */}
         <div className="relative flex-1">
-          <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
             placeholder={t('Search by invoice code (#INV-...), member name, phone...')}
-            className="w-full pl-9 pr-4 py-2 bg-[var(--bg)] border border-[var(--border)] rounded-lg text-xs sm:text-sm text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition-colors"
+            className="w-full pl-9 pr-3 py-1.5 text-xs sm:text-sm bg-[var(--bg)] border border-[var(--border)] rounded-md text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition-colors"
           />
         </div>
 
-        {/* Filters */}
+        {/* Filter Controls Row */}
         <div className="flex flex-wrap items-center gap-2">
+          
           {/* Status Filter */}
-          <div className="flex items-center gap-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg p-1 text-xs">
-            <Filter className="w-3.5 h-3.5 text-[var(--text-muted)] ml-1" />
+          <div className="flex items-center gap-1 bg-[var(--bg)] border border-[var(--border)] rounded-md px-2 py-1 text-xs">
+            <span className="text-[var(--text-muted)]">{t('Status')}:</span>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-transparent border-none text-[var(--text)] text-xs font-semibold focus:outline-none pr-2 cursor-pointer"
+              className="bg-transparent border-none text-[var(--text)] text-xs font-semibold focus:outline-none cursor-pointer"
             >
-              <option value="ALL">{t('All Statuses')}</option>
-              <option value="AWAITING_CONFIRMATION">
-                {t('Awaiting Confirmation')} {awaitingCount > 0 ? `(${awaitingCount})` : ''}
-              </option>
+              <option value="ALL">{t('All')}</option>
+              <option value="AWAITING_CONFIRMATION">{t('Awaiting Confirmation')}</option>
               <option value="PAID">{t('Paid')}</option>
               <option value="CANCELLED">{t('Cancelled')}</option>
             </select>
           </div>
 
           {/* Payment Method Filter */}
-          <div className="flex items-center gap-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg p-1 text-xs">
-            <Filter className="w-3.5 h-3.5 text-[var(--text-muted)] ml-1" />
+          <div className="flex items-center gap-1 bg-[var(--bg)] border border-[var(--border)] rounded-md px-2 py-1 text-xs">
+            <Filter className="w-3.5 h-3.5 text-[var(--text-muted)]" />
             <select
               value={paymentFilter}
               onChange={(e) => setPaymentFilter(e.target.value)}
-              className="bg-transparent border-none text-[var(--text)] text-xs font-medium focus:outline-none pr-2 cursor-pointer"
+              className="bg-transparent border-none text-[var(--text)] text-xs font-medium focus:outline-none cursor-pointer"
             >
               <option value="ALL">{t('All Methods')}</option>
               <option value="CASH">{t('Cash')}</option>
@@ -296,12 +298,12 @@ export default function InvoiceManagementView(props) {
           </div>
 
           {/* Date Filter */}
-          <div className="flex items-center gap-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg p-1 text-xs">
-            <Calendar className="w-3.5 h-3.5 text-[var(--text-muted)] ml-1" />
+          <div className="flex items-center gap-1 bg-[var(--bg)] border border-[var(--border)] rounded-md px-2 py-1 text-xs">
+            <Calendar className="w-3.5 h-3.5 text-[var(--text-muted)]" />
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="bg-transparent border-none text-[var(--text)] text-xs font-medium focus:outline-none pr-2 cursor-pointer"
+              className="bg-transparent border-none text-[var(--text)] text-xs font-medium focus:outline-none cursor-pointer"
             >
               <option value="ALL">{t('All Time')}</option>
               <option value="TODAY">{t('Today')}</option>
@@ -314,7 +316,7 @@ export default function InvoiceManagementView(props) {
           <button
             onClick={() => setSortOrder(prev => prev === 'DESC' ? 'ASC' : 'DESC')}
             type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[var(--bg)] hover:bg-[var(--surface-hover)] border border-[var(--border)] rounded-lg text-xs font-medium text-[var(--text)] transition-colors"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[var(--bg)] hover:bg-[var(--surface-hover)] border border-[var(--border)] rounded-md text-xs font-medium text-[var(--text)] transition-colors cursor-pointer"
             title={sortOrder === 'DESC' ? t('Newest First') : t('Oldest First')}
           >
             <ArrowUpDown className="w-3.5 h-3.5 text-[var(--text-muted)]" />
@@ -323,20 +325,20 @@ export default function InvoiceManagementView(props) {
         </div>
       </div>
 
-      {/* Main Invoices Table */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm">
+      {/* Main Invoices Table - Square, Sharp & Clean */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-md overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-[var(--text-muted)] text-sm space-y-3">
-            <RotateCw className="w-7 h-7 animate-spin mx-auto text-[var(--primary)]" />
+            <RotateCw className="w-6 h-6 animate-spin mx-auto text-[var(--primary)]" />
             <p className="font-medium">{t('Loading invoice list...')}</p>
           </div>
         ) : filteredInvoices.length === 0 ? (
           <div className="py-16 text-center text-[var(--text-muted)] space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-[var(--surface-hover)] text-[var(--text-muted)] flex items-center justify-center mx-auto opacity-70">
-              <Receipt className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-md bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text-muted)] flex items-center justify-center mx-auto">
+              <Receipt className="w-5 h-5" />
             </div>
             <div className="space-y-1">
-              <h4 className="font-semibold text-sm sm:text-base text-[var(--text)]">
+              <h4 className="font-semibold text-sm text-[var(--text)]">
                 {t('No matching invoices found')}
               </h4>
               <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto">
@@ -347,220 +349,307 @@ export default function InvoiceManagementView(props) {
         ) : (
           <>
             <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-xs sm:text-sm">
-              <thead>
-                <tr className="bg-[var(--surface-hover)] border-b border-[var(--border)] text-[var(--text-muted)] font-semibold">
-                  <th className="py-3 px-2 w-10 text-center">#</th>
-                  <th className="py-3 px-3 whitespace-nowrap">{t('Invoice No.')}</th>
-                  <th className="py-3 px-3 whitespace-nowrap">{t('Date & Time')}</th>
-                  <th className="py-3 px-3">{t('Customer')}</th>
-                  <th className="py-3 px-3">{t('Service')}</th>
-                  <th className="py-3 px-3 whitespace-nowrap">{t('Payment Method')}</th>
-                  <th className="py-3 px-3 text-right whitespace-nowrap">{t('Amount')}</th>
-                  <th className="py-3 px-3 whitespace-nowrap">{t('Cashier')}</th>
-                  <th className="py-3 px-3 text-center whitespace-nowrap">{t('Status')}</th>
-                  <th className="py-3 px-4 text-center whitespace-nowrap min-w-[130px]">{t('Action')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border)] text-[var(--text)]">
-                {paginatedInvoices.map((inv, idx) => {
-                  const method = (inv.paymentMethod || 'CASH').toUpperCase();
-                  const isCash = method === 'CASH';
+              <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                <thead>
+                  <tr className="bg-[var(--surface-hover)] border-b border-[var(--border)] text-[var(--text-muted)] font-semibold">
+                    <th className="py-2.5 px-2 w-10 text-center">#</th>
+                    <th className="py-2.5 px-3 whitespace-nowrap">{t('Invoice No.')}</th>
+                    <th className="py-2.5 px-3 whitespace-nowrap">{t('Date & Time')}</th>
+                    <th className="py-2.5 px-3">{t('Customer')}</th>
+                    <th className="py-2.5 px-3 min-w-[200px]">{t('Service')}</th>
+                    <th className="py-2.5 px-3 whitespace-nowrap">{t('Payment Channel')}</th>
+                    <th className="py-2.5 px-3 text-right whitespace-nowrap">{t('Original Amount')}</th>
+                    <th className="py-2.5 px-3 text-right whitespace-nowrap">{t('Actual Amount')}</th>
+                    <th className="py-2.5 px-3 text-center whitespace-nowrap">{t('Status')}</th>
+                    <th className="py-2.5 px-3 text-center whitespace-nowrap min-w-[130px]">{t('Action')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)] text-[var(--text)]">
+                  {paginatedInvoices.map((inv, idx) => {
+                    const method = (inv.paymentMethod || 'CASH').toUpperCase();
+                    const isCash = method === 'CASH';
+                    
+                    // Determine cashier / channel attribution
+                    const isOnline = inv.cashierName && (
+                      inv.cashierName.toLowerCase().includes('trực tuyến') ||
+                      inv.cashierName.toLowerCase().includes('online') ||
+                      inv.cashierName.toLowerCase().includes('hệ thống')
+                    );
 
-                  return (
-                    <tr
-                      key={inv.invoiceId}
-                      className="hover:bg-[var(--surface-hover)]/70 transition-colors"
-                    >
-                      <td className="py-3 px-2 text-center font-mono text-[var(--text-muted)] text-xs">
-                        {idx + 1}
-                      </td>
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <span className="font-mono font-bold text-[var(--primary)]">
-                          {inv.invoiceCode || `#INV-${inv.invoiceId}`}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-[var(--text-muted)] text-xs whitespace-nowrap">
-                        {formatDateTime(inv.createdAt)}
-                      </td>
-                      <td className="py-3 px-3">
-                        <div className="font-semibold text-[var(--text)]">
-                          {inv.memberName || t('Walk-in Guest')}
-                        </div>
-                        {inv.memberPhone && (
-                          <div className="text-[11px] text-[var(--text-muted)] font-mono flex items-center gap-1 mt-0.5">
-                            <Phone className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                            <a href={`tel:${inv.memberPhone}`} className="hover:underline text-[var(--text)] font-semibold">
-                              {inv.memberPhone}
-                            </a>
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 max-w-[200px]">
-                        <div className="font-medium truncate text-[var(--text)]" title={inv.items?.map(i => i.itemName).join(', ')}>
-                          {inv.items && inv.items.length > 0
-                            ? inv.items.map(it => it.itemName).join(', ')
-                            : t('Sports Service')}
-                        </div>
-                        {inv.items && inv.items[0]?.durationDays && (
-                          <div className="text-[11px] text-[var(--text-muted)]">
-                            {inv.items[0].durationDays} {t('days')}
-                          </div>
-                        )}
-                        {inv.items && inv.items[0]?.totalSessions && (
-                          <div className="text-[11px] text-[var(--text-muted)]">
-                            {inv.items[0].totalSessions} {t('sessions')}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold border border-[var(--border)] ${
-                          isCash
-                            ? 'bg-[var(--success-soft)] text-[var(--success-text)]'
-                            : 'bg-[var(--primary-soft)] text-[var(--primary)]'
-                        }`}>
-                          {isCash ? <Banknote className="w-3.5 h-3.5 shrink-0" /> : <CreditCard className="w-3.5 h-3.5 shrink-0" />}
-                          <span>{isCash ? t('Cash') : t('Bank Transfer')}</span>
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-right whitespace-nowrap">
-                        <span className="font-black text-sm text-[var(--text)]">
-                          {formatMoney(inv.totalAmount)}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-xs text-[var(--text-muted)] whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <User className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
-                          <span className="truncate max-w-[120px]">{inv.cashierName || t('Front Desk')}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 text-center whitespace-nowrap">
-                        {inv.status === 'AWAITING_CONFIRMATION' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 animate-pulse">
-                            <Clock className="w-3 h-3" />
-                            {t('Awaiting Confirmation')}
+                    // Multi-service formatting
+                    const items = inv.items || [];
+                    const hasMultipleItems = items.length > 1;
+                    const firstItem = items[0];
+                    const allItemsTooltip = items.map((it, i) => 
+                      `${i + 1}. ${it.itemName || ''} (${it.durationDays ? `${it.durationDays}d` : (it.totalSessions ? `${it.totalSessions}s` : '-')}) - ${formatMoney(it.amount || it.unitPrice || 0)}`
+                    ).join('\n');
+
+                    // Financial amounts
+                    const originalAmount = (inv.subtotal && Number(inv.subtotal) > 0)
+                      ? Number(inv.subtotal)
+                      : Number(inv.totalAmount || 0);
+                    const finalAmount = Number(inv.totalAmount || 0);
+                    const discount = (inv.discountAmount && Number(inv.discountAmount) > 0)
+                      ? Number(inv.discountAmount)
+                      : Math.max(0, originalAmount - finalAmount);
+
+                    return (
+                      <tr
+                        key={inv.invoiceId}
+                        className="hover:bg-[var(--surface-hover)]/60 transition-colors"
+                      >
+                        {/* 1. Row Index */}
+                        <td className="py-2.5 px-2 text-center font-mono text-[var(--text-muted)] text-xs">
+                          {(validPage - 1) * pageSize + idx + 1}
+                        </td>
+
+                        {/* 2. Invoice Code */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <span className="font-mono font-bold text-[var(--primary)] text-xs sm:text-sm">
+                            {inv.invoiceCode || `INV-${inv.invoiceId}`}
                           </span>
-                        ) : inv.status === 'PAID' ? (
-                          <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--success-soft)] text-[var(--success-text)] border border-[var(--border)]">
-                            {t('PAID')}
-                          </span>
-                        ) : (
-                          <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-600 border border-rose-500/20">
-                            {inv.status || t('CANCELLED')}
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-center whitespace-nowrap min-w-[140px]">
-                        {inv.status === 'AWAITING_CONFIRMATION' ? (
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleApprove(inv.invoiceId)}
-                              disabled={processingId === inv.invoiceId}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-sm disabled:opacity-50 cursor-pointer"
-                              title={t('Approve Payment')}
-                            >
-                              {processingId === inv.invoiceId ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                              <span>{t('Approve')}</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleReject(inv.invoiceId)}
-                              disabled={processingId === inv.invoiceId}
-                              className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/20 transition-all disabled:opacity-50 cursor-pointer"
-                              title={t('Reject / Cancel Order')}
-                            >
-                              <XCircle className="w-3.5 h-3.5" />
-                              <span>{t('Reject')}</span>
-                            </button>
+                        </td>
+
+                        {/* 3. Date & Time */}
+                        <td className="py-2.5 px-3 text-[var(--text-muted)] text-xs whitespace-nowrap">
+                          {formatDateTime(inv.createdAt)}
+                        </td>
+
+                        {/* 4. Customer */}
+                        <td className="py-2.5 px-3">
+                          <div className="font-semibold text-[var(--text)]">
+                            {inv.memberName || t('Walk-in Guest')}
                           </div>
-                        ) : (
-                          <button
-                            onClick={() => handleOpenReceipt(inv)}
-                            type="button"
-                            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[var(--surface-hover)] text-[var(--primary)] border border-[var(--border)] hover:bg-[var(--primary-soft)] transition-colors shadow-sm whitespace-nowrap shrink-0 cursor-pointer"
-                            title={t('Print Receipt')}
-                          >
-                            <Printer className="w-3.5 h-3.5 shrink-0" />
-                            <span className="whitespace-nowrap">{t('Print Receipt')}</span>
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                          {inv.memberPhone && (
+                            <div className="text-[11px] text-[var(--text-muted)] font-mono flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <a href={`tel:${inv.memberPhone}`} className="hover:underline">
+                                {inv.memberPhone}
+                              </a>
+                            </div>
+                          )}
+                        </td>
 
-          {/* Pagination Controls */}
-          {filteredInvoices.length > 0 && (
-            <div className="p-4 sm:p-5 border-t border-[var(--border)] bg-[var(--surface-hover)]/30 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-xs text-[var(--text-muted)] flex items-center gap-1.5 order-2 sm:order-1">
-                <span>{t("Showing")}</span>
-                <strong className="text-[var(--text)] font-bold">{startRecord}–{endRecord}</strong>
-                <span>{t("of")}</span>
-                <strong className="text-[var(--text)] font-bold">{filteredInvoices.length}</strong>
-                <span>{t("invoices")}</span>
-              </div>
+                        {/* 5. Service (Single vs Multiple) */}
+                        <td className="py-2.5 px-3 max-w-[240px]">
+                          {hasMultipleItems ? (
+                            <div title={allItemsTooltip}>
+                              <div className="font-medium text-[var(--text)] truncate">
+                                {firstItem?.itemName || t('Sports Service')}
+                              </div>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-sm text-[10px] font-semibold bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text-muted)]">
+                                  <Layers className="w-3 h-3" />
+                                  <span>+{items.length - 1} {t('more services')}</span>
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="font-medium text-[var(--text)] truncate">
+                                {firstItem?.itemName || t('Sports Service')}
+                              </div>
+                              {firstItem?.durationDays && (
+                                <div className="text-[11px] text-[var(--text-muted)]">
+                                  {firstItem.durationDays} {t('days')}
+                                </div>
+                              )}
+                              {firstItem?.totalSessions && (
+                                <div className="text-[11px] text-[var(--text-muted)]">
+                                  {firstItem.totalSessions} {t('sessions')}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </td>
 
-              {totalPages > 1 && (
-                <div className="flex items-center gap-1.5 order-1 sm:order-2 select-none">
-                  {/* Previous button */}
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={validPage === 1}
-                    className="px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] disabled:opacity-30 disabled:pointer-events-none text-xs text-[var(--text)] transition-all flex items-center gap-1 cursor-pointer"
-                    title={t("Previous")}
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">{t("Previous")}</span>
-                  </button>
+                        {/* 6. Payment Channel & Method */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-semibold border ${
+                              isCash
+                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20'
+                                : 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20'
+                            }`}>
+                              {isCash ? <Banknote className="w-3.5 h-3.5" /> : <CreditCard className="w-3.5 h-3.5" />}
+                              <span>{isCash ? t('Cash') : t('Bank Transfer')}</span>
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1 mt-0.5">
+                            {isOnline ? (
+                              <>
+                                <Globe className="w-3 h-3 text-sky-500 shrink-0" />
+                                <span>{t('Online Checkout')}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Building className="w-3 h-3 text-amber-500 shrink-0" />
+                                <span>{inv.cashierName || t('Front Desk')}</span>
+                              </>
+                            )}
+                          </div>
+                        </td>
 
-                  {/* Page numbers (1, 2, 3...) */}
-                  <div className="flex items-center gap-1">
-                    {getPaginationRange(validPage, totalPages).map((p, idx) => {
-                      if (p === '...') {
-                        return (
-                          <span key={`dots-${idx}`} className="px-2 py-1 text-xs text-[var(--text-muted)]">
-                            ...
-                          </span>
-                        );
-                      }
-                      const isCurrent = p === validPage;
-                      return (
-                        <button
-                          key={`page-${p}`}
-                          type="button"
-                          onClick={() => setCurrentPage(p)}
-                          className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            isCurrent
-                              ? "bg-blue-600 text-white shadow-xs shadow-blue-500/30 ring-1 ring-blue-500"
-                              : "border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
-                          }`}
-                        >
-                          {p}
-                        </button>
-                      );
-                    })}
-                  </div>
+                        {/* 7. Original Amount (Subtotal) */}
+                        <td className="py-2.5 px-3 text-right font-mono text-xs text-[var(--text-muted)] whitespace-nowrap">
+                          {formatMoney(originalAmount)}
+                        </td>
 
-                  {/* Next button */}
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={validPage === totalPages}
-                    className="px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] disabled:opacity-30 disabled:pointer-events-none text-xs text-[var(--text)] transition-all flex items-center gap-1 cursor-pointer"
-                    title={t("Next")}
-                  >
-                    <span className="hidden sm:inline">{t("Next")}</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
+                        {/* 8. Actual Payment (Amount) */}
+                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                          <div className="font-mono font-bold text-xs sm:text-sm text-[var(--text)]">
+                            {formatMoney(finalAmount)}
+                          </div>
+                          {discount > 0 && (
+                            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold font-mono">
+                              (-{formatMoney(discount)})
+                            </div>
+                          )}
+                        </td>
+
+                        {/* 9. Status Badge - Square */}
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                          {inv.status === 'AWAITING_CONFIRMATION' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                              <Clock className="w-3 h-3" />
+                              {t('Awaiting Confirmation')}
+                            </span>
+                          ) : inv.status === 'PAID' ? (
+                            <span className="inline-block px-2 py-0.5 rounded-sm text-[11px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                              {t('PAID')}
+                            </span>
+                          ) : (
+                            <span className="inline-block px-2 py-0.5 rounded-sm text-[11px] font-semibold bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                              {inv.status || t('CANCELLED')}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* 10. Action Buttons - Progressive Disclosure */}
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                          {inv.status === 'AWAITING_CONFIRMATION' ? (
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleApprove(inv.invoiceId)}
+                                disabled={processingId === inv.invoiceId}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md bg-emerald-600 hover:bg-emerald-700 text-white transition-colors disabled:opacity-50 cursor-pointer"
+                                title={t('Approve Payment')}
+                              >
+                                {processingId === inv.invoiceId ? <RotateCw className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                                <span>{t('Approve')}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleReject(inv.invoiceId)}
+                                disabled={processingId === inv.invoiceId}
+                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/20 transition-colors disabled:opacity-50 cursor-pointer"
+                                title={t('Reject / Cancel Order')}
+                              >
+                                <XCircle className="w-3 h-3" />
+                                <span>{t('Reject')}</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center gap-1.5">
+                              {/* Primary: View Details (Modal) */}
+                              <button
+                                onClick={() => handleOpenReceipt(inv)}
+                                type="button"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md bg-[var(--surface-hover)] hover:bg-[var(--border)] text-[var(--text)] border border-[var(--border)] transition-colors cursor-pointer"
+                                title={t('View Details')}
+                              >
+                                <Eye className="w-3.5 h-3.5 text-[var(--primary)]" />
+                                <span>{t('View Details')}</span>
+                              </button>
+
+                              {/* Secondary: Print Receipt */}
+                              <button
+                                onClick={() => handleOpenReceipt(inv)}
+                                type="button"
+                                className="p-1 text-xs font-medium rounded-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-transparent hover:border-[var(--border)] transition-colors cursor-pointer"
+                                title={t('Print Receipt')}
+                              >
+                                <Printer className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          )}
+
+            {/* Pagination Controls - Square & Minimal */}
+            {filteredInvoices.length > 0 && (
+              <div className="p-3 border-t border-[var(--border)] bg-[var(--surface-hover)]/40 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs text-[var(--text-muted)] flex items-center gap-1 order-2 sm:order-1">
+                  <span>{t("Showing")}</span>
+                  <strong className="text-[var(--text)] font-semibold">{startRecord}–{endRecord}</strong>
+                  <span>{t("of")}</span>
+                  <strong className="text-[var(--text)] font-semibold">{filteredInvoices.length}</strong>
+                  <span>{t("invoices")}</span>
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1 order-1 sm:order-2 select-none">
+                    {/* Previous button */}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={validPage === 1}
+                      className="px-2 py-1 rounded-md border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] disabled:opacity-30 disabled:pointer-events-none text-xs text-[var(--text)] transition-colors flex items-center gap-1 cursor-pointer"
+                      title={t("Previous")}
+                    >
+                      <ChevronLeft className="w-3 h-3" />
+                      <span className="hidden sm:inline">{t("Previous")}</span>
+                    </button>
+
+                    {/* Page numbers */}
+                    <div className="flex items-center gap-1">
+                      {getPaginationRange(validPage, totalPages).map((p, idx) => {
+                        if (p === '...') {
+                          return (
+                            <span key={`dots-${idx}`} className="px-1.5 py-0.5 text-xs text-[var(--text-muted)]">
+                              ...
+                            </span>
+                          );
+                        }
+                        const isCurrent = p === validPage;
+                        return (
+                          <button
+                            key={`page-${p}`}
+                            type="button"
+                            onClick={() => setCurrentPage(p)}
+                            className={`min-w-[28px] h-7 px-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                              isCurrent
+                                ? "bg-[var(--primary)] text-white"
+                                : "border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Next button */}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={validPage === totalPages}
+                      className="px-2 py-1 rounded-md border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] disabled:opacity-30 disabled:pointer-events-none text-xs text-[var(--text)] transition-colors flex items-center gap-1 cursor-pointer"
+                      title={t("Next")}
+                    >
+                      <span className="hidden sm:inline">{t("Next")}</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

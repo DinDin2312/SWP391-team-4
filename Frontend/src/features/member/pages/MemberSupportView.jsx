@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   CreditCard, Ticket, Clock, CheckCircle2,
   AlertTriangle, Plus, Send, X, Copy, Check, MessageSquare,
-  ShieldCheck, AlertCircle, ChevronDown, ChevronUp, RefreshCw,
+  ShieldCheck, ShieldAlert, AlertCircle, ChevronDown, ChevronUp, RefreshCw,
   Sparkles, Wrench, UserCheck, Calendar, RotateCcw,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
@@ -325,13 +325,14 @@ const MemberSupportView = () => {
         finalPriority = 'NORMAL';
       }
     } else if (ticketForm.category === 'COACH_FEEDBACK') {
-      if (!ticketForm.title.trim() || !ticketForm.content.trim()) {
-        showToast(t('Please fill in title and description.'), 'error');
+      if (!ticketForm.content.trim()) {
+        showToast(t('Please provide your feedback description.'), 'error');
         return;
       }
       const selectedClass = classes.find(c => String(c.classId) === String(ticketForm.classId));
-      finalTitle = ticketForm.title.trim();
-      finalContent = `[${t('Feedback Aspect')}: ${getCoachAspectLabel(ticketForm.coachAspect)}${selectedClass ? ` | ${t('Associated Class')}: ${selectedClass.className} (${selectedClass.coachName || 'Coach'})` : ''}] ${ticketForm.content.trim()}`;
+      const aspectLabel = getCoachAspectLabel(ticketForm.coachAspect);
+      finalTitle = ticketForm.title.trim() || `${t('Coach Feedback')}: ${aspectLabel}`;
+      finalContent = `[${t('Feedback Aspect')}: ${aspectLabel}${selectedClass ? ` | ${t('Associated Class')}: ${selectedClass.className} (${selectedClass.coachName || 'Coach'})` : ''}] ${ticketForm.content.trim()}`;
       if (ticketForm.coachAspect === 'ATTITUDE') {
         finalPriority = 'HIGH';
       } else {
@@ -428,13 +429,16 @@ const MemberSupportView = () => {
     if (cat === 'SCHEDULE_SUPPORT') {
       return t('Please describe your schedule support request.');
     }
+    if (cat === 'COACH_FEEDBACK') {
+      return t('Please share your detailed feedback regarding the instructor (teaching method, attitude, punctualness, or suggestions for improvement)...');
+    }
     return t('Please provide as much detail as possible so Reception can assist you accurately...');
   };
 
   const getSubmitButtonLabel = (cat) => {
     switch (cat) {
       case 'COACH_FEEDBACK':
-        return t('Submit Feedback to Reception');
+        return t('Submit Feedback directly to Management');
       case 'FACILITY_ISSUE':
         return t('Submit Incident Report');
       case 'SCHEDULE_SUPPORT':
@@ -1172,6 +1176,13 @@ const MemberSupportView = () => {
                       {/* Sub-form: COACH_FEEDBACK */}
                       {ticketForm.category === 'COACH_FEEDBACK' && (
                         <>
+                          <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-xs text-purple-900 dark:text-purple-200 flex items-start gap-2.5">
+                            <ShieldAlert className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+                            <div className="leading-relaxed font-medium">
+                              <strong className="font-bold block text-purple-950 dark:text-purple-100">{t('Direct Routing to Center Management')}</strong>
+                              {t('Coach feedback and complaints are sent directly to Center Management for objective assessment and confidential handling.')}
+                            </div>
+                          </div>
                           {classes.length > 0 && (
                             <div className="space-y-1.5">
                               <label htmlFor="coach-class-select" className="block text-xs font-bold text-[var(--text)]">
@@ -1394,20 +1405,22 @@ const MemberSupportView = () => {
                       )}
 
                       {/* Shared Title Field */}
-                      <div className="space-y-1.5">
-                        <label htmlFor="ticket-title-input" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                          {t('Title / Subject')} {ticketForm.category !== 'SCHEDULE_SUPPORT' && <span className="text-rose-500">*</span>}
-                        </label>
-                        <input
-                          id="ticket-title-input"
-                          type="text"
-                          value={ticketForm.title}
-                          onChange={(e) => setTicketForm({ ...ticketForm, title: e.target.value })}
-                          placeholder={getTitlePlaceholder(ticketForm.category)}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.08] dark:border-white/[0.1] text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-[#0071E3]/15"
-                          required={ticketForm.category !== 'SCHEDULE_SUPPORT'}
-                        />
-                      </div>
+                      {ticketForm.category !== 'COACH_FEEDBACK' && (
+                        <div className="space-y-1.5">
+                          <label htmlFor="ticket-title-input" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            {t('Title / Subject')} {ticketForm.category !== 'SCHEDULE_SUPPORT' && <span className="text-rose-500">*</span>}
+                          </label>
+                          <input
+                            id="ticket-title-input"
+                            type="text"
+                            value={ticketForm.title}
+                            onChange={(e) => setTicketForm({ ...ticketForm, title: e.target.value })}
+                            placeholder={getTitlePlaceholder(ticketForm.category)}
+                            className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.08] dark:border-white/[0.1] text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-[#0071E3]/15"
+                            required={ticketForm.category !== 'SCHEDULE_SUPPORT'}
+                          />
+                        </div>
+                      )}
 
                       {/* Shared Detailed Content Field */}
                       <div className="space-y-1.5">

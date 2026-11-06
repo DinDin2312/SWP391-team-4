@@ -691,7 +691,7 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
                           ? 'bg-[var(--primary)] text-white rounded-2xl rounded-tr-sm whitespace-pre-wrap'
                           : 'bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--border)] rounded-2xl rounded-tl-sm'
                       }`}>
-                        {msg.sender === 'user' ? msg.text : renderChatMarkdown(msg.text)}
+                        {msg.sender === 'user' ? msg.text : renderChatMarkdown(msg.text, { onNavigate: (url) => navigate(url) })}
                         {msg.isStreaming && <span className="inline-block w-1.5 h-3.5 ml-1 bg-blue-500 animate-pulse align-middle" />}
                       </div>
 

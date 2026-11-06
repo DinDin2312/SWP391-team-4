@@ -3,7 +3,7 @@ import {
   X, AlertTriangle, CheckCircle2, ShieldAlert,
   Send, User, Phone, Mail, BookOpen, Clock, Calendar,
   CreditCard, ArrowUpRight, DollarSign, RotateCcw, Dumbbell, Sparkles,
-  Wrench, UserCheck
+  Wrench, UserCheck, AlertCircle
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
@@ -11,7 +11,9 @@ import {
   getPriorityBadge as renderPriorityBadge,
   getDisplayTitle,
   formatRespondedAt,
-  getStatusBadge
+  getStatusBadge,
+  cleanSupportTitle,
+  parseCoachFeedback
 } from '../../../utils/supportDisplayUtils';
 import receptionistService from '../services/receptionistService';
 
@@ -55,7 +57,8 @@ const ResolutionActionCard = ({
   desc,
   color = 'blue',
   isMemberChoice = false,
-  memberChoiceLabel
+  memberChoiceLabel,
+  disabled = false
 }) => {
   const isSelected = selectedType === actionType;
   const theme = COLOR_THEMES[color] || COLOR_THEMES.blue;
@@ -63,8 +66,10 @@ const ResolutionActionCard = ({
   return (
     <button
       type="button"
-      onClick={() => onSelect(actionType)}
+      disabled={disabled}
+      onClick={() => !disabled && onSelect(actionType)}
       className={`p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between ${
+        disabled ? "opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-900/40 border-slate-300 dark:border-slate-800" : 
         isSelected ? theme.selected : theme.unselected
       }`}
     >
@@ -103,39 +108,39 @@ const ResolutionActionCard = ({
 
 const NON_CANCELLATION_RESOLUTIONS = {
   COACH_FEEDBACK: {
-    primary: { actionType: 'ACKNOWLEDGE_AND_TRAIN', icon: UserCheck, titleKey: 'Ghi nhận & Làm việc với HLV', descKey: 'Nhắc nhở HLV, làm việc cùng Trưởng bộ môn để nâng cao chất lượng bài giảng.' },
-    secondary: { actionType: 'TRANSFER_CLASS_SUGGESTION', icon: BookOpen, titleKey: 'Đề xuất đổi lớp / HLV khác', descKey: 'Tư vấn hỗ trợ học viên chuyển sang lớp của HLV khác phù hợp với phong cách học.' },
-    escalate: { titleKey: 'Chuyển Quản lý Chuyên môn', descKey: 'Phản ánh nghiêm trọng về vi phạm kỷ luật hoặc thái độ cần cấp quản lý xử lý.' },
-    reject: { titleKey: 'Đóng phản ánh (Không có cơ sở)', descKey: 'Sau khi kiểm tra camera/lịch sử thấy HLV thực hiện đúng giáo án chuẩn.' }
+    primary: { actionType: 'ACKNOWLEDGE_AND_TRAIN', icon: UserCheck, titleKey: 'Acknowledge & Work with Coach', descKey: 'Remind coach and review with Department Head to enhance teaching quality.' },
+    secondary: { actionType: 'TRANSFER_CLASS_SUGGESTION', icon: BookOpen, titleKey: 'Suggest Class / Coach Transfer', descKey: 'Consult and support member to transfer to a more suitable class or coach.' },
+    escalate: { titleKey: 'Escalate to Discipline Management', descKey: 'Serious conduct or policy violation requiring management action.' },
+    reject: { titleKey: 'Dismiss Feedback (Unsubstantiated)', descKey: 'After reviewing history/cameras, coach followed all standard protocols.' }
   },
   FACILITY_ISSUE: {
-    primary: { actionType: 'ASSIGN_MAINTENANCE', icon: Wrench, titleKey: 'Báo Kỹ thuật / Bảo trì ngay', descKey: 'Chuyển ngay lệnh sửa chữa tới đội bảo trì, gắn biển kiểm tra thiết bị.' },
-    secondary: { actionType: 'SCHEDULED_FIX', icon: Clock, titleKey: 'Thông báo lịch sửa chữa', descKey: 'Báo lịch máy đang sửa chữa, dự kiến hoàn thành đưa vào sử dụng trong 24-48h.' },
-    escalate: { titleKey: 'Chuyển Quản lý CSVC (Thay mới)', descKey: 'Thiết bị hỏng nặng không thể sửa, cần Quản lý duyệt mua mới thay thế.' },
-    reject: { titleKey: 'Đã kiểm tra (Máy hoạt động tốt)', descKey: 'Kỹ thuật đã test máy bình thường, lễ tân sẽ hướng dẫn hội viên thao tác đúng.' }
+    primary: { actionType: 'ASSIGN_MAINTENANCE', icon: Wrench, titleKey: 'Dispatch Maintenance Immediately', descKey: 'Issue repair order to maintenance team and post equipment inspection notices.' },
+    secondary: { actionType: 'SCHEDULED_FIX', icon: Clock, titleKey: 'Announce Repair Schedule', descKey: 'Equipment under maintenance, expected to be back in service within 24-48 hours.' },
+    escalate: { titleKey: 'Escalate to Facility Management (Replacement)', descKey: 'Severely damaged equipment requiring manager approval for full replacement.' },
+    reject: { titleKey: 'Inspection Complete (Normal Operation)', descKey: 'Technicians verified equipment works properly; staff will guide member on usage.' }
   },
   SCHEDULE_SUPPORT: {
-    primary: { actionType: 'APPROVE_SCHEDULE_CHANGE', icon: Calendar, titleKey: 'Hỗ trợ đổi buổi / Xếp lịch bù', descKey: 'Lễ tân đã cập nhật lịch học mới cho học viên trên hệ thống quản lý.' },
-    secondary: { actionType: 'GUIDE_BOOKING', icon: BookOpen, titleKey: 'Hướng dẫn tự đổi lịch trên App', descKey: 'Hướng dẫn học viên chủ động đổi lịch trên app trước 24h quy định.' },
-    escalate: { titleKey: 'Chuyển Quản lý (Đặc cách xếp ca)', descKey: 'Yêu cầu xếp ca ngoài lịch học chuẩn cần cấp quản lý phê duyệt.' },
-    reject: { titleKey: 'Từ chối đổi lịch (Hết chỗ / Quá hạn)', descKey: 'Ca học mong muốn đã đầy sĩ số hoặc báo trễ không thỏa mãn điều kiện.' }
+    primary: { actionType: 'APPROVE_SCHEDULE_CHANGE', icon: Calendar, titleKey: 'Support Session Swap / Makeup', descKey: 'Receptionist has updated new class schedule for member on management system.' },
+    secondary: { actionType: 'GUIDE_BOOKING', icon: BookOpen, titleKey: 'Guide App Self-Reschedule', descKey: 'Instruct member on how to reschedule sessions via app 24h in advance.' },
+    escalate: { titleKey: 'Escalate to Manager (Special Slot Allocation)', descKey: 'Out-of-policy session schedule requests requiring management approval.' },
+    reject: { titleKey: 'Decline Reschedule (Full / Expired)', descKey: 'Desired session is fully booked or notification was submitted after cutoff deadline.' }
   },
   COMPLAINT: {
-    primary: { actionType: 'RESOLVE_COMPLAINT', icon: CheckCircle2, titleKey: 'Tiếp nhận xin lỗi & Khắc phục sự cố', descKey: 'Xin lỗi học viên, ghi nhận thiếu sót và đưa ra biện pháp khắc phục quy trình.' },
-    secondary: { actionType: 'CONTACT_DIRECTLY', icon: Phone, titleKey: 'Đã liên hệ trực tiếp hòa giải', descKey: 'Lễ tân/Trưởng ca đã gặp trực tiếp hoặc gọi điện trao đổi thỏa đáng với hội viên.' },
-    escalate: { titleKey: 'Chuyển Quản lý Trung tâm', descKey: 'Khiếu nại phức tạp cần cấp Quản lý trung tâm trực tiếp vào cuộc.' },
-    reject: { titleKey: 'Bác bỏ khiếu nại (Không vi phạm)', descKey: 'Xác minh quy trình đúng quy chế, không có sai sót từ phía trung tâm.' }
+    primary: { actionType: 'RESOLVE_COMPLAINT', icon: CheckCircle2, titleKey: 'Apologize & Resolve Issue', descKey: 'Apologize to member, record shortcomings, and implement corrective workflows.' },
+    secondary: { actionType: 'CONTACT_DIRECTLY', icon: Phone, titleKey: 'Contact Directly to Reconcile', descKey: 'Duty manager/receptionist has met or called member directly to resolve satisfactorily.' },
+    escalate: { titleKey: 'Escalate to Center Management', descKey: 'Complex dispute requiring center manager direct intervention.' },
+    reject: { titleKey: 'Dismiss Complaint (No Violation)', descKey: 'Investigation confirmed procedures were followed with no misconduct by center.' }
   },
   GENERAL_INQUIRY: {
-    primary: { actionType: 'ANSWER_INQUIRY', icon: CheckCircle2, titleKey: 'Giải đáp & Hướng dẫn hội viên', descKey: 'Phản hồi câu trả lời giải đáp đầy đủ thông tin hội viên cần hỗ trợ.' },
-    secondary: { actionType: 'CONTACT_DIRECTLY', icon: Phone, titleKey: 'Đã tư vấn trực tiếp / Qua điện thoại', descKey: 'Lễ tân đã liên hệ trực tiếp hỗ trợ chi tiết tại quầy hoặc qua hotline.' },
-    escalate: { titleKey: 'Chuyển Quản lý giải đáp', descKey: 'Câu hỏi chính sách vượt quá thẩm quyền của nhân viên lễ tân.' },
-    reject: { titleKey: 'Đóng yêu cầu hỗ trợ', descKey: 'Nội dung đã được xử lý hoặc đóng theo yêu cầu hội viên.' }
+    primary: { actionType: 'ANSWER_INQUIRY', icon: CheckCircle2, titleKey: 'Answer & Guide Member', descKey: 'Provide complete answers and instructions addressing member inquiry.' },
+    secondary: { actionType: 'CONTACT_DIRECTLY', icon: Phone, titleKey: 'Consult Directly / via Phone', descKey: 'Receptionist has contacted member directly at the front desk or via hotline.' },
+    escalate: { titleKey: 'Escalate to Manager for Answer', descKey: 'Policy questions exceeding front desk receptionist authority.' },
+    reject: { titleKey: 'Close Support Request', descKey: 'Inquiry has been addressed or closed per member request.' }
   }
 };
 
 const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSuccess }) => {
-  useLanguage();
+  const currentLang = useLanguage();
 
   const [resolutionType, setResolutionType] = useState('ISSUE_CREDIT'); // 'ISSUE_CREDIT' | 'GYM_PASS' | 'ESCALATE' | 'REJECT'
   const [creditAmount, setCreditAmount] = useState(0);
@@ -154,60 +159,118 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
     (request?.title && /cancellation|hủy|bảo lưu|retention/i.test(request.title))
   );
 
+  const exceedsEightyPercent = Boolean(
+    request?.totalSessions > 0 && ((request?.attendedSessions || 0) / request.totalSessions > 0.8)
+  );
+
   const getNoteTemplate = (type, amt = creditAmount) => {
-    const rolePrefix = isManager ? 'Quản lý trung tâm' : 'Lễ tân';
-    const clsName = request?.className ? ` lớp "${request.className}"` : '';
+    const rolePrefix = isManager ? (currentLang === 'vi' ? 'Quản lý trung tâm' : 'Center Management') : (currentLang === 'vi' ? 'Lễ tân' : 'Reception');
+    const clsNameVi = request?.className ? ` lớp "${request.className}"` : '';
+    const clsNameEn = request?.className ? ` for class "${request.className}"` : '';
     const rawAmt = Number(amt ?? 0);
     const suggested = Math.round(Number(request?.calculatedCreditAmount ?? request?.proratedCredit ?? request?.classPrice ?? 0) / 1000) * 1000;
     const effectiveAmt = rawAmt > 0 ? rawAmt : suggested;
     const roundedAmt = Math.round(Number(effectiveAmt || 0) / 1000) * 1000;
     const formattedAmt = formatMoney(roundedAmt);
 
-    switch (type) {
-      // Cancellation actions
-      case 'ISSUE_CREDIT':
-        return `${rolePrefix} đã phê duyệt bảo lưu${clsName}. Mã tín dụng 60 ngày trị giá ${formattedAmt} đã được cấp vào ví tài khoản học viên.`;
-      case 'GYM_PASS':
-        return `${rolePrefix} đã phê duyệt chuyển đổi${clsName} sang Thẻ tập Gym 01 tháng miễn phí. Mã voucher kích hoạt trị giá ${formattedAmt} đã được cấp vào ví tài khoản học viên.`;
-      case 'CASH_REFUND':
-        return `Quản lý trung tâm đã phê duyệt hoàn tiền học phí${clsName}. Số tiền ${formattedAmt} sẽ được hoàn trả trực tiếp tại quầy hoặc chuyển khoản.`;
+    if (currentLang === 'vi') {
+      switch (type) {
+        // Cancellation actions
+        case 'ISSUE_CREDIT':
+          return `${rolePrefix} đã phê duyệt bảo lưu${clsNameVi}. Mã tín dụng 60 ngày trị giá ${formattedAmt} đã được cấp vào ví tài khoản học viên.`;
+        case 'GYM_PASS':
+          return `${rolePrefix} đã phê duyệt chuyển đổi${clsNameVi} sang Thẻ tập Gym 01 tháng miễn phí. Mã voucher kích hoạt trị giá ${formattedAmt} đã được cấp vào ví tài khoản học viên.`;
+        case 'CASH_REFUND':
+          return `Quản lý trung tâm đã phê duyệt hoàn tiền học phí${clsNameVi}. Số tiền ${formattedAmt} sẽ được hoàn trả trực tiếp tại quầy hoặc chuyển khoản.`;
 
-      // Coach feedback actions
-      case 'ACKNOWLEDGE_AND_TRAIN':
-        return `${rolePrefix} đã tiếp nhận phản ánh của học viên về HLV phụ trách${clsName}. Trung tâm đã làm việc với Trưởng bộ môn và nhắc nhở HLV để chấn chỉnh, nâng cao chất lượng giảng dạy.`;
-      case 'TRANSFER_CLASS_SUGGESTION':
-        return `${rolePrefix} đã ghi nhận phản hồi và tư vấn hỗ trợ học viên chuyển sang lớp của HLV khác phù hợp hơn với nhu cầu tập luyện.`;
+        // Coach feedback actions
+        case 'ACKNOWLEDGE_AND_TRAIN':
+          return `${rolePrefix} đã tiếp nhận phản ánh của học viên về HLV phụ trách${clsNameVi}. Trung tâm đã làm việc với Trưởng bộ môn và nhắc nhở HLV để chấn chỉnh, nâng cao chất lượng giảng dạy.`;
+        case 'TRANSFER_CLASS_SUGGESTION':
+          return `${rolePrefix} đã ghi nhận phản hồi và tư vấn hỗ trợ học viên chuyển sang lớp của HLV khác phù hợp hơn với nhu cầu tập luyện.`;
 
-      // Facility actions
-      case 'ASSIGN_MAINTENANCE':
-        return `${rolePrefix} đã tiếp nhận thông tin và chuyển ngay lệnh kiểm tra, bảo trì thiết bị tới bộ phận kỹ thuật để khắc phục sớm nhất.`;
-      case 'SCHEDULED_FIX':
-        return `Thiết bị đã được gắn biển bảo trì và dự kiến sẽ hoàn tất kiểm tra, sửa chữa đưa vào sử dụng trong vòng 24h - 48h tới.`;
+        // Facility actions
+        case 'ASSIGN_MAINTENANCE':
+          return `${rolePrefix} đã tiếp nhận thông tin và chuyển ngay lệnh kiểm tra, bảo trì thiết bị tới bộ phận kỹ thuật để khắc phục sớm nhất.`;
+        case 'SCHEDULED_FIX':
+          return 'Thiết bị đã được gắn biển bảo trì và dự kiến sẽ hoàn tất kiểm tra, sửa chữa đưa vào sử dụng trong vòng 24h - 48h tới.';
 
-      // Schedule support actions
-      case 'APPROVE_SCHEDULE_CHANGE':
-        return `${rolePrefix} đã hỗ trợ cập nhật lịch học mới cho học viên trên hệ thống. Chúc bạn có buổi tập hiệu quả!`;
-      case 'GUIDE_BOOKING':
-        return `${rolePrefix} đã gửi hướng dẫn qua ứng dụng để học viên có thể chủ động chuyển đổi lịch tập theo thời gian biểu mong muốn.`;
+        // Schedule support actions
+        case 'APPROVE_SCHEDULE_CHANGE':
+          return `${rolePrefix} đã hỗ trợ cập nhật lịch học mới cho học viên trên hệ thống. Chúc bạn có buổi tập hiệu quả!`;
+        case 'GUIDE_BOOKING':
+          return `${rolePrefix} đã gửi hướng dẫn qua ứng dụng để học viên có thể chủ động chuyển đổi lịch tập theo thời gian biểu mong muốn.`;
 
-      // Complaint actions
-      case 'RESOLVE_COMPLAINT':
-        return `Trung tâm chân thành xin lỗi học viên về trải nghiệm chưa tốt. ${rolePrefix} đã làm việc với các bộ phận liên quan để khắc phục ngay vấn đề này.`;
+        // Complaint actions
+        case 'RESOLVE_COMPLAINT':
+          return `Trung tâm chân thành xin lỗi học viên về trải nghiệm chưa tốt. ${rolePrefix} đã làm việc với các bộ phận liên quan để khắc phục ngay vấn đề này.`;
 
-      // Inquiry actions
-      case 'ANSWER_INQUIRY':
-        return `${rolePrefix} đã giải đáp chi tiết thắc mắc của bạn. Nếu cần hỗ trợ thêm, bạn vui lòng liên hệ trực tiếp quầy lễ tân.`;
-      case 'CONTACT_DIRECTLY':
-        return `${rolePrefix} đã liên hệ trực tiếp với học viên để giải đáp và hướng dẫn chi tiết mọi nội dung thắc mắc.`;
+        // Inquiry actions
+        case 'ANSWER_INQUIRY':
+          return `${rolePrefix} đã giải đáp chi tiết thắc mắc của bạn. Nếu cần hỗ trợ thêm, bạn vui lòng liên hệ trực tiếp quầy lễ tân.`;
+        case 'CONTACT_DIRECTLY':
+          return `${rolePrefix} đã liên hệ trực tiếp với học viên để giải đáp và hướng dẫn chi tiết mọi nội dung thắc mắc.`;
 
-      // Common actions
-      case 'ESCALATE':
-        return `${rolePrefix} đã tiếp nhận yêu cầu của học viên và chuyển tiếp đến Quản lý trung tâm xem xét, giải quyết.`;
-      case 'REJECT':
-        return `${rolePrefix} rất tiếc chưa thể phê duyệt yêu cầu của học viên do không thỏa điều kiện theo quy định của trung tâm.`;
-      case 'APPROVE_GENERAL':
-      default:
-        return `${rolePrefix} đã tiếp nhận và xử lý yêu cầu của bạn.`;
+        // Common actions
+        case 'ESCALATE':
+          return `${rolePrefix} đã tiếp nhận yêu cầu của học viên và chuyển tiếp đến Quản lý trung tâm xem xét, giải quyết.`;
+        case 'REJECT':
+          return exceedsEightyPercent
+            ? `${rolePrefix} từ chối yêu cầu do khóa học đã diễn ra quá 80% số buổi theo quy định của trung tâm.`
+            : `${rolePrefix} rất tiếc chưa thể phê duyệt yêu cầu của học viên do không thỏa điều kiện theo quy định của trung tâm.`;
+        case 'APPROVE_GENERAL':
+        default:
+          return `${rolePrefix} đã tiếp nhận và xử lý yêu cầu của bạn.`;
+      }
+    } else {
+      switch (type) {
+        // Cancellation actions
+        case 'ISSUE_CREDIT':
+          return `${rolePrefix} approved tuition retention${clsNameEn}. A 60-day credit voucher worth ${formattedAmt} has been issued to member wallet.`;
+        case 'GYM_PASS':
+          return `${rolePrefix} approved conversion${clsNameEn} to a free 1-month Gym Pass. Activation voucher worth ${formattedAmt} has been issued to member wallet.`;
+        case 'CASH_REFUND':
+          return `Center Management approved tuition fee refund${clsNameEn}. The amount of ${formattedAmt} will be refunded directly at the counter or via bank transfer.`;
+
+        // Coach feedback actions
+        case 'ACKNOWLEDGE_AND_TRAIN':
+          return `${rolePrefix} acknowledged member feedback regarding instructor${clsNameEn}. Center management reviewed with Head of Department and reminded the coach to enhance teaching quality.`;
+        case 'TRANSFER_CLASS_SUGGESTION':
+          return `${rolePrefix} acknowledged member feedback and advised transferring to another coach class better suited to member training goals.`;
+
+        // Facility actions
+        case 'ASSIGN_MAINTENANCE':
+          return `${rolePrefix} received the report and dispatched an urgent inspection/maintenance order to the technical team.`;
+        case 'SCHEDULED_FIX':
+          return 'Equipment has been tagged for maintenance and is scheduled to complete repairs and return to service within 24-48 hours.';
+
+        // Schedule support actions
+        case 'APPROVE_SCHEDULE_CHANGE':
+          return `${rolePrefix} updated the new schedule for member in the system. Wishing you productive workouts!`;
+        case 'GUIDE_BOOKING':
+          return `${rolePrefix} sent instructions via the app so member can actively adjust upcoming session schedules.`;
+
+        // Complaint actions
+        case 'RESOLVE_COMPLAINT':
+          return `The center sincerely apologizes for the subpar experience. ${rolePrefix} has coordinated with relevant departments to resolve this matter immediately.`;
+
+        // Inquiry actions
+        case 'ANSWER_INQUIRY':
+          return `${rolePrefix} answered your inquiry in detail. If you need further assistance, please contact the reception desk.`;
+        case 'CONTACT_DIRECTLY':
+          return `${rolePrefix} contacted the member directly to assist and guide on all questions.`;
+
+        // Common actions
+        case 'ESCALATE':
+          return `${rolePrefix} received member request and escalated to Center Management for review and resolution.`;
+        case 'REJECT':
+          return exceedsEightyPercent
+            ? `${rolePrefix} rejected request: class attended sessions exceeded 80% per center policy.`
+            : `${rolePrefix} regrets that your request could not be approved as it does not meet center policy criteria.`;
+        case 'APPROVE_GENERAL':
+        default:
+          return `${rolePrefix} received and processed your request.`;
+      }
     }
   };
 
@@ -244,12 +307,14 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
           defaultType = 'GYM_PASS';
         } else if (pref === 'CASH_REFUND') {
           defaultType = isManager ? 'CASH_REFUND' : 'ESCALATE';
+        } else if (exceedsEightyPercent) {
+          defaultType = 'REJECT';
         } else {
           // Default or ISSUE_CREDIT
           defaultType = isManager && (request.status === 'ESCALATED') ? 'CASH_REFUND' : 'ISSUE_CREDIT';
         }
       } else if (request.category === 'COACH_FEEDBACK') {
-        defaultType = 'ACKNOWLEDGE_AND_TRAIN';
+        defaultType = isManager ? 'ACKNOWLEDGE_AND_TRAIN' : 'ESCALATE';
       } else if (request.category === 'FACILITY_ISSUE') {
         defaultType = 'ASSIGN_MAINTENANCE';
       } else if (request.category === 'SCHEDULE_SUPPORT') {
@@ -264,11 +329,12 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
       setResponseNote(getNoteTemplate(defaultType, suggested));
       setError('');
     }
-  }, [isOpen, request, isManager]);
+  }, [isOpen, request, isManager, currentLang]);
 
   const isClosed = request?.status === 'APPROVED' || request?.status === 'RESOLVED' || request?.status === 'REJECTED';
   const isEscalatedForReceptionist = !isManager && request?.status === 'ESCALATED';
-  const isReadOnly = isClosed || isEscalatedForReceptionist;
+  const isCoachFeedbackForReceptionist = !isManager && request?.category === 'COACH_FEEDBACK';
+  const isReadOnly = isClosed || isEscalatedForReceptionist || isCoachFeedbackForReceptionist;
 
   if (!isOpen || !request) return null;
 
@@ -355,52 +421,85 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
           actionType: 'ISSUE_CREDIT',
           icon: CreditCard,
           title: t('Issue Credit Voucher (Recommended)'),
-          desc: t('Generates 60-day voucher code for member to re-enroll without losing money.'),
-          color: 'emerald',
-          isMemberChoice: request.preferredResolution === 'ISSUE_CREDIT' || !request.preferredResolution
+          desc: exceedsEightyPercent
+            ? t('Ineligible per center policy (>80% attended).')
+            : t('Generates 60-day voucher code for member to re-enroll without losing money.'),
+          color: exceedsEightyPercent ? 'rose' : 'emerald',
+          disabled: exceedsEightyPercent,
+          isMemberChoice: !exceedsEightyPercent && (request.preferredResolution === 'ISSUE_CREDIT' || !request.preferredResolution)
         },
         {
           actionType: 'GYM_PASS',
           icon: Clock,
           title: t('Grant Free 1-Month Gym Pass'),
-          desc: t('Alternative perk when student prefers gym workouts over class credit.'),
-          color: 'blue',
-          isMemberChoice: request.preferredResolution === 'GYM_PASS'
+          desc: exceedsEightyPercent
+            ? t('Ineligible per center policy (>80% attended).')
+            : t('Alternative perk when student prefers gym workouts over class credit.'),
+          color: exceedsEightyPercent ? 'rose' : 'blue',
+          disabled: exceedsEightyPercent,
+          isMemberChoice: !exceedsEightyPercent && request.preferredResolution === 'GYM_PASS'
         },
         isManager
           ? {
               actionType: 'CASH_REFUND',
               icon: DollarSign,
-              title: t('Phê Duyệt Hoàn Tiền Mặt / Chuyển Khoản'),
-              desc: t('Duyệt lệnh xuất quỹ/kế toán chuyển khoản hoàn trả học phí cho học viên.'),
-              color: 'purple',
-              isMemberChoice: request.preferredResolution === 'CASH_REFUND'
+              title: t('Approve Cash / Bank Refund'),
+              desc: exceedsEightyPercent
+                ? t('Ineligible per center policy (>80% attended).')
+                : t('Authorizes cash disbursement or bank transfer to refund tuition to member.'),
+              color: exceedsEightyPercent ? 'rose' : 'purple',
+              disabled: exceedsEightyPercent,
+              isMemberChoice: !exceedsEightyPercent && request.preferredResolution === 'CASH_REFUND'
             }
           : {
               actionType: 'ESCALATE',
               icon: ArrowUpRight,
               title: t('Escalate to Center Manager'),
-              desc: t('For special cash refunds or high-dispute exceptions.'),
-              color: 'purple',
+              desc: exceedsEightyPercent
+                ? t('Ineligible per center policy (>80% attended).')
+                : t('For special cash refunds or high-dispute exceptions.'),
+              color: exceedsEightyPercent ? 'rose' : 'purple',
+              disabled: exceedsEightyPercent,
               isMemberChoice: false
             },
         {
           actionType: 'REJECT',
           icon: X,
-          title: t('Reject Request'),
-          desc: t('Course completed >80% or violates center policies.'),
+          title: exceedsEightyPercent ? t('Reject Request (Policy Enforced)') : t('Reject Request'),
+          desc: exceedsEightyPercent
+            ? t('Class attended sessions exceeded 80%. Center policy strictly prohibits refunds or perks.')
+            : t('Course completed >80% or violates center policies.'),
           color: 'rose',
-          isMemberChoice: false
+          isMemberChoice: exceedsEightyPercent || request.preferredResolution === 'REJECT'
         }
       ];
     } else {
       const cfg = NON_CANCELLATION_RESOLUTIONS[request.category] || NON_CANCELLATION_RESOLUTIONS.GENERAL_INQUIRY;
-      actions = [
-        { ...cfg.primary, color: 'emerald', title: t(cfg.primary.titleKey), desc: t(cfg.primary.descKey) },
-        { ...cfg.secondary, color: 'blue', title: t(cfg.secondary.titleKey), desc: t(cfg.secondary.descKey) },
-        { actionType: 'ESCALATE', icon: ArrowUpRight, color: 'purple', title: t(cfg.escalate.titleKey), desc: t(cfg.escalate.descKey) },
-        { actionType: 'REJECT', icon: X, color: 'rose', title: t(cfg.reject.titleKey), desc: t(cfg.reject.descKey) }
-      ];
+      if (request.category === 'COACH_FEEDBACK' && !isManager) {
+        actions = [
+          {
+            actionType: 'ESCALATE',
+            icon: ArrowUpRight,
+            color: 'purple',
+            title: t('Escalate to Training Management for Review & Resolution'),
+            desc: t("Coach complaints fall under the Center Manager's authority. Reception logs and routes directly."),
+            isMemberChoice: true
+          }
+        ];
+      } else if (request.category === 'COACH_FEEDBACK' && isManager) {
+        actions = [
+          { ...cfg.primary, color: 'emerald', title: t(cfg.primary.titleKey), desc: t(cfg.primary.descKey) },
+          { ...cfg.secondary, color: 'blue', title: t(cfg.secondary.titleKey), desc: t(cfg.secondary.descKey) },
+          { actionType: 'REJECT', icon: X, color: 'rose', title: t(cfg.reject.titleKey), desc: t(cfg.reject.descKey) }
+        ];
+      } else {
+        actions = [
+          { ...cfg.primary, color: 'emerald', title: t(cfg.primary.titleKey), desc: t(cfg.primary.descKey) },
+          { ...cfg.secondary, color: 'blue', title: t(cfg.secondary.titleKey), desc: t(cfg.secondary.descKey) },
+          { actionType: 'ESCALATE', icon: ArrowUpRight, color: 'purple', title: t(cfg.escalate.titleKey), desc: t(cfg.escalate.descKey) },
+          { actionType: 'REJECT', icon: X, color: 'rose', title: t(cfg.reject.titleKey), desc: t(cfg.reject.descKey) }
+        ];
+      }
     }
 
     return (
@@ -417,6 +516,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
             color={act.color}
             isMemberChoice={act.isMemberChoice}
             memberChoiceLabel={t("Member's Choice")}
+            disabled={act.disabled}
           />
         ))}
       </>
@@ -442,7 +542,11 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                 {isReadOnly ? t('Support Ticket Details') : t('Resolve Support Ticket')} #{request.requestId}
               </h2>
               <p className="text-xs text-[var(--text-muted)] flex flex-wrap items-center gap-1.5 mt-0.5">
-                <span>{getDisplayTitle(request.title)}</span>
+                <span>
+                  {request.category === 'COACH_FEEDBACK'
+                    ? cleanSupportTitle(request)
+                    : getDisplayTitle(request.title)}
+                </span>
                 <span>&bull;</span>
                 <span>{t('Priority:')}</span>
                 {renderPriorityBadge(request.priority, request.preferredResolution)}
@@ -487,14 +591,51 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
           </div>
 
           {/* Ticket Request Content */}
-          <div className="p-4 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] space-y-2">
-            <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">
-              {t('Member Request Description')}
+          {request.category === 'COACH_FEEDBACK' ? (
+            (() => {
+              const parsed = parseCoachFeedback(request.content, request);
+              return (
+                <div className="p-4 rounded-xl bg-purple-500/5 dark:bg-purple-950/20 border border-purple-500/25 space-y-3">
+                  <div className="flex items-center justify-between border-b border-purple-500/20 pb-2.5">
+                    <span className="text-xs font-bold text-purple-900 dark:text-purple-200 uppercase tracking-wide flex items-center gap-1.5">
+                      <UserCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      {t('Coach Feedback Topic')}
+                    </span>
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                      {t(parsed.aspect || 'Coach & Training Feedback')}
+                    </span>
+                  </div>
+
+                  {parsed.targetInfo && (
+                    <div className="text-xs text-[var(--text)] flex items-center gap-2">
+                      <span className="text-[var(--text-muted)] font-medium">{t('Associated Target')}:</span>
+                      <span className="font-semibold text-[var(--text)] bg-[var(--surface)] px-2 py-0.5 rounded border border-[var(--border)]">
+                        {parsed.targetInfo}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5 pt-1">
+                    <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">
+                      {t('Student Feedback & Comments')}:
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm font-medium text-[var(--text)] whitespace-pre-line leading-relaxed shadow-xs">
+                      "{parsed.comment || request.title || t('No additional comments provided.')}"
+                    </div>
+                  </div>
+                </div>
+              );
+            })()
+          ) : (
+            <div className="p-4 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] space-y-2">
+              <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">
+                {t('Member Request Description')}
+              </div>
+              <p className="text-sm text-[var(--text)] whitespace-pre-line leading-relaxed">
+                {request.content}
+              </p>
             </div>
-            <p className="text-sm text-[var(--text)] whitespace-pre-line leading-relaxed">
-              {request.content}
-            </p>
-          </div>
+          )}
 
           {/* Associated Class Proration Card (if cancellation) */}
           {request.classId && (
@@ -526,6 +667,12 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                   <span className="font-bold text-amber-600">{request.remainingSessions || 0}</span>
                 </div>
               </div>
+              {request.totalSessions > 0 && ((request.attendedSessions || 0) / request.totalSessions > 0.8) && (
+                <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-xs text-rose-700 dark:text-rose-300 font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{t('Class attendance exceeded 80%. Under center policy, member is not eligible for voucher refund.')}</span>
+                </div>
+              )}
               {isClassCancellationOrCompensation && (
                 <div className="flex justify-between items-center pt-1 text-xs">
                   <span className="font-bold text-[var(--text)]">
@@ -574,8 +721,21 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
           {/* If Read-Only (Closed Ticket or Escalated for Receptionist): Show Resolution Summary */}
           {isReadOnly ? (
             <div className="space-y-4">
-              {/* If Escalated for Receptionist banner */}
-              {isEscalatedForReceptionist && (
+              {/* If Coach Feedback for Receptionist banner */}
+              {isCoachFeedbackForReceptionist && !isClosed && (
+                <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs font-bold text-purple-900 dark:text-purple-200">
+                    <ArrowUpRight className="w-4 h-4 text-purple-700 dark:text-purple-400" />
+                    <span>{t('Coach Feedback Directly Routed to Management')}</span>
+                  </div>
+                  <p className="text-xs text-[var(--text)] leading-relaxed font-medium">
+                    {t('This ticket reports issues regarding a Coach / Instructor and has been routed directly to Center Management for review. Receptionists have view-only access.')}
+                  </p>
+                </div>
+              )}
+
+              {/* If Escalated for Receptionist banner (other categories) */}
+              {!isCoachFeedbackForReceptionist && isEscalatedForReceptionist && (
                 <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1.5">
                   <div className="flex items-center gap-2 text-xs font-bold text-purple-900 dark:text-purple-200">
                     <ArrowUpRight className="w-4 h-4 text-purple-700 dark:text-purple-400" />
@@ -713,6 +873,21 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
             </div>
           ) : (
             <>
+              {/* Coach Feedback Policy Alert for Receptionist */}
+              {request.category === 'COACH_FEEDBACK' && !isManager && (
+                <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-start gap-3">
+                  <ShieldAlert className="w-5 h-5 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+                  <div className="text-xs space-y-1">
+                    <div className="font-extrabold text-purple-900 dark:text-purple-200">
+                      {t('Coach complaints fall under Manager authority')}
+                    </div>
+                    <p className="text-[var(--text-muted)] leading-relaxed font-medium">
+                      {t('Reception does not have authority to handle Coach performance or discipline. Please escalate to Center Management.')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Resolution Action Selector */}
               <div className="space-y-2">
                 <label className="block text-xs font-extrabold text-[var(--text)]">
@@ -733,13 +908,19 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                   {resolutionType === 'CASH_REFUND' && (
                     <div className="flex items-center gap-2 text-xs font-extrabold text-[var(--text)]">
                       <CheckCircle2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                      <span>{t('Xác nhận lệnh hoàn tiền mặt / chuyển khoản (Thẩm quyền Quản lý)')}</span>
+                      <span>{t('Confirm cash / bank refund order (Manager Authority)')}</span>
+                    </div>
+                  )}
+                  {resolutionType === 'ISSUE_CREDIT' && exceedsEightyPercent && (
+                    <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-xs text-rose-700 dark:text-rose-300 font-semibold flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{t('Warning: This class exceeded 80% attendance. Issuing voucher violates center policy.')}</span>
                     </div>
                   )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div className="space-y-1.5">
                       <label htmlFor="resolution-amount-input" className="block text-xs font-black text-[var(--text)]">
-                        {resolutionType === 'ISSUE_CREDIT' ? t('Voucher Credit Amount (VND)') : t('Số tiền duyệt hoàn (VNĐ)')}{' '}
+                        {resolutionType === 'ISSUE_CREDIT' ? t('Voucher Credit Amount (VND)') : t('Approved Refund Amount (VND)')}{' '}
                         <span className="text-red-500 font-bold">*</span>
                       </label>
                       <input
@@ -774,10 +955,10 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                     ) : (
                       <div className="space-y-1.5">
                         <label className="block text-xs font-black text-[var(--text)]">
-                          {t('Hình thức chi trả')}
+                          {t('Payment Method')}
                         </label>
                         <div className="px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-xs font-bold text-[var(--text)] flex items-center h-[46px]">
-                          {t('Tiền mặt tại quầy / Chuyển khoản ngân hàng')}
+                          {t('Cash at desk / Bank transfer')}
                         </div>
                       </div>
                     )}
@@ -794,10 +975,14 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                   {resolutionType === 'REJECT' && (
                     <button
                       type="button"
-                      onClick={() => setResponseNote(`${isManager ? 'Quản lý trung tâm' : 'Lễ tân'} xin phép đóng đơn do yêu cầu này đã được giải quyết hoặc bị trùng lặp với đơn hỗ trợ khác.`)}
+                      onClick={() => setResponseNote(
+                        currentLang === 'vi'
+                          ? `${isManager ? 'Quản lý trung tâm' : 'Lễ tân'} xin phép đóng đơn do yêu cầu này đã được giải quyết hoặc bị trùng lặp với đơn hỗ trợ khác.`
+                          : `${isManager ? 'Center Management' : 'Reception'} is closing this ticket as the request has already been addressed or is duplicate with another ticket.`
+                      )}
                       className="px-2 py-0.5 rounded-lg text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/20 transition-colors flex items-center gap-1"
                     >
-                      <span>⚠️ {t('Mẫu: Đóng do trùng lặp')}</span>
+                      <span>⚠️ {t('Template: Close as Duplicate')}</span>
                     </button>
                   )}
                 </div>

@@ -24,6 +24,16 @@ public class Invoice {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @Column(name = "subtotal")
+    private BigDecimal subtotal;
+
+    @Column(name = "discount_amount")
+    @Builder.Default
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @Column(name = "voucher_code")
+    private String voucherCode;
+
     @Column(name = "total_amount")
     private BigDecimal totalAmount;
 
