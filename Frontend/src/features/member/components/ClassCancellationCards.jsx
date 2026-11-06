@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  CheckCircle2, Clock, Sparkles, CreditCard, Dumbbell, DollarSign, Check, Copy, Send
+  CheckCircle2, Clock, Sparkles, CreditCard, Dumbbell, DollarSign, Check, Copy, Send, AlertCircle, AlertTriangle
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';

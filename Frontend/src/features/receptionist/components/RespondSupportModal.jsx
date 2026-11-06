@@ -3,7 +3,7 @@ import {
   X, AlertTriangle, CheckCircle2, ShieldAlert,
   Send, User, Phone, Mail, BookOpen, Clock, Calendar,
   CreditCard, ArrowUpRight, DollarSign, RotateCcw, Dumbbell, Sparkles,
-  Wrench, UserCheck
+  Wrench, UserCheck, AlertCircle
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';

@@ -154,7 +154,7 @@ INSERT INTO CLASSES (class_id,subject_id,coach_id,room_id,class_name,price,max_s
                         (25, 5, 3, 5, '[SPIN-203] Đạp Xe Leo Dốc Đốt Mỡ Đêm', 680000, 18, 'ACTIVE');
 
 -- Lịch học của các Lớp
-INSERT INTO SCHEDULES VALUES
+INSERT INTO SCHEDULES (schedule_id, class_id, start_time, end_time, status) VALUES
                           (1, 1, '2026-10-01 06:00:00', '2026-10-01 07:30:00', 'SCHEDULED'),
                           (2, 1, '2026-10-03 06:00:00', '2026-10-03 07:30:00', 'SCHEDULED'),
                           (3, 1, '2026-10-05 06:00:00', '2026-10-05 07:30:00', 'SCHEDULED'),
@@ -188,7 +188,7 @@ INSERT INTO BOOKINGS (booking_id, user_id, schedule_id, status, attendance_statu
                          (17, 13, 1, 'CANCELLED', 'ABSENT', '2026-09-01 06:00:00');
 
 -- Bài tập Mẫu
-INSERT INTO EXERCISES VALUES
+INSERT INTO EXERCISES (exercise_id, exercise_name, muscle_group, video_url) VALUES
                           (1, 'Hít đất (Push up)', 'Ngực', 'https://www.youtube.com/watch?v=IODxDxX7oi4'),
                           (2, 'Gập bụng (Crunch)', 'Bụng', 'https://www.youtube.com/watch?v=Xyd_fa5zoEU'),
                           (3, 'Kéo xà đơn (Pull up)', 'Lưng', 'https://www.youtube.com/watch?v=eGo4IYlbE5g'),
@@ -197,24 +197,24 @@ INSERT INTO EXERCISES VALUES
                           (6, 'Chạy bộ máy (Treadmill)', 'Cardio', 'https://www.youtube.com/watch?v=aKfJJ1TuyE4');
 
 -- Kế hoạch AI sinh ra cho Khách hàng
-INSERT INTO AI_WORKOUT_PLANS VALUES
+INSERT INTO AI_WORKOUT_PLANS (plan_id, user_id, goal, fitness_level, created_at) VALUES
                                  (1, 8, 'Tăng cơ ngực và lưng', 'Trung bình', '2026-09-15 10:00:00'),
                                  (2, 6, 'Giảm mỡ bụng cấp tốc', 'Mới bắt đầu', '2026-09-18 15:30:00');
 
 -- Chi tiết các bài tập trong Kế hoạch AI
-INSERT INTO AI_PLAN_DETAILS VALUES
+INSERT INTO AI_PLAN_DETAILS (detail_id, plan_id, exercise_id, sets, reps, rest_seconds) VALUES
                                 (1, 1, 1, 4, 12, 60), (2, 1, 3, 4, 8, 90), (3, 1, 5, 3, 10, 60),
                                 (4, 2, 2, 5, 20, 30), (5, 2, 6, 1, 1, 0), (6, 2, 4, 3, 15, 45);
 
 -- Hóa đơn thanh toán
-INSERT INTO INVOICES VALUES
-                         (1, 6, 1100000, 'PAID', '2026-09-01 08:00:00'),
-                         (2, 7, 4500000, 'PAID', '2026-01-01 09:15:00'),
-                         (3, 8, 99000, 'PAID', '2026-09-15 10:00:00'),
-                         (4, 9, 1400000, 'PENDING', '2026-09-22 07:00:00');
+INSERT INTO INVOICES (invoice_id, user_id, subtotal, discount_amount, voucher_code, total_amount, status, created_at) VALUES
+                         (1, 6, 1100000, 0.00, NULL, 1100000, 'PAID', '2026-09-01 08:00:00'),
+                         (2, 7, 4500000, 0.00, NULL, 4500000, 'PAID', '2026-01-01 09:15:00'),
+                         (3, 8, 99000, 0.00, NULL, 99000, 'PAID', '2026-09-15 10:00:00'),
+                         (4, 9, 1400000, 0.00, NULL, 1400000, 'PENDING', '2026-09-22 07:00:00');
 
 -- Chi tiết Hóa đơn
-INSERT INTO INVOICE_DETAILS VALUES
+INSERT INTO INVOICE_DETAILS (detail_id, invoice_id, class_id, package_id, schedule_id, unit_price) VALUES
                                 (1, 1, NULL, 1, NULL, 500000),
                                 (2, 1, 1, NULL, NULL, 600000),
                                 (3, 2, NULL, 3, NULL, 4500000),
@@ -222,7 +222,7 @@ INSERT INTO INVOICE_DETAILS VALUES
                                 (5, 4, NULL, 2, NULL, 1400000);
 
 -- Giao dịch Thanh toán
-INSERT INTO PAYMENTS VALUES
+INSERT INTO PAYMENTS (payment_id, invoice_id, amount, payment_method, transaction_no, status, payment_date) VALUES
                          (1, 1, 1100000, 'VNPAY', 'VNP123456789', 'SUCCESS', '2026-09-01 08:05:00'),
                          (2, 2, 4500000, 'MOMO', 'MM987654321', 'SUCCESS', '2026-01-01 09:20:00'),
                          (3, 3, 99000, 'VNPAY', 'VNP555666777', 'SUCCESS', '2026-09-15 10:02:00');
@@ -263,7 +263,7 @@ CREATE TABLE PACKAGE_TYPES (
  type_name varchar(255) NOT NULL UNIQUE,
  requires_subjects boolean NOT NULL DEFAULT FALSE
 );
-INSERT INTO PACKAGE_TYPES VALUES
+INSERT INTO PACKAGE_TYPES (type_code, type_name, requires_subjects) VALUES
  ('GYM_ACCESS','Gym access',FALSE),('AI_ACCESS','AI access',FALSE),
  ('PREMIUM','Premium',FALSE),('COMBO','Combo (Gym + AI)',FALSE);
 INSERT IGNORE INTO PACKAGE_TYPES(type_code,type_name,requires_subjects)
@@ -534,3 +534,4 @@ CREATE TABLE IF NOT EXISTS `ROOM_SUBJECTS` (
     CONSTRAINT `fk_room_subjects_room` FOREIGN KEY (`room_id`) REFERENCES `ROOMS`(`room_id`) ON DELETE CASCADE,
     CONSTRAINT `fk_room_subjects_subject` FOREIGN KEY (`subject_id`) REFERENCES `SUBJECTS`(`subject_id`) ON DELETE CASCADE
 );
+INSERT IGNORE INTO ROOM_SUBJECTS (room_id, subject_id) SELECT DISTINCT room_id, subject_id FROM CLASSES WHERE room_id IS NOT NULL AND subject_id IS NOT NULL;
