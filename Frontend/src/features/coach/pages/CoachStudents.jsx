@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { coachService } from '../services/coachService';
 import {
   Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send, Dumbbell,
-  Target, Trophy, Activity, TrendingUp, HeartPulse, AlertTriangle, Scale, Layers, Filter,
+  Target, Trophy, Activity, TrendingUp, HeartPulse, AlertTriangle, Scale, Layers,
   CheckCircle2, Building2, Check, RefreshCw
 } from 'lucide-react';
 import SendNotificationModal from '../components/SendNotificationModal';

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Crown, ShieldCheck, Check } from 'lucide-react';
 import { t } from '../i18n/useLanguage';
+import { resolveAvatarUrl } from '../utils/avatarUtils';
 
 const TIER_RING_CONFIG = {
   PLATINUM: {
@@ -125,11 +126,7 @@ export default function MemberTierAvatar({
         .toUpperCase()
     : 'NX';
 
-  const fullAvatarUrl = avatarUrl
-    ? avatarUrl.startsWith('http')
-      ? avatarUrl
-      : `http://localhost:8080${avatarUrl}`
-    : null;
+  const fullAvatarUrl = resolveAvatarUrl(avatarUrl);
 
   const BadgeIcon = config.badgeIcon;
   const isPro = normalizedTier === 'PLATINUM';

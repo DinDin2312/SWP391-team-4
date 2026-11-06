@@ -16,6 +16,8 @@ public class EnrolledStudentResponse {
     private String fullName;
     private String email;
     private String phone;
+    private String avatarPath;
+    private String avatarUrl;
     private String bookingStatus;
     private String attendanceStatus;
     private Boolean checkedInAtFrontDesk;

@@ -19,6 +19,8 @@ public class MemberDetailResponse {
     private String status;
     private String bio;
     private String roleName;
+    private String avatarPath;
+    private String avatarUrl;
 
     // Current membership summary
     private String currentPackageName;

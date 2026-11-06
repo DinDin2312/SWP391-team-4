@@ -1,5 +1,6 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDate as displayFormatDate, formatDateTime as displayFormatDateTime, formatMoney } from '../../../utils/displayFormat';
+import { resolveAvatarUrl } from '../../../utils/avatarUtils';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     X,
@@ -433,9 +434,19 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                                 boxShadow: 'var(--shadow)',
                                 border: '2px solid var(--border)',
                                 flexShrink: 0,
+                                overflow: 'hidden',
+                                position: 'relative',
                             }}
                         >
-                            {getInitials(member.fullName)}
+                            <span>{getInitials(member.fullName)}</span>
+                            {resolveAvatarUrl(member.avatarPath || member.avatarUrl) && (
+                                <img
+                                    src={resolveAvatarUrl(member.avatarPath || member.avatarUrl)}
+                                    alt={member.fullName}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                            )}
                         </div>
 
                         <div>

@@ -17,6 +17,9 @@ public class MemberCheckInRecordResponse {
     private String memberName;
     private String memberEmail;
     private String memberPhone;
+    private String memberAvatar;
+    private String avatarPath;
+    private String avatarUrl;
     private Integer membershipId;
     private String packageName;
     private String packageType;
@@ -50,6 +53,15 @@ public class MemberCheckInRecordResponse {
 
     public String getMemberPhone() { return memberPhone; }
     public void setMemberPhone(String memberPhone) { this.memberPhone = memberPhone; }
+
+    public String getMemberAvatar() { return memberAvatar; }
+    public void setMemberAvatar(String memberAvatar) { this.memberAvatar = memberAvatar; }
+
+    public String getAvatarPath() { return avatarPath; }
+    public void setAvatarPath(String avatarPath) { this.avatarPath = avatarPath; }
+
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 
     public Integer getMembershipId() { return membershipId; }
     public void setMembershipId(Integer membershipId) { this.membershipId = membershipId; }

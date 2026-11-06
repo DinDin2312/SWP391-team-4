@@ -16,6 +16,9 @@ public class CoachScheduleCheckInResponse {
     private String coachName;
     private String coachEmail;
     private String coachPhone;
+    private String coachAvatar;
+    private String avatarPath;
+    private String avatarUrl;
 
     private Integer scheduleId;
     private Integer classId;

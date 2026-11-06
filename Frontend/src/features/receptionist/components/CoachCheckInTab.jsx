@@ -19,6 +19,7 @@ import {
 import receptionistService from '../services/receptionistService';
 import { AuthContext } from '../../../context/AuthContext';
 import VnDateInput from '../../../components/VnDateInput';
+import { resolveAvatarUrl } from '../../../utils/avatarUtils';
 
 const getTodayDateString = () => {
   const now = new Date();
@@ -65,6 +66,10 @@ const CoachCheckInTab = () => {
 
   useEffect(() => {
     fetchCoachSchedules();
+    const timer = setInterval(() => {
+      fetchCoachSchedules();
+    }, 30000);
+    return () => clearInterval(timer);
   }, [fetchCoachSchedules]);
 
   // Statistics
@@ -311,8 +316,16 @@ const CoachCheckInTab = () => {
 
                   {/* Coach Info Box */}
                   <div className="flex items-center gap-3 pt-1">
-                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm">
-                      {initials}
+                    <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
+                      <span>{initials}</span>
+                      {resolveAvatarUrl(item.coachAvatar || item.avatarPath || item.avatarUrl) && (
+                        <img
+                          src={resolveAvatarUrl(item.coachAvatar || item.avatarPath || item.avatarUrl)}
+                          alt={item.coachName}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      )}
                     </div>
                     <div className="flex flex-col min-w-0">
                       <h4 className="text-sm font-bold text-[var(--text)] truncate">{item.coachName}</h4>

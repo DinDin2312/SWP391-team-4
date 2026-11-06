@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import SendNotificationModal from '../components/SendNotificationModal';
 import TraineeAssessmentModal from '../components/TraineeAssessmentModal';
+import { resolveAvatarUrl } from '../../../utils/avatarUtils';
 import CreateRescheduleModal from '../components/CreateRescheduleModal';
 import CoachToast from '../components/CoachToast';
 
@@ -638,10 +639,25 @@ const CoachSchedule = () => {
                           {(!s.enrolledStudents || s.enrolledStudents.length === 0) ? (
                             <p className="text-[11px] text-[var(--text-muted)] italic py-2 text-center">{t("No trainees registered for this session yet")}</p>
                           ) : (
-                            s.enrolledStudents.map((st, stIdx) => (
+                            s.enrolledStudents.map((st, stIdx) => {
+                              const stAv = resolveAvatarUrl(st.avatarPath || st.avatarUrl);
+                              const stIn = st.fullName ? st.fullName.split(' ').filter(Boolean).slice(-2).map(n => n[0]).join('').toUpperCase() : 'HV';
+                              return (
                               <div key={stIdx} className="p-2.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center justify-between text-xs">
-                                <div className="flex flex-col gap-0.5">
-                                  <span className="font-semibold text-[var(--text)]">{st.fullName}</span>
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="relative w-8 h-8 rounded-lg bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-[10px] flex items-center justify-center shrink-0 overflow-hidden">
+                                    <span>{stIn}</span>
+                                    {stAv && (
+                                      <img
+                                        src={stAv}
+                                        alt={st.fullName}
+                                        className="absolute inset-0 w-full h-full object-cover"
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                      />
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col gap-0.5 min-w-0">
+                                    <span className="font-semibold text-[var(--text)] truncate">{st.fullName}</span>
                                   <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)]">
                                     {st.email && (
                                       <span className="flex items-center gap-1">
@@ -651,7 +667,8 @@ const CoachSchedule = () => {
                                     )}
                                   </div>
                                 </div>
-                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${st.attendanceStatus === 'PRESENT'
+                                </div>
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold shrink-0 ${st.attendanceStatus === 'PRESENT'
                                     ? t('bg-[var(--success-soft)] text-[var(--success-text)] border border-[var(--success-soft)]')
                                     : st.attendanceStatus === 'ABSENT'
                                       ? t('bg-[var(--rose-soft)] text-[var(--rose)] border border-[var(--rose-soft)]')
@@ -660,7 +677,7 @@ const CoachSchedule = () => {
                                   {t(st.attendanceStatus || 'NOT_YET')}
                                 </span>
                               </div>
-                            ))
+                            );})
                           )}
                         </div>
                       )}
@@ -768,8 +785,16 @@ const CoachSchedule = () => {
                       className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary-soft)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center shrink-0">
-                          {initials}
+                        <div className="relative w-10 h-10 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)] font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
+                          <span>{initials}</span>
+                          {resolveAvatarUrl(st.avatarPath || st.avatarUrl) && (
+                            <img
+                              src={resolveAvatarUrl(st.avatarPath || st.avatarUrl)}
+                              alt={st.fullName}
+                              className="absolute inset-0 w-full h-full object-cover"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          )}
                         </div>
                         <div className="flex flex-col gap-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">

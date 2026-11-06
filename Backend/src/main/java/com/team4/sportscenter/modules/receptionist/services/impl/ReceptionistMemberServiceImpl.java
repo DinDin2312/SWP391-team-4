@@ -129,6 +129,8 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                     .phone(user.getPhone())
                     .status(user.getStatus())
                     .bio(user.getBio())
+                    .avatarPath(user.getAvatarPath())
+                    .avatarUrl(user.getAvatarPath() != null && !user.getAvatarPath().isBlank() ? "/api/avatars/" + user.getAvatarPath() : null)
                     .currentMembershipId(currentMembershipId)
                     .currentPackageName(currentPackageName)
                     .currentPackageType(currentPackageType)
@@ -321,6 +323,8 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 .status(user.getStatus())
                 .bio(user.getBio())
                 .roleName(user.getRole() != null ? user.getRole().getRoleName() : "Member")
+                .avatarPath(user.getAvatarPath())
+                .avatarUrl(user.getAvatarPath() != null && !user.getAvatarPath().isBlank() ? "/api/avatars/" + user.getAvatarPath() : null)
                 .currentPackageName(currentPkgName)
                 .currentPackageType(currentPkgType)
                 .currentMembershipStatus(currentStatus)
@@ -1159,6 +1163,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         payload.put("memberName", user.getFullName());
         payload.put("memberEmail", user.getEmail());
         payload.put("memberPhone", user.getPhone());
+        payload.put("memberAvatar", user.getAvatarPath());
+        payload.put("avatarPath", user.getAvatarPath());
+        payload.put("avatarUrl", user.getAvatarPath() != null && !user.getAvatarPath().isBlank() ? "/api/avatars/" + user.getAvatarPath() : null);
         payload.put("membershipId", membershipId);
         payload.put("bookingId", bookingId);
         payload.put("checkInType", checkInType);
@@ -1223,6 +1230,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 .memberName(user.getFullName())
                 .memberEmail(user.getEmail())
                 .memberPhone(user.getPhone())
+                .memberAvatar(user.getAvatarPath())
+                .avatarPath(user.getAvatarPath())
+                .avatarUrl(user.getAvatarPath() != null && !user.getAvatarPath().isBlank() ? "/api/avatars/" + user.getAvatarPath() : null)
                 .membershipId(membershipId)
                 .bookingId(bookingId)
                 .checkInType(checkInType)
@@ -1347,8 +1357,28 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             }
         }
 
+        Set<Integer> userIdsToFetch = new HashSet<>();
+        for (MemberCheckInRecordResponse item : parsedList) {
+            if (item.getUserId() != null) userIdsToFetch.add(item.getUserId());
+        }
+        Map<Integer, String> userAvatarMap = new HashMap<>();
+        if (!userIdsToFetch.isEmpty()) {
+            List<User> fetchedUsers = userRepository.findAllById(userIdsToFetch);
+            for (User fu : fetchedUsers) {
+                if (fu.getAvatarPath() != null && !fu.getAvatarPath().isBlank()) {
+                    userAvatarMap.put(fu.getUserId(), fu.getAvatarPath());
+                }
+            }
+        }
+
         List<MemberCheckInRecordResponse> results = new ArrayList<>();
         for (MemberCheckInRecordResponse item : parsedList) {
+            if (item.getUserId() != null && userAvatarMap.containsKey(item.getUserId())) {
+                String av = userAvatarMap.get(item.getUserId());
+                item.setMemberAvatar(av);
+                item.setAvatarPath(av);
+                item.setAvatarUrl("/api/avatars/" + av);
+            }
             if (item.getBookingId() != null) {
                 String att = bookingAttendanceMap.get(item.getBookingId());
                 if (att != null) {
@@ -1419,6 +1449,12 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 if (map.get("memberName") instanceof String s) builder.memberName(s);
                 if (map.get("memberEmail") instanceof String s) builder.memberEmail(s);
                 if (map.get("memberPhone") instanceof String s) builder.memberPhone(s);
+                if (map.get("memberAvatar") instanceof String s) {
+                    builder.memberAvatar(s);
+                    builder.avatarPath(s);
+                }
+                if (map.get("avatarPath") instanceof String s) builder.avatarPath(s);
+                if (map.get("avatarUrl") instanceof String s) builder.avatarUrl(s);
                 if (map.get("membershipId") instanceof Number n) builder.membershipId(n.intValue());
                 if (map.get("packageName") instanceof String s) builder.packageName(s);
                 if (map.get("packageType") instanceof String s) builder.packageType(s);
@@ -2019,17 +2055,28 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             }
         }
 
+        // Auto-transition consecutive coach schedules and auto-complete ended sessions
+        autoProcessConsecutiveCoachCheckIns(schedules, checkInMapBySchedule, targetDate);
+
         String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim().toLowerCase() : null;
         String cleanStatus = (statusFilter != null && !statusFilter.trim().isEmpty() && !statusFilter.equalsIgnoreCase("ALL"))
                 ? statusFilter.trim().toUpperCase() : null;
 
         List<CoachScheduleCheckInResponse> results = new ArrayList<>();
+        Set<String> seenScheduleSlots = new HashSet<>();
 
         for (Schedule s : schedules) {
             GymClass gymClass = s.getGymClass();
             if (gymClass == null) continue;
             User coach = s.getSubstituteCoach() != null ? s.getSubstituteCoach() : gymClass.getCoach(); // substitute is the coach expected at the desk
             if (coach == null) continue;
+
+            // Deduplicate guard: same coach, same start time and room only appears once
+            Integer rId = (gymClass.getRoom() != null) ? gymClass.getRoom().getRoomId() : 0;
+            String dedupKey = coach.getUserId() + "_" + s.getStartTime() + "_" + rId;
+            if (!seenScheduleSlots.add(dedupKey)) {
+                continue;
+            }
 
             String coachName = coach.getFullName() != null ? coach.getFullName() : "HLV #" + coach.getUserId();
             String coachEmail = coach.getEmail() != null ? coach.getEmail() : "";
@@ -2086,6 +2133,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                     .coachName(coachName)
                     .coachEmail(coachEmail)
                     .coachPhone(coachPhone)
+                    .coachAvatar(coach.getAvatarPath())
+                    .avatarPath(coach.getAvatarPath())
+                    .avatarUrl(coach.getAvatarPath() != null && !coach.getAvatarPath().isBlank() ? "/api/avatars/" + coach.getAvatarPath() : null)
                     .scheduleId(s.getScheduleId())
                     .classId(gymClass.getClassId())
                     .className(className)
@@ -2268,6 +2318,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         LocalDateTime now = LocalDateTime.now().withNano(0);
         payload.put("status", "COMPLETED");
         payload.put("checkOutTime", now.toString());
+        payload.put("manualCheckOut", true);
 
         String updatedJson;
         try {
@@ -2325,4 +2376,160 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 .build();
     }
 
+
+    private void autoProcessConsecutiveCoachCheckIns(
+            List<Schedule> schedules,
+            Map<Integer, Map<String, Object>> checkInMapBySchedule,
+            LocalDate targetDate) {
+        if (schedules == null || schedules.isEmpty()) return;
+
+        LocalDate today = LocalDate.now();
+        if (targetDate.isAfter(today)) return;
+
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+
+        Map<Integer, List<Schedule>> schedulesByCoach = new LinkedHashMap<>();
+        for (Schedule s : schedules) {
+            GymClass gc = s.getGymClass();
+            if (gc == null) continue;
+            User coach = s.getSubstituteCoach() != null ? s.getSubstituteCoach() : gc.getCoach();
+            if (coach == null || coach.getUserId() == null) continue;
+            schedulesByCoach.computeIfAbsent(coach.getUserId(), k -> new ArrayList<>()).add(s);
+        }
+
+        for (Map.Entry<Integer, List<Schedule>> entry : schedulesByCoach.entrySet()) {
+            List<Schedule> coachSchedules = entry.getValue();
+            coachSchedules.sort(Comparator.comparing(Schedule::getStartTime));
+
+            for (int i = 0; i < coachSchedules.size(); i++) {
+                Schedule current = coachSchedules.get(i);
+                Map<String, Object> currentCheckIn = checkInMapBySchedule.get(current.getScheduleId());
+                String currentStatus = currentCheckIn != null ? (String) currentCheckIn.getOrDefault("status", "PENDING") : "PENDING";
+
+                if ("CHECKED_IN".equalsIgnoreCase(currentStatus)) {
+                    Schedule next = (i + 1 < coachSchedules.size()) ? coachSchedules.get(i + 1) : null;
+                    boolean hasConsecutiveNext = false;
+
+                    if (next != null && current.getEndTime() != null && next.getStartTime() != null) {
+                        long gapMinutes = java.time.Duration.between(current.getEndTime(), next.getStartTime()).toMinutes();
+                        if (gapMinutes >= 0 && gapMinutes <= 90) {
+                            hasConsecutiveNext = true;
+                        }
+                    }
+
+                    if (hasConsecutiveNext) {
+                        if (!now.isBefore(next.getStartTime())) {
+                            Map<String, Object> nextCheckIn = checkInMapBySchedule.get(next.getScheduleId());
+                            String nextStatus = nextCheckIn != null ? (String) nextCheckIn.getOrDefault("status", "PENDING") : "PENDING";
+
+                            if ("PENDING".equalsIgnoreCase(nextStatus)) {
+                                autoCompleteSchedule(currentCheckIn, current.getEndTime());
+
+                                Map<String, Object> newNextCheckIn = autoCheckInNextSchedule(next);
+                                if (newNextCheckIn != null) {
+                                    checkInMapBySchedule.put(next.getScheduleId(), newNextCheckIn);
+                                }
+                            }
+                        }
+                    } else {
+                        if (current.getEndTime() != null && now.isAfter(current.getEndTime().plusMinutes(15))) {
+                            autoCompleteSchedule(currentCheckIn, current.getEndTime());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void autoCompleteSchedule(Map<String, Object> checkInData, LocalDateTime endTime) {
+        if (checkInData == null) return;
+        Long auditId = (checkInData.get("auditId") != null) ? ((Number) checkInData.get("auditId")).longValue() : null;
+        if (auditId == null) return;
+
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+        LocalDateTime outTime = (endTime != null && !endTime.isAfter(now)) ? endTime : now;
+
+        checkInData.put("status", "COMPLETED");
+        checkInData.put("checkOutTime", outTime.toString());
+        String currentNote = (String) checkInData.get("note");
+        if (currentNote == null || currentNote.isBlank()) {
+            checkInData.put("note", "Tự động hoàn tất ca dạy");
+        } else if (!currentNote.contains("Tự động hoàn tất")) {
+            checkInData.put("note", currentNote + " | Tự động hoàn tất");
+        }
+
+        try {
+            String updatedJson = jsonMapper.writeValueAsString(checkInData);
+            jdbcTemplate.update(
+                    "UPDATE AUDIT_LOGS SET action = 'COACH_CHECK_OUT', changes_json = ? WHERE audit_id = ?",
+                    updatedJson, auditId
+            );
+        } catch (Exception ignored) {}
+    }
+
+    private Map<String, Object> autoCheckInNextSchedule(Schedule nextSchedule) {
+        GymClass gymClass = nextSchedule.getGymClass();
+        if (gymClass == null) return null;
+        User coach = nextSchedule.getSubstituteCoach() != null ? nextSchedule.getSubstituteCoach() : gymClass.getCoach();
+        if (coach == null) return null;
+
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+        LocalDateTime checkInTime = (nextSchedule.getStartTime() != null && !nextSchedule.getStartTime().isAfter(now))
+                ? nextSchedule.getStartTime() : now;
+
+        String roomName = (gymClass.getRoom() != null && gymClass.getRoom().getRoomName() != null)
+                ? gymClass.getRoom().getRoomName() : "Phòng tập";
+        Integer roomId = (gymClass.getRoom() != null) ? gymClass.getRoom().getRoomId() : null;
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("coachId", coach.getUserId());
+        payload.put("coachName", coach.getFullName());
+        payload.put("coachEmail", coach.getEmail());
+        payload.put("coachPhone", coach.getPhone());
+        payload.put("scheduleId", nextSchedule.getScheduleId());
+        payload.put("classId", gymClass.getClassId());
+        payload.put("className", gymClass.getClassName());
+        payload.put("roomId", roomId);
+        payload.put("roomName", roomName);
+        payload.put("startTime", nextSchedule.getStartTime() != null ? nextSchedule.getStartTime().toString() : "");
+        payload.put("endTime", nextSchedule.getEndTime() != null ? nextSchedule.getEndTime().toString() : "");
+        payload.put("status", "CHECKED_IN");
+        payload.put("checkInTime", checkInTime.toString());
+        payload.put("checkOutTime", null);
+        payload.put("checkedInBy", "Hệ thống (Tự động ca liền kề)");
+        payload.put("autoCheckedIn", true);
+        payload.put("note", "Tự động điểm danh: HLV tiếp tục dạy ca liền kề");
+
+        String jsonString;
+        try {
+            jsonString = jsonMapper.writeValueAsString(payload);
+        } catch (Exception e) {
+            return null;
+        }
+
+        String details = String.format("Tự động Check-in HLV %s (#%d) - Lớp: %s - Ca: %s",
+                coach.getFullName(), coach.getUserId(), gymClass.getClassName(), nextSchedule.getStartTime());
+
+        org.springframework.jdbc.support.KeyHolder keyHolder = new org.springframework.jdbc.support.GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            java.sql.PreparedStatement ps = connection.prepareStatement(
+                    "INSERT INTO AUDIT_LOGS (actor_email, action, entity_type, entity_id, details, changes_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    java.sql.Statement.RETURN_GENERATED_KEYS
+            );
+            ps.setString(1, "system@sportscenter.com");
+            ps.setString(2, "COACH_CHECK_IN");
+            ps.setString(3, "COACH_CHECKIN");
+            ps.setString(4, String.valueOf(coach.getUserId()));
+            ps.setString(5, details);
+            ps.setString(6, jsonString);
+            ps.setTimestamp(7, java.sql.Timestamp.valueOf(now));
+            return ps;
+        }, keyHolder);
+
+        Number generatedKey = keyHolder.getKey();
+        if (generatedKey != null) {
+            payload.put("auditId", generatedKey.longValue());
+        }
+        return payload;
+    }
 }
