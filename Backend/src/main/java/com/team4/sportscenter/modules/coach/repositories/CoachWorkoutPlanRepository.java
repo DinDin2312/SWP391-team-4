@@ -20,6 +20,9 @@ public interface CoachWorkoutPlanRepository extends JpaRepository<CoachWorkoutPl
     @Query("SELECT DISTINCT p FROM CoachWorkoutPlan p LEFT JOIN FETCH p.planDetails d LEFT JOIN FETCH d.exercise WHERE p.coach.email = :coachEmail AND p.user.userId = :userId ORDER BY p.createdAt DESC")
     List<CoachWorkoutPlan> findByCoachEmailAndUserIdOrderByCreatedAtDesc(@Param("coachEmail") String coachEmail, @Param("userId") Integer userId);
 
+    @Query("SELECT p FROM CoachWorkoutPlan p JOIN FETCH p.user WHERE p.coach.email = :coachEmail AND p.user.userId IN :userIds ORDER BY p.createdAt DESC")
+    List<CoachWorkoutPlan> findByCoachEmailAndUserIdsOrderByCreatedAtDesc(@Param("coachEmail") String coachEmail, @Param("userIds") List<Integer> userIds);
+
     @Query("SELECT DISTINCT p FROM CoachWorkoutPlan p LEFT JOIN FETCH p.planDetails d LEFT JOIN FETCH d.exercise WHERE p.coach.email = :coachEmail AND p.user.userId = :userId AND (:planType IS NULL OR p.planType = :planType) ORDER BY p.createdAt DESC")
     List<CoachWorkoutPlan> findByCoachEmailAndUserIdAndPlanTypeOrderByCreatedAtDesc(@Param("coachEmail") String coachEmail, @Param("userId") Integer userId, @Param("planType") String planType);
 

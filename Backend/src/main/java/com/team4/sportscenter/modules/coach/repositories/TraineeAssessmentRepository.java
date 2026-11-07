@@ -20,6 +20,9 @@ public interface TraineeAssessmentRepository extends JpaRepository<TraineeAssess
     @Query("SELECT a FROM TraineeAssessment a WHERE a.user.userId = :userId ORDER BY a.createdAt DESC")
     List<TraineeAssessment> findByUserIdOrderByCreatedAtDesc(@Param("userId") Integer userId);
 
+    @Query("SELECT a FROM TraineeAssessment a JOIN FETCH a.user LEFT JOIN FETCH a.coach WHERE a.user.userId IN :userIds ORDER BY a.createdAt DESC")
+    List<TraineeAssessment> findByUserIdsOrderByCreatedAtDesc(@Param("userIds") List<Integer> userIds);
+
     @Query("SELECT a FROM TraineeAssessment a WHERE a.user.email = :userEmail ORDER BY a.createdAt DESC")
     List<TraineeAssessment> findByUserEmailOrderByCreatedAtDesc(@Param("userEmail") String userEmail);
 

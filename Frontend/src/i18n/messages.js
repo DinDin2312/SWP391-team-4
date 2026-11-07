@@ -5519,3 +5519,40 @@ const coachSubjectLabels = {
 };
 for (const [en, vi] of Object.entries(coachSubjectLabels)) translations[en] = [en, vi];
 translations['Newest first'] = ['Newest first', 'Mới tạo trước'];
+
+// Trainee Attendance & Detail Modal Labels
+const traineeModalLabels = {
+  'Trainee Details': 'Chi tiết học viên',
+  'Back to Attendance': 'Quay lại điểm danh',
+  'Age': 'Độ tuổi',
+  'Current Session Status': 'Trạng thái ca học này',
+  'Physical & Health Profile': 'Hồ sơ thể chất & Sức khỏe',
+  'Injury History & Notes': 'Tiền sử chấn thương & Ghi chú',
+  'Medical Conditions & Precautions': 'Bệnh lý & Vùng cần lưu ý',
+  'No special medical conditions or injuries recorded.': 'Không có ghi nhận bệnh lý hoặc chấn thương đặc biệt.',
+  'Special Notes from Trainee': 'Ghi chú đặc biệt từ học viên',
+  'Normal physical condition, ready for training.': 'Thể trạng bình thường, ổn định, sẵn sàng tập luyện.',
+  'No additional notes.': 'Không có ghi chú thêm.',
+  'Assess This Trainee': 'Đánh giá học viên này',
+  'Back to class attendance roster': 'Quay lại danh sách điểm danh lớp',
+  'Trainee has not updated InBody body metrics yet.': 'Học viên chưa cập nhật số đo thể trạng InBody.',
+  'Medical clearance recommended prior to high-intensity training (PAR-Q).': 'Cần tư vấn y tế trước khi tập luyện cường độ cao (PAR-Q).',
+  'Attendance is currently locked for this session.': 'Ca học này hiện đã khóa chức năng điểm danh.',
+  'Checked in at front desk': 'Đã check-in quầy lễ tân',
+  'Not checked in at front desk': 'Chưa check-in lễ tân',
+  'Click avatar to view trainee details': 'Bấm vào ảnh đại diện để xem chi tiết học viên này',
+  'Locked': 'Đã khóa',
+  'Attendance function is locked': 'Chức năng điểm danh đã bị khóa',
+  'Mark as present': 'Đánh dấu có mặt',
+  'Mark as absent': 'Đánh dấu vắng mặt',
+  'Reset to unmarked': 'Hoàn tác về chưa điểm danh',
+  'Direct Present': 'Có mặt trực tiếp',
+  'Present (Direct)': 'Có mặt (Trực tiếp)',
+  'Present': 'Có mặt',
+};
+
+for (const [en, vi] of Object.entries(traineeModalLabels)) {
+  translations[en] = [en, vi];
+  translations[vi] = [en, vi];
+}
+

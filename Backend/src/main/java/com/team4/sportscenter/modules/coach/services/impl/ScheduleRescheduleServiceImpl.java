@@ -214,28 +214,32 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
         User coach = userRepository.findByEmail(coachEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Coach not found: " + coachEmail));
 
-        LocalDateTime futureThreshold = LocalDateTime.now();
+        List<Schedule> schedules = scheduleRepository.findUpcomingSchedulesByCoachId(
+                coach.getUserId(), LocalDateTime.now());
+        if (schedules.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        List<Schedule> schedules = scheduleRepository.findAll().stream()
-                .filter(s -> s.getStartTime() != null && s.getStartTime().isAfter(futureThreshold))
-                .filter(s -> !"CANCELLED".equalsIgnoreCase(s.getStatus()))
-                .filter(s -> {
-                    boolean isPrimary = s.getGymClass() != null && s.getGymClass().getCoach() != null
-                            && Objects.equals(s.getGymClass().getCoach().getUserId(), coach.getUserId());
-                    boolean isSub = s.getSubstituteCoach() != null
-                            && Objects.equals(s.getSubstituteCoach().getUserId(), coach.getUserId());
-                    return isPrimary || isSub;
-                })
-                .sorted(Comparator.comparing(Schedule::getStartTime))
-                .toList();
+        List<Integer> scheduleIds = schedules.stream().map(Schedule::getScheduleId).toList();
+        Map<Integer, Integer> enrolledCounts = new HashMap<>();
+        for (Object[] row : bookingRepository.countBookingsByScheduleIds(scheduleIds)) {
+            if (row != null && row.length >= 2 && row[0] instanceof Number && row[1] instanceof Number) {
+                enrolledCounts.put(((Number) row[0]).intValue(), ((Number) row[1]).intValue());
+            }
+        }
 
-        List<UpcomingScheduleOptionDto> result = new ArrayList<>();
+        Map<Integer, Integer> pendingRequestIds = new HashMap<>();
+        for (ScheduleRescheduleRequest req : requestRepository
+                .findBySchedule_ScheduleIdInAndStatusInOrderByCreatedAtDesc(scheduleIds, List.of("PENDING"))) {
+            if (req.getSchedule() != null) {
+                pendingRequestIds.putIfAbsent(req.getSchedule().getScheduleId(), req.getRequestId());
+            }
+        }
+
+        List<UpcomingScheduleOptionDto> result = new ArrayList<>(schedules.size());
         for (Schedule s : schedules) {
             GymClass gc = s.getGymClass();
-            Integer enrolledCount = bookingRepository.findBySchedule_ScheduleId(s.getScheduleId()).size();
-
-            Optional<ScheduleRescheduleRequest> pending = requestRepository
-                    .findFirstBySchedule_ScheduleIdAndStatusInOrderByCreatedAtDesc(s.getScheduleId(), List.of("PENDING"));
+            Integer pendingReqId = pendingRequestIds.get(s.getScheduleId());
 
             result.add(UpcomingScheduleOptionDto.builder()
                     .scheduleId(s.getScheduleId())
@@ -245,10 +249,10 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
                     .roomName(gc != null && gc.getRoom() != null ? gc.getRoom().getRoomName() : "Phòng tập")
                     .startTime(s.getStartTime())
                     .endTime(s.getEndTime())
-                    .enrolledCount(enrolledCount)
+                    .enrolledCount(enrolledCounts.getOrDefault(s.getScheduleId(), 0))
                     .status(s.getStatus())
-                    .hasPendingRequest(pending.isPresent())
-                    .existingRequestId(pending.map(ScheduleRescheduleRequest::getRequestId).orElse(null))
+                    .hasPendingRequest(pendingReqId != null)
+                    .existingRequestId(pendingReqId)
                     .build());
         }
 

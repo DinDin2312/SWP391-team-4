@@ -158,6 +158,7 @@ public class CoachAssessmentServiceImpl implements CoachAssessmentService {
                 .fullName(st.getFullName())
                 .email(st.getEmail())
                 .phone(st.getPhone())
+                .avatarPath(st.getAvatarPath())
                 .bookingStatus("CONFIRMED")
                 .attendanceStatus("NOT_YET")
                 .health(memberHealthService.summaryFor(st))

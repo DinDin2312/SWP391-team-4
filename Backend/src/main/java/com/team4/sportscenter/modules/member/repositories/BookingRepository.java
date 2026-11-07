@@ -63,4 +63,7 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
     List<Booking> findBySchedule_ScheduleId(Integer scheduleId);
 
     List<Booking> findBySchedule_ScheduleIdAndStatus(Integer scheduleId, String status);
+
+    @Query("SELECT b.schedule.scheduleId, COUNT(b) FROM Booking b WHERE b.schedule.scheduleId IN :scheduleIds GROUP BY b.schedule.scheduleId")
+    List<Object[]> countBookingsByScheduleIds(@Param("scheduleIds") List<Integer> scheduleIds);
 }

@@ -2018,6 +2018,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
     }
 
     @Override
+    @Transactional
     public List<CoachScheduleCheckInResponse> getTodayCoachSchedules(LocalDate date, String keyword, String statusFilter) {
         LocalDate targetDate = (date != null) ? date : LocalDate.now();
         LocalDateTime dayStart = targetDate.atStartOfDay();

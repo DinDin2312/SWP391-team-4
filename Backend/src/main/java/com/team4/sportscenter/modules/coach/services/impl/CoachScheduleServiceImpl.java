@@ -18,6 +18,7 @@ import com.team4.sportscenter.modules.auth.entities.User;
 import com.team4.sportscenter.modules.member.entities.Booking;
 import com.team4.sportscenter.modules.member.entities.Schedule;
 import com.team4.sportscenter.modules.member.repositories.BookingRepository;
+import com.team4.sportscenter.modules.member.health.MemberHealthSummary;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -102,38 +103,87 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
         return userMap;
     }
 
+    private Map<Integer, TraineeAssessment> findLatestAssessmentsByUserIds(List<Integer> userIds) {
+        if (userIds == null || userIds.isEmpty()) return Collections.emptyMap();
+        Map<Integer, TraineeAssessment> latestMap = new HashMap<>();
+        for (TraineeAssessment a : traineeAssessmentRepository.findByUserIdsOrderByCreatedAtDesc(userIds)) {
+            if (a.getUser() != null) {
+                latestMap.putIfAbsent(a.getUser().getUserId(), a);
+            }
+        }
+        return latestMap;
+    }
+
+    private EnrolledStudentResponse toEnrolledStudent(
+            Booking b,
+            FrontDeskCheckInInfo fd,
+            MemberHealthSummary health,
+            TraineeAssessment latestAssessment) {
+        User u = b.getUser();
+        String avatarPath = u.getAvatarPath();
+        return EnrolledStudentResponse.builder()
+                .bookingId(b.getBookingId())
+                .userId(u.getUserId())
+                .fullName(u.getFullName())
+                .email(u.getEmail())
+                .phone(u.getPhone())
+                .avatarPath(avatarPath)
+                .avatarUrl(avatarPath != null && !avatarPath.isBlank() ? "/api/avatars/" + avatarPath : null)
+                .bookingStatus(b.getStatus())
+                .attendanceStatus(b.getAttendanceStatus() != null ? b.getAttendanceStatus() : "NOT_YET")
+                .checkedInAtFrontDesk(fd != null && fd.isCheckedIn())
+                .frontDeskCheckInTime(fd != null ? fd.getCheckInTime() : null)
+                .frontDeskCheckInType(fd != null ? fd.getCheckInType() : null)
+                .health(health)
+                .height(latestAssessment != null ? latestAssessment.getHeight() : null)
+                .weight(latestAssessment != null ? latestAssessment.getWeight() : null)
+                .build();
+    }
+
     @Override
     public List<CoachScheduleResponse> getCoachSchedules(String coachEmail) {
         List<Schedule> schedules = coachScheduleRepository.findSchedulesByCoachEmail(coachEmail);
+        if (schedules == null || schedules.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         Map<Integer, FrontDeskCheckInInfo> frontDeskMap = getTodayFrontDeskCheckInsByUser();
+        List<Integer> scheduleIds = schedules.stream().map(Schedule::getScheduleId).collect(Collectors.toList());
+
+        List<Booking> allBookings = coachScheduleRepository.findBookingsByScheduleIds(scheduleIds);
+        Map<Integer, List<Booking>> bookingsByScheduleId = allBookings.stream()
+                .collect(Collectors.groupingBy(b -> b.getSchedule().getScheduleId()));
+
+        List<ScheduleRescheduleRequest> pendingRequests = rescheduleRequestRepository
+                .findBySchedule_ScheduleIdInAndStatusInOrderByCreatedAtDesc(scheduleIds, List.of("PENDING"));
+        Map<Integer, ScheduleRescheduleRequest> pendingMapByScheduleId = new HashMap<>();
+        for (ScheduleRescheduleRequest req : pendingRequests) {
+            if (req.getSchedule() != null) {
+                pendingMapByScheduleId.putIfAbsent(req.getSchedule().getScheduleId(), req);
+            }
+        }
+
+        List<User> distinctUsers = allBookings.stream().map(Booking::getUser).filter(Objects::nonNull).toList();
+        List<Integer> distinctUserIds = distinctUsers.stream().map(User::getUserId).distinct().toList();
+        Map<Integer, MemberHealthSummary> healthCache = memberHealthService.summariesFor(distinctUsers);
+        Map<Integer, TraineeAssessment> latestAssessments = findLatestAssessmentsByUserIds(distinctUserIds);
 
         return schedules.stream().map(schedule -> {
-            List<Booking> bookings = coachScheduleRepository.findBookingsByScheduleId(schedule.getScheduleId());
+            List<Booking> bookings = bookingsByScheduleId.getOrDefault(schedule.getScheduleId(), Collections.emptyList());
 
             List<EnrolledStudentResponse> students = bookings.stream().map(b -> {
-                FrontDeskCheckInInfo fd = frontDeskMap.get(b.getUser().getUserId());
-                return EnrolledStudentResponse.builder()
-                        .bookingId(b.getBookingId())
-                        .userId(b.getUser().getUserId())
-                        .fullName(b.getUser().getFullName())
-                        .email(b.getUser().getEmail())
-                        .phone(b.getUser().getPhone())
-                        .avatarPath(b.getUser().getAvatarPath())
-                        .avatarUrl(b.getUser().getAvatarPath() != null && !b.getUser().getAvatarPath().isBlank() ? "/api/avatars/" + b.getUser().getAvatarPath() : null)
-                        .bookingStatus(b.getStatus())
-                        .attendanceStatus(b.getAttendanceStatus() != null ? b.getAttendanceStatus() : "NOT_YET")
-                        .checkedInAtFrontDesk(fd != null && fd.isCheckedIn())
-                        .frontDeskCheckInTime(fd != null ? fd.getCheckInTime() : null)
-                        .frontDeskCheckInType(fd != null ? fd.getCheckInType() : null)
-                        .health(memberHealthService.summaryFor(b.getUser()))
-                        .build();
+                Integer uid = b.getUser().getUserId();
+                return toEnrolledStudent(
+                        b,
+                        frontDeskMap.get(uid),
+                        healthCache.get(uid),
+                        latestAssessments.get(uid)
+                );
             }).collect(Collectors.toList());
 
             boolean isSub = schedule.getSubstituteCoach() != null && schedule.getSubstituteCoach().getEmail().equalsIgnoreCase(coachEmail);
             String primaryCoachName = schedule.getGymClass().getCoach() != null ? schedule.getGymClass().getCoach().getFullName() : null;
-
-            Optional<ScheduleRescheduleRequest> pendingReq = rescheduleRequestRepository
-                    .findFirstBySchedule_ScheduleIdAndStatusInOrderByCreatedAtDesc(schedule.getScheduleId(), List.of("PENDING"));
+            ScheduleRescheduleRequest pendingReq = pendingMapByScheduleId.get(schedule.getScheduleId());
 
             return CoachScheduleResponse.builder()
                     .scheduleId(schedule.getScheduleId())
@@ -146,8 +196,8 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                     .coachName(primaryCoachName)
                     .substituteCoachName(schedule.getSubstituteCoach() != null ? schedule.getSubstituteCoach().getFullName() : null)
                     .isSubstituteForCurrentCoach(isSub)
-                    .hasPendingReschedule(pendingReq.isPresent())
-                    .pendingRescheduleRequestId(pendingReq.map(ScheduleRescheduleRequest::getRequestId).orElse(null))
+                    .hasPendingReschedule(pendingReq != null)
+                    .pendingRescheduleRequestId(pendingReq != null ? pendingReq.getRequestId() : null)
                     .maxSlots(schedule.getGymClass().getMaxSlots())
                     .enrolledCount(students.size())
                     .enrolledStudents(students)
@@ -171,14 +221,37 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                     .collect(Collectors.toList());
         }
 
-        // Group bookings by User
+        if (bookings.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         Map<User, List<Booking>> userBookingsMap = bookings.stream()
                 .collect(Collectors.groupingBy(Booking::getUser));
+        List<Integer> userIds = userBookingsMap.keySet().stream().map(User::getUserId).toList();
 
-        List<CoachStudentResponse> result = new ArrayList<>();
+        // Batch fetch AI workout plans, Coach workout plans, Assessments & Health profiles in 4 queries total
+        Map<Integer, AiWorkoutPlan> latestAiPlanByUser = new HashMap<>();
+        for (AiWorkoutPlan p : aiWorkoutPlanRepository.findByUserIdsOrderByCreatedAtDesc(userIds)) {
+            if (p.getUser() != null) {
+                latestAiPlanByUser.putIfAbsent(p.getUser().getUserId(), p);
+            }
+        }
+
+        Map<Integer, List<String>> assignedPlansByUser = new HashMap<>();
+        for (CoachWorkoutPlan p : coachWorkoutPlanRepository.findByCoachEmailAndUserIdsOrderByCreatedAtDesc(coachEmail, userIds)) {
+            if (p.getUser() != null) {
+                assignedPlansByUser.computeIfAbsent(p.getUser().getUserId(), k -> new ArrayList<>()).add(p.getTitle());
+            }
+        }
+
+        Map<Integer, TraineeAssessment> latestAssessmentByUser = findLatestAssessmentsByUserIds(userIds);
+        Map<Integer, MemberHealthSummary> healthByUser = memberHealthService.summariesFor(userBookingsMap.keySet());
+
+        List<CoachStudentResponse> result = new ArrayList<>(userBookingsMap.size());
 
         for (Map.Entry<User, List<Booking>> entry : userBookingsMap.entrySet()) {
             User user = entry.getKey();
+            Integer uid = user.getUserId();
             List<Booking> userBookings = entry.getValue();
 
             Set<String> enrolledClasses = userBookings.stream()
@@ -191,20 +264,12 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                     .map(b -> b.getSchedule().getGymClass().getClassId())
                     .collect(Collectors.toSet());
 
-            // Fetch student AI workout goal & fitness level
-            List<AiWorkoutPlan> aiPlans = aiWorkoutPlanRepository.findByUserIdOrderByCreatedAtDesc(user.getUserId());
-            String workoutGoal = (aiPlans != null && !aiPlans.isEmpty()) ? aiPlans.get(0).getGoal() : null;
-            String fitnessLevel = (aiPlans != null && !aiPlans.isEmpty()) ? aiPlans.get(0).getFitnessLevel() : null;
+            AiWorkoutPlan latestAi = latestAiPlanByUser.get(uid);
+            String workoutGoal = latestAi != null ? latestAi.getGoal() : null;
+            String fitnessLevel = latestAi != null ? latestAi.getFitnessLevel() : null;
+            List<String> assignedPlans = assignedPlansByUser.getOrDefault(uid, Collections.emptyList());
 
-            // Fetch coach assigned workout plans for this student
-            List<CoachWorkoutPlan> coachPlans = coachWorkoutPlanRepository.findByCoachEmailAndUserIdOrderByCreatedAtDesc(coachEmail, user.getUserId());
-            List<String> assignedPlans = (coachPlans != null) ? coachPlans.stream()
-                    .map(CoachWorkoutPlan::getTitle)
-                    .collect(Collectors.toList()) : Collections.emptyList();
-
-            // Fetch latest physical & InBody metrics (including member self-assessments)
-            List<TraineeAssessment> assessments = traineeAssessmentRepository.findByUserIdOrderByCreatedAtDesc(user.getUserId());
-            TraineeAssessment latestAssessment = (assessments != null && !assessments.isEmpty()) ? assessments.get(0) : null;
+            TraineeAssessment latestAssessment = latestAssessmentByUser.get(uid);
 
             BigDecimal weight = null;
             BigDecimal height = null;
@@ -222,7 +287,7 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                 muscleMass = latestAssessment.getMuscleMass();
                 latestAssessmentTitle = latestAssessment.getAssessmentTitle();
                 metricsUpdatedAt = latestAssessment.getCreatedAt();
-                isSelfRecorded = latestAssessment.getCoach() != null && latestAssessment.getCoach().getUserId().equals(user.getUserId());
+                isSelfRecorded = latestAssessment.getCoach() != null && latestAssessment.getCoach().getUserId().equals(uid);
                 if (weight != null && height != null && height.compareTo(BigDecimal.ZERO) > 0) {
                     BigDecimal heightMeters = height.divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
                     BigDecimal heightSquared = heightMeters.multiply(heightMeters);
@@ -233,7 +298,7 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
             }
 
             result.add(CoachStudentResponse.builder()
-                    .userId(user.getUserId())
+                    .userId(uid)
                     .fullName(user.getFullName())
                     .email(user.getEmail())
                     .phone(user.getPhone())
@@ -246,7 +311,7 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                     .workoutGoal(workoutGoal)
                     .fitnessLevel(fitnessLevel)
                     .assignedPlans(assignedPlans)
-                    .health(memberHealthService.summaryFor(user))
+                    .health(healthByUser.get(uid))
                     .weight(weight)
                     .height(height)
                     .bodyFatPercentage(bodyFatPercentage)
@@ -263,23 +328,30 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
 
     @Override
     public List<EnrolledStudentResponse> getScheduleStudents(Integer scheduleId, String coachEmail) {
+        Schedule schedule = coachScheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch học với ID: " + scheduleId));
+
+        boolean isMainCoach = schedule.getGymClass() != null && schedule.getGymClass().getCoach() != null
+                && schedule.getGymClass().getCoach().getEmail().equalsIgnoreCase(coachEmail);
+        boolean isSubCoach = schedule.getSubstituteCoach() != null
+                && schedule.getSubstituteCoach().getEmail().equalsIgnoreCase(coachEmail);
+        if (!isMainCoach && !isSubCoach) {
+            throw new RuntimeException("Bạn không có quyền xem danh sách học viên của lịch học này.");
+        }
+
         List<Booking> bookings = coachScheduleRepository.findBookingsByScheduleId(scheduleId);
+        if (bookings.isEmpty()) {
+            return Collections.emptyList();
+        }
         Map<Integer, FrontDeskCheckInInfo> frontDeskMap = getTodayFrontDeskCheckInsByUser();
+        List<User> users = bookings.stream().map(Booking::getUser).filter(Objects::nonNull).toList();
+        List<Integer> userIds = users.stream().map(User::getUserId).distinct().toList();
+        Map<Integer, MemberHealthSummary> healthMap = memberHealthService.summariesFor(users);
+        Map<Integer, TraineeAssessment> latestAssessments = findLatestAssessmentsByUserIds(userIds);
+
         return bookings.stream().map(b -> {
-            FrontDeskCheckInInfo fd = frontDeskMap.get(b.getUser().getUserId());
-            return EnrolledStudentResponse.builder()
-                    .bookingId(b.getBookingId())
-                    .userId(b.getUser().getUserId())
-                    .fullName(b.getUser().getFullName())
-                    .email(b.getUser().getEmail())
-                    .phone(b.getUser().getPhone())
-                    .bookingStatus(b.getStatus())
-                    .attendanceStatus(b.getAttendanceStatus() != null ? b.getAttendanceStatus() : "NOT_YET")
-                    .checkedInAtFrontDesk(fd != null && fd.isCheckedIn())
-                    .frontDeskCheckInTime(fd != null ? fd.getCheckInTime() : null)
-                    .frontDeskCheckInType(fd != null ? fd.getCheckInType() : null)
-                    .health(memberHealthService.summaryFor(b.getUser()))
-                    .build();
+            Integer uid = b.getUser().getUserId();
+            return toEnrolledStudent(b, frontDeskMap.get(uid), healthMap.get(uid), latestAssessments.get(uid));
         }).collect(Collectors.toList());
     }
 

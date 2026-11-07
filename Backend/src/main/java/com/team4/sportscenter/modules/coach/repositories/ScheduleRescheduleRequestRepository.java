@@ -25,6 +25,11 @@ public interface ScheduleRescheduleRequestRepository extends JpaRepository<Sched
     Optional<ScheduleRescheduleRequest> findFirstBySchedule_ScheduleIdAndStatusInOrderByCreatedAtDesc(
             Integer scheduleId, List<String> statuses);
 
+    @Query("SELECT r FROM ScheduleRescheduleRequest r JOIN FETCH r.schedule s WHERE r.schedule.scheduleId IN :scheduleIds AND r.status IN :statuses ORDER BY r.createdAt DESC")
+    List<ScheduleRescheduleRequest> findBySchedule_ScheduleIdInAndStatusInOrderByCreatedAtDesc(
+            @Param("scheduleIds") List<Integer> scheduleIds,
+            @Param("statuses") List<String> statuses);
+
     @Query("SELECT r FROM ScheduleRescheduleRequest r " +
            "WHERE r.status = 'APPROVED' " +
            "AND r.confirmationDeadline IS NOT NULL " +

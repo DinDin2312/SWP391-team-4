@@ -388,9 +388,9 @@ const TraineeAssessmentModal = ({
                       }`}
                     >
                       <div className="flex items-center gap-2.5 truncate">
-                        <div className={`relative w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center shrink-0 border overflow-hidden ${
+                        <div className={`relative w-10 h-10 rounded-xl font-bold text-xs flex items-center justify-center shrink-0 border overflow-hidden shadow-xs transition-transform ${
                           isSelected
-                            ? 'bg-[var(--primary)] text-[color:var(--on-primary)] border-[var(--primary)]'
+                            ? 'bg-[var(--primary)] text-[color:var(--on-primary)] border-[var(--primary)] ring-2 ring-amber-500/30'
                             : 'bg-[var(--surface-hover)] text-[var(--text-muted)] border-[var(--border)]'
                         }`}>
                           <span>{initials}</span>
@@ -420,13 +420,26 @@ const TraineeAssessmentModal = ({
 
             {/* Selected Trainee Profile Summary Card */}
             {selectedStudent && (
-              <div className="p-3.5 rounded-xl bg-indigo-50/90 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-500/30 text-xs shrink-0 flex items-center justify-between shadow-xs">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-indigo-800 dark:text-indigo-300 font-extrabold uppercase tracking-wider">{t("Học viên mục tiêu")}</span>
-                  <span className="font-extrabold text-sm text-slate-900 dark:text-[var(--text)]">{selectedStudent.fullName}</span>
-                  <span className="text-[10px] text-slate-600 dark:text-[var(--text-muted)]">{selectedStudent.email}</span>
+              <div className="p-3 rounded-xl bg-indigo-50/90 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-500/30 text-xs shrink-0 flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative w-10 h-10 rounded-xl bg-indigo-200 dark:bg-indigo-900/60 text-indigo-900 dark:text-indigo-200 font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden border border-indigo-300 dark:border-indigo-500/30 shadow-xs">
+                    <span>{selectedStudent.fullName ? selectedStudent.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'HV'}</span>
+                    {resolveAvatarUrl(selectedStudent.avatarPath || selectedStudent.avatarUrl) && (
+                      <img
+                        src={resolveAvatarUrl(selectedStudent.avatarPath || selectedStudent.avatarUrl)}
+                        alt={selectedStudent.fullName}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    )}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] text-indigo-800 dark:text-indigo-300 font-extrabold uppercase tracking-wider truncate">{t("Học viên mục tiêu")}</span>
+                    <span className="font-extrabold text-sm text-slate-900 dark:text-[var(--text)] truncate">{selectedStudent.fullName}</span>
+                    <span className="text-[10px] text-slate-600 dark:text-[var(--text-muted)] truncate">{selectedStudent.email}</span>
+                  </div>
                 </div>
-                <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 flex items-center justify-center font-bold text-xs border border-indigo-300 dark:border-indigo-500/30">
+                <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 flex items-center justify-center font-bold text-xs border border-indigo-300 dark:border-indigo-500/30 shrink-0">
                   <Activity className="w-4 h-4" />
                 </div>
               </div>
