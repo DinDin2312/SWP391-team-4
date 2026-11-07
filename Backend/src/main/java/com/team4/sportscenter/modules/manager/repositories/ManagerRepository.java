@@ -642,6 +642,14 @@ public class ManagerRepository {
         jdbc.update("UPDATE " + target[0] + " SET image_path=? WHERE " + target[1] + "=?", imagePath, id);
     }
 
+    private List<Map<String, Object>> revenueByDay(LocalDate from, LocalDate to) {
+        return jdbc.queryForList("""
+                SELECT DATE_FORMAT(p.payment_date,'%Y-%m-%d') label,SUM(p.amount) value FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id
+                WHERE p.status IN ('SUCCESS','COMPLETED') AND i.status<>'REVIEW' AND DATE(p.payment_date) BETWEEN ? AND ?
+                GROUP BY DATE_FORMAT(p.payment_date,'%Y-%m-%d') ORDER BY label
+                """, from, to);
+    }
+
     public Map<String, Object> report(LocalDate from, LocalDate to) {
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         // Comparison window: the same number of days immediately before the selected range.
@@ -666,11 +674,9 @@ public class ManagerRepository {
                 WHERE b.booking_time>=? AND b.booking_time<?
                 GROUP BY b.status ORDER BY b.status
                 """,from.atStartOfDay(),to.plusDays(1).atStartOfDay()));
-        result.put("revenueByDay", jdbc.queryForList("""
-                SELECT DATE_FORMAT(p.payment_date,'%Y-%m-%d') label,SUM(p.amount) value FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id
-                WHERE p.status IN ('SUCCESS','COMPLETED') AND i.status<>'REVIEW' AND DATE(p.payment_date) BETWEEN ? AND ?
-                GROUP BY DATE_FORMAT(p.payment_date,'%Y-%m-%d') ORDER BY label
-                """, from, to));
+        result.put("revenueByDay", revenueByDay(from, to));
+        // Same-length window just before the range, drawn as the comparison line on the revenue chart.
+        result.put("previousRevenueByDay", revenueByDay(previousFrom, previousTo));
         result.put("memberships", jdbc.queryForList("""
                 SELECT p.package_name label,COUNT(um.membership_id) value
                 FROM PACKAGES p LEFT JOIN USER_MEMBERSHIPS um ON um.package_id=p.package_id AND um.start_date BETWEEN ? AND ?

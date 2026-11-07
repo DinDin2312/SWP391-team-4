@@ -471,13 +471,16 @@ export default function ManagerRescheduleView() {
                             </button>
                           )}
 
-                          <button
-                            onClick={() => openSubstitute(req)}
-                            className="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-500 active:scale-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
-                          >
-                            <UserCheck className="w-3.5 h-3.5" />
-                            <span>{t('Assign Substitute')}</span>
-                          </button>
+                          {/* A make-up request is only approved or rejected; picking a substitute is for substitute requests. */}
+                          {isSubstituteCoach(req.actionType) && (
+                            <button
+                              onClick={() => openSubstitute(req)}
+                              className="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-500 active:scale-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <UserCheck className="w-3.5 h-3.5" />
+                              <span>{t('Assign Substitute')}</span>
+                            </button>
+                          )}
 
                           <button
                             onClick={() => openReject(req)}

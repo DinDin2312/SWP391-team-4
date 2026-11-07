@@ -778,6 +778,7 @@ class ManagerIntegrationTests {
         assertEquals(1, ((Number) popular.get("students")).intValue(), "one member booking two sessions is one student");
         assertEquals(1, ((Number) row.get("students")).intValue());
         assertNotNull(result.get("previousSummary"));
+        assertTrue(result.get("previousRevenueByDay") instanceof List<?>, "previous period revenue is sent for the comparison line");
         assertDoesNotThrow(() -> service.classes());
         assertDoesNotThrow(() -> service.packages());
     }
