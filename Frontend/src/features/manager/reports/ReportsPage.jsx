@@ -4,7 +4,7 @@ import { t, useLanguage } from '../../../i18n/useLanguage';
 import { locale } from '../../../i18n/languageStore';
 import { formatDate, formatMoney } from '../../../utils/displayFormat';
 import { isoDate, reportCsv } from '../managerUtils';
-import { bucketDays, fillDays } from './revenueSeries';
+import { alignPrevious, bucketDays, fillDays } from './revenueSeries';
 import ManagerPageHeader from '../components/ManagerPageHeader';
 import CoachTeachingReport from './CoachTeachingReport';
 import './reports.css';
@@ -31,11 +31,6 @@ function niceScale(maximum, targetTicks = 4) {
   return { top, ticks: Array.from({ length: Math.round(top / step) + 1 }, (_, index) => index * step) };
 }
 
-function columnPath(x, y, width, height, radius = 4) {
-  const r = Math.min(radius, width / 2, height);
-  return `M${x},${y + height}V${y + r}Q${x},${y} ${x + r},${y}H${x + width - r}Q${x + width},${y} ${x + width},${y + r}V${y + height}Z`;
-}
-
 function useWidth(fallback = 760) {
   const ref = useRef(null);
   const [width, setWidth] = useState(fallback);
@@ -49,71 +44,95 @@ function useWidth(fallback = 760) {
   return [ref, width];
 }
 
-function RevenueChart({ days }) {
+function linePath(points) {
+  return points.map(([px, py], index) => `${index ? 'L' : 'M'}${px},${py}`).join('');
+}
+
+// Line chart: this period as a solid line with a soft area, the previous period of equal length as a dashed line.
+function RevenueChart({ days, previousDays, previousPeriod }) {
   const titleId = useId();
+  const gradientId = `reports-area-${titleId.replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const [ref, width] = useWidth();
   const [active, setActive] = useState(null);
   const { unit, buckets } = useMemo(() => bucketDays(days), [days]);
+  const previous = useMemo(() => alignPrevious(buckets, previousDays), [buckets, previousDays]);
   const narrow = width < 520;
-  const margin = { top: 28, right: 12, bottom: 30, left: narrow ? 44 : 56 };
+  const margin = { top: 28, right: narrow ? 14 : 20, bottom: 30, left: narrow ? 44 : 56 };
   const height = narrow ? 220 : 260;
   const plotW = width - margin.left - margin.right;
   const plotH = height - margin.top - margin.bottom;
   const values = buckets.map(bucket => bucket.value);
+  const previousValues = previous ? previous.map(bucket => bucket?.value ?? 0) : [];
+  const hasPrevious = previousValues.some(value => value > 0);
   const total = values.reduce((sum, value) => sum + value, 0);
-  const average = buckets.length ? total / buckets.length : 0;
   const peakIndex = values.reduce((best, value, index) => value > values[best] ? index : best, 0);
-  const { top, ticks } = niceScale(Math.max(...values, 1), narrow ? 3 : 4);
-  const band = plotW / buckets.length;
-  const barWidth = Math.max(2, Math.min(24, band * 0.68));
-  const xCenter = index => margin.left + band * index + band / 2;
+  const { top, ticks } = niceScale(Math.max(...values, ...(hasPrevious ? previousValues : []), 1), narrow ? 3 : 4);
+  const count = buckets.length;
+  const x = index => margin.left + (count < 2 ? plotW / 2 : plotW * index / (count - 1));
   const y = value => margin.top + plotH - (value / top) * plotH;
-  const tickCount = Math.min(buckets.length, narrow ? 4 : 7);
-  const xTicks = [...new Set(Array.from({ length: tickCount }, (_, index) => Math.round(index * (buckets.length - 1) / Math.max(1, tickCount - 1))))];
+  const points = values.map((value, index) => [x(index), y(value)]);
+  const previousPoints = previousValues.map((value, index) => [x(index), y(value)]);
+  const showDots = count <= 14;
+  const tickCount = Math.min(count, narrow ? 4 : 7);
+  const xTicks = [...new Set(Array.from({ length: tickCount }, (_, index) => Math.round(index * (count - 1) / Math.max(1, tickCount - 1))))];
   const shown = active == null ? null : buckets[active];
-  const tooltipOnLeft = active != null && xCenter(active) > width / 2;
-  const tooltipLeft = active == null ? 0 : xCenter(active) + (tooltipOnLeft ? -10 : 10);
-  const edgeAnchor = index => buckets.length < 2 ? 'middle' : index === 0 ? 'start' : index === buckets.length - 1 ? 'end' : 'middle';
-  const edgeShift = index => buckets.length < 2 ? 0 : index === 0 ? -Math.min(barWidth / 2, 8) : index === buckets.length - 1 ? Math.min(barWidth / 2, 8) : 0;
+  const shownPrevious = active == null || !previous ? null : previous[active];
+  const tooltipOnLeft = active != null && x(active) > width / 2;
+  const tooltipLeft = active == null ? 0 : x(active) + (tooltipOnLeft ? -12 : 12);
+  const edgeAnchor = index => count < 2 ? 'middle' : index === 0 ? 'start' : index === count - 1 ? 'end' : 'middle';
+  const rangeLabel = bucket => bucket.end !== bucket.date ? `${shortDate(bucket.date)} – ${formatDate(bucket.end)}` : formatDate(bucket.date);
+  // Hover zone for each point reaches halfway to its neighbours.
+  const hitStart = index => index === 0 ? margin.left : (x(index - 1) + x(index)) / 2;
+  const hitEnd = index => index === count - 1 ? width - margin.right : (x(index) + x(index + 1)) / 2;
 
   const onKeyDown = event => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
     setActive(current => {
       if (event.key === 'Home') return 0;
-      if (event.key === 'End') return buckets.length - 1;
-      return Math.max(0, Math.min(buckets.length - 1, (current ?? peakIndex) + (event.key === 'ArrowLeft' ? -1 : 1)));
+      if (event.key === 'End') return count - 1;
+      return Math.max(0, Math.min(count - 1, (current ?? peakIndex) + (event.key === 'ArrowLeft' ? -1 : 1)));
     });
   };
 
   return <div className="reports-chart" ref={ref}>
-    <div className="reports-chart-meta"><div className="reports-chart-legend"><span><i aria-hidden="true" />{t(unit === 'week' ? 'Weekly revenue' : 'Daily revenue')}</span>{average > 0 && <span><b aria-hidden="true" />{t(unit === 'week' ? 'Weekly average' : 'Daily average')}: {compact(average)}</span>}</div>{unit === 'week' && <span>{t('Long ranges are grouped by week (Monday to Sunday).')}</span>}</div>
+    <div className="reports-chart-meta"><div className="reports-chart-legend">
+      <span className="is-line"><i aria-hidden="true" />{t(unit === 'week' ? 'Weekly revenue' : 'Daily revenue')}</span>
+      {hasPrevious && <span className="is-previous"><i aria-hidden="true" />{t('Previous period')}{previousPeriod ? ` (${shortDate(previousPeriod.from)} – ${shortDate(previousPeriod.to)})` : ''}</span>}
+    </div>{unit === 'week' && <span>{t('Long ranges are grouped by week (Monday to Sunday).')}</span>}</div>
     <div className="reports-chart-stage" tabIndex={0} role="group" aria-labelledby={titleId}
       aria-describedby={`${titleId}-hint`} onKeyDown={onKeyDown} onFocus={() => setActive(current => current ?? peakIndex)}
       onBlur={() => setActive(null)} onPointerLeave={() => setActive(null)}>
-      <span id={`${titleId}-hint`} className="reports-sr-only">{t('Use the left and right arrow keys to read each column.')}</span>
+      <span id={`${titleId}-hint`} className="reports-sr-only">{t('Use the left and right arrow keys to read each point.')}</span>
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby={titleId}>
         <title id={titleId}>{t(unit === 'week' ? 'Weekly revenue' : 'Daily revenue')}</title>
+        <defs><linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" className="reports-area-top" /><stop offset="100%" className="reports-area-bottom" />
+        </linearGradient></defs>
         {ticks.map(tick => <g key={tick} className="reports-axis-y">
           <line x1={margin.left} x2={width - margin.right} y1={y(tick)} y2={y(tick)} className={tick === 0 ? 'is-baseline' : ''} />
           <text x={margin.left - 8} y={y(tick)} dy="0.32em">{compact(tick)}</text>
         </g>)}
-        {buckets.map((bucket, index) => bucket.value > 0 && <path key={bucket.date} className={`reports-column${active === index ? ' is-active' : ''}${active != null && active !== index ? ' is-dimmed' : ''}`}
-          d={columnPath(xCenter(index) - barWidth / 2, y(bucket.value), barWidth, y(0) - y(bucket.value))} />)}
-        {average > 0 && <g className="reports-average">
-          <line x1={margin.left} x2={width - margin.right} y1={y(average)} y2={y(average)} />
-        </g>}
+        {count > 1 && <path className="reports-area" fill={`url(#${gradientId})`} d={`${linePath(points)}L${x(count - 1)},${y(0)}L${x(0)},${y(0)}Z`} />}
+        {hasPrevious && count > 1 && <path className="reports-previous-line" d={linePath(previousPoints)} />}
+        {count > 1 && <path className="reports-line" d={linePath(points)} />}
+        {(showDots || count < 2) && points.map(([px, py], index) => values[index] > 0 && active !== index && <circle key={buckets[index].date} className="reports-point" cx={px} cy={py} r={3.5} />)}
         {values[peakIndex] > 0 && active == null && <g className="reports-peak">
-          <text x={Math.min(Math.max(xCenter(peakIndex), margin.left + 30), width - margin.right - 30)} y={y(values[peakIndex]) - 9} textAnchor="middle">{compact(values[peakIndex])}</text>
+          <text x={Math.min(Math.max(x(peakIndex), margin.left + 30), width - margin.right - 30)} y={y(values[peakIndex]) - 10} textAnchor="middle">{compact(values[peakIndex])}</text>
         </g>}
-        {active != null && <g className="reports-crosshair"><line x1={xCenter(active)} x2={xCenter(active)} y1={margin.top} y2={y(0)} /></g>}
-        <g className="reports-axis-x">{xTicks.map(index => <text key={index} x={xCenter(index)} y={height - 8} textAnchor={edgeAnchor(index)} dx={edgeShift(index)}>{shortDate(buckets[index].date)}</text>)}</g>
-        <g className="reports-hit">{buckets.map((bucket, index) => <rect key={bucket.date} x={margin.left + band * index} y={margin.top} width={band} height={plotH}
+        {active != null && <g className="reports-crosshair">
+          <line x1={x(active)} x2={x(active)} y1={margin.top} y2={y(0)} />
+          {hasPrevious && <circle className="is-previous" cx={x(active)} cy={y(previousValues[active])} r={4} />}
+          <circle cx={x(active)} cy={y(values[active])} r={5} />
+        </g>}
+        <g className="reports-axis-x">{xTicks.map(index => <text key={index} x={x(index)} y={height - 8} textAnchor={edgeAnchor(index)}>{shortDate(buckets[index].date)}</text>)}</g>
+        <g className="reports-hit">{buckets.map((bucket, index) => <rect key={bucket.date} x={hitStart(index)} y={margin.top} width={Math.max(1, hitEnd(index) - hitStart(index))} height={plotH}
           onPointerEnter={() => setActive(index)} onPointerMove={() => setActive(index)} />)}</g>
       </svg>
       {shown && <div className="reports-tooltip" role="status" style={{ left: tooltipLeft, top: margin.top, transform: tooltipOnLeft ? 'translateX(-100%)' : 'none' }}>
         <strong>{formatMoney(shown.value)}</strong>
-        <span><i aria-hidden="true" />{shown.end !== shown.date ? `${shortDate(shown.date)} – ${formatDate(shown.end)}` : formatDate(shown.date)}{shown.value > 0 && total > 0 ? ` · ${percent(shown.value / total * 100)} ${t('of period')}` : ''}</span>
+        <span><i aria-hidden="true" />{rangeLabel(shown)}{shown.value > 0 && total > 0 ? ` · ${percent(shown.value / total * 100)} ${t('of period')}` : ''}</span>
+        {hasPrevious && shownPrevious && <span className="is-previous"><i aria-hidden="true" />{t('Previous period')} · {rangeLabel(shownPrevious)}: {formatMoney(shownPrevious.value)}</span>}
       </div>}
     </div>
   </div>;
@@ -208,6 +227,9 @@ export default function ReportsPage({ data, filters, appliedFilters, setFilters,
   const summary = report?.summary;
   const rawDaily = report?.revenueByDay;
   const days = useMemo(() => fillDays(rawDaily || [], appliedFilters.from, appliedFilters.to), [rawDaily, appliedFilters.from, appliedFilters.to]);
+  const rawPreviousDaily = report?.previousRevenueByDay;
+  const previousRange = report?.previousPeriod;
+  const previousDays = useMemo(() => rawPreviousDaily && previousRange ? fillDays(rawPreviousDaily, previousRange.from, previousRange.to) : null, [rawPreviousDaily, previousRange]);
   const hasRevenue = days.some(day => day.value > 0);
   const classes = report?.classOccupancy || [];
   const allPackages = [...(report?.memberships || [])].filter(item => Number(item.value) > 0).sort((a, b) => Number(b.value) - Number(a.value));
@@ -301,7 +323,7 @@ export default function ReportsPage({ data, filters, appliedFilters, setFilters,
 
         <section className="reports-card reports-revenue">
           <div className="reports-card-header"><div><h2>{t('Revenue trend')}</h2><p>{t('Daily totals from successful payments.')}</p></div><span className="reports-unit">VND</span></div>
-          {loading ? loadingBlock : hasRevenue ? <><RevenueStats days={days} /><RevenueChart days={days} /></> : <Empty text={loadError ? 'Report data is unavailable.' : 'No successful payments in this period.'} />}
+          {loading ? loadingBlock : hasRevenue ? <><RevenueStats days={days} /><RevenueChart days={days} previousDays={previousDays} previousPeriod={previousRange} /></> : <Empty text={loadError ? 'Report data is unavailable.' : 'No successful payments in this period.'} />}
           {hasRevenue && <><div className="reports-chart-footer"><span>{t('Days without successful payments count as 0. Hover or use the arrow keys for each value.')}</span><button type="button" aria-expanded={showDaily} onClick={() => setShowDaily(current => !current)}>{t('View data table')}<ChevronDown size={15} className={showDaily ? 'is-open' : ''} aria-hidden="true" /></button></div>
             {showDaily && <div className="reports-daily-table"><table><thead><tr><th scope="col">{t('Date')}</th><th scope="col">{t('Revenue (VND)')}</th></tr></thead><tbody>{days.filter(day => day.value > 0).map(day => <tr key={day.date}><td>{formatDate(day.date)}</td><td>{formatMoney(day.value)}</td></tr>)}</tbody></table></div>}</>}
         </section>

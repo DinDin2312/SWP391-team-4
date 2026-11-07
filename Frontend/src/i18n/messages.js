@@ -4902,6 +4902,8 @@ const reportsChartTranslations = [
   ['Long ranges are grouped by week (Monday to Sunday).', 'Khoảng thời gian dài được gộp theo tuần (thứ Hai đến Chủ nhật).'],
   ['Daily average', 'Trung bình/ngày'],
   ['of period', 'của kỳ'],
+  ['Previous period', 'Kỳ trước'],
+  ['Use the left and right arrow keys to read each point.', 'Dùng phím mũi tên trái/phải để xem từng điểm.'],
   ['Total revenue', 'Tổng doanh thu'],
   ['{0} days in period', '{0} ngày trong kỳ'],
   ['Best day', 'Ngày cao nhất'],
