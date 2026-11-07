@@ -50,6 +50,8 @@ public class SecurityConfig {
 
                         // Auth endpoints
                         .requestMatchers("/api/v1/auth/**", "/api/auth/**", "/auth/**", "/api/guest/**").permitAll()
+                        // API documentation (Swagger UI and the OpenAPI JSON it reads)
+                        .requestMatchers("/api/swagger-ui.html", "/api/swagger-ui/**", "/api/v3/api-docs", "/api/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/avatars/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/resource-images/**").permitAll()
                         .requestMatchers("/api/v1/payment/payos-webhook", "/api/v1/payment/payos-callback", "/api/v1/payment/vietqr-info/**").permitAll()
