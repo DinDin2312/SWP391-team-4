@@ -11,7 +11,7 @@ test('reports hide stale totals during loading or failed refresh and preserve AP
     const { setLanguage } = await server.ssrLoadModule('/src/i18n/languageStore.js');
     const { LanguageContext } = await server.ssrLoadModule('/src/i18n/useLanguage.js');
     const range = { from: '2026-10-01', to: '2026-10-11' };
-    const props = { page: { title: 'Reports', description: '' }, filters: range, appliedFilters: range, setFilters() {}, reload() {}, data: {memberGrowth:{newMembers:17,unknownCreationDates:9},bookingStatuses:[{status:'PENDING',value:3},{status:'CONFIRMED',value:5},{status:'CANCELLED',value:2}], summary: { revenue: 12345678, successfulPayments: 42, pendingInvoices: 6, confirmedBookings: 10 }, revenueByDay: [{ label: '2026-10-02', value: 12345678 }], previousSummary: { revenue: 10000000, successfulPayments: 50, pendingInvoices: 3, confirmedBookings: 10, newMembers: 0 }, previousPeriod: { from: '2026-09-20', to: '2026-09-30' }, classPopularity: [{ classId: 7, label: 'Popular class from API', subject: 'Yoga', coach: 'Coach A', students: 12, newStudents: 4 }], classOccupancy: [{ classId: 1, label: 'Class name from API', value: 0, capacity: 0 }], memberships: [{ label: 'Package name from API', value: 2 }] } };
+    const props = { page: { title: 'Reports', description: '' }, filters: range, appliedFilters: range, setFilters() {}, reload() {}, data: {memberGrowth:{newMembers:17,unknownCreationDates:9},bookingStatuses:[{status:'PENDING',value:3},{status:'CONFIRMED',value:5},{status:'CANCELLED',value:2}], summary: { revenue: 12345678, successfulPayments: 42, pendingInvoices: 6, confirmedBookings: 10 }, revenueByDay: [{ label: '2026-10-02', value: 12345678 }], previousSummary: { revenue: 10000000, successfulPayments: 50, pendingInvoices: 3, confirmedBookings: 10, newMembers: 0 }, previousPeriod: { from: '2026-09-20', to: '2026-09-30' }, previousRevenueByDay: [{ label: '2026-09-22', value: 5000000 }], classPopularity: [{ classId: 7, label: 'Popular class from API', subject: 'Yoga', coach: 'Coach A', students: 12, newStudents: 4 }], classOccupancy: [{ classId: 1, label: 'Class name from API', value: 0, capacity: 0 }], memberships: [{ label: 'Package name from API', value: 2 }] } };
     for (const language of ['en', 'vi']) {
       setLanguage(language);
       const render = extra => renderToStaticMarkup(React.createElement(LanguageContext.Provider, { value: language }, React.createElement(Page, { ...props, ...extra })));
@@ -66,5 +66,13 @@ test('revenue series fills missing days and groups long ranges by week', async (
     assert.equal(buckets[0].date, '2026-08-03');
     assert.equal(buckets[0].end, '2026-08-09');
     assert.equal(buckets.reduce((sum, bucket) => sum + bucket.value, 0), 15);
+    const { alignPrevious } = await server.ssrLoadModule('/src/features/manager/reports/revenueSeries.js');
+    const before = fillDays([{ label: '2026-09-25', value: 40 }], '2026-09-24', '2026-09-30');
+    assert.deepEqual(alignPrevious(bucketDays(days).buckets, before).map(bucket => bucket.value), [0, 40, 0, 0, 0, 0, 0]);
+    const longBefore = fillDays([{ label: '2026-05-05', value: 7 }, { label: '2026-05-06', value: 3 }], '2026-05-05', '2026-08-02');
+    const weekly = alignPrevious(buckets, longBefore);
+    assert.equal(weekly.length, buckets.length, 'one comparison point per week');
+    assert.equal(weekly[0].value, 10);
+    assert.equal(alignPrevious(buckets, null), null);
   } finally { await server.close(); }
 });
