@@ -194,7 +194,7 @@ const CoachSchedule = () => {
             bookingId: st?.bookingId || (numId ? numId : null),
             userId: st?.userId || null,
             attendanceStatus: status,
-            overrideFrontDeskCheckIn: Boolean(overrideMap[key])
+            overrideFrontDeskCheckIn: Boolean(overrideMap[key]) || (status === 'PRESENT' && !st?.checkedInAtFrontDesk)
           };
         })
       };
@@ -984,7 +984,7 @@ const CoachSchedule = () => {
                             <button
                               type="button"
                               disabled={!isAllowed}
-                              onClick={() => handleStatusChange(key, 'PRESENT')}
+                              onClick={() => handleStatusChange(key, 'PRESENT', !selectedTraineeForDetail?.checkedInAtFrontDesk)}
                               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                                 !isAllowed
                                   ? 'opacity-40 cursor-not-allowed'
@@ -997,7 +997,7 @@ const CoachSchedule = () => {
                               title={!isAllowed ? t("Chức năng điểm danh đã bị khóa") : t("Đánh dấu có mặt")}
                             >
                               <Check className="w-3.5 h-3.5 inline mr-1" />
-                              {t("Có mặt")}
+                              {currentStatus === 'PRESENT' && (!selectedTraineeForDetail?.checkedInAtFrontDesk || isOverride) ? t('Present (Direct)') : t('Có mặt')}
                             </button>
 
                             {/* Nút 3: Vắng mặt */}
