@@ -1,0 +1,8 @@
+# GitHub Linguist overrides
+# Bỏ qua các file script hỗ trợ và agent tooling khỏi thống kê ngôn ngữ trên GitHub
+.agents/** linguist-vendored
+outputs/** linguist-vendored
+*.py linguist-vendored
+*.ps1 linguist-vendored
+*.sh linguist-vendored
+*.bat linguist-vendored

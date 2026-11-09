@@ -140,8 +140,18 @@ export const getPreferredResolutionBadge = (pref) => {
   }
 };
 
-export const getPriorityBadge = (priority, preferredResolution, extraClassName = '') => {
-  const effectivePriority = (priority === 'HIGH' || preferredResolution === 'CASH_REFUND') ? 'HIGH' : priority;
+export const getPriorityBadge = (priority, preferredResolution, extraClassName = '', category = null) => {
+  let effectivePriority = priority;
+  if (category) {
+    const isCancellationOrFacility = category === 'CLASS_CANCELLATION' || category === 'REFUND_REQUEST' || category === 'FACILITY_ISSUE' || preferredResolution === 'CASH_REFUND';
+    if (isCancellationOrFacility) {
+      effectivePriority = (priority === 'URGENT') ? 'URGENT' : 'HIGH';
+    } else if (effectivePriority !== 'URGENT') {
+      effectivePriority = 'NORMAL';
+    }
+  } else if (priority === 'HIGH' || preferredResolution === 'CASH_REFUND') {
+    effectivePriority = 'HIGH';
+  }
   const baseClass = extraClassName ? ` ${extraClassName}` : '';
   switch (effectivePriority) {
     case 'URGENT':

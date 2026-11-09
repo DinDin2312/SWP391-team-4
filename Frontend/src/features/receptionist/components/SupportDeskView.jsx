@@ -319,7 +319,8 @@ const SupportDeskView = (props) => {
               </thead>
               <tbody className="divide-y divide-[var(--border)] text-[var(--text)]">
                 {requests.map((req) => {
-                  const isHighPriority = req.priority === 'HIGH' || req.priority === 'URGENT' || req.preferredResolution === 'CASH_REFUND';
+                  const isCancellationOrFacility = req.category === 'CLASS_CANCELLATION' || req.category === 'REFUND_REQUEST' || req.category === 'FACILITY_ISSUE' || req.preferredResolution === 'CASH_REFUND';
+                  const isHighPriority = (req.priority === 'HIGH' && isCancellationOrFacility) || req.priority === 'URGENT';
                   const memberName = req.userFullName || req.memberName || '—';
                   const memberContact = req.userPhone || req.memberPhone || req.userEmail || req.memberEmail || '';
                   const memberEmail = req.userEmail || req.memberEmail || '';
@@ -335,7 +336,7 @@ const SupportDeskView = (props) => {
                         </div>
                         {isHighPriority && (
                           <div className="mt-1">
-                            {getPriorityBadge(req.priority, req.preferredResolution)}
+                            {getPriorityBadge(req.priority, req.preferredResolution, '', req.category)}
                           </div>
                         )}
                       </td>

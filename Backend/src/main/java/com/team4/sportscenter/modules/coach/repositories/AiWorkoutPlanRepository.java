@@ -13,4 +13,7 @@ public interface AiWorkoutPlanRepository extends JpaRepository<AiWorkoutPlan, In
 
     @Query("SELECT p FROM AiWorkoutPlan p WHERE p.user.userId = :userId ORDER BY p.createdAt DESC")
     List<AiWorkoutPlan> findByUserIdOrderByCreatedAtDesc(@Param("userId") Integer userId);
+
+    @Query("SELECT p FROM AiWorkoutPlan p JOIN FETCH p.user WHERE p.user.userId IN :userIds ORDER BY p.createdAt DESC")
+    List<AiWorkoutPlan> findByUserIdsOrderByCreatedAtDesc(@Param("userIds") List<Integer> userIds);
 }

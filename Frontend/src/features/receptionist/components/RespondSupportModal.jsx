@@ -549,7 +549,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                 </span>
                 <span>&bull;</span>
                 <span>{t('Priority:')}</span>
-                {renderPriorityBadge(request.priority, request.preferredResolution)}
+                {renderPriorityBadge(request.priority, request.preferredResolution, '', request.category)}
               </p>
             </div>
           </div>

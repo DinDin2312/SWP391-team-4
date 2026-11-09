@@ -5,7 +5,7 @@ import { coachService } from '../services/coachService';
 import {
   Users, Search, Mail, Phone, BookOpen, ChevronRight, UserCheck, X, Bell, Send, Dumbbell,
   Target, Trophy, Activity, TrendingUp, HeartPulse, AlertTriangle, Scale, Layers,
-  CheckCircle2, Building2, Check, RefreshCw
+  CheckCircle2, Building2, Check, RefreshCw, ChevronDown, ChevronUp
 } from 'lucide-react';
 import SendNotificationModal from '../components/SendNotificationModal';
 import BodyTransformationModal from '../../member/components/BodyTransformationModal';
@@ -20,6 +20,14 @@ const CoachStudents = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [expandedClassRows, setExpandedClassRows] = useState({});
+
+  const toggleExpandClasses = (userId) => {
+    setExpandedClassRows(prev => ({
+      ...prev,
+      [userId]: !prev[userId]
+    }));
+  };
 
   // Notification Modal States
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
@@ -578,44 +586,82 @@ const CoachStudents = () => {
                         </div>
                       </td>
 
-                      {/* 3. Enrolled Classes with active highlight */}
+                      {/* 3. Enrolled Classes with expandable compact view */}
                       <td className="px-4 py-3.5">
-                        <div className="flex flex-col gap-1 min-w-[180px] max-w-[240px]">
+                        <div className="flex flex-col gap-1.5 min-w-[190px] max-w-[250px]">
                           {st.enrolledClasses && st.enrolledClasses.length > 0 ? (
                             <>
-                              {st.enrolledClasses.slice(0, 3).map((cls, cIdx) => {
-                                const isCurrentSelectedClass = selectedClass && (
-                                  cls === selectedClass.className ||
-                                  (st.enrolledClassIds && st.enrolledClassIds.includes(Number(selectedClassId)))
-                                );
+                              {(() => {
+                                const isExpanded = Boolean(expandedClassRows[st.userId]);
+                                // Find primary class (matching selected filter or 1st class)
+                                let primaryClass = st.enrolledClasses[0];
+                                if (selectedClass) {
+                                  const matched = st.enrolledClasses.find(c =>
+                                    c === selectedClass.className ||
+                                    (st.enrolledClassIds && st.enrolledClassIds.includes(Number(selectedClassId)))
+                                  );
+                                  if (matched) primaryClass = matched;
+                                }
+
+                                const displayClasses = isExpanded ? st.enrolledClasses : [primaryClass];
 
                                 return (
-                                  <span
-                                    key={cIdx}
-                                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold truncate max-w-full ${
-                                      isCurrentSelectedClass
-                                        ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 ring-1 ring-emerald-400/30'
-                                        : 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)]'
-                                    }`}
-                                    title={cls}
-                                  >
-                                    {isCurrentSelectedClass ? (
-                                      <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                                    ) : (
-                                      <BookOpen className="w-3 h-3 shrink-0 opacity-70" />
+                                  <div className="flex flex-col gap-1">
+                                    {displayClasses.map((cls, cIdx) => {
+                                      const isCurrentSelectedClass = selectedClass && (
+                                        cls === selectedClass.className ||
+                                        (st.enrolledClassIds && st.enrolledClassIds.includes(Number(selectedClassId)))
+                                      );
+
+                                      return (
+                                        <span
+                                          key={cIdx}
+                                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold truncate max-w-full transition-all ${
+                                            isCurrentSelectedClass
+                                              ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 ring-1 ring-emerald-400/30'
+                                              : 'bg-[var(--primary-soft)] border border-[var(--primary-soft)] text-[var(--primary)]'
+                                          }`}
+                                          title={cls}
+                                        >
+                                          {isCurrentSelectedClass ? (
+                                            <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                          ) : (
+                                            <BookOpen className="w-3 h-3 shrink-0 opacity-70" />
+                                          )}
+                                          <span className="truncate">{cls}</span>
+                                        </span>
+                                      );
+                                    })}
+
+                                    {/* Expand/Collapse Toggle Button for multiple classes */}
+                                    {st.enrolledClasses.length > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleExpandClasses(st.userId);
+                                        }}
+                                        className="inline-flex items-center gap-1.5 px-2 py-0.5 mt-0.5 rounded-md text-[10px] font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-all cursor-pointer w-fit group"
+                                        title={isExpanded ? t('Thu gọn danh sách') : t('Bấm để xem tất cả lớp học đã đăng ký')}
+                                      >
+                                        <Layers className="w-2.5 h-2.5 text-amber-500 transition-transform group-hover:scale-110" />
+                                        {isExpanded ? (
+                                          <>
+                                            <span>{t('Thu gọn')}</span>
+                                            <ChevronUp className="w-2.5 h-2.5 text-amber-500" />
+                                          </>
+                                        ) : (
+                                          <>
+                                            <span>+{st.enrolledClasses.length - 1} {t('lớp khác')}</span>
+                                            <span className="text-[9px] text-[var(--text-muted)] font-normal hidden sm:inline">({t('Xem tất cả')})</span>
+                                            <ChevronDown className="w-2.5 h-2.5 text-amber-500" />
+                                          </>
+                                        )}
+                                      </button>
                                     )}
-                                    <span className="truncate">{cls}</span>
-                                  </span>
+                                  </div>
                                 );
-                              })}
-                              {st.enrolledClasses.length > 3 && (
-                                <span
-                                  className="text-[10px] text-[var(--text-muted)] font-medium pl-1"
-                                  title={st.enrolledClasses.slice(3).join(', ')}
-                                >
-                                  +{st.enrolledClasses.length - 3} {t('lớp khác')}
-                                </span>
-                              )}
+                              })()}
                             </>
                           ) : (
                             <span className="text-[var(--text-muted)] italic text-[11px]">{t("Unassigned")}</span>

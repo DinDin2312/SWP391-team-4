@@ -205,35 +205,44 @@ public class MemberHealthService {
         if (user == null || user.getUserId() == null) {
             return MemberHealthSummary.empty();
         }
+        return buildSummary(user, healthProfileRepository.findById(user.getUserId()).orElse(null), LocalDate.now());
+    }
 
-        LocalDate today = LocalDate.now();
-        Integer age = user.getDateOfBirth() != null ? ageOn(user.getDateOfBirth(), today) : null;
-        Optional<MemberHealthProfile> profileOpt = healthProfileRepository.findById(user.getUserId());
+    @Transactional(readOnly = true)
+    public Map<Integer, MemberHealthSummary> summariesFor(Collection<User> users) {
+        if (users == null || users.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Set<Integer> userIds = new HashSet<>();
+        for (User u : users) {
+            if (u != null && u.getUserId() != null) userIds.add(u.getUserId());
+        }
+        if (userIds.isEmpty()) return Collections.emptyMap();
 
-        if (profileOpt.isEmpty()) {
-            return new MemberHealthSummary(
-                    user.getGender(),
-                    age,
-                    Collections.emptyList(),
-                    null,
-                    false,
-                    false
-            );
+        Map<Integer, MemberHealthProfile> profileMap = new HashMap<>();
+        for (MemberHealthProfile p : healthProfileRepository.findAllById(userIds)) {
+            profileMap.put(p.getUserId(), p);
         }
 
-        MemberHealthProfile p = profileOpt.get();
+        LocalDate today = LocalDate.now();
+        Map<Integer, MemberHealthSummary> result = new HashMap<>(userIds.size());
+        for (User u : users) {
+            if (u != null && u.getUserId() != null && !result.containsKey(u.getUserId())) {
+                result.put(u.getUserId(), buildSummary(u, profileMap.get(u.getUserId()), today));
+            }
+        }
+        return result;
+    }
+
+    private MemberHealthSummary buildSummary(User user, MemberHealthProfile p, LocalDate today) {
+        Integer age = user.getDateOfBirth() != null ? ageOn(user.getDateOfBirth(), today) : null;
+        if (p == null) {
+            return new MemberHealthSummary(user.getGender(), age, Collections.emptyList(), null, false, false);
+        }
         List<String> conditions = parseConditions(p.getConditions());
         boolean clearance = p.getParqAnswers() != null && p.getParqAnswers().contains("1");
         boolean completed = user.getGender() != null && user.getDateOfBirth() != null && p.getParqAnswers() != null;
-
-        return new MemberHealthSummary(
-                user.getGender(),
-                age,
-                conditions,
-                p.getNotes(),
-                clearance,
-                completed
-        );
+        return new MemberHealthSummary(user.getGender(), age, conditions, p.getNotes(), clearance, completed);
     }
 
     private List<Boolean> parseParqAnswers(String parqStr) {

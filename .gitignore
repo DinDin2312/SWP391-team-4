@@ -36,3 +36,6 @@ fix*.js
 # Presentations & Slides
 presentation/
 *.pptx
+
+# Knowledge Graph / Graphify
+graphify-out/

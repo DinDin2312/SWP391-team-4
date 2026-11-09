@@ -24,4 +24,6 @@ public class EnrolledStudentResponse {
     private java.time.LocalDateTime frontDeskCheckInTime;
     private String frontDeskCheckInType;
     private MemberHealthSummary health;
+    private java.math.BigDecimal height;
+    private java.math.BigDecimal weight;
 }
