@@ -7,7 +7,7 @@ import {
   ChevronLeft, ChevronRight, MapPin,
   Clock, Users, BookOpen, Phone, Mail, ChevronDown, ChevronUp,
   X, Search, Sparkles, Save, Check, AlertCircle, Bell, Star, CalendarSync, UserCheck,
-  ArrowLeft, Heart, Scale, Eye, HeartPulse, AlertTriangle, RotateCcw, Lock
+  ArrowLeft, Scale, Eye, HeartPulse, AlertTriangle, RotateCcw, Lock
 } from 'lucide-react';
 import { healthBadge, HEALTH_CONDITIONS } from '../../member/healthProfileUtils';
 import SendNotificationModal from '../components/SendNotificationModal';
@@ -957,6 +957,7 @@ const CoachSchedule = () => {
                         const key = selectedTraineeForDetail.bookingId || selectedTraineeForDetail.userId;
                         const currentStatus = attendanceMap[key] || 'NOT_YET';
                         const isAllowed = canTakeAttendance(activeModalSchedule.startTime, activeModalSchedule.endTime);
+                        const isOverride = Boolean(overrideMap[key]);
 
                         return (
                           <>
@@ -1142,7 +1143,7 @@ const CoachSchedule = () => {
                   const key = st.bookingId || st.userId;
                   const currentStatus = attendanceMap[key] || 'NOT_YET';
                   const isAllowed = canTakeAttendance(activeModalSchedule.startTime, activeModalSchedule.endTime);
-                  const isOverride = Boolean(overrideMap[key]);
+                        const isOverride = Boolean(overrideMap[key]);
 
                   return (
                     <div
@@ -1397,5 +1398,6 @@ const CoachSchedule = () => {
 };
 
 export default CoachSchedule;
+
 
 
