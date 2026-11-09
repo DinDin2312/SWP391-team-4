@@ -50,6 +50,19 @@ import java.util.stream.Collectors;
 @Transactional
 public class SupportRequestServiceImpl implements SupportRequestService {
 
+    @jakarta.annotation.PostConstruct
+    public void normalizePriorities() {
+        try {
+            // Only Class Cancellation and Facility Issues are HIGH priority.
+            // Normalize coach feedback and general inquiry tickets to NORMAL if they were auto-set to HIGH.
+            jdbc.update("UPDATE SUPPORT_REQUESTS SET priority = 'NORMAL' WHERE category IN ('COACH_FEEDBACK', 'FEEDBACK_SERVICE', 'GENERAL_INQUIRY', 'SCHEDULE_SUPPORT', 'COMPLAINT') AND priority = 'HIGH'");
+            // Ensure facility issues and cancellation requests have HIGH priority
+            jdbc.update("UPDATE SUPPORT_REQUESTS SET priority = 'HIGH' WHERE category IN ('FACILITY_ISSUE', 'CLASS_CANCELLATION', 'REFUND_REQUEST') AND priority = 'NORMAL'");
+        } catch (Exception ignored) {
+        }
+    }
+
+
     private final SupportRequestRepository supportRequestRepository;
     private final UserCreditRepository userCreditRepository;
     private final UserRepository userRepository;
@@ -690,25 +703,16 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         boolean isCoachFeedback = request.getCategory() == SupportCategory.COACH_FEEDBACK;
         SupportStatus initialStatus = isCoachFeedback ? SupportStatus.ESCALATED : SupportStatus.PENDING;
 
-        // Auto-priority intelligence
+        // Auto-priority intelligence: Mức độ Cao (HIGH) chỉ áp dụng cho Hủy lớp hoặc Cơ sở vật chất (CSVC)
+        boolean isFacilityCategory = request.getCategory() == SupportCategory.FACILITY_ISSUE;
+        boolean isHighPriorityCategory = isCancellationCategory || isFacilityCategory;
+
         SupportPriority calculatedPriority = request.getPriority();
-        if (isCoachFeedback) {
-            calculatedPriority = SupportPriority.HIGH;
-        } else if (calculatedPriority == null || calculatedPriority == SupportPriority.NORMAL) {
-            if ("CASH_REFUND".equalsIgnoreCase(prefRes) || "MANAGER_REFUND".equalsIgnoreCase(prefRes)) {
-                calculatedPriority = SupportPriority.HIGH;
-            } else if (request.getCategory() == SupportCategory.COMPLAINT) {
-                calculatedPriority = SupportPriority.HIGH;
-            } else if (isCancellationCategory && request.getContent() != null) {
-                String cLower = request.getContent().toLowerCase();
-                if (cLower.contains("cấp cứu") || cLower.contains("y tế") || cLower.contains("tai nạn") 
-                        || cLower.contains("bệnh") || cLower.contains("medical") || cLower.contains("emergency")) {
-                    calculatedPriority = SupportPriority.HIGH;
-                }
-            }
-        }
-        if (calculatedPriority == null) {
-            calculatedPriority = SupportPriority.NORMAL;
+        if (isHighPriorityCategory || "CASH_REFUND".equalsIgnoreCase(prefRes) || "MANAGER_REFUND".equalsIgnoreCase(prefRes)) {
+            calculatedPriority = (request.getPriority() == SupportPriority.URGENT) ? SupportPriority.URGENT : SupportPriority.HIGH;
+        } else {
+            // Các loại đơn khác (góp ý HLV, dịch vụ, thắc mắc) mặc định mức độ NORMAL trừ khi có chỉ định URGENT
+            calculatedPriority = (request.getPriority() == SupportPriority.URGENT) ? SupportPriority.URGENT : SupportPriority.NORMAL;
         }
 
         SupportRequest entity = SupportRequest.builder()
@@ -1156,7 +1160,10 @@ public class SupportRequestServiceImpl implements SupportRequestService {
 
         boolean isCoachFeedback = request.getCategory() == SupportCategory.COACH_FEEDBACK;
         SupportStatus initialStatus = isCoachFeedback ? SupportStatus.ESCALATED : SupportStatus.IN_PROGRESS;
-        SupportPriority priority = isCoachFeedback ? SupportPriority.HIGH : (request.getPriority() != null ? request.getPriority() : SupportPriority.NORMAL);
+        boolean isFacilityCategory = request.getCategory() == SupportCategory.FACILITY_ISSUE;
+        boolean isHighPriorityCategory = isCancellationCategory || isFacilityCategory;
+        SupportPriority priority = isHighPriorityCategory ? SupportPriority.HIGH 
+                : (request.getPriority() == SupportPriority.URGENT ? SupportPriority.URGENT : SupportPriority.NORMAL);
 
         SupportRequest entity = SupportRequest.builder()
                 .user(member)
@@ -1402,8 +1409,15 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         BigDecimal generatedCreditAmount = optCredit.map(UserCredit::getAmount).orElse(null);
 
         SupportPriority effectivePriority = r.getPriority();
-        if (effectivePriority == SupportPriority.NORMAL && "CASH_REFUND".equalsIgnoreCase(r.getPreferredResolution())) {
-            effectivePriority = SupportPriority.HIGH;
+        boolean isHighPriorityCategory = r.getCategory() == SupportCategory.CLASS_CANCELLATION 
+                || r.getCategory() == SupportCategory.REFUND_REQUEST 
+                || r.getCategory() == SupportCategory.FACILITY_ISSUE;
+
+        if (isHighPriorityCategory || "CASH_REFUND".equalsIgnoreCase(r.getPreferredResolution()) || "MANAGER_REFUND".equalsIgnoreCase(r.getPreferredResolution())) {
+            effectivePriority = (effectivePriority == SupportPriority.URGENT) ? SupportPriority.URGENT : SupportPriority.HIGH;
+        } else if (effectivePriority != SupportPriority.URGENT) {
+            // Chỉ đơn liên quan tới Hủy lớp hoặc CSVC mới có mức độ Cao (HIGH)
+            effectivePriority = SupportPriority.NORMAL;
         }
 
         return SupportRequestResponse.builder()

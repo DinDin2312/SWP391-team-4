@@ -724,7 +724,7 @@ const MemberSupportView = () => {
                             {getCategoryLabel(tkt.category)}
                           </span>
                           {getStatusBadge(tkt.status, { isMember: true })}
-                          {getPriorityBadge(tkt.priority, tkt.preferredResolution)}
+                          {getPriorityBadge(tkt.priority, tkt.preferredResolution, '', tkt.category)}
                         </div>
                         <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                           {tkt.title}
