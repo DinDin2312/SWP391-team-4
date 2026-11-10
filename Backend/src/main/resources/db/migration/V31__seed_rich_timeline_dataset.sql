@@ -4,7 +4,106 @@
 -- Safe for both production servers and empty disposable CI migration test schemas.
 -- ==============================================================================
 
+SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
+
+-- 0A. Repair corrupted Vietnamese encoding (Mojibake) from initial database_init.sql import on existing servers
+UPDATE USERS SET full_name = 'Quản Lý Trung Tâm', phone = COALESCE(phone, '0901000001') WHERE user_id = 1;
+UPDATE USERS SET full_name = 'Lễ Tân Thúy Kiều', phone = COALESCE(phone, '0901000002') WHERE user_id = 2;
+UPDATE USERS SET full_name = 'HLV Nguyễn Văn Tuấn', phone = COALESCE(phone, '0901000003') WHERE user_id = 3;
+UPDATE USERS SET full_name = 'HLV Trần Mai Anh', phone = COALESCE(phone, '0901000004') WHERE user_id = 4;
+UPDATE USERS SET full_name = 'HLV Phạm Minh Hoàng', phone = COALESCE(phone, '0901000005') WHERE user_id = 5;
+UPDATE USERS SET full_name = 'Trần Bùi Thái', phone = COALESCE(phone, '0901000006') WHERE user_id = 6;
+UPDATE USERS SET full_name = 'Nguyễn Kiều Oanh', phone = COALESCE(phone, '0901000007') WHERE user_id = 7;
+UPDATE USERS SET full_name = 'Lê Hoàng Long', phone = COALESCE(phone, '0901000008') WHERE user_id = 8;
+UPDATE USERS SET full_name = 'Vũ Đức Mạnh', phone = COALESCE(phone, '0901000009') WHERE user_id = 9;
+UPDATE USERS SET full_name = 'Đinh Thị Thu', phone = COALESCE(phone, '0901000010') WHERE user_id = 10;
+UPDATE USERS SET full_name = 'Phạm Tuấn Ngọc', phone = COALESCE(phone, '0901000011') WHERE user_id = 11;
+UPDATE USERS SET full_name = 'Bùi Tấn Trường', phone = COALESCE(phone, '0901000012') WHERE user_id = 12;
+UPDATE USERS SET full_name = 'Hoàng Văn Thụ', phone = COALESCE(phone, '0901000013') WHERE user_id = 13;
+UPDATE USERS SET full_name = 'Đặng Thái Sơn', phone = COALESCE(phone, '0901000014') WHERE user_id = 14;
+UPDATE USERS SET full_name = 'Ngô Thanh Vân', phone = COALESCE(phone, '0901000015') WHERE user_id = 15;
+UPDATE USERS SET full_name = 'Lý Nhã Kỳ', phone = COALESCE(phone, '0901000016') WHERE user_id = 16;
+UPDATE USERS SET full_name = 'Trương Thế Vinh', phone = COALESCE(phone, '0901000017') WHERE user_id = 17;
+UPDATE USERS SET full_name = 'Hồ Ngọc Hà', phone = COALESCE(phone, '0901000018') WHERE user_id = 18;
+UPDATE USERS SET full_name = 'Mai Tiến Dũng', phone = COALESCE(phone, '0901000019') WHERE user_id = 19;
+UPDATE USERS SET full_name = 'Nguyễn Tóc Tiên', phone = COALESCE(phone, '0901000020') WHERE user_id = 20;
+
+UPDATE ROOMS SET room_name = '[P101] Phòng Gym & Thể Hình Đa Năng' WHERE room_id = 1;
+UPDATE ROOMS SET room_name = '[P201] Studio Yoga & Giãn Cơ Mặt Trời' WHERE room_id = 2;
+UPDATE ROOMS SET room_name = '[P301] Studio Zumba & Vũ Đạo Latin' WHERE room_id = 3;
+UPDATE ROOMS SET room_name = '[P102] Bể Bơi Bốn Mùa Tiêu Chuẩn Olympic' WHERE room_id = 4;
+UPDATE ROOMS SET room_name = '[P202] Studio Đạp Xe RPM & Spinning' WHERE room_id = 5;
+UPDATE ROOMS SET room_name = '[P103] Phòng Gym Free-Weight & Cử Tạ Powerlifting' WHERE room_id = 6;
+UPDATE ROOMS SET room_name = '[P104] Bể Bơi Thủy Trị Liệu & Bơi Trẻ Em' WHERE room_id = 7;
+UPDATE ROOMS SET room_name = '[P203] Studio Yoga Thiền Định & Trị Liệu Cột Sống' WHERE room_id = 8;
+UPDATE ROOMS SET room_name = '[P204] Studio Đạp Xe Tương Tác Ảo (Virtual RPM)' WHERE room_id = 9;
+UPDATE ROOMS SET room_name = '[P302] Studio Dance Fitness & Aerobic Hiện Đại' WHERE room_id = 10;
+UPDATE ROOMS SET room_name = '[P303] Võ Đài Boxing & Kickfit Functional Arena' WHERE room_id = 11;
+UPDATE ROOMS SET room_name = '[P205] Studio Pilates Reformer & Core VIP' WHERE room_id = 12;
+
+UPDATE SUBJECTS SET subject_name = 'Thể Hình (Gym)', description = 'Tập tạ tự do và máy móc hiện đại' WHERE subject_id = 1;
+UPDATE SUBJECTS SET subject_name = 'Yoga Căn Bản', description = 'Yoga thư giãn và giãn cơ buổi sáng' WHERE subject_id = 2;
+UPDATE SUBJECTS SET subject_name = 'Zumba Dance', description = 'Nhảy theo nhạc Latin sôi động giảm mỡ' WHERE subject_id = 3;
+UPDATE SUBJECTS SET subject_name = 'Bơi Lội', description = 'Kỹ thuật bơi ếch, bơi sải chuyên nghiệp' WHERE subject_id = 4;
+UPDATE SUBJECTS SET subject_name = 'Đạp Xe (Spinning)', description = 'Đạp xe cường độ cao trên nền nhạc' WHERE subject_id = 5;
+UPDATE SUBJECTS SET subject_name = 'Boxing & Kickfit', description = 'Võ thuật đối kháng kết hợp rèn luyện sức bền, phản xạ và tự vệ thực chiến' WHERE subject_id = 6;
+UPDATE SUBJECTS SET subject_name = 'Pilates Reformer', description = 'Tập luyện kiểm soát cơ lõi toàn thân và phục hồi vóc dáng trên thiết bị máy chuyên dụng' WHERE subject_id = 7;
+
+UPDATE PACKAGES SET package_name = 'Thẻ Gym 1 Tháng' WHERE package_id = 1;
+UPDATE PACKAGES SET package_name = 'Thẻ Gym 3 Tháng' WHERE package_id = 2;
+UPDATE PACKAGES SET package_name = 'Thẻ Gym 1 Năm' WHERE package_id = 3;
+UPDATE PACKAGES SET package_name = 'Gói Thuê AI Cá Nhân 1 Tháng' WHERE package_id = 4;
+UPDATE PACKAGES SET package_name = 'Thẻ Tập Thử VIP (1 Ngày)' WHERE package_id = 5;
+UPDATE USER_MEMBERSHIPS m JOIN PACKAGES p ON p.package_id = m.package_id SET m.package_name_snapshot = p.package_name WHERE m.package_id IN (1, 2, 3, 4, 5);
+
+UPDATE CLASSES SET class_name = '[YOGA-101] Yoga Giãn Cơ & Phục Hồi Khớp' WHERE class_id = 1;
+UPDATE CLASSES SET class_name = '[YOGA-102] Yoga Giảm Cân & Thon Gọn Vóc Dáng' WHERE class_id = 2;
+UPDATE CLASSES SET class_name = '[GYM-101] Gym Căn Bản & Tăng Cơ Cho Nam' WHERE class_id = 3;
+UPDATE CLASSES SET class_name = '[GYM-102] Siết Cơ Cấp Tốc (Cut & Shred)' WHERE class_id = 4;
+UPDATE CLASSES SET class_name = '[ZUMBA-101] Zumba Đốt Mỡ Buổi Tối Nhạc Latin' WHERE class_id = 5;
+UPDATE CLASSES SET class_name = '[SWIM-101] Lớp Học Bơi Sải Tiêu Chuẩn' WHERE class_id = 6;
+UPDATE CLASSES SET class_name = '[YOGA-103] Yoga Trị Liệu Cột Sống & Cổ Vai Gáy' WHERE class_id = 7;
+UPDATE CLASSES SET class_name = '[ZUMBA-102] Zumba Dance Chuyên Nghiệp & Khỏe Đẹp' WHERE class_id = 8;
+UPDATE CLASSES SET class_name = '[GYM-103] Lớp Luyện Cử Tạ Powerlifting' WHERE class_id = 9;
+UPDATE CLASSES SET class_name = '[SWIM-102] Bơi Lội Trẻ Em Cơ Bản & Sinh Tồn' WHERE class_id = 10;
+UPDATE CLASSES SET class_name = '[SPIN-201] Đạp Xe Tốc Độ RPM Bứt Phá Calo' WHERE class_id = 11;
+UPDATE CLASSES SET class_name = '[SPIN-202] Đạp Xe Tour Ảo Khám Phá Địa Hình' WHERE class_id = 12;
+UPDATE CLASSES SET class_name = '[GYM-201] Thể Hình Free-Weight & Sức Mạnh Nặng' WHERE class_id = 13;
+UPDATE CLASSES SET class_name = '[SWIM-201] Bơi Thủy Liệu & Phục Hồi Thể Lực' WHERE class_id = 14;
+UPDATE CLASSES SET class_name = '[YOGA-201] Yoga Thiền Định & Cân Bằng Năng Lượng' WHERE class_id = 15;
+UPDATE CLASSES SET class_name = '[DANCE-201] Aerobic Dance Bước Nhảy Năng Động' WHERE class_id = 16;
+UPDATE CLASSES SET class_name = '[BOX-201] Kickfit Đối Kháng & Tự Vệ Thực Chiến' WHERE class_id = 17;
+UPDATE CLASSES SET class_name = '[BOX-202] Boxing Cardio Xả Stress & Đốt Calo' WHERE class_id = 18;
+UPDATE CLASSES SET class_name = '[PILATES-201] Pilates Reformer Giữ Dáng Toàn Thân' WHERE class_id = 19;
+UPDATE CLASSES SET class_name = '[PILATES-202] Pilates Chỉnh Dáng & Cân Trục Cột Sống' WHERE class_id = 20;
+UPDATE CLASSES SET class_name = '[GYM-202] Siết Cơ Thần Tốc & Xả Calo HIIT' WHERE class_id = 21;
+UPDATE CLASSES SET class_name = '[YOGA-202] Yoga Vinyasa Chào Ngày Mới Năng Lượng' WHERE class_id = 22;
+UPDATE CLASSES SET class_name = '[ZUMBA-201] Zumba Vũ Điệu Samba Cuồng Nhiệt' WHERE class_id = 23;
+UPDATE CLASSES SET class_name = '[SWIM-202] Bơi Bướm Nâng Cao Vượt Giới Hạn' WHERE class_id = 24;
+UPDATE CLASSES SET class_name = '[SPIN-203] Đạp Xe Leo Dốc Đốt Mỡ Đêm' WHERE class_id = 25;
+
+UPDATE EXERCISES SET exercise_name = 'Hít đất (Push up)', muscle_group = 'Ngực' WHERE exercise_id = 1;
+UPDATE EXERCISES SET exercise_name = 'Gập bụng (Crunch)', muscle_group = 'Bụng' WHERE exercise_id = 2;
+UPDATE EXERCISES SET exercise_name = 'Kéo xà đơn (Pull up)', muscle_group = 'Lưng' WHERE exercise_id = 3;
+UPDATE EXERCISES SET exercise_name = 'Squat (Đứng lên ngồi xuống)', muscle_group = 'Đùi' WHERE exercise_id = 4;
+UPDATE EXERCISES SET exercise_name = 'Đẩy tạ đôi (Dumbbell Press)', muscle_group = 'Ngực' WHERE exercise_id = 5;
+UPDATE EXERCISES SET exercise_name = 'Chạy bộ máy (Treadmill)', muscle_group = 'Cardio' WHERE exercise_id = 6;
+
+UPDATE AI_WORKOUT_PLANS SET goal = 'Tăng cơ ngực và lưng', fitness_level = 'Trung bình' WHERE plan_id = 1;
+UPDATE AI_WORKOUT_PLANS SET goal = 'Giảm mỡ bụng cấp tốc', fitness_level = 'Mới bắt đầu' WHERE plan_id = 2;
+
+UPDATE TRAINEE_ASSESSMENTS SET
+  assessment_title = 'Đánh giá buổi tập Gym đầu tiên',
+  feedback_note = 'Học viên có thể lực nền tảng khá, tư thế squat và deadlift cơ bản đúng kỹ thuật. Cần chú ý hít thở đều.',
+  recommendation = 'Tập trung siết cơ bụng khi nâng tạ. Uống thêm nước và bổ sung thêm đạm sau buổi tập.'
+WHERE assessment_id = 1;
+
+UPDATE TRAINEE_ASSESSMENTS SET
+  assessment_title = 'Kiểm tra độ dẻo dai và hơi thở Yoga',
+  feedback_note = 'Khả năng giữ thăng bằng rất tốt, kiểm soát hơi thở đều đặn trong các tư thế chiến binh và uốn lưng.',
+  recommendation = 'Tiếp tục duy trì giãn cơ mỗi sáng 15 phút tại nhà để cải thiện khớp háng.'
+WHERE assessment_id = 2;
 
 -- 0. Only insert extra test users/coaches when running on an initialized SportCenter DB (where admin@sport.com exists),
 -- so empty-schema unit tests in DatabaseMigrationTests keep their exact expected USERS count.
