@@ -8,6 +8,7 @@ import {
   Sparkles, ShieldCheck, Lock, Eye, EyeOff,
   Bell, Check, Copy, ChevronRight
 } from 'lucide-react';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const CoachSettings = () => {
   useLanguage();
@@ -102,7 +103,7 @@ const CoachSettings = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:8080/api/v1/coach/profile', {
+      const res = await axios.get(`${API_ORIGIN}/api/v1/coach/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = res.data;
@@ -147,7 +148,7 @@ const CoachSettings = () => {
     formData.append('avatar', file);
     try {
       setAvatarUploading(true);
-      const res = await axios.post('http://localhost:8080/api/v1/user/avatar', formData, {
+      const res = await axios.post(`${API_ORIGIN}/api/v1/user/avatar`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -171,7 +172,7 @@ const CoachSettings = () => {
     const token = localStorage.getItem('token');
     try {
       setAvatarUploading(true);
-      await axios.delete('http://localhost:8080/api/v1/user/avatar', {
+      await axios.delete(`${API_ORIGIN}/api/v1/user/avatar`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setProfile(prev => ({ ...prev, avatarUrl: null, avatarPath: null }));
@@ -213,7 +214,7 @@ const CoachSettings = () => {
         subjectId: selectedSubjectId ? Number(selectedSubjectId) : null
       };
 
-      await axios.put('http://localhost:8080/api/v1/coach/profile', payload, {
+      await axios.put(`${API_ORIGIN}/api/v1/coach/profile`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -245,7 +246,7 @@ const CoachSettings = () => {
       setEmailLoading(true);
       setEmailError('');
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:8080/api/v1/user/email-change/send-otp', { newEmail }, {
+      await axios.post(`${API_ORIGIN}/api/v1/user/email-change/send-otp`, { newEmail }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setEmailStep(2);
@@ -261,7 +262,7 @@ const CoachSettings = () => {
       setEmailLoading(true);
       setEmailError('');
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:8080/api/v1/user/email-change/verify', { newEmail, otp }, {
+      await axios.post(`${API_ORIGIN}/api/v1/user/email-change/verify`, { newEmail, otp }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setEmailStep(3);
@@ -296,7 +297,7 @@ const CoachSettings = () => {
     try {
       setSavingPassword(true);
       const token = localStorage.getItem('token');
-      await axios.put('http://localhost:8080/api/v1/user/change-password', {
+      await axios.put(`${API_ORIGIN}/api/v1/user/change-password`, {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
         confirmPassword: passwordData.confirmPassword
@@ -434,7 +435,7 @@ const CoachSettings = () => {
                 <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-tr from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-700 border border-black/[0.08] dark:border-white/[0.1] flex items-center justify-center text-slate-800 dark:text-slate-200 font-bold text-lg shadow-inner relative">
                   {profile.avatarUrl ? (
                     <img
-                      src={profile.avatarUrl.startsWith('http') ? profile.avatarUrl : `http://localhost:8080${profile.avatarUrl}`}
+                      src={profile.avatarUrl.startsWith('http') ? profile.avatarUrl : `${API_ORIGIN}${profile.avatarUrl}`}
                       alt={profile.fullName || 'Coach'}
                       className="w-full h-full object-cover"
                       onError={(e) => {

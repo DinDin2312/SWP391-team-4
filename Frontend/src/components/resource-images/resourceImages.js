@@ -1,6 +1,7 @@
+import { API_BASE_URL } from '../../config/apiBase.js';
 const namePattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg$/;
 
-export function resourceImageUrl(path, base = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8080/api') {
+export function resourceImageUrl(path, base = API_BASE_URL) {
   if (!path || !namePattern.test(path)) return '';
   return `${base.replace(/\/$/, '')}/resource-images/${path}`;
 }

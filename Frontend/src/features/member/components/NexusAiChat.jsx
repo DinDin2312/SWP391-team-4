@@ -8,6 +8,7 @@ import { renderChatMarkdown } from '../chatMarkdown.jsx';
 import { normalizeChatResponse } from '../chatSources.js';
 import { parseSseChunk, stripPartialActionTag } from '../chatStream.js';
 import { CyberFoxAvatar } from '../../../components/CyberFoxMascot';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
   useLanguage();
@@ -399,7 +400,7 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
         const pkgId = Number(String(target).replace(/\D+/g, ''));
         if (!pkgId) return;
         try {
-          await axios.post('http://localhost:8080/api/v1/member/add-package-to-cart/' + pkgId, {}, {
+          await axios.post(`${API_ORIGIN}/api/v1/member/add-package-to-cart/` + pkgId, {}, {
             headers: { Authorization: "Bearer " + token }
           });
           triggerCartGlow();
@@ -421,7 +422,7 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
         const clsId = Number(String(target).replace(/\D+/g, ''));
         if (!clsId) return;
         try {
-          await axios.post('http://localhost:8080/api/v1/member/book-class/' + clsId, {}, {
+          await axios.post(`${API_ORIGIN}/api/v1/member/book-class/` + clsId, {}, {
             headers: { Authorization: "Bearer " + token }
           });
           triggerCartGlow();
@@ -476,7 +477,7 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
     let accumulatedText = '';
 
     try {
-      const response = await fetch('http://localhost:8080/api/v1/member/ai/chat/stream', {
+      const response = await fetch(`${API_ORIGIN}/api/v1/member/ai/chat/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -546,7 +547,7 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
       if (!streamedAnyChunk) {
         try {
           const res = await axios.post(
-            'http://localhost:8080/api/v1/member/ai/chat',
+            `${API_ORIGIN}/api/v1/member/ai/chat`,
             { message: userMsg.text, history },
             { headers: { Authorization: 'Bearer ' + token } }
           );

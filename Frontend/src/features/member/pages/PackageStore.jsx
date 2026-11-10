@@ -14,9 +14,10 @@ import {
 import { Meteors } from '../../../components/ui/meteors';
 import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
 import { motion, AnimatePresence } from 'framer-motion';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 
-const loadStoreDetail=id=>axios.get(`http://localhost:8080/api/v1/member/packages/${id}`,{headers:{Authorization:`Bearer ${localStorage.getItem('token')}`}});
+const loadStoreDetail=id=>axios.get(`${API_ORIGIN}/api/v1/member/packages/${id}`,{headers:{Authorization:`Bearer ${localStorage.getItem('token')}`}});
 const PackageStore = () => {
   useLanguage();
   const navigate = useNavigate();
@@ -63,7 +64,7 @@ const PackageStore = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/v1/member/packages', {
+      const response = await axios.get(`${API_ORIGIN}/api/v1/member/packages`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPackages(response.data || []);
@@ -108,7 +109,7 @@ const PackageStore = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:8080/api/v1/member/add-package-to-cart/${pkg.packageId}`, {}, {
+      await axios.post(`${API_ORIGIN}/api/v1/member/add-package-to-cart/${pkg.packageId}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -135,7 +136,7 @@ const PackageStore = () => {
   const fetchCart = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/v1/payment/cart', {
+      const response = await axios.get(`${API_ORIGIN}/api/v1/payment/cart`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data && response.data.items) {
@@ -162,7 +163,7 @@ const PackageStore = () => {
   const clearCart = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:8080/api/v1/payment/cart/clear`, {
+      await axios.delete(`${API_ORIGIN}/api/v1/payment/cart/clear`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCartCount(0);

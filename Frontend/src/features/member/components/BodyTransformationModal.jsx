@@ -26,8 +26,9 @@ import {
   generateTransformationSvgData
 } from '../bodyTransformationUtils.js';
 import './bodyTransformation.css';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = `${API_ORIGIN}/api/v1`;
 
 const BodyTransformationModal = ({
   isOpen,

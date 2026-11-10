@@ -1,0 +1,7 @@
+# Used by docker-compose.server.yml. Caddy gets and renews the HTTPS certificate for DOMAIN.
+{$DOMAIN} {
+	encode gzip zstd
+	reverse_proxy frontend:80 {
+		flush_interval -1
+	}
+}

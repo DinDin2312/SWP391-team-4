@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, X, Users, School, User, Bell, CheckCircle2, AlertCircle, Loader2, Layers
 } from 'lucide-react';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', initialStudent = null, initialClassId = null, onSuccess }) => {
   useLanguage();
@@ -43,8 +44,8 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
       const headers = { Authorization: `Bearer ${token}` };
 
       const [classRes, studentRes] = await Promise.all([
-        axios.get('http://localhost:8080/api/v1/coach/classes', { headers }),
-        axios.get('http://localhost:8080/api/v1/coach/students', { headers })
+        axios.get(`${API_ORIGIN}/api/v1/coach/classes`, { headers }),
+        axios.get(`${API_ORIGIN}/api/v1/coach/students`, { headers })
       ]);
 
       const fetchedClasses = classRes.data || [];
@@ -103,7 +104,7 @@ const SendNotificationModal = ({ isOpen, onClose, initialTargetType = 'ALL', ini
       };
 
       const response = await axios.post(
-        'http://localhost:8080/api/v1/coach/notifications/send',
+        `${API_ORIGIN}/api/v1/coach/notifications/send`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );

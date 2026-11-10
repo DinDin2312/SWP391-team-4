@@ -27,9 +27,10 @@ import {
   X,
   ShieldCheck,
 } from 'lucide-react';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const loadOwnedDetail = (id) =>
-  axios.get(`http://localhost:8080/api/v1/member/my-packages/${id}`, {
+  axios.get(`${API_ORIGIN}/api/v1/member/my-packages/${id}`, {
     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
   });
 
@@ -73,7 +74,7 @@ const Memberships = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/v1/member/my-packages', {
+      const response = await axios.get(`${API_ORIGIN}/api/v1/member/my-packages`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPackages(response.data || []);

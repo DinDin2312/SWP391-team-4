@@ -171,6 +171,49 @@ Hệ thống được khởi tạo sẵn dữ liệu mẫu trong file `database_
 
 ## 7. HƯỚNG DẪN CÀI ĐẶT & KHỞI CHẠY
 
+### Cách nhanh nhất: chạy bằng Docker 🐳
+Chỉ cần cài **[Docker Desktop](https://www.docker.com/products/docker-desktop/)**, không cần Java, Node hay MySQL trên máy.
+
+```bash
+cp .env.docker.example .env        # Windows: copy .env.docker.example .env
+docker compose up -d --build
+```
+
+Lần đầu mất khoảng 5–10 phút để build. Xong thì mở:
+
+| | Địa chỉ |
+| :--- | :--- |
+| Web | **http://localhost:8088** |
+| Swagger (toàn bộ API) | http://localhost:8088/api/swagger-ui.html |
+| MySQL cho Workbench / DBeaver | `localhost:3307`, user `root`, mật khẩu = `DB_PASSWORD` trong `.env` |
+
+Database được tạo từ `Backend/database_init.sql`, nên đăng nhập bằng các [tài khoản demo](#6-tài-khoản-demo-dùng-thử-demo-accounts) ở trên. Backend tự chạy Flyway để nâng lên phiên bản mới nhất.
+
+| Việc | Lệnh |
+| :--- | :--- |
+| Xem trạng thái | `docker compose ps` |
+| Xem log backend | `docker compose logs -f backend` |
+| Cập nhật sau khi `git pull` | `docker compose up -d --build` |
+| Dừng (giữ dữ liệu) | `docker compose down` |
+| Xóa sạch và tạo lại database | `docker compose down -v` rồi `docker compose up -d --build` |
+
+**Dùng dữ liệu của bạn thay cho dữ liệu demo:** xuất database trên máy rồi trỏ `DB_INIT_FILE` trong `.env` vào file đó. File chỉ được nạp khi database được tạo lần đầu, nên nếu đã chạy trước đó thì `docker compose down -v` trước.
+```bash
+mysqldump -uroot -p --single-transaction --routines --set-gtid-purged=OFF --databases SportCenter > my-data.sql
+```
+
+Các khóa Gmail, Gemini, PayOS điền vào `.env` (để trống thì các chức năng đó tạm không chạy). File `.env` không được commit.
+
+**Chạy trên server (VPS) có HTTPS:** cài Docker trên server, `git clone` dự án, tạo `.env` như trên rồi thêm `DOMAIN=<tên miền hoặc IP>.sslip.io` và `PUBLIC_URL=https://<domain đó>`, sau đó:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.server.yml up -d --build
+```
+Caddy tự lấy chứng chỉ HTTPS miễn phí; chỉ cần mở cổng 80 và 443. MySQL không mở ra internet.
+
+---
+
+### Chạy thủ công (không dùng Docker)
+
 ### Yêu cầu Tiên quyết (Prerequisites)
 *   **Java SDK**: Phiên bản 17 hoặc 21+
 *   **Node.js**: Phiên bản 18+ (kèm npm)

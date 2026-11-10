@@ -25,6 +25,7 @@ import {
   Printer
 } from 'lucide-react';
 import InvoiceReceiptModal from '../../receptionist/components/InvoiceReceiptModal';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const getPaginationRange = (current, total) => {
   if (total <= 7) {
@@ -93,7 +94,7 @@ const BillingHistory = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:8080/api/v1/invoices', {
+      const res = await axios.get(`${API_ORIGIN}/api/v1/invoices`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setInvoices(res.data || []);
@@ -114,7 +115,7 @@ const BillingHistory = () => {
     try {
       setCancellingId(invoiceId);
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:8080/api/v1/payment/cancel-pending-checkout',
+      await axios.post(`${API_ORIGIN}/api/v1/payment/cancel-pending-checkout`,
         { invoiceId },
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
