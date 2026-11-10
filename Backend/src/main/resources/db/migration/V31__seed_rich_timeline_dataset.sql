@@ -1,30 +1,27 @@
 -- ==============================================================================
 -- V31: RICH TIMELINE TEST DATASET (PAST - PRESENT - FUTURE) & CONFLICT CLEANUP
 -- Covers all 4 roles: Center Manager, Receptionist, Coach, Member
+-- Safe for both production servers and empty disposable CI migration test schemas.
 -- ==============================================================================
 
--- 0. Ensure core test users & coaches exist so foreign keys always succeed on any server
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- 0. Only insert extra test users/coaches when running on an initialized SportCenter DB (where admin@sport.com exists),
+-- so empty-schema unit tests in DatabaseMigrationTests keep their exact expected USERS count.
 INSERT IGNORE INTO USERS (user_id, role_id, full_name, email, phone, password_hash, status, force_password_change, loyalty_points)
-VALUES
-(1, 1, 'Quản Lý Trung Tâm', 'admin@sport.com', '0901000001', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 0),
-(2, 2, 'Lễ Tân Thúy Kiều', 'letan@sport.com', '0901000002', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 0),
-(3, 3, 'HLV Nguyễn Văn Tuấn', 'tuanpt@sport.com', '0901000003', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 50),
-(4, 3, 'HLV Trần Mai Anh', 'maianh@sport.com', '0901000004', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 50),
-(5, 3, 'HLV Phạm Minh Hoàng', 'hoangpt@sport.com', '0901000005', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 50),
-(6, 4, 'Trần Bùi Thái', 'thai@gmail.com', '0901000006', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 120),
-(7, 4, 'Nguyễn Kiều Oanh', 'oanh@gmail.com', '0901000007', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 90),
-(8, 4, 'Lê Hoàng Long', 'long@gmail.com', '0901000008', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 80),
-(9, 4, 'Vũ Đức Mạnh', 'manh@gmail.com', '0901000009', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 70),
-(10, 4, 'Đinh Thị Thu', 'thu@gmail.com', '0901000010', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 150),
-(11, 4, 'Phạm Tuấn Ngọc', 'ngoc@gmail.com', '0901000011', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 60),
-(12, 4, 'Bùi Tấn Trường', 'truong@gmail.com', '0901000012', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 60),
-(19, 4, 'Mai Tiến Dũng', 'dung@gmail.com', '0901000019', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 110),
-(9906, 4, 'Sinh Xuân', 'bich31699@gmail.com', '0909999906', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 200),
-(13275, 3, 'HLV Lê Hồng Quang', 'hlv_quang@sport.com', '0912345671', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 50),
-(13276, 3, 'HLV Đặng Lan Anh', 'hlv_lananh@sport.com', '0912345672', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 50),
-(13277, 3, 'HLV Vũ Minh Trí', 'hlv_minhtri@sport.com', '0912345673', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 50),
-(13278, 3, 'HLV Hoàng Thu Hà', 'hlv_thuha@sport.com', '0912345674', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 50),
-(13279, 3, 'HLV Bùi Hoàng Anh', 'hlv_hoanganh@sport.com', '0912345675', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 50);
+SELECT u.user_id, u.role_id, u.full_name, u.email, u.phone, u.password_hash, u.status, u.force_password_change, u.loyalty_points
+FROM (
+    SELECT 6 AS user_id, 4 AS role_id, 'Trần Bùi Thái' AS full_name, 'thai@gmail.com' AS email, '0901000006' AS phone, '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW' AS password_hash, 'ACTIVE' AS status, 0 AS force_password_change, 120 AS loyalty_points
+    UNION ALL SELECT 10, 4, 'Đinh Thị Thu', 'thu@gmail.com', '0901000010', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 150
+    UNION ALL SELECT 19, 4, 'Mai Tiến Dũng', 'dung@gmail.com', '0901000019', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 110
+    UNION ALL SELECT 9906, 4, 'Sinh Xuân', 'bich31699@gmail.com', '0909999906', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 200
+    UNION ALL SELECT 13275, 3, 'HLV Lê Hồng Quang', 'hlv_quang@sport.com', '0912345671', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 50
+    UNION ALL SELECT 13276, 3, 'HLV Đặng Lan Anh', 'hlv_lananh@sport.com', '0912345672', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 50
+    UNION ALL SELECT 13277, 3, 'HLV Vũ Minh Trí', 'hlv_minhtri@sport.com', '0912345673', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 50
+    UNION ALL SELECT 13278, 3, 'HLV Hoàng Thu Hà', 'hlv_thuha@sport.com', '0912345674', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 50
+    UNION ALL SELECT 13279, 3, 'HLV Bùi Hoàng Anh', 'hlv_hoanganh@sport.com', '0912345675', '$2a$10$tYvY6BPaFSn0UyVUQxF4FeeveL9r6MGP1xcgn4Uve6p47aIDqqrOW', 'ACTIVE', 0, 50
+) AS u
+WHERE EXISTS (SELECT 1 FROM (SELECT user_id FROM USERS WHERE email = 'admin@sport.com') AS prod_check);
 
 -- 1. Member Health Profiles & InBody Assessments
 INSERT INTO MEMBER_HEALTH_PROFILES (user_id, parq_answers, conditions, notes, consent_at, updated_at)
@@ -162,9 +159,11 @@ ON DUPLICATE KEY UPDATE remaining_amount = VALUES(remaining_amount);
 
 -- 8. Lost & Found Items
 INSERT IGNORE INTO LOST_AND_FOUND_ITEMS 
-(item_code, item_name, category, valuation_type, color, found_location, found_date, storage_location, public_description, status, created_by, created_at)
+(item_code, item_name, category, valuation_type, color, found_location, found_date, storage_location, public_description, status, expiry_date, created_by, created_at)
 VALUES
-('LF-2026-001', 'Bình nước giữ nhiệt Lock&Lock 800ml', 'ACCESSORIES', 'STANDARD', 'Xanh navy', 'Phòng Gym Tầng 1 - Cạnh máy chạy bộ số 3', NOW() - INTERVAL 4 DAY, 'Tủ thất lạc Quầy Lễ Tân (Ngăn A2)', 'Bình giữ nhiệt kim loại màu xanh, có khắc chữ cái T.', 'STORED', 2, NOW() - INTERVAL 4 DAY),
-('LF-2026-002', 'Tai nghe không dây AirPods Pro 2', 'ELECTRONICS', 'HIGH_VALUE', 'Trắng', 'Studio Yoga P201 Tầng 2', NOW() - INTERVAL 6 DAY, 'Két an toàn Lễ tân', 'Hộp sạc trắng có bao silicon đen, tìm thấy dưới bục giảng HLV.', 'CLAIMED', 2, NOW() - INTERVAL 6 DAY),
-('LF-2026-003', 'Áo khoác gió thể thao Adidas', 'CLOTHING', 'STANDARD', 'Đen 3 sọc trắng', 'Khu tủ Locker Nam Tầng 1', NOW() - INTERVAL 2 DAY, 'Tủ thất lạc Quầy Lễ Tân (Ngăn B1)', 'Áo size L, còn rất mới để quên trên nóc tủ locker.', 'STORED', 2, NOW() - INTERVAL 2 DAY),
-('LF-2026-004', 'Đồng hồ thông minh Apple Watch Series 8', 'ELECTRONICS', 'HIGH_VALUE', 'Midnight', 'Ghế nghỉ cạnh Bể bơi Bốn Mùa', NOW() - INTERVAL 1 DAY, 'Két an toàn Quản lý', 'Đồng hồ dây cao su đen, màn hình có dán cường lực.', 'STORED', 2, NOW() - INTERVAL 1 DAY);
+('LF-2026-001', 'Bình nước giữ nhiệt Lock&Lock 800ml', 'ACCESSORIES', 'STANDARD', 'Xanh navy', 'Phòng Gym Tầng 1 - Cạnh máy chạy bộ số 3', NOW() - INTERVAL 4 DAY, 'Tủ thất lạc Quầy Lễ Tân (Ngăn A2)', 'Bình giữ nhiệt kim loại màu xanh, có khắc chữ cái T.', 'STORED', CURDATE() + INTERVAL 30 DAY, 2, NOW() - INTERVAL 4 DAY),
+('LF-2026-002', 'Tai nghe không dây AirPods Pro 2', 'ELECTRONICS', 'HIGH_VALUE', 'Trắng', 'Studio Yoga P201 Tầng 2', NOW() - INTERVAL 6 DAY, 'Két an toàn Lễ tân', 'Hộp sạc trắng có bao silicon đen, tìm thấy dưới bục giảng HLV.', 'CLAIMED', CURDATE() + INTERVAL 30 DAY, 2, NOW() - INTERVAL 6 DAY),
+('LF-2026-003', 'Áo khoác gió thể thao Adidas', 'CLOTHING', 'STANDARD', 'Đen 3 sọc trắng', 'Khu tủ Locker Nam Tầng 1', NOW() - INTERVAL 2 DAY, 'Tủ thất lạc Quầy Lễ Tân (Ngăn B1)', 'Áo size L, còn rất mới để quên trên nóc tủ locker.', 'STORED', CURDATE() + INTERVAL 30 DAY, 2, NOW() - INTERVAL 2 DAY),
+('LF-2026-004', 'Đồng hồ thông minh Apple Watch Series 8', 'ELECTRONICS', 'HIGH_VALUE', 'Midnight', 'Ghế nghỉ cạnh Bể bơi Bốn Mùa', NOW() - INTERVAL 1 DAY, 'Két an toàn Quản lý', 'Đồng hồ dây cao su đen, màn hình có dán cường lực.', 'STORED', CURDATE() + INTERVAL 30 DAY, 2, NOW() - INTERVAL 1 DAY);
+
+SET FOREIGN_KEY_CHECKS = 1;
