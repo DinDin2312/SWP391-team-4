@@ -1,0 +1,78 @@
+# Nexus Sports Center in Docker: MySQL + Spring Boot backend + React frontend (nginx).
+#   docker compose up -d --build      then open http://localhost:8088
+# Settings live in .env (copy .env.example). Database and uploaded images survive restarts.
+name: sportscenter
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: SportCenter
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-sportscenter}
+      TZ: Asia/Ho_Chi_Minh
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      # Same table-name rules as MySQL on Windows, so a dump made on Windows loads as is.
+      - --lower-case-table-names=1
+    ports:
+      # For DB tools (Workbench, DBeaver): localhost:3307. Not needed by the app itself.
+      - "${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Loaded ONCE, when the database is created for the first time: demo data by default,
+      # or your own dump via DB_INIT_FILE in .env.
+      - ${DB_INIT_FILE:-./Backend/database_init.sql}:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    logging: *logging
+
+  backend:
+    build: ./Backend
+    restart: unless-stopped
+    depends_on:
+      mysql: { condition: service_healthy }
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/SportCenter?useSSL=false&allowPublicKeyRetrieval=true&connectionTimeZone=Asia/Ho_Chi_Minh
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD:-sportscenter}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx768m}
+      SPRING_JPA_SHOW_SQL: "false"
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID:-}
+      PAYOS_API_KEY: ${PAYOS_API_KEY:-}
+      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-}
+      PAYOS_RETURN_URL: ${PUBLIC_URL:-http://localhost:8088}/member/payment-result
+      PAYOS_CANCEL_URL: ${PUBLIC_URL:-http://localhost:8088}/member/cart
+      VNPAY_RETURN_URL: ${PUBLIC_URL:-http://localhost:8088}/member/payment-result
+      MOMO_RETURN_URL: ${PUBLIC_URL:-http://localhost:8088}/member/payment-result
+      MOMO_IPN_URL: ${PUBLIC_URL:-http://localhost:8088}/member/payment-result
+    volumes:
+      - uploads:/app/uploads
+    logging: *logging
+
+  frontend:
+    build:
+      context: ./Frontend
+      args: { VITE_API_BASE_URL: /api }
+    restart: unless-stopped
+    depends_on: [backend]
+    ports:
+      # The whole app (web + /api + Swagger) is served here.
+      - "${WEB_PORT:-8088}:80"
+    logging: *logging
+
+volumes:
+  mysql_data:
+  uploads:

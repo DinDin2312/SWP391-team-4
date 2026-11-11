@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import ManagerPageHeader from './ManagerPageHeader';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 import {
   getReasonLabel,
@@ -48,7 +49,7 @@ export default function ManagerRescheduleView() {
 
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:8080/api/v1/manager/reschedule-requests', {
+      const res = await axios.get(`${API_ORIGIN}/api/v1/manager/reschedule-requests`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setRequests(Array.isArray(res.data) ? res.data : []);
@@ -104,7 +105,7 @@ export default function ManagerRescheduleView() {
     try {
       setActionBusy(true);
       await axios.post(
-        `http://localhost:8080/api/v1/manager/reschedule-requests/${approveModal.requestId}/approve`,
+        `${API_ORIGIN}/api/v1/manager/reschedule-requests/${approveModal.requestId}/approve`,
         {
           customMinAttendees,
           deadlineHoursBefore,
@@ -145,7 +146,7 @@ export default function ManagerRescheduleView() {
     try {
       setActionBusy(true);
       await axios.post(
-        `http://localhost:8080/api/v1/manager/reschedule-requests/${rejectModal.requestId}/reject`,
+        `${API_ORIGIN}/api/v1/manager/reschedule-requests/${rejectModal.requestId}/reject`,
         {
           rejectionReason: rejectionReason.trim(),
           reason: rejectionReason.trim()
@@ -178,7 +179,7 @@ export default function ManagerRescheduleView() {
     try {
       setLoadingCoaches(true);
       const res = await axios.get(
-        `http://localhost:8080/api/v1/manager/reschedule-requests/available-coaches?scheduleId=${req.scheduleId}`,
+        `${API_ORIGIN}/api/v1/manager/reschedule-requests/available-coaches?scheduleId=${req.scheduleId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const list = Array.isArray(res.data) ? res.data : [];
@@ -205,7 +206,7 @@ export default function ManagerRescheduleView() {
     try {
       setActionBusy(true);
       await axios.post(
-        `http://localhost:8080/api/v1/manager/reschedule-requests/assign-substitute`,
+        `${API_ORIGIN}/api/v1/manager/reschedule-requests/assign-substitute`,
         {
           requestId: substituteModal.requestId,
           scheduleId: substituteModal.scheduleId,

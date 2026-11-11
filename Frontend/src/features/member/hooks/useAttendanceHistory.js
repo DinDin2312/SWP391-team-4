@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { calculateAttendanceStats, filterBookingsByStatus, sortBookingsByTime } from '../memberUtils.js';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 export const useAttendanceHistory = () => {
   const token = localStorage.getItem('token');
@@ -12,7 +13,7 @@ export const useAttendanceHistory = () => {
   const fetchHistory = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:8080/api/v1/member/calendar-bookings", {
+      const res = await axios.get(`${API_ORIGIN}/api/v1/member/calendar-bookings`, {
         headers: { Authorization: "Bearer " + token }
       });
       const nowTime = new Date().getTime();

@@ -6,6 +6,7 @@ import {
   CheckCircle2, ShieldCheck, Download, Loader2, Sparkles
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const VietQRPayment = () => {
   useLanguage();
@@ -30,7 +31,7 @@ const VietQRPayment = () => {
       setCancelling(true);
       const token = localStorage.getItem('token');
       if (invoiceId) {
-        await axios.post('http://localhost:8080/api/v1/payment/cancel-pending-checkout',
+        await axios.post(`${API_ORIGIN}/api/v1/payment/cancel-pending-checkout`,
           { invoiceId: Number(invoiceId) },
           { headers: token ? { Authorization: `Bearer ${token}` } : {} }
         );
@@ -47,7 +48,7 @@ const VietQRPayment = () => {
     try {
       setSubmitting(true);
       const token = localStorage.getItem('token');
-      const response = await axios.post(`http://localhost:8080/api/v1/payment/vietqr-submit-transfer/${invoiceId}`, {}, {
+      const response = await axios.post(`${API_ORIGIN}/api/v1/payment/vietqr-submit-transfer/${invoiceId}`, {}, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
@@ -84,7 +85,7 @@ const VietQRPayment = () => {
     const fetchPaymentInfo = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(`http://localhost:8080/api/v1/payment/vietqr-info/${invoiceId}`, {
+        const response = await axios.get(`${API_ORIGIN}/api/v1/payment/vietqr-info/${invoiceId}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
 
@@ -108,7 +109,7 @@ const VietQRPayment = () => {
     pollTimerRef.current = setInterval(async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(`http://localhost:8080/api/v1/payment/vietqr-info/${invoiceId}`, {
+        const response = await axios.get(`${API_ORIGIN}/api/v1/payment/vietqr-info/${invoiceId}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
         if (response.data && response.data.status === 'PAID') {

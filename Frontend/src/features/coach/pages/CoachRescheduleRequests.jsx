@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 import {
   CalendarSync, Plus, RefreshCw, Clock, XCircle, Calendar, Users, MapPin, AlertTriangle, UserCheck
@@ -41,7 +42,7 @@ const CoachRescheduleRequests = () => {
 
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:8080/api/v1/coach/reschedule-requests/my', {
+      const res = await axios.get(`${API_ORIGIN}/api/v1/coach/reschedule-requests/my`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setRequests(Array.isArray(res.data) ? res.data : []);
@@ -71,7 +72,7 @@ const CoachRescheduleRequests = () => {
 
     try {
       setCancellingId(requestId);
-      await axios.put(`http://localhost:8080/api/v1/coach/reschedule-requests/${requestId}/cancel`, {}, {
+      await axios.put(`${API_ORIGIN}/api/v1/coach/reschedule-requests/${requestId}/cancel`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       showToast(t('Request cancelled successfully.'));

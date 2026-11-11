@@ -8,6 +8,7 @@ import {
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { REASON_CATEGORIES, getReasonLabel, formatScheduleSlot, isMakeupSession } from '../coachRescheduleUtils';
 import VnDateInput from '../../../components/VnDateInput';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }) => {
   const currentLang = useLanguage();
@@ -77,7 +78,7 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
       if (!token) return;
       try {
         setLoadingSchedules(true);
-        const res = await axios.get('http://localhost:8080/api/v1/coach/reschedule-requests/upcoming-schedules', {
+        const res = await axios.get(`${API_ORIGIN}/api/v1/coach/reschedule-requests/upcoming-schedules`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const list = Array.isArray(res.data) ? res.data : [];
@@ -223,7 +224,7 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
 
       try {
         setAvailability(prev => ({ ...prev, checking: true }));
-        const res = await axios.get('http://localhost:8080/api/v1/coach/reschedule-requests/check-availability', {
+        const res = await axios.get(`${API_ORIGIN}/api/v1/coach/reschedule-requests/check-availability`, {
           params: {
             scheduleId: parseInt(selectedScheduleId, 10),
             proposedStartTime: `${proposedDate}T${proposedStartTime}:00`,
@@ -307,7 +308,7 @@ const CreateRescheduleModal = ({ isOpen, onClose, onSuccess, initialScheduleId }
         proposedRoomId: isMakeupSession(actionType) && selectedSchedule ? selectedSchedule.roomId : undefined
       };
 
-      await axios.post('http://localhost:8080/api/v1/coach/reschedule-requests', payload, {
+      await axios.post(`${API_ORIGIN}/api/v1/coach/reschedule-requests`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

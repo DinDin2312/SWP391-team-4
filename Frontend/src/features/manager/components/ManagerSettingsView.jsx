@@ -27,6 +27,7 @@ import {
   Database,
   Award,
 } from 'lucide-react';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 export default function ManagerSettingsView() {
   useLanguage();
@@ -266,7 +267,7 @@ export default function ManagerSettingsView() {
                   src={
                     profileData.avatarUrl.startsWith('http')
                       ? profileData.avatarUrl
-                      : `http://localhost:8080${profileData.avatarUrl}`
+                      : `${API_ORIGIN}${profileData.avatarUrl}`
                   }
                   alt={fullName}
                   className="w-full h-full object-cover"

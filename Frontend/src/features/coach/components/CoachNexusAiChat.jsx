@@ -8,6 +8,7 @@ import { renderChatMarkdown } from '../../member/chatMarkdown.jsx';
 import { normalizeChatResponse } from '../../member/chatSources.js';
 import { parseSseChunk, stripPartialActionTag } from '../../member/chatStream.js';
 import { CyberFoxAvatar } from '../../../components/CyberFoxMascot';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const SUGGESTIONS = [
   "Lên 1 buổi tập ngực & tay sau hôm nay",
@@ -408,7 +409,7 @@ const CoachNexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) =
     let accumulatedText = '';
 
     try {
-      const response = await fetch('http://localhost:8080/api/v1/coach/ai/chat/stream', {
+      const response = await fetch(`${API_ORIGIN}/api/v1/coach/ai/chat/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -496,7 +497,7 @@ const CoachNexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) =
       if (!streamedAnyChunk) {
         try {
           const res = await axios.post(
-            'http://localhost:8080/api/v1/coach/ai/chat',
+            `${API_ORIGIN}/api/v1/coach/ai/chat`,
             { message: userMsg.text, history },
             { headers: { Authorization: 'Bearer ' + token } }
           );

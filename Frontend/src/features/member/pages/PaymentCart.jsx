@@ -9,6 +9,7 @@ import {
   Wallet, QrCode, AlertCircle, CheckCircle2, Ticket, X,
   Clock, XCircle, Loader2
 } from 'lucide-react';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const PaymentCart = () => {
   useLanguage();
@@ -95,9 +96,9 @@ const PaymentCart = () => {
       const token = localStorage.getItem('token');
       const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
       const [cartRes, profileRes, creditsRes] = await Promise.allSettled([
-        axios.get('http://localhost:8080/api/v1/payment/cart', { headers: authHeader }),
-        axios.get('http://localhost:8080/api/v1/user/profile', { headers: authHeader }),
-        axios.get('http://localhost:8080/api/v1/member/support/credits', { headers: authHeader })
+        axios.get(`${API_ORIGIN}/api/v1/payment/cart`, { headers: authHeader }),
+        axios.get(`${API_ORIGIN}/api/v1/user/profile`, { headers: authHeader }),
+        axios.get(`${API_ORIGIN}/api/v1/member/support/credits`, { headers: authHeader })
       ]);
 
       if (cartRes.status === 'fulfilled' && cartRes.value?.data) {
@@ -143,9 +144,9 @@ const PaymentCart = () => {
       const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
       const invId = targetInvoiceId || pendingInvoice?.invoiceId;
       try {
-        await axios.post('http://localhost:8080/api/v1/payment/cancel-pending-checkout', { invoiceId: invId }, { headers: authHeader });
+        await axios.post(`${API_ORIGIN}/api/v1/payment/cancel-pending-checkout`, { invoiceId: invId }, { headers: authHeader });
       } catch  {
-        await axios.post('http://localhost:8080/api/v1/payment/cart/cancel-pending', {}, { headers: authHeader });
+        await axios.post(`${API_ORIGIN}/api/v1/payment/cart/cancel-pending`, {}, { headers: authHeader });
       }
       setToast({
         visible: true,
@@ -173,7 +174,7 @@ const PaymentCart = () => {
       const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
       const invId = targetInvoiceId || pendingInvoice?.invoiceId;
 
-      await axios.post(`http://localhost:8080/api/v1/payment/vietqr-submit-transfer/${invId}`, {}, { headers: authHeader });
+      await axios.post(`${API_ORIGIN}/api/v1/payment/vietqr-submit-transfer/${invId}`, {}, { headers: authHeader });
 
       setToast({
         visible: true,
@@ -202,11 +203,11 @@ const PaymentCart = () => {
       const token = localStorage.getItem('token');
       const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
       if (type === 'PACKAGE') {
-        await axios.delete(`http://localhost:8080/api/v1/payment/cart/package/${id}`, {
+        await axios.delete(`${API_ORIGIN}/api/v1/payment/cart/package/${id}`, {
           headers: authHeader
         });
       } else {
-        await axios.delete(`http://localhost:8080/api/v1/payment/cart/${id}`, {
+        await axios.delete(`${API_ORIGIN}/api/v1/payment/cart/${id}`, {
           headers: authHeader
         });
       }
@@ -227,7 +228,7 @@ const PaymentCart = () => {
     try {
       setCheckoutLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:8080/api/v1/payment/checkout', {
+      const response = await axios.post(`${API_ORIGIN}/api/v1/payment/checkout`, {
         paymentMethod: selectedMethod,
         creditCode: selectedCredit ? selectedCredit.creditCode : null,
         cancelPending: true

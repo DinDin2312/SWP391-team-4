@@ -37,6 +37,7 @@ import './manager.css';
 import './manager-polish.css';
 import './admin-design.css';
 import VnDateInput from '../../../components/VnDateInput';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const today = new Date();
 const initialFrom = isoDate(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -213,7 +214,7 @@ function ManagerDashboard() {
           <label className="manager-avatar" style={{ cursor: 'pointer', position: 'relative' }} title={t("Change photo")} onClick={(e) => e.stopPropagation()}>
             {userInfo?.avatarUrl ? (
               <img
-                src={userInfo.avatarUrl.startsWith('http') ? userInfo.avatarUrl : `http://localhost:8080${userInfo.avatarUrl}`}
+                src={userInfo.avatarUrl.startsWith('http') ? userInfo.avatarUrl : `${API_ORIGIN}${userInfo.avatarUrl}`}
                 alt=""
                 className="manager-avatar-image"
                 onError={(e) => { e.currentTarget.style.display = 'none'; if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'; }}

@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { CheckCircle2, XCircle, Loader2, ArrowRight } from 'lucide-react';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const PaymentResult = () => {
   useLanguage();
@@ -32,7 +33,7 @@ const PaymentResult = () => {
         } else if (searchParams.has('orderCode')) {
           endpoint = 'payos-callback';
         }
-        const response = await axios.get(`http://localhost:8080/api/v1/payment/${endpoint}?${queryString}`, {
+        const response = await axios.get(`${API_ORIGIN}/api/v1/payment/${endpoint}?${queryString}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
 

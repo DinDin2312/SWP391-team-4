@@ -39,3 +39,6 @@ presentation/
 
 # Knowledge Graph / Graphify
 graphify-out/
+
+# Docker settings with secrets
+.env

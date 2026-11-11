@@ -35,6 +35,7 @@ import {
   Gift
 } from 'lucide-react';
 import { getReasonLabel, formatScheduleSlot } from '../../coach/coachRescheduleUtils';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const TABS = [
   { id: 'ALL', labelKey: 'All', shortLabelKey: 'All', icon: Bell, types: [] },
@@ -232,10 +233,10 @@ const Notifications = () => {
     try {
       const token = localStorage.getItem('token');
       const [notifRes, reschedRes] = await Promise.all([
-        axios.get('http://localhost:8080/api/v1/notifications', {
+        axios.get(`${API_ORIGIN}/api/v1/notifications`, {
           headers: { Authorization: `Bearer ${token}` }
         }).catch(() => ({ data: [] })),
-        axios.get('http://localhost:8080/api/v1/member/reschedule-responses/my', {
+        axios.get(`${API_ORIGIN}/api/v1/member/reschedule-responses/my`, {
           headers: { Authorization: `Bearer ${token}` }
         }).catch(() => ({ data: [] }))
       ]);
@@ -254,7 +255,7 @@ const Notifications = () => {
     try {
       setReschedBusyId(requestId);
       await axios.post(
-        `http://localhost:8080/api/v1/member/reschedule-responses/${requestId}/respond`,
+        `${API_ORIGIN}/api/v1/member/reschedule-responses/${requestId}/respond`,
         { action },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -286,7 +287,7 @@ const Notifications = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:8080/api/v1/notifications/${id}/read`, {}, {
+      await axios.put(`${API_ORIGIN}/api/v1/notifications/${id}/read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       window.dispatchEvent(new Event('notificationUpdated'));
@@ -306,7 +307,7 @@ const Notifications = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.put('http://localhost:8080/api/v1/notifications/read-all', {}, {
+      await axios.put(`${API_ORIGIN}/api/v1/notifications/read-all`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       window.dispatchEvent(new Event('notificationUpdated'));
@@ -325,7 +326,7 @@ const Notifications = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:8080/api/v1/notifications/${id}`, {
+      await axios.delete(`${API_ORIGIN}/api/v1/notifications/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       window.dispatchEvent(new Event('notificationUpdated'));
@@ -344,7 +345,7 @@ const Notifications = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete('http://localhost:8080/api/v1/notifications', {
+      await axios.delete(`${API_ORIGIN}/api/v1/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       window.dispatchEvent(new Event('notificationUpdated'));

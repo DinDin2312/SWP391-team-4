@@ -14,8 +14,9 @@ import CoachReviewSubmissionModal from '../components/CoachReviewSubmissionModal
 import { coachService } from '../services/coachService';
 import VnDateInput from '../../../components/VnDateInput';
 import { vnToday } from '../../../utils/vnTime';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
-const API_BASE = 'http://localhost:8080/api/v1/coach';
+const API_BASE = `${API_ORIGIN}/api/v1/coach`;
 
 const DAYS_OF_WEEK = [
   { key: 'MONDAY', name: 'Thứ Hai', short: 'T2' },

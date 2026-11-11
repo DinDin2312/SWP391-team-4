@@ -1,5 +1,6 @@
 import { locale } from '../../../i18n/languageStore.js';
 import { formatDate } from '../../../utils/displayFormat.js';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 // Missing metadata stays unknown; never invent dates, plans or account activity.
 export function enrichStaffUser(user) {
   return {...user,joinedAt:user.joinedAt || null,lastLoginAt:user.lastLoginAt || null,
@@ -36,9 +37,8 @@ export const staffAvatarTone = (user = {}) => {
 export const staffAvatarUrl = (avatarPath) => {
   if (!avatarPath) return '';
   if (/^https?:\/\//i.test(avatarPath)) return avatarPath;
-  const apiBase = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8080/api';
   const path = avatarPath.startsWith('/') ? avatarPath : `/api/avatars/${avatarPath}`;
-  return new URL(path, apiBase).href;
+  return `${API_ORIGIN}${path}`;
 };
 
 export const validateAvatarFile = (file) => {

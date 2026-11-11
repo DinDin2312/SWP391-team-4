@@ -27,6 +27,7 @@ import { receptionistService } from '../services/receptionistService';
 import InvoiceReceiptModal from './InvoiceReceiptModal';
 import { formatMoney, formatDateTime } from '../../../utils/displayFormat';
 import { t } from '../../../i18n/useLanguage';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const getPaginationRange = (current, total) => {
   if (total <= 7) {
@@ -190,7 +191,7 @@ export default function InvoiceManagementView(props) {
     try {
       setProcessingId(invoiceId);
       const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:8080/api/v1/payment/vietqr-confirm/${invoiceId}`, {}, {
+      await axios.post(`${API_ORIGIN}/api/v1/payment/vietqr-confirm/${invoiceId}`, {}, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       await fetchInvoices();
@@ -206,7 +207,7 @@ export default function InvoiceManagementView(props) {
     try {
       setProcessingId(invoiceId);
       const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:8080/api/v1/payment/vietqr-reject/${invoiceId}`, {}, {
+      await axios.post(`${API_ORIGIN}/api/v1/payment/vietqr-reject/${invoiceId}`, {}, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       await fetchInvoices();

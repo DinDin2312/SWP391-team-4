@@ -21,8 +21,9 @@ import {
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { locale } from '../../../i18n/languageStore.js';
 import BodyTransformationModal from './BodyTransformationModal';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
-const API_BASE = 'http://localhost:8080/api/v1/member';
+const API_BASE = `${API_ORIGIN}/api/v1/member`;
 
 const MemberAssessmentsModal = ({ isOpen, onClose, initialClassId = null }) => {
   useLanguage();

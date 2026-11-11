@@ -25,6 +25,7 @@ import {
   getSavedReceptionistPreferences,
   getReceptionistUnreadCount,
 } from '../features/receptionist/receptionistNotificationUtils';
+import { API_ORIGIN } from '../config/apiBase.js';
 
 const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSelectFeature }) => {
   useLanguage();
@@ -56,7 +57,7 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
       const token = localStorage.getItem('token');
       if (!token) return;
       try {
-        const res = await axios.get('http://localhost:8080/api/v1/notifications', {
+        const res = await axios.get(`${API_ORIGIN}/api/v1/notifications`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = Array.isArray(res.data) ? res.data : [];
@@ -219,7 +220,7 @@ const ReceptionistLayout = ({ children, activeFeature = 'search-members', onSele
               <div className="relative shrink-0">
                 {userInfo?.avatarUrl ? (
                   <img
-                    src={userInfo.avatarUrl.startsWith('http') ? userInfo.avatarUrl : `http://localhost:8080${userInfo.avatarUrl}`}
+                    src={userInfo.avatarUrl.startsWith('http') ? userInfo.avatarUrl : `${API_ORIGIN}${userInfo.avatarUrl}`}
                     alt={fullName}
                     className="w-9 h-9 rounded-xl object-cover border border-[var(--primary-soft)] group-hover:ring-2 group-hover:ring-[var(--primary)] transition-all"
                     onError={(e) => { e.currentTarget.style.display = 'none'; if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'; }}

@@ -30,6 +30,7 @@ import {
   Laptop,
   Layers,
 } from 'lucide-react';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const ReceptionistSettingsView = () => {
   useLanguage();
@@ -341,7 +342,7 @@ const ReceptionistSettingsView = () => {
   const avatarSrc = profileData.avatarUrl
     ? profileData.avatarUrl.startsWith('http')
       ? profileData.avatarUrl
-      : `http://localhost:8080${profileData.avatarUrl}`
+      : `${API_ORIGIN}${profileData.avatarUrl}`
     : null;
 
   const staffId = profileData.userId ? `REC-${String(profileData.userId).padStart(4, '0')}` : 'REC-0012';

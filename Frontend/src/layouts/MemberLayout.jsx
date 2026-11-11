@@ -3,6 +3,7 @@ import AutoSidebar from '../components/AutoSidebar';
 import LanguageSwitcher from '../i18n/LanguageSwitcher';
 import ThemeToggle from '../components/ThemeToggle';
 import MemberTierAvatar from '../components/MemberTierAvatar';
+import { API_ORIGIN } from '../config/apiBase.js';
 
 import React, { useContext, useState, useEffect, useRef, Suspense } from 'react';
 import { useNavigate, useLocation, useOutlet } from 'react-router-dom';
@@ -55,7 +56,7 @@ const MemberLayout = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        const res = await axios.get(`http://localhost:8080/api/v1/payment/vietqr-info/${invId}`, {
+        const res = await axios.get(`${API_ORIGIN}/api/v1/payment/vietqr-info/${invId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const status = res.data?.status;
@@ -166,16 +167,16 @@ const MemberLayout = () => {
         const token = localStorage.getItem('token');
         if (token) {
           const [cartRes, notifRes, myPkgsRes, profileRes] = await Promise.all([
-            axios.get('http://localhost:8080/api/v1/payment/cart', {
+            axios.get(`${API_ORIGIN}/api/v1/payment/cart`, {
               headers: { Authorization: `Bearer ${token}` }
             }).catch(() => ({ data: { items: [] } })),
-            axios.get('http://localhost:8080/api/v1/notifications', {
+            axios.get(`${API_ORIGIN}/api/v1/notifications`, {
               headers: { Authorization: `Bearer ${token}` }
             }).catch(() => ({ data: [] })),
-            axios.get('http://localhost:8080/api/v1/member/my-packages', {
+            axios.get(`${API_ORIGIN}/api/v1/member/my-packages`, {
               headers: { Authorization: `Bearer ${token}` }
             }).catch(() => ({ data: [] })),
-            axios.get('http://localhost:8080/api/v1/user/profile', {
+            axios.get(`${API_ORIGIN}/api/v1/user/profile`, {
               headers: { Authorization: `Bearer ${token}` }
             }).catch(() => ({ data: null }))
           ]);

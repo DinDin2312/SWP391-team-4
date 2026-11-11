@@ -10,6 +10,7 @@ import {
   Clock, ArrowRight, ArrowLeft, Loader2, Sparkles, X, ChevronDown, Dumbbell, Sunrise, Sun, Sunset, RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const detectCourseSubject = (course) => {
   if (course.subjectName && course.subjectName.trim()) {
@@ -248,7 +249,7 @@ const BookClass = () => {
   const fetchCourses = async (isInitialLoad = false) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:8080/api/v1/member/available-classes', {
+      const res = await axios.get(`${API_ORIGIN}/api/v1/member/available-classes`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const stableList = sortCoursesStably(res.data);
@@ -274,7 +275,7 @@ const BookClass = () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      const res = await axios.get('http://localhost:8080/api/v1/payment/cart', {
+      const res = await axios.get(`${API_ORIGIN}/api/v1/payment/cart`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data && res.data.items) {
@@ -294,7 +295,7 @@ const BookClass = () => {
     setBooking(classId);
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:8080/api/v1/member/book-class/${classId}`, {}, {
+      await axios.post(`${API_ORIGIN}/api/v1/member/book-class/${classId}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

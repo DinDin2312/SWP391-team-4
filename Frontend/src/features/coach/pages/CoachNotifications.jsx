@@ -17,6 +17,7 @@ import {
   getNotificationAction,
   getSavedCoachPreferences
 } from '../coachNotificationUtils';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const CATEGORY_TABS = [
   { id: 'ALL', label: 'All', icon: Bell },
@@ -44,7 +45,7 @@ const CoachNotifications = () => {
 
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:8080/api/v1/notifications', {
+      const res = await axios.get(`${API_ORIGIN}/api/v1/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = Array.isArray(res.data) ? res.data : [];
@@ -73,7 +74,7 @@ const CoachNotifications = () => {
     if (isRead) return;
     const token = localStorage.getItem('token');
     try {
-      await axios.put(`http://localhost:8080/api/v1/notifications/${id}/read`, {}, {
+      await axios.put(`${API_ORIGIN}/api/v1/notifications/${id}/read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(prev =>
@@ -90,7 +91,7 @@ const CoachNotifications = () => {
     const token = localStorage.getItem('token');
     try {
       setActionLoading(true);
-      await axios.put('http://localhost:8080/api/v1/notifications/read-all', {}, {
+      await axios.put(`${API_ORIGIN}/api/v1/notifications/read-all`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(prev =>
@@ -110,7 +111,7 @@ const CoachNotifications = () => {
     e.stopPropagation();
     const token = localStorage.getItem('token');
     try {
-      await axios.delete(`http://localhost:8080/api/v1/notifications/${id}`, {
+      await axios.delete(`${API_ORIGIN}/api/v1/notifications/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(prev => prev.filter(n => n.id !== id));
@@ -126,7 +127,7 @@ const CoachNotifications = () => {
     const token = localStorage.getItem('token');
     try {
       setActionLoading(true);
-      await axios.delete('http://localhost:8080/api/v1/notifications', {
+      await axios.delete(`${API_ORIGIN}/api/v1/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications([]);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
+import { API_ORIGIN } from '../../../config/apiBase.js';
 
 import {
   Bell, Check, Clock, CheckCheck, RefreshCw,
@@ -30,10 +31,10 @@ export default function MemberNotificationDropdown({ isOpen = true, onClose, onU
     try {
       setLoading(true);
       const [reschedRes, notifRes] = await Promise.all([
-        axios.get('http://localhost:8080/api/v1/member/reschedule-responses/my', {
+        axios.get(`${API_ORIGIN}/api/v1/member/reschedule-responses/my`, {
           headers: { Authorization: `Bearer ${token}` }
         }).catch(() => ({ data: [] })),
-        axios.get('http://localhost:8080/api/v1/notifications', {
+        axios.get(`${API_ORIGIN}/api/v1/notifications`, {
           headers: { Authorization: `Bearer ${token}` }
         }).catch(() => ({ data: [] }))
       ]);
@@ -97,7 +98,7 @@ export default function MemberNotificationDropdown({ isOpen = true, onClose, onU
     try {
       setActionBusyId(requestId);
       await axios.post(
-        `http://localhost:8080/api/v1/member/reschedule-responses/${requestId}/respond`,
+        `${API_ORIGIN}/api/v1/member/reschedule-responses/${requestId}/respond`,
         { action },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -116,7 +117,7 @@ export default function MemberNotificationDropdown({ isOpen = true, onClose, onU
     if (!token) return;
 
     try {
-      await axios.put('http://localhost:8080/api/v1/notifications/mark-all-read', {}, {
+      await axios.put(`${API_ORIGIN}/api/v1/notifications/mark-all-read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchData();
