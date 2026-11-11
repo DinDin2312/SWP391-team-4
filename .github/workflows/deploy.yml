@@ -1,0 +1,68 @@
+# CD: after CI passes on main, deploy that exact commit to the VPS and check the site is up.
+# Needs repository secrets: DEPLOY_HOST, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS, DEPLOY_DOMAIN (see docs/deploy-cd.md).
+name: CD - Deploy to VPS
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Only a green CI run from a push to main (merged PR), or a manual run.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_DOMAIN: ${{ secrets.DEPLOY_DOMAIN }}
+      COMMIT: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - name: Check deploy settings
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          missing=0
+          for name in DEPLOY_HOST DEPLOY_DOMAIN DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS; do
+            if [ -z "${!name}" ]; then echo "::error::Repository secret $name is not set"; missing=1; fi
+          done
+          exit $missing
+
+      - name: Set up SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Deploy ${{ env.COMMIT }}
+        # The key on the server only runs scripts/deploy-vps.sh; the commit is its only input.
+        run: ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 "root@$DEPLOY_HOST" "$COMMIT"
+
+      - name: Check the site answers
+        run: |
+          for i in $(seq 1 20); do
+            if curl -fsS --max-time 10 -o /dev/null "https://$DEPLOY_DOMAIN/api/guest/packages"; then
+              echo "Site is up: https://$DEPLOY_DOMAIN"; exit 0
+            fi
+            sleep 6
+          done
+          echo "::error::https://$DEPLOY_DOMAIN did not answer after deploy"; exit 1
+
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
