@@ -223,6 +223,7 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
             }
         }
         
+        BigDecimal subtotal = totalAmount;
         int points = user.getLoyaltyPoints() == null ? 0 : user.getLoyaltyPoints();
         BigDecimal discountFactor = BigDecimal.ONE;
         if (points >= 3000) discountFactor = new BigDecimal("0.85"); // PLATINUM 15% off
@@ -230,6 +231,7 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         else if (points >= 500) discountFactor = new BigDecimal("0.95"); // SILVER 5% off
         
         totalAmount = totalAmount.multiply(discountFactor).setScale(0, java.math.RoundingMode.HALF_UP);
+        boolean hasLoyaltyDiscount = subtotal.compareTo(totalAmount) > 0;
 
         com.team4.sportscenter.modules.support.entities.UserCredit appliedCredit = null;
         BigDecimal creditDiscount = BigDecimal.ZERO;
@@ -256,8 +258,21 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
             }
         }
 
+        BigDecimal discountAmount = subtotal.subtract(totalAmount).max(BigDecimal.ZERO);
+        String voucherCode = null;
+        if (appliedCredit != null) {
+            voucherCode = hasLoyaltyDiscount
+                    ? appliedCredit.getCreditCode() + " + LOYALTYVIP"
+                    : appliedCredit.getCreditCode();
+        } else if (hasLoyaltyDiscount) {
+            voucherCode = "LOYALTYVIP";
+        }
+
         Invoice invoice = Invoice.builder()
                 .user(user)
+                .subtotal(subtotal)
+                .discountAmount(discountAmount)
+                .voucherCode(voucherCode)
                 .totalAmount(totalAmount)
                 .status("PENDING") 
                 .createdAt(LocalDateTime.now())

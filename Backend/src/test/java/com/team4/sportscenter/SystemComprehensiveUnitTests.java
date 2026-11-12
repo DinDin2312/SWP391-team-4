@@ -529,6 +529,142 @@ class SystemComprehensiveUnitTests {
     }
 
     @Test
+    void invoiceServiceBackfillsLegacyDiscountAndPreservesStoredVoucher() {
+        InvoiceRepository invRepo = mock(InvoiceRepository.class);
+        InvoiceDetailRepository detailRepo = mock(InvoiceDetailRepository.class);
+        PaymentRepository payRepo = mock(PaymentRepository.class);
+        InvoiceServiceImpl service = new InvoiceServiceImpl(invRepo, detailRepo, payRepo);
+
+        User user = User.builder().userId(2).email("vip@gym.vn").build();
+        Invoice legacy = Invoice.builder()
+                .invoiceId(608)
+                .user(user)
+                .subtotal(null)
+                .discountAmount(BigDecimal.ZERO)
+                .voucherCode(null)
+                .totalAmount(new BigDecimal("400000"))
+                .status("PAID")
+                .build();
+        Invoice stored = Invoice.builder()
+                .invoiceId(609)
+                .user(user)
+                .subtotal(new BigDecimal("1000000"))
+                .discountAmount(new BigDecimal("200000"))
+                .voucherCode("VOUCHER200")
+                .totalAmount(new BigDecimal("800000"))
+                .status("PAID")
+                .build();
+        Invoice fullPrice = Invoice.builder()
+                .invoiceId(610)
+                .user(user)
+                .subtotal(new BigDecimal("500000"))
+                .discountAmount(BigDecimal.ZERO)
+                .voucherCode(" ")
+                .totalAmount(new BigDecimal("500000"))
+                .status("PAID")
+                .build();
+
+        when(invRepo.findByUser_EmailOrderByCreatedAtDesc("vip@gym.vn")).thenReturn(List.of(legacy, stored, fullPrice));
+        when(detailRepo.findByInvoice_InvoiceId(608)).thenReturn(List.of(
+                InvoiceDetail.builder().unitPrice(new BigDecimal("500000")).build(),
+                InvoiceDetail.builder().unitPrice(new BigDecimal("1400000")).build()
+        ));
+        when(detailRepo.findByInvoice_InvoiceId(609)).thenReturn(List.of(
+                InvoiceDetail.builder().unitPrice(new BigDecimal("1000000")).build()
+        ));
+        when(detailRepo.findByInvoice_InvoiceId(610)).thenReturn(List.of(
+                InvoiceDetail.builder().unitPrice(new BigDecimal("500000")).build()
+        ));
+
+        List<InvoiceResponse> responses = service.getMyInvoices("vip@gym.vn");
+        assertEquals(3, responses.size());
+
+        assertEquals(new BigDecimal("1900000"), responses.get(0).getSubtotal());
+        assertEquals(new BigDecimal("1500000"), responses.get(0).getDiscountAmount());
+        assertEquals("LOYALTYVIP", responses.get(0).getVoucherCode());
+
+        assertEquals(new BigDecimal("1000000"), responses.get(1).getSubtotal());
+        assertEquals(new BigDecimal("200000"), responses.get(1).getDiscountAmount());
+        assertEquals("VOUCHER200", responses.get(1).getVoucherCode());
+
+        assertEquals(new BigDecimal("500000"), responses.get(2).getSubtotal());
+        assertEquals(BigDecimal.ZERO, responses.get(2).getDiscountAmount());
+        assertNull(responses.get(2).getVoucherCode());
+    }
+
+    @Test
+    void paymentServiceCheckoutPersistsSubtotalDiscountAndVoucherCode() {
+        BookingRepository bookingRepo = mock(BookingRepository.class);
+        com.team4.sportscenter.modules.member.repositories.UserMembershipRepository membershipRepo = mock(com.team4.sportscenter.modules.member.repositories.UserMembershipRepository.class);
+        UserRepository userRepo = mock(UserRepository.class);
+        InvoiceRepository invoiceRepo = mock(InvoiceRepository.class);
+        InvoiceDetailRepository detailRepo = mock(InvoiceDetailRepository.class);
+        PaymentRepository paymentRepo = mock(PaymentRepository.class);
+        com.team4.sportscenter.config.VNPayConfig vnPay = mock(com.team4.sportscenter.config.VNPayConfig.class);
+        com.team4.sportscenter.config.PayOSConfig payOS = mock(com.team4.sportscenter.config.PayOSConfig.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        com.team4.sportscenter.modules.member.services.PackageCommerceService commerce = mock(com.team4.sportscenter.modules.member.services.PackageCommerceService.class);
+        com.team4.sportscenter.modules.notification.services.NotificationService notifService = mock(com.team4.sportscenter.modules.notification.services.NotificationService.class);
+        PackageTypeCatalog pkgTypes = mock(PackageTypeCatalog.class);
+        com.team4.sportscenter.modules.support.repositories.UserCreditRepository creditRepo = mock(com.team4.sportscenter.modules.support.repositories.UserCreditRepository.class);
+
+        com.team4.sportscenter.modules.payment.services.impl.PaymentServiceImpl paymentService = new com.team4.sportscenter.modules.payment.services.impl.PaymentServiceImpl(
+            bookingRepo, membershipRepo, userRepo, invoiceRepo, detailRepo, paymentRepo,
+            vnPay, payOS, jdbc, commerce, notifService, pkgTypes, creditRepo
+        );
+
+        User vipUser = User.builder().userId(10).email("vip@gym.vn").loyaltyPoints(1500).build();
+        com.team4.sportscenter.modules.member.entities.Package pkg = com.team4.sportscenter.modules.member.entities.Package.builder()
+                .packageId(5).packageName("Gym 3 Months").price(new BigDecimal("1000000")).build();
+        com.team4.sportscenter.modules.member.entities.UserMembership pendingMembership =
+                com.team4.sportscenter.modules.member.entities.UserMembership.builder()
+                        .membershipId(88).user(vipUser).aPackage(pkg).status("PENDING").build();
+        com.team4.sportscenter.modules.support.entities.UserCredit credit =
+                com.team4.sportscenter.modules.support.entities.UserCredit.builder()
+                        .creditId(12).user(vipUser).creditCode("CR-GOLD-100")
+                        .amount(new BigDecimal("100000")).remainingAmount(new BigDecimal("100000"))
+                        .status(com.team4.sportscenter.modules.support.enums.CreditStatus.ACTIVE)
+                        .expiryDate(java.time.LocalDate.now().plusDays(10))
+                        .build();
+
+        when(userRepo.findByEmail("vip@gym.vn")).thenReturn(Optional.of(vipUser));
+        when(bookingRepo.findAllBookingsByEmail("vip@gym.vn")).thenReturn(List.of());
+        when(membershipRepo.findByEmailAndStatus("vip@gym.vn", "PENDING")).thenReturn(List.of(pendingMembership));
+        when(creditRepo.findByCreditCode("CR-GOLD-100")).thenReturn(Optional.of(credit));
+        when(payOS.isConfigured()).thenReturn(false);
+        when(invoiceRepo.saveAndFlush(any(Invoice.class))).thenAnswer(inv -> {
+            Invoice saved = inv.getArgument(0);
+            saved.setInvoiceId(700);
+            return saved;
+        });
+
+        paymentService.checkout("vip@gym.vn", "127.0.0.1", "payos", "CR-GOLD-100");
+        vipUser.setLoyaltyPoints(0);
+        paymentService.checkout("vip@gym.vn", "127.0.0.1", "payos", "CR-GOLD-100");
+        vipUser.setLoyaltyPoints(3000);
+        paymentService.checkout("vip@gym.vn", "127.0.0.1", "payos", null);
+
+        org.mockito.ArgumentCaptor<Invoice> captor = org.mockito.ArgumentCaptor.forClass(Invoice.class);
+        verify(invoiceRepo, times(3)).saveAndFlush(captor.capture());
+        List<Invoice> persisted = captor.getAllValues();
+
+        assertEquals(new BigDecimal("1000000"), persisted.get(0).getSubtotal());
+        assertEquals(new BigDecimal("200000"), persisted.get(0).getDiscountAmount());
+        assertEquals("CR-GOLD-100 + LOYALTYVIP", persisted.get(0).getVoucherCode());
+        assertEquals(new BigDecimal("800000"), persisted.get(0).getTotalAmount());
+
+        assertEquals(new BigDecimal("1000000"), persisted.get(1).getSubtotal());
+        assertEquals(new BigDecimal("100000"), persisted.get(1).getDiscountAmount());
+        assertEquals("CR-GOLD-100", persisted.get(1).getVoucherCode());
+        assertEquals(new BigDecimal("900000"), persisted.get(1).getTotalAmount());
+
+        assertEquals(new BigDecimal("1000000"), persisted.get(2).getSubtotal());
+        assertEquals(new BigDecimal("150000"), persisted.get(2).getDiscountAmount());
+        assertEquals("LOYALTYVIP", persisted.get(2).getVoucherCode());
+        assertEquals(new BigDecimal("850000"), persisted.get(2).getTotalAmount());
+    }
+
+    @Test
     void userControllerUploadsAndDeletesAvatarSuccessfully() {
         UserRepository userRepo = mock(UserRepository.class);
         com.team4.sportscenter.modules.auth.services.UserService userService = mock(com.team4.sportscenter.modules.auth.services.UserService.class);

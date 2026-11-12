@@ -56,11 +56,24 @@ public class InvoiceServiceImpl implements InvoiceService {
                         .build();
             }).collect(Collectors.toList());
             
+            BigDecimal detailsSum = details.stream()
+                    .map(d -> d.getUnitPrice() != null ? d.getUnitPrice() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal total = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : BigDecimal.ZERO;
+            BigDecimal subtotal = invoice.getSubtotal() != null && invoice.getSubtotal().compareTo(total) >= 0
+                    ? invoice.getSubtotal()
+                    : detailsSum.max(total);
+            BigDecimal storedDiscount = invoice.getDiscountAmount() != null ? invoice.getDiscountAmount() : BigDecimal.ZERO;
+            BigDecimal discount = storedDiscount.signum() > 0 ? storedDiscount : subtotal.subtract(total).max(BigDecimal.ZERO);
+            String voucherCode = (invoice.getVoucherCode() != null && !invoice.getVoucherCode().isBlank())
+                    ? invoice.getVoucherCode()
+                    : (discount.signum() > 0 ? "LOYALTYVIP" : null);
+
             return InvoiceResponse.builder()
                     .invoiceId(invoice.getInvoiceId())
-                    .subtotal(invoice.getSubtotal() != null ? invoice.getSubtotal() : invoice.getTotalAmount())
-                    .discountAmount(invoice.getDiscountAmount() != null ? invoice.getDiscountAmount() : BigDecimal.ZERO)
-                    .voucherCode(invoice.getVoucherCode())
+                    .subtotal(subtotal)
+                    .discountAmount(discount)
+                    .voucherCode(voucherCode)
                     .totalAmount(invoice.getTotalAmount())
                     .status(invoice.getStatus())
                     .createdAt(invoice.getCreatedAt())
