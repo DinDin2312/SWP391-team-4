@@ -260,7 +260,7 @@ function ManagerView(props) {
   if (props.active === 'packages') return <PackagesPage {...props} />;
   if (props.active === 'reports') return <ReportsPage {...props} />;
   if (props.active === 'transactions') return <TransactionsPage {...props} />;
-  if (props.active === 'support') return <SupportDeskView {...props} />;
+  if (props.active === 'support') return <SupportDeskView {...props} isManager />;
   if (props.active === 'settings') return <ManagerSettingsView {...props} />;
   return <AuditPage {...props} />;
 }

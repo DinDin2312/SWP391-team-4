@@ -17,6 +17,8 @@ public interface SupportRequestRepository extends JpaRepository<SupportRequest, 
     
     List<SupportRequest> findByUserUserIdOrderByCreatedAtDesc(Integer userId);
 
+    List<SupportRequest> findByCategoryInAndStatusIn(List<SupportCategory> categories, List<SupportStatus> statuses);
+
     @Query("SELECT r FROM SupportRequest r WHERE " +
            "(:status IS NULL OR r.status = :status) AND " +
            "(:category IS NULL OR r.category = :category) AND " +

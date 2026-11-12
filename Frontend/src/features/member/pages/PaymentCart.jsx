@@ -320,9 +320,7 @@ const PaymentCart = () => {
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
-                {pendingInvoice.status === 'AWAITING_CONFIRMATION'
-                  ? t("Order Awaiting Payment / Confirmation")
-                  : t("Pending Checkout Session")}
+                {t("Pending Checkout Session")}
                 <span className="font-mono text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold">
                   #{pendingInvoice.invoiceId}
                 </span>

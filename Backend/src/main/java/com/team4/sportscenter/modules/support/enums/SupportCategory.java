@@ -18,6 +18,9 @@ public enum SupportCategory {
             return GENERAL_INQUIRY;
         }
         String normalized = value.trim().toUpperCase();
+        if (normalized.contains("SCHEDULE")) {
+            return GENERAL_INQUIRY;
+        }
         for (SupportCategory cat : values()) {
             if (cat.name().equalsIgnoreCase(normalized)) {
                 return cat;
@@ -34,9 +37,6 @@ public enum SupportCategory {
         }
         if (normalized.contains("COACH") || normalized.contains("FEEDBACK")) {
             return COACH_FEEDBACK;
-        }
-        if (normalized.contains("SCHEDULE")) {
-            return SCHEDULE_SUPPORT;
         }
         return GENERAL_INQUIRY;
     }

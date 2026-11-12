@@ -1,7 +1,8 @@
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney, formatDateTime } from '../../../utils/displayFormat';
+import { formatPaymentMethodLabel } from '../memberUtils';
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Receipt, 
@@ -57,8 +58,11 @@ const getStatusBadgeStyle = (status) => {
 };
 
 const BillingHistory = () => {
-  useLanguage();
+  const currentLang = useLanguage();
+  const lang = (currentLang === 'vi' || globalThis.localStorage?.getItem('nexusLanguage') === 'vi') ? 'vi' : 'en';
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [highlightedInvoiceId, setHighlightedInvoiceId] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -110,6 +114,31 @@ const BillingHistory = () => {
   useEffect(() => {
     fetchInvoices();
   }, []);
+
+  useEffect(() => {
+    const rawId = searchParams.get('invoiceId');
+    if (!rawId || loading || invoices.length === 0) return;
+    const targetId = Number(rawId);
+    const idx = invoices.findIndex((inv) => Number(inv.invoiceId) === targetId);
+    if (idx === -1) return;
+
+    setStatusFilter('ALL');
+    setSearchQuery('');
+    setCurrentPage(Math.floor(idx / pageSize) + 1);
+    setExpandedInvoices((prev) => ({ ...prev, [targetId]: true }));
+    setHighlightedInvoiceId(targetId);
+
+    setTimeout(() => {
+      document.getElementById(`invoice-card-${targetId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('invoiceId');
+    setSearchParams(next, { replace: true });
+
+    const timer = setTimeout(() => setHighlightedInvoiceId(null), 4000);
+    return () => clearTimeout(timer);
+  }, [searchParams, setSearchParams, loading, invoices, pageSize]);
 
   const handleCancelInvoice = async (invoiceId) => {
     try {
@@ -189,10 +218,15 @@ const BillingHistory = () => {
     });
   }, [invoices, statusFilter, searchQuery]);
 
-  // Reset page when filters change
-  useEffect(() => {
+  const applyStatusFilter = (nextStatus) => {
+    setStatusFilter(nextStatus);
     setCurrentPage(1);
-  }, [statusFilter, searchQuery]);
+  };
+
+  const applySearchQuery = (nextQuery) => {
+    setSearchQuery(nextQuery);
+    setCurrentPage(1);
+  };
 
   const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / pageSize));
   const validPage = Math.min(Math.max(1, currentPage), totalPages);
@@ -256,7 +290,7 @@ const BillingHistory = () => {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setStatusFilter(tab.id)}
+                onClick={() => applyStatusFilter(tab.id)}
                 className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                   statusFilter === tab.id
                     ? 'bg-[var(--primary)] text-white'
@@ -281,14 +315,14 @@ const BillingHistory = () => {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => applySearchQuery(e.target.value)}
               placeholder={t("Search by invoice # or package...")}
               className="w-full pl-9 pr-8 py-1.5 text-xs sm:text-sm rounded-md bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition-colors"
             />
             {searchQuery && (
               <button
                 type="button"
-                onClick={() => setSearchQuery('')}
+                onClick={() => applySearchQuery('')}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs cursor-pointer p-0.5"
               >
                 ✕
@@ -327,7 +361,7 @@ const BillingHistory = () => {
                 </p>
                 <button
                   type="button"
-                  onClick={() => { setStatusFilter('ALL'); setSearchQuery(''); }}
+                  onClick={() => { setStatusFilter('ALL'); setSearchQuery(''); setCurrentPage(1); }}
                   className="mt-3 px-3 py-1.5 rounded-md bg-[var(--primary)] text-white text-xs font-semibold cursor-pointer"
                 >
                   {t("Clear filters")}
@@ -352,8 +386,13 @@ const BillingHistory = () => {
 
                 return (
                   <div 
-                    key={invoice.invoiceId} 
-                    className="rounded-md bg-[var(--surface)] border border-slate-300 dark:border-white/15 overflow-hidden flex flex-col transition-shadow shadow-xs hover:shadow-sm"
+                    key={invoice.invoiceId}
+                    id={`invoice-card-${invoice.invoiceId}`}
+                    className={`rounded-md bg-[var(--surface)] overflow-hidden flex flex-col transition-all shadow-xs hover:shadow-sm border ${
+                      highlightedInvoiceId === invoice.invoiceId
+                        ? 'border-[#0071E3] ring-2 ring-[#0071E3]/30'
+                        : 'border-slate-300 dark:border-white/15'
+                    }`}
                   >
                     {/* 1. Card Header - Dark Header Cap for Maximum Contrast & Clear Separation */}
                     <div className="p-4 bg-slate-900 dark:bg-black text-white border-b border-slate-800 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -377,18 +416,18 @@ const BillingHistory = () => {
                         </div>
                       </div>
 
-                      {/* Header Right: Payment Method & Ref (Replaces duplicated total payment) */}
+                      {/* Header Right: Payment Method & Ref */}
                       <div className="flex flex-col sm:items-end text-xs">
                         <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                           {t("Payment Method")}
                         </span>
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap sm:justify-end">
                           <span className="font-bold text-white">
-                            {invoice.paymentMethod || t("Bank Transfer")}
+                            {formatPaymentMethodLabel(invoice.paymentMethod, lang)}
                           </span>
                           {invoice.transactionNo && (
                             <span className="text-[11px] font-mono text-slate-400">
-                              (Ref: <strong className="text-slate-200 font-semibold">{invoice.transactionNo}</strong>)
+                              ({t("Transaction ID")}: <strong className="text-slate-200 font-semibold">{invoice.transactionNo}</strong>)
                             </span>
                           )}
                         </div>
@@ -403,10 +442,10 @@ const BillingHistory = () => {
                         <div className="flex items-center justify-between text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
                           <span className="flex items-center gap-1.5">
                             <Dumbbell className="w-3.5 h-3.5" />
-                            <span>{t("Purchased Items")} ({details.length} {t("items")})</span>
+                            <span>{t("Purchased Items")} ({details.length} {t("services")})</span>
                           </span>
                           {hasMultiple && (
-                            <span className="text-[11px] font-normal text-[var(--text-muted)] lowercase">
+                            <span className="text-[11px] font-medium text-[var(--text-muted)]">
                               {isExpanded ? t("Showing all") : `1 / ${details.length}`}
                             </span>
                           )}
@@ -455,7 +494,7 @@ const BillingHistory = () => {
                             ) : (
                               <>
                                 <Layers className="w-3.5 h-3.5" />
-                                <span>+{details.length - 1} {t("more items")} • {t("Show all items")}</span>
+                                <span>+{details.length - 1} {t("more services")} • {t("Show all items")}</span>
                                 <ChevronDown className="w-3.5 h-3.5" />
                               </>
                             )}
@@ -467,7 +506,7 @@ const BillingHistory = () => {
                       <div className="rounded-md bg-[var(--surface-hover)]/60 border border-[var(--border)] p-3 text-xs space-y-1.5">
                         <div className="flex justify-between items-center text-[var(--text)]">
                           <span className="text-[var(--text-muted)]">
-                            {t("Total Items Price")} ({details.length} {t("items")}):
+                            {t("Total Items Price")} ({details.length} {t("services")}):
                           </span>
                           <span className="font-mono font-semibold">{formatMoney(originalSubtotal)}</span>
                         </div>
@@ -660,7 +699,7 @@ const BillingHistory = () => {
 
               <div className="space-y-1.5 text-xs">
                 <div 
-                  onClick={() => setStatusFilter('PAID')}
+                  onClick={() => applyStatusFilter('PAID')}
                   className={`flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors ${
                     statusFilter === 'PAID'
                       ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/40'
@@ -675,7 +714,7 @@ const BillingHistory = () => {
                 </div>
 
                 <div 
-                  onClick={() => setStatusFilter('PENDING')}
+                  onClick={() => applyStatusFilter('PENDING')}
                   className={`flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors ${
                     statusFilter === 'PENDING'
                       ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold border border-amber-500/40'
@@ -690,7 +729,7 @@ const BillingHistory = () => {
                 </div>
 
                 <div 
-                  onClick={() => setStatusFilter('CANCELLED')}
+                  onClick={() => applyStatusFilter('CANCELLED')}
                   className={`flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors ${
                     statusFilter === 'CANCELLED'
                       ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 font-bold border border-rose-500/40'

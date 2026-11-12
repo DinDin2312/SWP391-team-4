@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   X, AlertTriangle, CheckCircle2, ShieldAlert,
-  Send, User, Phone, Mail, BookOpen, Clock, Calendar,
+  Send, User, Phone, Mail, BookOpen, Clock,
   CreditCard, ArrowUpRight, DollarSign, RotateCcw, Dumbbell, Sparkles,
-  Wrench, UserCheck, AlertCircle
+  Wrench, UserCheck, AlertCircle, Copy, Check
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
@@ -11,11 +11,16 @@ import {
   getPriorityBadge as renderPriorityBadge,
   getDisplayTitle,
   formatRespondedAt,
+  formatSupportDate,
   getStatusBadge,
   cleanSupportTitle,
-  parseCoachFeedback
+  parseSupportRequestDetails,
+  getAttendancePolicySummary,
+  isCashRefundRequest,
+  canStaffProcessTicket
 } from '../../../utils/supportDisplayUtils';
 import receptionistService from '../services/receptionistService';
+import { splitCode } from '../../manager/components/classSearch';
 
 const COLOR_THEMES = {
   emerald: {
@@ -119,12 +124,6 @@ const NON_CANCELLATION_RESOLUTIONS = {
     escalate: { titleKey: 'Escalate to Facility Management (Replacement)', descKey: 'Severely damaged equipment requiring manager approval for full replacement.' },
     reject: { titleKey: 'Inspection Complete (Normal Operation)', descKey: 'Technicians verified equipment works properly; staff will guide member on usage.' }
   },
-  SCHEDULE_SUPPORT: {
-    primary: { actionType: 'APPROVE_SCHEDULE_CHANGE', icon: Calendar, titleKey: 'Support Session Swap / Makeup', descKey: 'Receptionist has updated new class schedule for member on management system.' },
-    secondary: { actionType: 'GUIDE_BOOKING', icon: BookOpen, titleKey: 'Guide App Self-Reschedule', descKey: 'Instruct member on how to reschedule sessions via app 24h in advance.' },
-    escalate: { titleKey: 'Escalate to Manager (Special Slot Allocation)', descKey: 'Out-of-policy session schedule requests requiring management approval.' },
-    reject: { titleKey: 'Decline Reschedule (Full / Expired)', descKey: 'Desired session is fully booked or notification was submitted after cutoff deadline.' }
-  },
   COMPLAINT: {
     primary: { actionType: 'RESOLVE_COMPLAINT', icon: CheckCircle2, titleKey: 'Apologize & Resolve Issue', descKey: 'Apologize to member, record shortcomings, and implement corrective workflows.' },
     secondary: { actionType: 'CONTACT_DIRECTLY', icon: Phone, titleKey: 'Contact Directly to Reconcile', descKey: 'Duty manager/receptionist has met or called member directly to resolve satisfactorily.' },
@@ -151,19 +150,14 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
   const [revokeReason, setRevokeReason] = useState('');
   const [revoking, setRevoking] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
 
-  const isClassCancellationOrCompensation = Boolean(
-    request?.category === 'CLASS_CANCELLATION' ||
-    request?.category === 'REFUND_REQUEST' ||
-    (request?.preferredResolution && ['ISSUE_CREDIT', 'GYM_PASS', 'CASH_REFUND'].includes(request.preferredResolution)) ||
-    (request?.title && /cancellation|hủy|bảo lưu|retention/i.test(request.title))
-  );
+  const policy = getAttendancePolicySummary(request);
+  const isClassCancellationOrCompensation = policy.isCancellationLike;
+  const exceedsEightyPercent = policy.exceedsEightyPercent;
+  const details = parseSupportRequestDetails(request?.content, request);
 
-  const exceedsEightyPercent = Boolean(
-    request?.totalSessions > 0 && ((request?.attendedSessions || 0) / request.totalSessions > 0.8)
-  );
-
-  const getNoteTemplate = (type, amt = creditAmount) => {
+  const getNoteTemplate = (type, amt = creditAmount, days = validDays) => {
     const rolePrefix = isManager ? (currentLang === 'vi' ? 'Quản lý trung tâm' : 'Center Management') : (currentLang === 'vi' ? 'Lễ tân' : 'Reception');
     const clsNameVi = request?.className ? ` lớp "${request.className}"` : '';
     const clsNameEn = request?.className ? ` for class "${request.className}"` : '';
@@ -172,101 +166,68 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
     const effectiveAmt = rawAmt > 0 ? rawAmt : suggested;
     const roundedAmt = Math.round(Number(effectiveAmt || 0) / 1000) * 1000;
     const formattedAmt = formatMoney(roundedAmt);
+    const parsedDays = Math.max(7, Math.min(365, Number.parseInt(days, 10) || 60));
 
     if (currentLang === 'vi') {
       switch (type) {
-        // Cancellation actions
         case 'ISSUE_CREDIT':
-          return `${rolePrefix} đã phê duyệt bảo lưu${clsNameVi}. Mã tín dụng 60 ngày trị giá ${formattedAmt} đã được cấp vào ví tài khoản học viên.`;
+          return `${rolePrefix} đã duyệt bảo lưu${clsNameVi} và cấp Credit ${formattedAmt} (hạn ${parsedDays} ngày).`;
         case 'GYM_PASS':
-          return `${rolePrefix} đã phê duyệt chuyển đổi${clsNameVi} sang Thẻ tập Gym 01 tháng miễn phí. Mã voucher kích hoạt trị giá ${formattedAmt} đã được cấp vào ví tài khoản học viên.`;
+          return `${rolePrefix} đã duyệt đổi${clsNameVi} sang Thẻ tập Gym 01 tháng (${formattedAmt}, hạn ${parsedDays} ngày).`;
         case 'CASH_REFUND':
-          return `Quản lý trung tâm đã phê duyệt hoàn tiền học phí${clsNameVi}. Số tiền ${formattedAmt} sẽ được hoàn trả trực tiếp tại quầy hoặc chuyển khoản.`;
-
-        // Coach feedback actions
+          return `Quản lý trung tâm đã duyệt hoàn ${formattedAmt}${clsNameVi} qua tiền mặt / chuyển khoản.`;
         case 'ACKNOWLEDGE_AND_TRAIN':
-          return `${rolePrefix} đã tiếp nhận phản ánh của học viên về HLV phụ trách${clsNameVi}. Trung tâm đã làm việc với Trưởng bộ môn và nhắc nhở HLV để chấn chỉnh, nâng cao chất lượng giảng dạy.`;
+          return `${rolePrefix} đã ghi nhận phản hồi về HLV${clsNameVi} và trao đổi với bộ môn để cải thiện chất lượng giảng dạy.`;
         case 'TRANSFER_CLASS_SUGGESTION':
-          return `${rolePrefix} đã ghi nhận phản hồi và tư vấn hỗ trợ học viên chuyển sang lớp của HLV khác phù hợp hơn với nhu cầu tập luyện.`;
-
-        // Facility actions
+          return `${rolePrefix} đã ghi nhận góp ý và hỗ trợ tư vấn chuyển sang lớp khác phù hợp hơn.`;
         case 'ASSIGN_MAINTENANCE':
-          return `${rolePrefix} đã tiếp nhận thông tin và chuyển ngay lệnh kiểm tra, bảo trì thiết bị tới bộ phận kỹ thuật để khắc phục sớm nhất.`;
+          return `${rolePrefix} đã chuyển yêu cầu kiểm tra, bảo trì thiết bị tới bộ phận kỹ thuật.`;
         case 'SCHEDULED_FIX':
-          return 'Thiết bị đã được gắn biển bảo trì và dự kiến sẽ hoàn tất kiểm tra, sửa chữa đưa vào sử dụng trong vòng 24h - 48h tới.';
-
-        // Schedule support actions
-        case 'APPROVE_SCHEDULE_CHANGE':
-          return `${rolePrefix} đã hỗ trợ cập nhật lịch học mới cho học viên trên hệ thống. Chúc bạn có buổi tập hiệu quả!`;
-        case 'GUIDE_BOOKING':
-          return `${rolePrefix} đã gửi hướng dẫn qua ứng dụng để học viên có thể chủ động chuyển đổi lịch tập theo thời gian biểu mong muốn.`;
-
-        // Complaint actions
+          return 'Thiết bị đang được bảo trì và dự kiến hoạt động lại trong 24h - 48h tới.';
         case 'RESOLVE_COMPLAINT':
-          return `Trung tâm chân thành xin lỗi học viên về trải nghiệm chưa tốt. ${rolePrefix} đã làm việc với các bộ phận liên quan để khắc phục ngay vấn đề này.`;
-
-        // Inquiry actions
+          return `Trung tâm xin lỗi học viên về trải nghiệm vừa qua. ${rolePrefix} đã phối hợp xử lý khắc phục vấn đề này.`;
         case 'ANSWER_INQUIRY':
-          return `${rolePrefix} đã giải đáp chi tiết thắc mắc của bạn. Nếu cần hỗ trợ thêm, bạn vui lòng liên hệ trực tiếp quầy lễ tân.`;
+          return `${rolePrefix} đã giải đáp thắc mắc của bạn. Nếu cần hỗ trợ thêm, vui lòng liên hệ quầy lễ tân.`;
         case 'CONTACT_DIRECTLY':
-          return `${rolePrefix} đã liên hệ trực tiếp với học viên để giải đáp và hướng dẫn chi tiết mọi nội dung thắc mắc.`;
-
-        // Common actions
+          return `${rolePrefix} đã liên hệ trực tiếp với học viên để hướng dẫn và hỗ trợ chi tiết.`;
         case 'ESCALATE':
-          return `${rolePrefix} đã tiếp nhận yêu cầu của học viên và chuyển tiếp đến Quản lý trung tâm xem xét, giải quyết.`;
+          return `${rolePrefix} đã chuyển tiếp yêu cầu lên Quản lý trung tâm xem xét, giải quyết.`;
         case 'REJECT':
           return exceedsEightyPercent
-            ? `${rolePrefix} từ chối yêu cầu do khóa học đã diễn ra quá 80% số buổi theo quy định của trung tâm.`
-            : `${rolePrefix} rất tiếc chưa thể phê duyệt yêu cầu của học viên do không thỏa điều kiện theo quy định của trung tâm.`;
+            ? `${rolePrefix} từ chối yêu cầu do lớp đã học quá 80% số buổi theo quy chế trung tâm.`
+            : `${rolePrefix} rất tiếc chưa thể duyệt yêu cầu do chưa đáp ứng điều kiện quy định.`;
         case 'APPROVE_GENERAL':
         default:
           return `${rolePrefix} đã tiếp nhận và xử lý yêu cầu của bạn.`;
       }
     } else {
       switch (type) {
-        // Cancellation actions
         case 'ISSUE_CREDIT':
-          return `${rolePrefix} approved tuition retention${clsNameEn}. A 60-day credit voucher worth ${formattedAmt} has been issued to member wallet.`;
+          return `${rolePrefix} approved tuition retention${clsNameEn} with a ${parsedDays}-day credit of ${formattedAmt}.`;
         case 'GYM_PASS':
-          return `${rolePrefix} approved conversion${clsNameEn} to a free 1-month Gym Pass. Activation voucher worth ${formattedAmt} has been issued to member wallet.`;
+          return `${rolePrefix} approved switching${clsNameEn} to a 1-month Gym Pass (${formattedAmt}, ${parsedDays} days).`;
         case 'CASH_REFUND':
-          return `Center Management approved tuition fee refund${clsNameEn}. The amount of ${formattedAmt} will be refunded directly at the counter or via bank transfer.`;
-
-        // Coach feedback actions
+          return `Center Management approved a refund of ${formattedAmt}${clsNameEn} via cash or bank transfer.`;
         case 'ACKNOWLEDGE_AND_TRAIN':
-          return `${rolePrefix} acknowledged member feedback regarding instructor${clsNameEn}. Center management reviewed with Head of Department and reminded the coach to enhance teaching quality.`;
+          return `${rolePrefix} acknowledged coach feedback${clsNameEn} and will review with the Head of Department.`;
         case 'TRANSFER_CLASS_SUGGESTION':
-          return `${rolePrefix} acknowledged member feedback and advised transferring to another coach class better suited to member training goals.`;
-
-        // Facility actions
+          return `${rolePrefix} acknowledged feedback and suggested transferring to another suitable class.`;
         case 'ASSIGN_MAINTENANCE':
-          return `${rolePrefix} received the report and dispatched an urgent inspection/maintenance order to the technical team.`;
+          return `${rolePrefix} dispatched a maintenance inspection request to the technical team.`;
         case 'SCHEDULED_FIX':
-          return 'Equipment has been tagged for maintenance and is scheduled to complete repairs and return to service within 24-48 hours.';
-
-        // Schedule support actions
-        case 'APPROVE_SCHEDULE_CHANGE':
-          return `${rolePrefix} updated the new schedule for member in the system. Wishing you productive workouts!`;
-        case 'GUIDE_BOOKING':
-          return `${rolePrefix} sent instructions via the app so member can actively adjust upcoming session schedules.`;
-
-        // Complaint actions
+          return 'Equipment has been tagged for maintenance and should return to service within 24-48 hours.';
         case 'RESOLVE_COMPLAINT':
-          return `The center sincerely apologizes for the subpar experience. ${rolePrefix} has coordinated with relevant departments to resolve this matter immediately.`;
-
-        // Inquiry actions
+          return `We apologize for the inconvenience. ${rolePrefix} has coordinated with the team to resolve this issue.`;
         case 'ANSWER_INQUIRY':
-          return `${rolePrefix} answered your inquiry in detail. If you need further assistance, please contact the reception desk.`;
+          return `${rolePrefix} answered your inquiry. Feel free to reach out at Reception if you need more help.`;
         case 'CONTACT_DIRECTLY':
-          return `${rolePrefix} contacted the member directly to assist and guide on all questions.`;
-
-        // Common actions
+          return `${rolePrefix} contacted the member directly to assist with the request.`;
         case 'ESCALATE':
-          return `${rolePrefix} received member request and escalated to Center Management for review and resolution.`;
+          return `${rolePrefix} escalated the request to Center Management for review.`;
         case 'REJECT':
           return exceedsEightyPercent
-            ? `${rolePrefix} rejected request: class attended sessions exceeded 80% per center policy.`
-            : `${rolePrefix} regrets that your request could not be approved as it does not meet center policy criteria.`;
+            ? `${rolePrefix} declined the request as class attendance exceeded 80%.`
+            : `${rolePrefix} could not approve this request under center policy.`;
         case 'APPROVE_GENERAL':
         default:
           return `${rolePrefix} received and processed your request.`;
@@ -281,18 +242,38 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
     if (creditAmount <= 0 && effectiveAmt > 0) {
       setCreditAmount(effectiveAmt);
     }
-    setResponseNote(getNoteTemplate(type, effectiveAmt));
+    setResponseNote(getNoteTemplate(type, effectiveAmt, validDays));
   };
 
   const handleAmountChange = (newVal) => {
     setCreditAmount(newVal);
     const parsed = Number.parseFloat(newVal) || 0;
-    setResponseNote(getNoteTemplate(resolutionType, parsed));
+    setResponseNote(getNoteTemplate(resolutionType, parsed, validDays));
+  };
+
+  const handleValidDaysChange = (newDays) => {
+    setValidDays(newDays);
+    if (resolutionType === 'ISSUE_CREDIT') {
+      const parsed = Number.parseFloat(creditAmount) || 0;
+      setResponseNote(getNoteTemplate(resolutionType, parsed, newDays));
+    }
+  };
+
+  const handleCopyCreditCode = async () => {
+    if (!request?.generatedCreditCode) return;
+    try {
+      await globalThis.navigator?.clipboard?.writeText(request.generatedCreditCode);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    } catch {
+      setCopiedCode(false);
+    }
   };
 
   useEffect(() => {
     if (isOpen && request) {
       setShowRevokeConfirm(false);
+      setCopiedCode(false);
       setRevokeReason('');
       const rawSuggested = request.calculatedCreditAmount ?? request.proratedCredit ?? request.classPrice ?? 0;
       const suggested = Math.round(Number(rawSuggested) / 1000) * 1000;
@@ -317,8 +298,6 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
         defaultType = isManager ? 'ACKNOWLEDGE_AND_TRAIN' : 'ESCALATE';
       } else if (request.category === 'FACILITY_ISSUE') {
         defaultType = 'ASSIGN_MAINTENANCE';
-      } else if (request.category === 'SCHEDULE_SUPPORT') {
-        defaultType = 'APPROVE_SCHEDULE_CHANGE';
       } else if (request.category === 'COMPLAINT') {
         defaultType = 'RESOLVE_COMPLAINT';
       } else {
@@ -326,7 +305,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
       }
 
       setResolutionType(defaultType);
-      setResponseNote(getNoteTemplate(defaultType, suggested));
+      setResponseNote(getNoteTemplate(defaultType, suggested, 60));
       setError('');
     }
   }, [isOpen, request, isManager, currentLang]);
@@ -334,7 +313,9 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
   const isClosed = request?.status === 'APPROVED' || request?.status === 'RESOLVED' || request?.status === 'REJECTED';
   const isEscalatedForReceptionist = !isManager && request?.status === 'ESCALATED';
   const isCoachFeedbackForReceptionist = !isManager && request?.category === 'COACH_FEEDBACK';
-  const isReadOnly = isClosed || isEscalatedForReceptionist || isCoachFeedbackForReceptionist;
+  const isFacilityIssueForReceptionist = !isManager && request?.category === 'FACILITY_ISSUE';
+  const isCashRefundForReceptionist = !isManager && !isClosed && isCashRefundRequest(request);
+  const isReadOnly = isClosed || !canStaffProcessTicket(request, isManager);
 
   if (!isOpen || !request) return null;
 
@@ -465,12 +446,12 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
         {
           actionType: 'REJECT',
           icon: X,
-          title: exceedsEightyPercent ? t('Reject Request (Policy Enforced)') : t('Reject Request'),
+          title: exceedsEightyPercent ? t('Reject Request (>80% Policy)') : t('Reject Request'),
           desc: exceedsEightyPercent
-            ? t('Class attended sessions exceeded 80%. Center policy strictly prohibits refunds or perks.')
-            : t('Course completed >80% or violates center policies.'),
+            ? t('Class attended sessions exceeded 80%. Refunds and vouchers are unavailable.')
+            : t('Decline request because it does not meet center policy.'),
           color: 'rose',
-          isMemberChoice: exceedsEightyPercent || request.preferredResolution === 'REJECT'
+          isMemberChoice: request.preferredResolution === 'REJECT'
         }
       ];
     } else {
@@ -496,7 +477,9 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
         actions = [
           { ...cfg.primary, color: 'emerald', title: t(cfg.primary.titleKey), desc: t(cfg.primary.descKey) },
           { ...cfg.secondary, color: 'blue', title: t(cfg.secondary.titleKey), desc: t(cfg.secondary.descKey) },
-          { actionType: 'ESCALATE', icon: ArrowUpRight, color: 'purple', title: t(cfg.escalate.titleKey), desc: t(cfg.escalate.descKey) },
+          ...(!(isManager && request.status === 'ESCALATED')
+            ? [{ actionType: 'ESCALATE', icon: ArrowUpRight, color: 'purple', title: t(cfg.escalate.titleKey), desc: t(cfg.escalate.descKey) }]
+            : []),
           { actionType: 'REJECT', icon: X, color: 'rose', title: t(cfg.reject.titleKey), desc: t(cfg.reject.descKey) }
         ];
       }
@@ -573,7 +556,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
           )}
 
           {/* Member Card */}
-          <div className="p-3.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="p-3.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] flex flex-wrap items-center justify-between gap-2.5 text-xs">
             <div className="flex items-center gap-2">
               <User className="w-4 h-4 text-[var(--primary)]" />
               <span className="font-bold text-[var(--text)]">{request.userFullName || request.memberName}</span>
@@ -581,168 +564,235 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
             {(request.userPhone || request.memberPhone) && (
               <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
                 <Phone className="w-3.5 h-3.5" />
-                <span>{request.userPhone || request.memberPhone}</span>
+                <span className="font-mono">{request.userPhone || request.memberPhone}</span>
               </div>
             )}
             <div className="flex items-center gap-1.5 text-[var(--text-muted)]">
               <Mail className="w-3.5 h-3.5" />
               <span>{request.userEmail || request.memberEmail}</span>
             </div>
+            {request.createdAt && (
+              <div className="flex items-center gap-1 text-[var(--text-muted)] font-mono">
+                <Clock className="w-3.5 h-3.5" />
+                <span>{formatSupportDate(request.createdAt)}</span>
+              </div>
+            )}
           </div>
 
           {/* Ticket Request Content */}
           {request.category === 'COACH_FEEDBACK' ? (
-            (() => {
-              const parsed = parseCoachFeedback(request.content, request);
-              return (
-                <div className="p-4 rounded-xl bg-purple-500/5 dark:bg-purple-950/20 border border-purple-500/25 space-y-3">
-                  <div className="flex items-center justify-between border-b border-purple-500/20 pb-2.5">
-                    <span className="text-xs font-bold text-purple-900 dark:text-purple-200 uppercase tracking-wide flex items-center gap-1.5">
-                      <UserCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                      {t('Coach Feedback Topic')}
-                    </span>
-                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
-                      {t(parsed.aspect || 'Coach & Training Feedback')}
-                    </span>
-                  </div>
+            <div className="p-4 rounded-xl bg-purple-500/5 dark:bg-purple-950/20 border border-purple-500/25 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-purple-500/20 pb-2.5">
+                <span className="text-xs font-bold text-purple-900 dark:text-purple-200 uppercase tracking-wide flex items-center gap-1.5">
+                  <UserCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  {t('Coach Feedback Topic')}
+                </span>
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                  {t(details.aspect || 'Coach & Training Feedback')}
+                </span>
+              </div>
 
-                  {parsed.targetInfo && (
-                    <div className="text-xs text-[var(--text)] flex items-center gap-2">
-                      <span className="text-[var(--text-muted)] font-medium">{t('Associated Target')}:</span>
-                      <span className="font-semibold text-[var(--text)] bg-[var(--surface)] px-2 py-0.5 rounded border border-[var(--border)]">
-                        {parsed.targetInfo}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="space-y-1.5 pt-1">
-                    <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">
-                      {t('Student Feedback & Comments')}:
-                    </div>
-                    <div className="p-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm font-medium text-[var(--text)] whitespace-pre-line leading-relaxed shadow-xs">
-                      "{parsed.comment || request.title || t('No additional comments provided.')}"
-                    </div>
-                  </div>
+              {details.targetInfo && (
+                <div className="text-xs text-[var(--text)] flex flex-wrap items-center gap-2">
+                  <span className="text-[var(--text-muted)] font-medium">{t('Associated Target')}:</span>
+                  <span className="font-semibold text-[var(--text)] bg-[var(--surface)] px-2 py-0.5 rounded border border-[var(--border)]">
+                    {details.targetInfo}
+                  </span>
                 </div>
-              );
-            })()
+              )}
+
+              <div className="space-y-1.5 pt-1">
+                <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">
+                  {t('Student Feedback & Comments')}:
+                </div>
+                <div className="p-3.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm font-medium text-[var(--text)] whitespace-pre-line leading-relaxed shadow-xs">
+                  "{details.bodyText || request.title || t('No additional comments provided.')}"
+                </div>
+              </div>
+            </div>
           ) : (
-            <div className="p-4 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] space-y-2">
+            <div className="p-4 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] space-y-3">
               <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">
                 {t('Member Request Description')}
               </div>
-              <p className="text-sm text-[var(--text)] whitespace-pre-line leading-relaxed">
-                {request.content}
-              </p>
-            </div>
-          )}
-
-          {/* Associated Class Proration Card (if cancellation) */}
-          {request.classId && (
-            <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
-                  <BookOpen className="w-4 h-4" />
-                  {t('Enrolled Course Information')}
-                </span>
-                <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
-                  {request.className}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-1">
-                <div className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
-                  <span className="text-[var(--text-muted)] block">{t('Total Fee')}</span>
-                  <span className="font-bold text-[var(--text)]">{formatMoney(request.classPrice)}</span>
-                </div>
-                <div className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
-                  <span className="text-[var(--text-muted)] block">{t('Total Sessions')}</span>
-                  <span className="font-bold text-[var(--text)]">{request.totalSessions || 0}</span>
-                </div>
-                <div className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
-                  <span className="text-[var(--text-muted)] block">{t('Attended')}</span>
-                  <span className="font-bold text-emerald-600">{request.attendedSessions || 0}</span>
-                </div>
-                <div className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
-                  <span className="text-[var(--text-muted)] block">{t('Remaining')}</span>
-                  <span className="font-bold text-amber-600">{request.remainingSessions || 0}</span>
-                </div>
-              </div>
-              {request.totalSessions > 0 && ((request.attendedSessions || 0) / request.totalSessions > 0.8) && (
-                <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-xs text-rose-700 dark:text-rose-300 font-semibold flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{t('Class attendance exceeded 80%. Under center policy, member is not eligible for voucher refund.')}</span>
+              {details.chips.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {details.chips.map((chip, idx) => (
+                    <div
+                      key={`${chip.key}-${idx}`}
+                      className="px-3 py-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs flex flex-col gap-0.5"
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                        {t(chip.labelKey)}
+                      </span>
+                      <span className="font-semibold text-[var(--text)] break-words">
+                        {t(chip.value)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
-              {isClassCancellationOrCompensation && (
-                <div className="flex justify-between items-center pt-1 text-xs">
-                  <span className="font-bold text-[var(--text)]">
-                    {t('Prorated Remaining Value (Recommended Credit):')}
-                  </span>
-                  <span className="text-base font-extrabold text-[var(--primary)]">
-                    {formatMoney(request.calculatedCreditAmount ?? request.proratedCredit ?? request.classPrice ?? 0)}
-                  </span>
-                </div>
+              {(details.bodyText || (!details.chips.length && request.content)) && (
+                <p className="text-sm text-[var(--text)] whitespace-pre-line leading-relaxed">
+                  {details.bodyText || request.content}
+                </p>
               )}
             </div>
           )}
 
-          {/* Member's Preferred Compensation Benefit Card */}
+          {/* Associated Class Proration Card */}
+          {request.classId && (() => {
+            const { code, name } = splitCode(request.className || '');
+            return (
+              <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
+                    <BookOpen className="w-4 h-4 shrink-0" />
+                    {t('Enrolled Course Information')}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {code && (
+                      <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-800 dark:text-blue-200 border border-blue-500/30">
+                        {code}
+                      </span>
+                    )}
+                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                      {name || request.className}
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-1">
+                  <div className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
+                    <span className="text-[var(--text-muted)] block">{t('Total Fee')}</span>
+                    <span className="font-bold text-[var(--text)]">{formatMoney(request.classPrice)}</span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
+                    <span className="text-[var(--text-muted)] block">{t('Total Sessions')}</span>
+                    <span className="font-bold text-[var(--text)]">{policy.total}</span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
+                    <span className="text-[var(--text-muted)] block">{t('Attended')}</span>
+                    <span className="font-bold text-emerald-600">{policy.attended}</span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
+                    <span className="text-[var(--text-muted)] block">{t('Remaining')}</span>
+                    <span className="font-bold text-amber-600">{policy.remaining}</span>
+                  </div>
+                </div>
+                {policy.total > 0 && isClassCancellationOrCompensation && (
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-semibold text-[var(--text-muted)]">
+                        {t('Attendance Progress')}: <strong className="text-[var(--text)]">{policy.percent}%</strong> / 80% {t('policy limit')}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                        exceedsEightyPercent
+                          ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                          : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                      }`}>
+                        {exceedsEightyPercent ? t('>80% Over limit') : t('<=80% Eligible')}
+                      </span>
+                    </div>
+                    <div className="relative h-2 rounded-full bg-[var(--surface)] border border-[var(--border)] overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${exceedsEightyPercent ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${policy.percent}%` }}
+                      />
+                      <div
+                        className="absolute top-0 bottom-0 w-0.5 bg-amber-500/80"
+                        style={{ left: '80%' }}
+                        title="80%"
+                      />
+                    </div>
+                  </div>
+                )}
+                {isClassCancellationOrCompensation && exceedsEightyPercent && (
+                  <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-xs text-rose-700 dark:text-rose-300 font-semibold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{t('Attendance exceeded 80% — not eligible for refunds or vouchers.')}</span>
+                  </div>
+                )}
+                {isClassCancellationOrCompensation && (
+                  <div className="flex justify-between items-center pt-1 text-xs">
+                    <span className="font-bold text-[var(--text)]">
+                      {t('Prorated Remaining Value (Recommended Credit):')}
+                    </span>
+                    <span className="text-base font-extrabold text-[var(--primary)]">
+                      {formatMoney(request.calculatedCreditAmount ?? request.proratedCredit ?? request.classPrice ?? 0)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Member's Requested Benefit (concise single-row badge) */}
           {request.preferredResolution && (
-            <div className="p-3.5 rounded-xl border bg-[var(--surface-hover)] border-[var(--border)] space-y-1.5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  {t("Member's Requested Benefit:")}
+            <div className="px-3.5 py-2.5 rounded-xl border bg-[var(--surface-hover)] border-[var(--border)] flex items-center justify-between gap-2 shadow-sm">
+              <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                {t('Requested Benefit')}
+              </span>
+              {request.preferredResolution === 'ISSUE_CREDIT' && (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
+                  <CreditCard className="w-3 h-3" /> {t('Credit Voucher')}
                 </span>
-                {request.preferredResolution === 'ISSUE_CREDIT' && (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
-                    <CreditCard className="w-3 h-3" /> {t('Credit Voucher')}
-                  </span>
-                )}
-                {request.preferredResolution === 'GYM_PASS' && (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 inline-flex items-center gap-1">
-                    <Dumbbell className="w-3 h-3" /> {t('1-Month Gym Pass')}
-                  </span>
-                )}
-                {request.preferredResolution === 'CASH_REFUND' && (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 inline-flex items-center gap-1">
-                    <DollarSign className="w-3 h-3" /> {t('Cash / Bank Refund')}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-[var(--text)] font-semibold leading-relaxed">
-                {request.preferredResolution === 'ISSUE_CREDIT' && t('Member requested compensation: Credit Voucher.')}
-                {request.preferredResolution === 'GYM_PASS' && t('Member requested compensation: 1-Month Gym Pass.')}
-                {request.preferredResolution === 'CASH_REFUND' && t('Member requested compensation: Cash / Bank Refund.')}
-              </p>
+              )}
+              {request.preferredResolution === 'GYM_PASS' && (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 inline-flex items-center gap-1">
+                  <Dumbbell className="w-3 h-3" /> {t('1-Month Gym Pass')}
+                </span>
+              )}
+              {isCashRefundRequest(request) && (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 inline-flex items-center gap-1">
+                  <DollarSign className="w-3 h-3" /> {t('Cash / Bank Refund')}
+                </span>
+              )}
+              {request.preferredResolution === 'NONE' && (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-500/10 text-slate-600 dark:text-slate-300 border border-slate-500/20">
+                  {t('No Compensation')}
+                </span>
+              )}
             </div>
           )}
 
-          {/* If Read-Only (Closed Ticket or Escalated for Receptionist): Show Resolution Summary */}
+          {/* If Read-Only (Closed Ticket or Admin-Only Ticket for Receptionist): Show Concise Summary */}
           {isReadOnly ? (
             <div className="space-y-4">
-              {/* If Coach Feedback for Receptionist banner */}
-              {isCoachFeedbackForReceptionist && !isClosed && (
-                <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1.5">
+              {(isCoachFeedbackForReceptionist || isFacilityIssueForReceptionist) && !isClosed && (
+                <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1">
                   <div className="flex items-center gap-2 text-xs font-bold text-purple-900 dark:text-purple-200">
                     <ArrowUpRight className="w-4 h-4 text-purple-700 dark:text-purple-400" />
-                    <span>{t('Coach Feedback Directly Routed to Management')}</span>
+                    <span>{t('Management Review Only')}</span>
                   </div>
                   <p className="text-xs text-[var(--text)] leading-relaxed font-medium">
-                    {t('This ticket reports issues regarding a Coach / Instructor and has been routed directly to Center Management for review. Receptionists have view-only access.')}
+                    {isCoachFeedbackForReceptionist
+                      ? t('Coach feedback is handled confidentially by Center Management.')
+                      : t('Facility and equipment reports are routed directly to Center Management for technical inspection and resolution.')}
                   </p>
                 </div>
               )}
 
-              {/* If Escalated for Receptionist banner (other categories) */}
-              {!isCoachFeedbackForReceptionist && isEscalatedForReceptionist && (
-                <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1.5">
-                  <div className="flex items-center gap-2 text-xs font-bold text-purple-900 dark:text-purple-200">
-                    <ArrowUpRight className="w-4 h-4 text-purple-700 dark:text-purple-400" />
-                    <span>{t('Ticket Escalated to Center Management')}</span>
+              {!isCoachFeedbackForReceptionist && !isFacilityIssueForReceptionist && isCashRefundForReceptionist && (
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-bold text-amber-900 dark:text-amber-200">
+                    <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <span>{t('Admin-Only Action')}</span>
                   </div>
                   <p className="text-xs text-[var(--text)] leading-relaxed font-medium">
-                    {t('This ticket involves mid-course refund or exception and has been escalated to Center Manager for review. Receptionists cannot modify escalated tickets.')}
+                    {t('Only Admin / Center Management can process cash or bank refunds.')}
+                  </p>
+                </div>
+              )}
+
+              {!isCoachFeedbackForReceptionist && !isFacilityIssueForReceptionist && !isCashRefundForReceptionist && isEscalatedForReceptionist && (
+                <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-bold text-purple-900 dark:text-purple-200">
+                    <ArrowUpRight className="w-4 h-4 text-purple-700 dark:text-purple-400" />
+                    <span>{t('Escalated to Management')}</span>
+                  </div>
+                  <p className="text-xs text-[var(--text)] leading-relaxed font-medium">
+                    {t('This ticket has been escalated to Center Management for review.')}
                   </p>
                 </div>
               )}
@@ -764,9 +814,20 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                         <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
                           <CreditCard className="w-4 h-4" /> {t('Credit Voucher Issued')}
                         </div>
-                        <code className="text-sm font-black text-[var(--text)] tracking-wider block mt-1">
-                          {request.generatedCreditCode}
-                        </code>
+                        <div className="mt-1 flex items-center gap-2">
+                          <code className="text-sm font-black text-[var(--text)] tracking-wider">
+                            {request.generatedCreditCode}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={handleCopyCreditCode}
+                            className="px-2 py-0.5 rounded-md border border-emerald-500/30 bg-[var(--surface)] hover:bg-emerald-500/15 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 inline-flex items-center gap-1 transition-colors"
+                            aria-label={t('Copy voucher code')}
+                          >
+                            {copiedCode ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedCode ? t('Copied') : t('Copy code')}</span>
+                          </button>
+                        </div>
                       </div>
                       <div className="text-right">
                         <div className="text-xs text-[var(--text-muted)] font-medium">{t('Amount')}</div>
@@ -938,16 +999,34 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                     </div>
                     {resolutionType === 'ISSUE_CREDIT' ? (
                       <div className="space-y-1.5">
-                        <label htmlFor="credit-validity-input" className="block text-xs font-black text-[var(--text)]">
-                          {t('Validity (Days)')} <span className="text-red-500 font-bold">*</span>
-                        </label>
+                        <div className="flex items-center justify-between gap-2">
+                          <label htmlFor="credit-validity-input" className="block text-xs font-black text-[var(--text)]">
+                            {t('Validity (Days)')} <span className="text-red-500 font-bold">*</span>
+                          </label>
+                          <div className="flex items-center gap-1">
+                            {[30, 60, 90].map((preset) => (
+                              <button
+                                key={preset}
+                                type="button"
+                                onClick={() => handleValidDaysChange(preset)}
+                                className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors ${
+                                  Number(validDays) === preset
+                                    ? 'bg-emerald-600 text-white border-emerald-600'
+                                    : 'bg-[var(--surface)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text)]'
+                                }`}
+                              >
+                                {preset} {t('days')}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                         <input
                           id="credit-validity-input"
                           type="number"
                           min="7"
                           max="365"
                           value={validDays}
-                          onChange={(e) => setValidDays(e.target.value)}
+                          onChange={(e) => handleValidDaysChange(e.target.value)}
                           className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-[var(--text)] font-black text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
                           required
                         />
@@ -968,24 +1047,9 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
 
               {/* Response Note (sent to member notification) */}
               <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label htmlFor="response-note-textarea" className="block text-xs font-black text-[var(--text)]">
-                    {t('Official Response & Explanation to Member')} <span className="text-red-500 font-bold">*</span>
-                  </label>
-                  {resolutionType === 'REJECT' && (
-                    <button
-                      type="button"
-                      onClick={() => setResponseNote(
-                        currentLang === 'vi'
-                          ? `${isManager ? 'Quản lý trung tâm' : 'Lễ tân'} xin phép đóng đơn do yêu cầu này đã được giải quyết hoặc bị trùng lặp với đơn hỗ trợ khác.`
-                          : `${isManager ? 'Center Management' : 'Reception'} is closing this ticket as the request has already been addressed or is duplicate with another ticket.`
-                      )}
-                      className="px-2 py-0.5 rounded-lg text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/20 transition-colors flex items-center gap-1"
-                    >
-                      <span>⚠️ {t('Template: Close as Duplicate')}</span>
-                    </button>
-                  )}
-                </div>
+                <label htmlFor="response-note-textarea" className="block text-xs font-black text-[var(--text)]">
+                  {t('Official Response & Explanation to Member')} <span className="text-red-500 font-bold">*</span>
+                </label>
                 <textarea
                   id="response-note-textarea"
                   rows={3}

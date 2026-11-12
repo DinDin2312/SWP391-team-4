@@ -146,8 +146,12 @@ public class ManagerRepository {
                 """, Integer.class);
     }
 
-    public void requireSubject(Integer id) {
-        jdbc.queryForObject("SELECT subject_id FROM SUBJECTS WHERE subject_id=?", Integer.class, id);
+    public String requireSubject(Integer id) {
+        return jdbc.queryForObject("SELECT subject_name FROM SUBJECTS WHERE subject_id=?", String.class, id);
+    }
+
+    public List<Map<String, Object>> classNames() {
+        return jdbc.queryForList("SELECT class_id classId, class_name className FROM CLASSES");
     }
 
     public void requireRoom(Integer id) {

@@ -12,7 +12,81 @@ export const fold = text => Array.from(String(text ?? ''), foldChar).join('');
 // "[YOGA-101] Yoga Giãn Cơ" -> { code: 'YOGA-101', name: 'Yoga Giãn Cơ' }
 export function splitCode(className) {
   const match = String(className ?? '').match(/^\s*\[([^\]]+)\]\s*(.*)$/);
-  return match ? { code: match[1], name: match[2] } : { code: '', name: String(className ?? '') };
+  return match ? { code: match[1].trim(), name: match[2].trim() } : { code: '', name: String(className ?? '').trim() };
+}
+
+const SUBJECT_PREFIXES = [
+  ['gym', 'GYM'],
+  ['the hinh', 'GYM'],
+  ['yoga', 'YOGA'],
+  ['zumba', 'ZUMBA'],
+  ['boi', 'SWIM'],
+  ['swim', 'SWIM'],
+  ['dap xe', 'SPIN'],
+  ['spin', 'SPIN'],
+  ['cycling', 'SPIN'],
+  ['box', 'BOX'],
+  ['kickfit', 'BOX'],
+  ['pilates', 'PILATES'],
+  ['dance', 'DANCE'],
+  ['aerobic', 'DANCE'],
+];
+
+export function subjectCodePrefix(subjectName) {
+  const folded = fold(subjectName).replace(/[^a-z0-9\s]/g, ' ').trim();
+  if (!folded) return 'CLS';
+  for (const [keyword, prefix] of SUBJECT_PREFIXES) {
+    if (folded.includes(keyword)) return prefix;
+  }
+  const firstWord = folded.split(/\s+/).find(token => token.length >= 2) || folded.replace(/\s+/g, '');
+  return (firstWord.slice(0, 8) || 'CLS').toUpperCase();
+}
+
+export function classLevelFromCode(code) {
+  const match = String(code ?? '').trim().match(/-(\d+)$/);
+  if (!match) return '';
+  const num = Number(match[1]);
+  if (num >= 100 && num < 200) return '1';
+  if (num >= 200 && num < 300) return '2';
+  if (num >= 300 && num < 400) return '3';
+  return '';
+}
+
+export function nextClassCode(classes = [], subjects = [], subjectId, levelBand = 1) {
+  const subject = subjects.find(s => String(s.subjectId) === String(subjectId));
+  if (!subject) return '';
+  const prefix = subjectCodePrefix(subject.subjectName);
+  const band = [1, 2, 3].includes(Number(levelBand)) ? Number(levelBand) : 1;
+  const bandStart = band * 100;
+  const bandEnd = bandStart + 99;
+  const usedNumbers = new Set();
+  let maxInBand = bandStart;
+  const codePattern = new RegExp(`^${prefix}-(\\d+)$`, 'i');
+
+  for (const row of classes) {
+    const { code } = splitCode(row?.className);
+    const match = code.match(codePattern);
+    if (!match) continue;
+    const num = Number(match[1]);
+    if (!Number.isFinite(num)) continue;
+    usedNumbers.add(num);
+    if (num >= bandStart && num <= bandEnd && num > maxInBand) {
+      maxInBand = num;
+    }
+  }
+
+  let candidate = maxInBand + 1;
+  while (usedNumbers.has(candidate)) {
+    candidate += 1;
+  }
+  return `${prefix}-${candidate}`;
+}
+
+export function formatClassNameWithCode(code, title) {
+  const cleanCode = String(code ?? '').trim().replace(/^\[+|\]+$/g, '').toUpperCase();
+  const cleanTitle = splitCode(title).name.trim();
+  if (!cleanCode) return cleanTitle;
+  return cleanTitle ? `[${cleanCode}] ${cleanTitle}` : `[${cleanCode}]`;
 }
 
 const fields = row => [row.className, row.subjectName, row.coachName, row.roomName];

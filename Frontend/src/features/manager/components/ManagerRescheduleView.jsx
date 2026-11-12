@@ -2,14 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import {
   CalendarSync, CheckCircle, XCircle, AlertTriangle, AlertCircle, Clock,
-  Check, X, RefreshCw, UserCheck
+  Check, X, RefreshCw, UserCheck, ChevronDown
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import ManagerPageHeader from './ManagerPageHeader';
 import { API_ORIGIN } from '../../../config/apiBase.js';
 
 import {
-  getReasonLabel,
+  getRescheduleReasonDetail,
   getStatusMeta,
   formatDateTime,
   formatScheduleSlot,
@@ -42,6 +42,11 @@ export default function ManagerRescheduleView() {
   const [selectedSubstituteId, setSelectedSubstituteId] = useState('');
   const [substituteNote, setSubstituteNote] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
+  const [expandedReasonIds, setExpandedReasonIds] = useState({});
+
+  const toggleReasonDetails = (requestId) => {
+    setExpandedReasonIds((prev) => ({ ...prev, [requestId]: !prev[requestId] }));
+  };
 
   const fetchRequests = async () => {
     const token = globalThis.localStorage?.getItem('token');
@@ -278,7 +283,7 @@ export default function ManagerRescheduleView() {
         <div className="flex items-center gap-2 p-3 border-b border-[var(--border)] bg-[var(--surface-hover)] overflow-x-auto">
           {[
             { id: 'PENDING', label: t('Pending Review') },
-            { id: 'APPROVED', label: t('Approved') },
+            { id: 'APPROVED', label: getStatusMeta('APPROVED', lang).label },
             { id: 'COMPLETED', label: t('Completed') },
             { id: 'REJECTED', label: t('Rejected / Cancelled') },
             { id: 'ALL', label: t('All Requests') }
@@ -320,7 +325,10 @@ export default function ManagerRescheduleView() {
           <div className="divide-y divide-[var(--border)]">
             {filteredRequests.map((req) => {
               const statusMeta = getStatusMeta(req.status, lang);
-              const reasonLabel = getReasonLabel(req.reasonCategory, lang);
+              const { reasonLabel, detailText, hasCustomDetail } = getRescheduleReasonDetail(req, lang);
+              const isReasonExpanded = Boolean(expandedReasonIds[req.requestId]);
+              const adminNoteText = req.adminNote || (req.status !== 'REJECTED' ? req.adminResponseNote : '');
+              const rejectionNoteText = req.rejectionReason || (req.status === 'REJECTED' ? req.adminResponseNote : '');
               const isExpired = isDeadlineExpired(req.confirmationDeadline);
               const hasRoomConflict = Boolean(req.hasRoomConflict || req.hasRoomCollision);
               const hasCoachConflict = Boolean(req.hasCoachConflict || req.hasCoachCollision);
@@ -388,24 +396,47 @@ export default function ManagerRescheduleView() {
                         </div>
                       )}
 
-                      {/* Reason */}
-                      <div className="text-xs text-[var(--text-muted)] flex items-baseline gap-2">
-                        <span className="font-semibold text-[var(--text)]">{t('Reason')}:</span>
-                        <span className="px-1.5 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)] font-medium text-[var(--text)]">
-                          {reasonLabel}
-                        </span>
-                        {req.reasonNote && <span>— {req.reasonNote}</span>}
+                      {/* Reason — click pill to reveal full coach explanation */}
+                      <div className="space-y-2">
+                        <div className="text-xs text-[var(--text-muted)] flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-[var(--text)]">{t('Reason')}:</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleReasonDetails(req.requestId)}
+                            aria-expanded={isReasonExpanded}
+                            title={isReasonExpanded ? t('Collapse') : t('View details')}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+                              isReasonExpanded
+                                ? 'bg-[var(--primary)]/10 border-[var(--primary)]/40 text-[var(--primary)]'
+                                : 'bg-[var(--surface)] border-[var(--border)] text-[var(--text)] hover:border-[var(--primary)]/50 hover:bg-[var(--primary)]/5'
+                            }`}
+                          >
+                            <span>{reasonLabel}</span>
+                            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-150 ${isReasonExpanded ? 'rotate-180' : ''}`} />
+                          </button>
+                        </div>
+
+                        {isReasonExpanded && (
+                          <div className="p-3 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-xs space-y-1">
+                            <div className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wide">
+                              {t('Additional Note / Explanation')}
+                            </div>
+                            <p className={hasCustomDetail ? 'text-[var(--text)] leading-relaxed' : 'text-[var(--text-muted)] italic'}>
+                              {hasCustomDetail ? detailText : t('No additional notes.')}
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       {/* Admin Note / Rejection Reason */}
-                      {req.adminNote && (
+                      {adminNoteText && (
                         <div className="text-xs text-[var(--text-muted)] italic">
-                          <span>{t('Admin Note')}: "{req.adminNote}"</span>
+                          <span>{t('Admin Note')}: "{adminNoteText}"</span>
                         </div>
                       )}
-                      {req.rejectionReason && (
+                      {rejectionNoteText && (
                         <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-600 dark:text-rose-400">
-                          <strong>{t('Rejection Reason')}:</strong> {req.rejectionReason}
+                          <strong>{t('Reason for Rejection')}:</strong> {rejectionNoteText}
                         </div>
                       )}
                     </div>

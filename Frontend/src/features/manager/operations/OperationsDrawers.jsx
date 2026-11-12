@@ -22,8 +22,10 @@ import {
   roomFitsSubject,
   seatLimit,
   duplicateClassName,
+  duplicateClassCode,
   conflictParts,
 } from "./operationsUtils";
+import { formatClassNameWithCode, nextClassCode } from "../components/classSearch";
 import { Occupancy, OperationStatus } from "./OperationsUI";
 import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
 import StaffAvatar from '../staff/StaffAvatar';
@@ -167,7 +169,7 @@ function validate(type, form) {
         ? ["roomName", "capacity"]
         : type === "class"
           ? [
-              "className",
+              "classTitle",
               "subjectId",
               "coachId",
               "roomId",
@@ -185,8 +187,17 @@ function validate(type, form) {
       ? "subjectName"
       : type === "room"
         ? "roomName"
-        : "className";
-  if (form[name]?.length > 255) errors[name] = "Use at most 255 characters.";
+        : "classTitle";
+  const formattedClassLength =
+    type === "class"
+      ? formatClassNameWithCode(form.classCode, form.classTitle ?? form.className).length
+      : 0;
+  if (form[name]?.length > 255 || formattedClassLength > 255) {
+    errors[name] = "Use at most 255 characters.";
+  }
+  if (type === "class" && String(form.classCode || "").trim().length > 32) {
+    errors.classCode = "Use at most 32 characters.";
+  }
   if (form.description?.length > 10000)
     errors.description = "Use at most 10,000 characters.";
   for (const key of type === "class"
@@ -236,10 +247,21 @@ function validate(type, form) {
 export function OperationEditor({ config, data, onClose, onSaved }) {
   useLanguage();
   const { type } = config;
-  const [form, setForm] = useState(() => ({
-    ...initialForm(type, config.item),
-    ...config.initial,
-  }));
+  const [form, setForm] = useState(() => {
+    const merged = {
+      ...initialForm(type, config.item),
+      ...config.initial,
+    };
+    if (type === "class" && merged.autoCode && merged.subjectId && !merged.classCode) {
+      const code = nextClassCode(data.classes, data.subjects, merged.subjectId, merged.levelBand);
+      return {
+        ...merged,
+        classCode: code,
+        className: formatClassNameWithCode(code, merged.classTitle ?? merged.className),
+      };
+    }
+    return merged;
+  });
   const {policy,error:policyError}=useTeachingSlots(['schedule','series'].includes(type)?(form.classId || undefined):undefined);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
@@ -257,8 +279,39 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
   },[policy,editing,type]);
   const title = config.supplementary ? "Add supplementary session" : `${editing ? "Edit" : "Create"} ${type === "series" ? "repeating sessions" : type === "schedule" ? "session" : type}`;
   const set = (key, value) => {
-    setForm((current) => ({ ...current, [key]: value, ...(type==='class' && key==='subjectId'?{coachId:'',roomId:roomFits(current.roomId,value)?current.roomId:''}:{}), ...(type==='class' && key==='roomId' && value && (!current.maxSlots || Number(current.maxSlots)>seatLimit(data.rooms,value))?{maxSlots:String(seatLimit(data.rooms,value))}:{}), ...(['schedule','series'].includes(type) && key==='classId'?{startTime:'',endTime:''}:{}), ...((type==='schedule' || type==='series') && key==='startTime'?{endTime:slotEnd(value,policy?.durationMinutes || 90)}:{}) }));
-    setErrors((current) => ({ ...current, [key]: undefined }));
+    setForm((current) => {
+      const next = {
+        ...current,
+        [key]: value,
+        ...(type === 'class' && key === 'subjectId'
+          ? { coachId: '', roomId: roomFits(current.roomId, value) ? current.roomId : '' }
+          : {}),
+        ...(type === 'class' && key === 'roomId' && value && (!current.maxSlots || Number(current.maxSlots) > seatLimit(data.rooms, value))
+          ? { maxSlots: String(seatLimit(data.rooms, value)) }
+          : {}),
+        ...(['schedule', 'series'].includes(type) && key === 'classId' ? { startTime: '', endTime: '' } : {}),
+        ...((type === 'schedule' || type === 'series') && key === 'startTime'
+          ? { endTime: slotEnd(value, policy?.durationMinutes || 90) }
+          : {}),
+      };
+      if (type === 'class') {
+        if ((key === 'subjectId' || key === 'levelBand' || (key === 'autoCode' && value === true)) && next.autoCode) {
+          next.classCode = nextClassCode(data.classes, data.subjects, next.subjectId, next.levelBand);
+        }
+        if (key === 'classCode') {
+          next.classCode = String(value ?? '').replace(/[[\]]/g, '').toUpperCase();
+        }
+        next.className = formatClassNameWithCode(next.classCode, next.classTitle ?? '');
+      }
+      return next;
+    });
+    setErrors((current) => ({
+      ...current,
+      [key]: undefined,
+      ...(type === 'class' && ['classCode', 'classTitle', 'subjectId', 'levelBand'].includes(key)
+        ? { classCode: undefined, className: undefined }
+        : {}),
+    }));
   };
   const candidates =
     config.candidates || eligibleClasses(data.classes, config.resource);
@@ -297,10 +350,10 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
           disabled={disabled}
           onChange={(event) => set(key, event.target.value)}
         >
-          {key !== 'status' && <option value="">{t("Select")}{' '}{t(label).toLocaleLowerCase()}</option>}
+          {!['status', 'levelBand'].includes(key) && <option value="">{t("Select")}{' '}{t(label).toLocaleLowerCase()}</option>}
           {options.map(([value, name]) => (
             <option key={value} value={value}>
-              {key === 'status' ? t(name) : name}
+              {['status', 'levelBand'].includes(key) ? t(name) : name}
             </option>
           ))}
         </select>
@@ -311,6 +364,9 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
     event.preventDefault();
     if (saving || photoError) return;
     const invalid = validate(type, form);
+    if (type === 'class' && !form.autoCode && duplicateClassCode(data.classes, form.classCode, form.classId)) {
+      invalid.classCode = t('Another class already uses this code.');
+    }
     if (type === 'class' && form.roomId && Number(form.maxSlots) > seatLimit(data.rooms, form.roomId)) invalid.maxSlots = t('At most {0} seats: the room capacity.', [seatLimit(data.rooms, form.roomId)]);
     setErrors(invalid);
     setError("");
@@ -413,8 +469,58 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
             )}
             {type === "class" && (
               <>
-                {input("className", "Class name", { maxLength: 255 }, duplicateClassName(data.classes, form.className, form.classId) ? "Another class already uses this name." : undefined)}
                 {searchSelect("subjectId","Subject",classSubjectOptions(data,initialSubject),{placeholder:'Search subjects'})}
+                {select(
+                  "levelBand",
+                  "Course level",
+                  [
+                    ["1", "Basic (1xx)"],
+                    ["2", "Advanced (2xx)"],
+                    ["3", "Intensive (3xx)"],
+                  ],
+                  editing && !form.autoCode,
+                  editing && !form.autoCode
+                    ? "Keep existing code band unless regenerating code."
+                    : "Determines the 1xx / 2xx / 3xx code range.",
+                )}
+                <Field
+                  key="classCode"
+                  name="classCode"
+                  label={t("Class code")}
+                  error={errors.classCode}
+                  help={
+                    duplicateClassCode(data.classes, form.classCode, form.classId)
+                      ? "Another class already uses this code."
+                      : form.autoCode
+                        ? "Auto-generated from subject & level."
+                        : "Optional prefix (e.g. YOGA-104)."
+                  }
+                >
+                  {(id, aria) => (
+                    <div className="ops-code-row">
+                      <input
+                        id={id}
+                        {...aria}
+                        maxLength={32}
+                        readOnly={Boolean(form.autoCode)}
+                        className={form.autoCode ? "is-auto-code" : undefined}
+                        placeholder={form.subjectId ? "YOGA-101" : t("Select a subject first")}
+                        value={form.classCode ?? ""}
+                        onInput={(event) => set("classCode", event.target.value)}
+                        onChange={(event) => set("classCode", event.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="manager-secondary ops-code-toggle"
+                        disabled={!form.subjectId && !form.autoCode}
+                        onClick={() => set("autoCode", !form.autoCode)}
+                      >
+                        {t(form.autoCode ? "Edit code" : "Use auto code")}
+                      </button>
+                    </div>
+                  )}
+                </Field>
+                {input("classTitle", "Class name", { maxLength: 220, placeholder: t("e.g. Morning Flexibility Yoga") }, duplicateClassName(data.classes, form.className, form.classId) ? "Another class already uses this name." : undefined)}
                 {form.subjectId && <p className="ops-note">{t('Inherited subject timetable')}: {t('{0} minutes per session',[data.subjects.find(subject=>String(subject.subjectId)===String(form.subjectId))?.durationMinutes || 90])}</p>}
                 {form.subjectId && !coaches.length && <p className="ops-warning" role="status">{t('No coaches are assigned to this subject. Assign teaching subjects in Staff & Roles first.')}</p>}
                 {form.coachId && !coaches.some(c=>String(c.userId)===String(form.coachId)) && <p className="ops-warning" role="alert">{t('The selected coach is not assigned to this subject.')}</p>}

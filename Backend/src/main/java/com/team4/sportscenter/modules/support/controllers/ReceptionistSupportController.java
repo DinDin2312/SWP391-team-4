@@ -44,6 +44,7 @@ public class ReceptionistSupportController {
     }
 
     @PutMapping("/requests/{id}/respond")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')")
     public ResponseEntity<SupportRequestResponse> respondToRequest(
             @PathVariable Integer id,
             @Valid @RequestBody RespondSupportRequest dto,

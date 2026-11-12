@@ -15,6 +15,17 @@ test('local SQL datetime retains the selected hour and converts explicit timezon
 test('create forms submit defaults without requiring a select change', () => {
   assert.equal(initialForm('user').status, 'ACTIVE');
   assert.equal(initialForm('class').status, 'ACTIVE');
+  assert.equal(initialForm('class').levelBand, '1');
+  assert.equal(initialForm('class').autoCode, true);
+  assert.deepEqual(
+    {
+      classCode: initialForm('class', { classId: 5, className: '[YOGA-201] Yoga Nâng Cao' }).classCode,
+      classTitle: initialForm('class', { classId: 5, className: '[YOGA-201] Yoga Nâng Cao' }).classTitle,
+      levelBand: initialForm('class', { classId: 5, className: '[YOGA-201] Yoga Nâng Cao' }).levelBand,
+      autoCode: initialForm('class', { classId: 5, className: '[YOGA-201] Yoga Nâng Cao' }).autoCode,
+    },
+    { classCode: 'YOGA-201', classTitle: 'Yoga Nâng Cao', levelBand: '2', autoCode: false }
+  );
   assert.equal(initialForm('schedule').status, 'SCHEDULED');
   assert.equal(initialForm('package').packageType, 'GYM_ACCESS');
   assert.equal(initialForm('user', { status: 'INACTIVE' }).status, 'INACTIVE');

@@ -83,3 +83,19 @@ test('Body transformation visualizer strings translate correctly for EN and VI w
   assert.equal(t('Tiến độ'), 'Progress');
 });
 
+test('Complaint and support resolution strings translate cleanly in both EN and VI', () => {
+  setLanguage('vi');
+  assert.equal(t('Escalate to Center Management'), 'Chuyển lên Quản lý Trung tâm');
+  assert.equal(
+    t('Complex dispute requiring center manager direct intervention.'),
+    'Tranh chấp phức tạp cần Quản lý trung tâm trực tiếp can thiệp.'
+  );
+  assert.equal(t('Customer Complaint & Service Feedback'), 'Khiếu nại khách hàng & Phản ánh dịch vụ');
+  assert.equal(t('General Inquiry & Feedback'), 'Hỏi đáp chung & Góp ý');
+  assert.equal(t('Complaint Category'), 'Mảng góp ý');
+
+  setLanguage('en');
+  assert.equal(t('Chuyển lên Quản lý Trung tâm'), 'Escalate to Center Management');
+  assert.equal(t('Mảng góp ý'), 'Complaint Category');
+});
+

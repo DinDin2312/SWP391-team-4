@@ -7,10 +7,39 @@ export const REASON_CATEGORIES = [
   { value: 'OTHER', labelEn: 'Other reason', labelVi: 'Lý do khác' }
 ];
 
+const LEGACY_REASON_LABELS = {
+  NO_SUBSTITUTE_SICK: { labelEn: 'Sick leave (No substitute coach)', labelVi: 'Nghỉ ốm đột xuất (Không có HLV dạy thay)' },
+  NO_SUBSTITUTE_EMERGENCY: { labelEn: 'Urgent emergency (No substitute coach)', labelVi: 'Việc khẩn cấp (Không có HLV dạy thay)' },
+  NO_SUBSTITUTE_PERSONAL: { labelEn: 'Personal leave (No substitute coach)', labelVi: 'Việc cá nhân (Không có HLV dạy thay)' },
+  NO_SUBSTITUTE_BUSINESS: { labelEn: 'Business trip (No substitute coach)', labelVi: 'Đi công tác (Không có HLV dạy thay)' },
+  NO_SUBSTITUTE_OTHER: { labelEn: 'Other reason (No substitute coach)', labelVi: 'Lý do khác (Không có HLV dạy thay)' },
+  BUSINESS_TRIP: { labelEn: 'Business trip / Training', labelVi: 'Công tác / Tham gia tập huấn' },
+  FACILITY_ISSUE: { labelEn: 'Facility / Equipment issue', labelVi: 'Sự cố phòng tập / Thiết bị' }
+};
+
+/** Resolve an enum or legacy reason code into a localized label. */
 export const getReasonLabel = (reasonKey, lang = 'vi') => {
-  const match = REASON_CATEGORIES.find(r => r.value === reasonKey);
+  const normalized = String(reasonKey || '').trim().toUpperCase();
+  const match = REASON_CATEGORIES.find(r => r.value === normalized) || LEGACY_REASON_LABELS[normalized];
   if (!match) return reasonKey || (lang === 'vi' ? 'Không rõ' : 'Unspecified');
   return lang === 'vi' ? match.labelVi : match.labelEn;
+};
+
+/** Extract localized reason label and any distinct coach explanation text. */
+export const getRescheduleReasonDetail = (req, lang = 'vi') => {
+  const reasonLabel = getReasonLabel(req?.reasonCategory, lang);
+  const rawDetail = String(req?.reasonDetails || req?.reasonNote || '').trim();
+  const isRedundantDefault =
+    !rawDetail ||
+    rawDetail === getReasonLabel(req?.reasonCategory, 'vi') ||
+    rawDetail === getReasonLabel(req?.reasonCategory, 'en') ||
+    rawDetail.toUpperCase() === String(req?.reasonCategory || '').trim().toUpperCase();
+  const hasCustomDetail = !isRedundantDefault;
+  return {
+    reasonLabel,
+    detailText: hasCustomDetail ? rawDetail : '',
+    hasCustomDetail
+  };
 };
 
 export const getStatusMeta = (status, lang = 'vi') => {

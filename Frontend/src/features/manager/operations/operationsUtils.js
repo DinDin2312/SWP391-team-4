@@ -1,3 +1,4 @@
+import { formatClassNameWithCode, splitCode } from "../components/classSearch.js";
 import { isoDate, localDateTime } from "../managerUtils.js";
 
 export const LOW_OCCUPANCY_THRESHOLD = 0.25;
@@ -110,10 +111,14 @@ export function operationPayload(type, form) {
       subjectIds: (form.subjectIds || []).map(Number),
       status: form.status || "ACTIVE",
     };
-  if (type === "class")
-    return {
+  if (type === "class") {
+    const className =
+      form.classTitle !== undefined || form.classCode !== undefined
+        ? formatClassNameWithCode(form.classCode, form.classTitle ?? form.className)
+        : String(form.className || "").trim();
+    const payload = {
       classId: form.classId,
-      className: form.className.trim(),
+      className,
       subjectId: Number(form.subjectId),
       coachId: Number(form.coachId),
       roomId: Number(form.roomId),
@@ -121,6 +126,12 @@ export function operationPayload(type, form) {
       price: Number(form.price),
       status: form.status,
     };
+    if (form.autoCode === true) {
+      payload.autoCode = true;
+      payload.levelBand = Number(form.levelBand || 1);
+    }
+    return payload;
+  }
   const session = {
     classId: Number(form.classId),
     startTime: form.startTime,
@@ -190,6 +201,7 @@ export const classRoomOptions = (data, subjectId, current) => data.rooms
 // Seats default to the room capacity and may never exceed it.
 export function seatLimit(rooms, roomId) { const room = rooms.find(r => String(r.roomId) === String(roomId)); return room ? Number(room.capacity) : null; }
 export const duplicateClassName = (classes, name, classId) => { const key = String(name || "").trim().toLocaleLowerCase("vi"); return Boolean(key) && classes.some(c => String(c.classId) !== String(classId ?? "") && String(c.className).trim().toLocaleLowerCase("vi") === key); };
+export const duplicateClassCode = (classes, code, classId) => { const key = String(code || "").trim().replace(/^\[+|\]+$/g, "").toLocaleLowerCase("en"); return Boolean(key) && classes.some(c => String(c.classId) !== String(classId ?? "") && splitCode(c.className).code.trim().toLocaleLowerCase("en") === key); };
 // Backend conflict message: "Schedule conflict: the coach|room already has <class> at HH:mm dd/MM/yyyy."
 export function conflictParts(message) { const m = String(message || "").match(/^Schedule conflict: the (coach|room) already has (.+) at (\d\d:\d\d \d\d\/\d\d\/\d{4})\.$/); return m ? { who: m[1], className: m[2], at: m[3] } : null; }
 

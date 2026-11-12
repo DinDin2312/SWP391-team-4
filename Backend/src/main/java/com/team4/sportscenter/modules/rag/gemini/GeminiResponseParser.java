@@ -40,17 +40,22 @@ public class GeminiResponseParser {
             return Optional.empty();
         }
 
-        Object firstPart = parts.get(0);
-        if (!(firstPart instanceof Map<?, ?> partMap)) {
-            return Optional.empty();
+        StringBuilder combined = new StringBuilder();
+        for (Object part : parts) {
+            if (!(part instanceof Map<?, ?> partMap)) {
+                continue;
+            }
+            // Skip internal reasoning blocks if a model ignores thinkingBudget=0
+            if (Boolean.TRUE.equals(partMap.get("thought"))) {
+                continue;
+            }
+            Object textObj = partMap.get("text");
+            if (textObj instanceof String text && !text.isEmpty()) {
+                combined.append(text);
+            }
         }
 
-        Object textObj = partMap.get("text");
-        if (textObj instanceof String text && !text.isEmpty()) {
-            return Optional.of(text);
-        }
-
-        return Optional.empty();
+        return combined.length() > 0 ? Optional.of(combined.toString()) : Optional.empty();
     }
 
     /**

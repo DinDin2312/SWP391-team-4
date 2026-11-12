@@ -58,7 +58,13 @@ public final class ManagerRequests {
             @NotNull Integer roomId,
             @NotNull @DecimalMin("0") @Digits(integer = 8, fraction = 2) BigDecimal price,
             @NotNull @Min(1) Integer maxSlots,
-            @NotBlank String status) {
+            @NotBlank String status,
+            @Min(1) @Max(3) Integer levelBand,
+            Boolean autoCode) {
+        public ClassRequest(String className, Integer subjectId, Integer coachId, Integer roomId,
+                BigDecimal price, Integer maxSlots, String status) {
+            this(className, subjectId, coachId, roomId, price, maxSlots, status, null, null);
+        }
     }
 
     public record ScheduleRequest(

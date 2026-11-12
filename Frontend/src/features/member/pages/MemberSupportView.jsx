@@ -3,7 +3,7 @@ import {
   CreditCard, Ticket, Clock, CheckCircle2,
   AlertTriangle, Plus, Send, X, Copy, Check, MessageSquare,
   ShieldCheck, ShieldAlert, AlertCircle, ChevronDown, ChevronUp, RefreshCw,
-  Sparkles, Wrench, UserCheck, Calendar, RotateCcw,
+  Sparkles, Wrench, UserCheck, RotateCcw,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
@@ -11,12 +11,13 @@ import { formatMoney } from '../../../utils/displayFormat';
 import memberService from '../services/memberService';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';
 import { useClassCancellation } from '../hooks/useClassCancellation';
+import { splitCode } from '../../manager/components/classSearch';
+import SupportClassPicker from '../components/SupportClassPicker';
 import {
   getDaysLeft,
   getReasonLabel,
   getCoachAspectLabel,
   getFacilityAreaLabel,
-  getScheduleTypeLabel,
   getComplaintTypeLabel,
   getCategoryLabel,
   getStatusBadge,
@@ -49,13 +50,6 @@ const CATEGORY_OPTIONS = [
     desc: 'Report broken equipment, gym rooms or hygiene',
     icon: Wrench,
     badgeBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-  },
-  {
-    key: 'SCHEDULE_SUPPORT',
-    label: 'Schedule Support & Absence/Makeup',
-    desc: 'Request session makeup, single absence or time swap',
-    icon: Calendar,
-    badgeBg: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20'
   },
   {
     key: 'COMPLAINT',
@@ -123,8 +117,6 @@ const MemberSupportView = () => {
     facilityArea: 'GYM_FLOOR',
     facilityDevice: '',
     facilityUrgency: 'NORMAL',
-    scheduleType: 'SINGLE_ABSENCE',
-    scheduleDateInfo: '',
     complaintType: 'STAFF_BEHAVIOR',
     complaintDateInfo: '',
     title: '',
@@ -256,8 +248,6 @@ const MemberSupportView = () => {
       facilityArea: 'GYM_FLOOR',
       facilityDevice: '',
       facilityUrgency: 'NORMAL',
-      scheduleType: 'SINGLE_ABSENCE',
-      scheduleDateInfo: '',
       complaintType: 'STAFF_BEHAVIOR',
       complaintDateInfo: '',
       title: '',
@@ -298,12 +288,17 @@ const MemberSupportView = () => {
     let finalTitle = '';
     let finalContent = '';
     let finalPriority = ticketForm.priority || 'NORMAL';
-    const finalClassId = ticketForm.classId ? Number.parseInt(ticketForm.classId, 10) : null;
+    const supportsClass = ['CLASS_CANCELLATION', 'COACH_FEEDBACK', 'GENERAL_INQUIRY'].includes(ticketForm.category);
+    const finalClassId = supportsClass && ticketForm.classId ? Number.parseInt(ticketForm.classId, 10) : null;
     let finalPreferredResolution = null;
 
     if (ticketForm.category === 'CLASS_CANCELLATION') {
       if (!finalClassId) {
         showToast(t('Please select an enrolled class to cancel or retain.'), 'error');
+        return;
+      }
+      if (cancelPreview?.exceedsEightyPercent) {
+        showToast(t('Per center policy, classes past 80% attendance cannot be cancelled for refunds, credits, or passes.'), 'error');
         return;
       }
       if (!ticketForm.content.trim()) {
@@ -346,15 +341,6 @@ const MemberSupportView = () => {
       finalTitle = ticketForm.title.trim();
       finalContent = `[${t('Facility Area')}: ${getFacilityAreaLabel(ticketForm.facilityArea)}${ticketForm.facilityDevice ? ` | ${t('Device / Location Detail')}: ${ticketForm.facilityDevice}` : ''}] ${ticketForm.content.trim()}`;
       finalPriority = ticketForm.facilityUrgency || 'NORMAL';
-    } else if (ticketForm.category === 'SCHEDULE_SUPPORT') {
-      if (!ticketForm.content.trim()) {
-        showToast(t('Please describe your schedule support request.'), 'error');
-        return;
-      }
-      const selectedClass = classes.find(c => String(c.classId) === String(ticketForm.classId));
-      finalTitle = ticketForm.title.trim() || (t('Hỗ trợ lịch tập') + (selectedClass ? ` - ${selectedClass.className}` : ''));
-      finalContent = `[${t('Schedule Support Type')}: ${getScheduleTypeLabel(ticketForm.scheduleType)}${ticketForm.scheduleDateInfo ? ` | ${t('Session / Date Detail')}: ${ticketForm.scheduleDateInfo}` : ''}] ${ticketForm.content.trim()}`;
-      finalPriority = 'NORMAL';
     } else if (ticketForm.category === 'COMPLAINT') {
       if (!ticketForm.title.trim() || !ticketForm.content.trim()) {
         showToast(t('Please fill in title and description.'), 'error');
@@ -399,7 +385,11 @@ const MemberSupportView = () => {
         type: 'SUPPORT_REQUEST_SUBMITTED',
         requestId: res.requestId,
         preferredLabel: prefLabel,
-        message: t('Your support ticket has been submitted to Reception. Our staff will review your request and issue a credit or alternative resolution.')
+        message: ticketForm.category === 'COACH_FEEDBACK'
+          ? t('Coach feedback and complaints are sent directly to Center Management for objective assessment and confidential handling.')
+          : ticketForm.category === 'FACILITY_ISSUE'
+            ? t('Facility and equipment reports are routed directly to Center Management for technical inspection and resolution.')
+            : t('Your support ticket has been submitted to Reception. Our staff will review your request and issue a credit or alternative resolution.')
       });
       await fetchData();
     } catch (err) {
@@ -416,8 +406,6 @@ const MemberSupportView = () => {
         return t('Brief summary of your feedback');
       case 'FACILITY_ISSUE':
         return t('Brief summary of facility issue');
-      case 'SCHEDULE_SUPPORT':
-        return t('Brief summary of schedule request');
       case 'COMPLAINT':
         return t('Brief summary of your complaint');
       default:
@@ -426,9 +414,6 @@ const MemberSupportView = () => {
   };
 
   const getContentPlaceholder = (cat) => {
-    if (cat === 'SCHEDULE_SUPPORT') {
-      return t('Please describe your schedule support request.');
-    }
     if (cat === 'COACH_FEEDBACK') {
       return t('Please share your detailed feedback regarding the instructor (teaching method, attitude, punctualness, or suggestions for improvement)...');
     }
@@ -440,9 +425,7 @@ const MemberSupportView = () => {
       case 'COACH_FEEDBACK':
         return t('Submit Feedback directly to Management');
       case 'FACILITY_ISSUE':
-        return t('Submit Incident Report');
-      case 'SCHEDULE_SUPPORT':
-        return t('Submit Schedule Request');
+        return t('Submit Facility Report directly to Management');
       case 'COMPLAINT':
         return t('Submit Complaint to Reception');
       default:
@@ -720,6 +703,14 @@ const MemberSupportView = () => {
                           <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30">
                             #{tkt.requestId}
                           </span>
+                          {tkt.className && (() => {
+                            const { code } = splitCode(tkt.className);
+                            return code ? (
+                              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20">
+                                {code}
+                              </span>
+                            ) : null;
+                          })()}
                           <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.06]">
                             {getCategoryLabel(tkt.category)}
                           </span>
@@ -756,12 +747,20 @@ const MemberSupportView = () => {
                           </p>
                         </div>
 
-                        {tkt.className && (
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <span className="font-semibold">{t('Associated Class')}:</span>
-                            <span className="font-bold text-slate-800 dark:text-slate-200">{tkt.className}</span>
-                          </div>
-                        )}
+                        {tkt.className && (() => {
+                          const { code, name } = splitCode(tkt.className);
+                          return (
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                              <span className="font-semibold">{t('Associated Class')}:</span>
+                              {code && (
+                                <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-500/12 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300 border border-blue-500/20">
+                                  {code}
+                                </span>
+                              )}
+                              <span className="font-bold text-slate-800 dark:text-slate-200">{name || tkt.className}</span>
+                            </div>
+                          );
+                        })()}
 
                         {tkt.preferredResolution && (
                           <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -780,7 +779,11 @@ const MemberSupportView = () => {
                             <div className="flex items-center justify-between text-xs font-bold">
                               <span className="flex items-center gap-1.5">
                                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                                {t('Reception Response')} {tkt.respondedByName ? `(${tkt.respondedByName})` : ''}
+                                {t(
+                                  (tkt.category === 'COACH_FEEDBACK' || tkt.category === 'FACILITY_ISSUE' || tkt.status === 'ESCALATED')
+                                    ? 'Center Management Response'
+                                    : 'Reception Response'
+                                )} {tkt.respondedByName ? `(${tkt.respondedByName})` : ''}
                               </span>
                               <span>{tkt.respondedAt}</span>
                             </div>
@@ -791,7 +794,13 @@ const MemberSupportView = () => {
                         ) : (
                           <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/90 text-amber-900 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-300 text-xs flex items-center gap-2.5 backdrop-blur-md">
                             <Clock className="w-4 h-4 shrink-0" />
-                            <span>{t('Ticket is currently in queue. Reception staff will respond shortly.')}</span>
+                            <span>
+                              {t(
+                                (tkt.category === 'COACH_FEEDBACK' || tkt.category === 'FACILITY_ISSUE' || tkt.status === 'ESCALATED')
+                                  ? 'This ticket has been routed to Center Management for review.'
+                                  : 'Ticket is currently in queue. Reception staff will respond shortly.'
+                              )}
+                            </span>
                           </div>
                         )}
 
@@ -905,10 +914,10 @@ const MemberSupportView = () => {
             role="dialog"
             aria-modal="true"
             aria-labelledby="ticket-modal-title"
-            className="relative w-full max-w-xl rounded-3xl bg-white dark:bg-slate-900 backdrop-blur-3xl border border-slate-200/90 dark:border-white/[0.1] shadow-2xl p-6 sm:p-7 overflow-hidden flex flex-col max-h-[90vh]"
+            className="relative w-full max-w-xl rounded-3xl bg-white dark:bg-slate-900 backdrop-blur-3xl border border-slate-200/90 dark:border-white/[0.1] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-white/[0.08]">
+            <div className="flex items-center justify-between px-6 sm:px-7 pt-6 pb-4 border-b border-slate-100 dark:border-white/[0.08] shrink-0">
               <div className="flex items-center gap-3.5">
                 <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-[#0071E3] flex items-center justify-center shrink-0">
                   {modalSuccess ? (
@@ -919,8 +928,6 @@ const MemberSupportView = () => {
                     <UserCheck className="w-5 h-5" />
                   ) : ticketForm.category === 'FACILITY_ISSUE' ? (
                     <Wrench className="w-5 h-5" />
-                  ) : ticketForm.category === 'SCHEDULE_SUPPORT' ? (
-                    <Calendar className="w-5 h-5" />
                   ) : ticketForm.category === 'COMPLAINT' ? (
                     <AlertTriangle className="w-5 h-5" />
                   ) : (
@@ -963,7 +970,7 @@ const MemberSupportView = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="py-4 overflow-y-auto flex-1 space-y-4">
+            <div className="px-6 sm:px-7 py-4 overflow-y-auto flex-1 min-h-0 space-y-4">
               {/* SUCCESS VIEW */}
               {modalSuccess ? (
                 <ClassCancellationSuccessCard
@@ -980,7 +987,7 @@ const MemberSupportView = () => {
                 />
               ) : (
                 /* FORM VIEW */
-                <form onSubmit={handleCreateTicket} className="space-y-4">
+                <form id="member-support-ticket-form" onSubmit={handleCreateTicket} className="space-y-4">
                   {/* Category Selector with Professional Vector Icons */}
                   <div className="relative space-y-1.5 pb-2 border-b border-slate-100 dark:border-white/[0.08]">
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -1078,22 +1085,15 @@ const MemberSupportView = () => {
                             <span>{t('You are not enrolled in any active classes to request cancellation or retention.')}</span>
                           </div>
                         ) : (
-                          <select
+                          <SupportClassPicker
                             id="cancel-class-select"
+                            classes={classes}
                             value={ticketForm.classId}
-                            onChange={(e) => setTicketForm({ ...ticketForm, classId: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm font-semibold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                            onChange={(val) => setTicketForm({ ...ticketForm, classId: val })}
+                            placeholder={`-- ${t('Select Enrolled Class')} --`}
+                            pendingClassIds={pendingClassIds}
                             required
-                          >
-                            {classes.map((cls) => {
-                              const isPending = pendingClassIds.has(String(cls.classId));
-                              return (
-                                <option key={cls.classId} value={cls.classId}>
-                                  {cls.className} ({cls.coachName || 'Coach'}) {isPending ? ` [⚠️ ${t('Pending Reception Review')}]` : ''}
-                                </option>
-                              );
-                            })}
-                          </select>
+                          />
                         )}
                       </div>
 
@@ -1188,19 +1188,14 @@ const MemberSupportView = () => {
                               <label htmlFor="coach-class-select" className="block text-xs font-bold text-[var(--text)]">
                                 {t('Associated Class')}
                               </label>
-                              <select
+                              <SupportClassPicker
                                 id="coach-class-select"
+                                classes={classes}
                                 value={ticketForm.classId}
-                                onChange={(e) => setTicketForm({ ...ticketForm, classId: e.target.value })}
-                                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                              >
-                                <option value="">-- {t('None / Not related to a specific class')} --</option>
-                                {classes.map((cls) => (
-                                  <option key={cls.classId} value={cls.classId}>
-                                    {cls.className} ({cls.coachName || 'Coach'})
-                                  </option>
-                                ))}
-                              </select>
+                                onChange={(val) => setTicketForm({ ...ticketForm, classId: val })}
+                                allowEmpty
+                                emptyLabel={`-- ${t('None / Not related to a specific class')} --`}
+                              />
                             </div>
                           )}
 
@@ -1227,6 +1222,14 @@ const MemberSupportView = () => {
                       {/* Sub-form: FACILITY_ISSUE */}
                       {ticketForm.category === 'FACILITY_ISSUE' && (
                         <>
+                          <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-xs text-purple-900 dark:text-purple-200 flex items-start gap-2.5">
+                            <ShieldAlert className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+                            <div className="leading-relaxed font-medium">
+                              <strong className="font-bold block text-purple-950 dark:text-purple-100">{t('Direct Routing to Center Management')}</strong>
+                              {t('Facility and equipment reports are routed directly to Center Management for technical inspection and resolution.')}
+                            </div>
+                          </div>
+
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-1.5">
                               <label htmlFor="facility-area-select" className="block text-xs font-bold text-[var(--text)]">
@@ -1281,71 +1284,6 @@ const MemberSupportView = () => {
                         </>
                       )}
 
-                      {/* Sub-form: SCHEDULE_SUPPORT */}
-                      {ticketForm.category === 'SCHEDULE_SUPPORT' && (
-                        <>
-                          <div className="space-y-1.5">
-                            <label htmlFor="schedule-class-select" className="block text-xs font-bold text-[var(--text)]">
-                              {t('Associated Class')} <span className="text-red-500">*</span>
-                            </label>
-                            {classes.length === 0 ? (
-                              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
-                                <AlertTriangle className="w-4 h-4 shrink-0" />
-                                <span>{t('You are not enrolled in any active classes to request cancellation or retention.')}</span>
-                              </div>
-                            ) : (
-                              <select
-                                id="schedule-class-select"
-                                value={ticketForm.classId}
-                                onChange={(e) => setTicketForm({ ...ticketForm, classId: e.target.value })}
-                                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm font-semibold text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                                required
-                              >
-                                <option value="">-- {t('Select Enrolled Class')} --</option>
-                                {classes.map((cls) => (
-                                  <option key={cls.classId} value={cls.classId}>
-                                    {cls.className} ({cls.coachName || 'Coach'})
-                                  </option>
-                                ))}
-                              </select>
-                            )}
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                              <label htmlFor="schedule-type-select" className="block text-xs font-bold text-[var(--text)]">
-                                {t('Schedule Support Type')} <span className="text-red-500">*</span>
-                              </label>
-                              <select
-                                id="schedule-type-select"
-                                value={ticketForm.scheduleType}
-                                onChange={(e) => setTicketForm({ ...ticketForm, scheduleType: e.target.value })}
-                                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                              >
-                                <option value="SINGLE_ABSENCE">{t('Request Single Session Absence')}</option>
-                                <option value="MAKEUP_CLASS">{t('Register Makeup Session')}</option>
-                                <option value="CLASS_TRANSFER">{t('Request Class Time Transfer')}</option>
-                                <option value="SCHEDULE_INQUIRY">{t('Schedule & Holiday Inquiry')}</option>
-                              </select>
-                            </div>
-
-                            <div className="space-y-1.5">
-                              <label htmlFor="schedule-date-input" className="block text-xs font-bold text-[var(--text)]">
-                                {t('Session / Date Detail')}
-                              </label>
-                              <input
-                                id="schedule-date-input"
-                                type="text"
-                                value={ticketForm.scheduleDateInfo}
-                                onChange={(e) => setTicketForm({ ...ticketForm, scheduleDateInfo: e.target.value })}
-                                placeholder={t('Session / Date Detail')}
-                                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                              />
-                            </div>
-                          </div>
-                        </>
-                      )}
-
                       {/* Sub-form: COMPLAINT */}
                       {ticketForm.category === 'COMPLAINT' && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1388,19 +1326,14 @@ const MemberSupportView = () => {
                           <label htmlFor="general-class-select" className="block text-xs font-bold text-[var(--text)]">
                             {t('Related Class (Optional)')}
                           </label>
-                          <select
+                          <SupportClassPicker
                             id="general-class-select"
+                            classes={classes}
                             value={ticketForm.classId}
-                            onChange={(e) => setTicketForm({ ...ticketForm, classId: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                          >
-                            <option value="">-- {t('None / Not related to a specific class')} --</option>
-                            {classes.map((cls) => (
-                              <option key={cls.classId} value={cls.classId}>
-                                {cls.className} ({cls.coachName || 'Coach'})
-                              </option>
-                            ))}
-                          </select>
+                            onChange={(val) => setTicketForm({ ...ticketForm, classId: val })}
+                            allowEmpty
+                            emptyLabel={`-- ${t('None / Not related to a specific class')} --`}
+                          />
                         </div>
                       )}
 
@@ -1408,7 +1341,7 @@ const MemberSupportView = () => {
                       {ticketForm.category !== 'COACH_FEEDBACK' && (
                         <div className="space-y-1.5">
                           <label htmlFor="ticket-title-input" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            {t('Title / Subject')} {ticketForm.category !== 'SCHEDULE_SUPPORT' && <span className="text-rose-500">*</span>}
+                            {t('Title / Subject')} <span className="text-rose-500">*</span>
                           </label>
                           <input
                             id="ticket-title-input"
@@ -1417,7 +1350,7 @@ const MemberSupportView = () => {
                             onChange={(e) => setTicketForm({ ...ticketForm, title: e.target.value })}
                             placeholder={getTitlePlaceholder(ticketForm.category)}
                             className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.08] dark:border-white/[0.1] text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-[#0071E3]/15"
-                            required={ticketForm.category !== 'SCHEDULE_SUPPORT'}
+                            required
                           />
                         </div>
                       )}
@@ -1437,40 +1370,47 @@ const MemberSupportView = () => {
                           required
                         />
                       </div>
-
-                      {/* Shared Action Buttons Footer */}
-                      <div className="flex items-center justify-end gap-3 pt-4 border-t border-black/[0.06] dark:border-white/[0.08]">
-                        <button
-                          type="button"
-                          onClick={handleCloseModal}
-                          disabled={creating}
-                          className="px-5 py-2.5 rounded-full border border-black/[0.08] dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] font-semibold text-xs sm:text-sm transition-all cursor-pointer"
-                        >
-                          {t('Cancel')}
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={creating || !ticketForm.content.trim() || (ticketForm.category !== 'SCHEDULE_SUPPORT' && !ticketForm.title.trim())}
-                          className="px-6 py-2.5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] text-white font-semibold text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm shadow-blue-500/25 disabled:opacity-50 active:scale-95 cursor-pointer"
-                        >
-                          {creating ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              <span>{t('Submitting...')}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Send className="w-4 h-4" />
-                              <span>{getSubmitButtonLabel(ticketForm.category)}</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
                     </div>
                   )}
                 </form>
               )}
             </div>
+
+            {/* Sticky Modal Footer for non-cancellation submissions */}
+            {!modalSuccess && ticketForm.category !== 'CLASS_CANCELLATION' && (
+              <div className="flex items-center justify-end gap-3 px-6 sm:px-7 py-4 border-t border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-slate-900 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  disabled={creating}
+                  className="px-5 py-2.5 rounded-full border border-black/[0.08] dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] font-semibold text-xs sm:text-sm transition-all cursor-pointer"
+                >
+                  {t('Cancel')}
+                </button>
+                <button
+                  type="submit"
+                  form="member-support-ticket-form"
+                  disabled={
+                    creating ||
+                    !ticketForm.content.trim() ||
+                    (ticketForm.category !== 'COACH_FEEDBACK' && !ticketForm.title.trim())
+                  }
+                  className="px-6 py-2.5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] text-white font-semibold text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm shadow-blue-500/25 disabled:opacity-50 active:scale-95 cursor-pointer"
+                >
+                  {creating ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>{t('Submitting...')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>{getSubmitButtonLabel(ticketForm.category)}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -63,6 +63,10 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
 
   const handleSubmitSupportRequest = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    if (preview?.exceedsEightyPercent) {
+      setError(t('Per center policy, classes past 80% attendance cannot be cancelled for refunds, credits, or passes.'));
+      return;
+    }
     if (!reasonContent.trim()) {
       setError(t('Please describe the reason for your support request.'));
       return;
@@ -186,6 +190,7 @@ const CancelClassPolicyModal = ({ isOpen, classId, onClose, onSuccess }) => {
                 preview={preview}
                 preferredResolution={preferredResolution}
                 onSelectResolution={setPreferredResolution}
+                showCourseName={false}
               />
 
               <ClassCancellationFormSection

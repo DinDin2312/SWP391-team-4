@@ -1,6 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resourceImageUrl, validateResourceImage } from './resourceImages.js';
+import { defaultPackageCoverUrl, resourceImageUrl, validateResourceImage } from './resourceImages.js';
+
+test('defaultPackageCoverUrl maps package tiers to distinct curated cover images', () => {
+  assert.equal(defaultPackageCoverUrl(null), '');
+  assert.equal(defaultPackageCoverUrl({}), '');
+  assert.equal(defaultPackageCoverUrl({ packageType: 'GYM_ACCESS', durationDays: 1 }), '/images/crossfit-poster.jpg');
+  assert.equal(defaultPackageCoverUrl({ packageType: 'GYM_ACCESS', durationDays: 30 }), '/images/bright-modern-gym.jpg');
+  assert.equal(defaultPackageCoverUrl({ packageType: 'GYM_ACCESS', durationDays: 90 }), '/images/bright-gym.jpg');
+  assert.equal(defaultPackageCoverUrl({ packageType: 'GYM_ACCESS', durationDays: 365 }), '/images/register-athlete.jpg');
+  assert.equal(defaultPackageCoverUrl({ packageType: 'AI_ACCESS', durationDays: 30 }), '/images/pkg-ai-personal.jpg');
+  assert.equal(defaultPackageCoverUrl({ packageType: 'AI_ACCESS', durationDays: 90 }), '/images/pkg-ai-premium.jpg');
+  assert.equal(defaultPackageCoverUrl({ packageType: 'AI_ACCESS', durationDays: 365 }), '/images/pkg-ai-vip.jpg');
+  assert.equal(defaultPackageCoverUrl({ packageType: 'COMBO', durationDays: 30 }), '/images/pkg-combo-ai.jpg');
+});
 
 test('resource images use the configured API and accept only generated filenames', () => {
   const name = '12345678-1234-1234-1234-123456789abc.jpg';

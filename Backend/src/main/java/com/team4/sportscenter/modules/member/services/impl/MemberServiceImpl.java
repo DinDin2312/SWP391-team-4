@@ -203,6 +203,11 @@ public class MemberServiceImpl implements MemberService {
     public List<AvailableClassResponse> getAvailableClasses() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth != null ? auth.getName() : null;
+        return getAvailableClasses(email);
+    }
+
+    @Override
+    public List<AvailableClassResponse> getAvailableClasses(String email) {
         LocalDateTime currentTime = LocalDateTime.now();
         List<Schedule> schedules = scheduleRepository.findAvailableSchedules(currentTime);
 
