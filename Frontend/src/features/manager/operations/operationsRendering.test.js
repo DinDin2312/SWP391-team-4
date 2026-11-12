@@ -16,6 +16,8 @@ test('class editor uses searchable subject, coach and room fields and locks coac
     assert.ok(/name="coachId"[^>]*disabled/.test(empty) || /disabled=""[^>]*name="coachId"/.test(empty));
     const picked=render({subjectId:1,coachId:10,roomId:6});
     assert.ok(picked.includes('Swim coach') && picked.includes('Pool'));
+    assert.ok(picked.includes('SWIM-101'));
+    assert.ok(picked.includes('Basic (1xx)'));
   } finally {await server.close();}
 });
 

@@ -1,3 +1,5 @@
+import { classLevelFromCode, splitCode } from './components/classSearch.js';
+
 export const isoDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
 export function localDateTime(value) {
@@ -9,10 +11,19 @@ export function localDateTime(value) {
 }
 
 export function initialForm(type, item = {}) {
+  const parsedClass = type === 'class' ? splitCode(item.className) : null;
   return {
     status: type === 'schedule' ? 'SCHEDULED' : 'ACTIVE', packageType: 'GYM_ACCESS',
     occurrences: 4, intervalWeeks: 1, repeat: false, forcePasswordChange: false, ...item, password: '',
     startTime: localDateTime(item.startTime), endTime: localDateTime(item.endTime),
+    ...(type === 'class'
+      ? {
+          classCode: item.classCode ?? parsedClass.code,
+          classTitle: item.classTitle ?? parsedClass.name,
+          levelBand: item.levelBand ?? (classLevelFromCode(parsedClass.code) || '1'),
+          autoCode: item.classId || item.className ? false : true,
+        }
+      : {}),
   };
 }
 

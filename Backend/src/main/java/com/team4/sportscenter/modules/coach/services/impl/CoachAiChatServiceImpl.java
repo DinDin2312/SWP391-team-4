@@ -81,7 +81,7 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
         SseEmitter emitter = new SseEmitter(120_000L);
         if (!geminiClient.isConfigured()) {
             try {
-                emitter.send(SseEmitter.event().name("delta").data("Sorry, the Google Gemini API Key is not configured. Please add the Key to application.properties!"));
+                emitter.send(SseEmitter.event().name("delta").data(Map.of("text", "Sorry, the Google Gemini API Key is not configured. Please add the Key to application.properties!")));
                 emitter.send(SseEmitter.event().name("done").data(Map.of("sources", Collections.emptyList())));
                 emitter.complete();
             } catch (Exception ignored) {}
@@ -90,7 +90,7 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
 
         if (userMessage == null || userMessage.trim().isEmpty()) {
             try {
-                emitter.send(SseEmitter.event().name("delta").data("Xin chào Coach! Mình là NEXUS COACH AI - trợ lý chuyên môn của bạn. Bạn muốn mình hỗ trợ soạn giáo án, giao bài tập cho học viên/lớp, hay phân tích thể trạng học viên nào hôm nay? 🏋️‍♂️"));
+                emitter.send(SseEmitter.event().name("delta").data(Map.of("text", "Xin chào Coach! Mình là NEXUS COACH AI - trợ lý chuyên môn của bạn. Bạn muốn mình hỗ trợ soạn giáo án, giao bài tập cho học viên/lớp, hay phân tích thể trạng học viên nào hôm nay? 🏋️‍♂️")));
                 emitter.send(SseEmitter.event().name("done").data(Map.of("sources", Collections.emptyList())));
                 emitter.complete();
             } catch (Exception ignored) {}
@@ -99,6 +99,9 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
 
         CompletableFuture.runAsync(() -> {
             try {
+                // Flush headers early so the UI switches to a live progress state immediately.
+                emitter.send(SseEmitter.event().name("status").data(Map.of("stage", "searching")));
+
                 CoachPromptContext ctx = buildCoachPromptContext(userMessage, coachEmail);
                 List<Turn> sanitizedHistory = sanitizeHistory(history);
                 List<AiChatResponse.SourceCitation> citations = new ArrayList<>();
@@ -107,13 +110,15 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
                     citations.add(new AiChatResponse.SourceCitation(i + 1, c.documentTitle(), c.category()));
                 }
 
+                emitter.send(SseEmitter.event().name("status").data(Map.of("stage", "generating")));
+
                 Optional<String> fullText = geminiClient.stream(
                         sanitizedHistory,
                         ctx.systemPrompt() + userMessage,
                         3000,
                         delta -> {
                             try {
-                                emitter.send(SseEmitter.event().name("delta").data(delta));
+                                emitter.send(SseEmitter.event().name("delta").data(Map.of("text", delta)));
                             } catch (Exception e) {
                                 log.warn("Failed to send SSE delta to coach: {}", e.getMessage());
                             }
@@ -124,7 +129,7 @@ public class CoachAiChatServiceImpl implements CoachAiChatService {
                     emitter.send(SseEmitter.event().name("done").data(Map.of("sources", citations, "fullText", fullText.get())));
                     emitter.complete();
                 } else {
-                    emitter.send(SseEmitter.event().name("delta").data("Xin lỗi Coach, hệ thống AI hiện đang bận do lượng truy cập cao. Vui lòng thử lại sau giây lát! 💪"));
+                    emitter.send(SseEmitter.event().name("delta").data(Map.of("text", "Xin lỗi Coach, hệ thống AI hiện đang bận do lượng truy cập cao. Vui lòng thử lại sau giây lát! 💪")));
                     emitter.send(SseEmitter.event().name("done").data(Map.of("sources", Collections.emptyList())));
                     emitter.complete();
                 }

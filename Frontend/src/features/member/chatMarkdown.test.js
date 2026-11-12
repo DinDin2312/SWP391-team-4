@@ -99,6 +99,17 @@ test('chatMarkdown tests', async (t) => {
     assert.ok(html.includes('cursor-pointer'), `Expected cursor-pointer for interactive row in: ${html}`);
   });
 
+  await t.test('renders package-store markdown table rows as interactive links', () => {
+    const pkgMd = `| Gói hội viên | Phân loại | Thời hạn | Giá | Chi tiết |
+| :--- | :--- | :---: | :---: | :---: |
+| **Gói Combo Gym + AI 1 Tháng** | Combo (Gym + AI) | 30 ngày | 550,000 đ | [Xem gói](/member/package-store?packageId=10) |`;
+
+    const html = renderToStaticMarkup(React.createElement('div', null, renderChatMarkdown(pkgMd)));
+    assert.ok(html.includes('href="/member/package-store?packageId=10"'));
+    assert.ok(html.includes('cursor-pointer'));
+    assert.ok(html.includes('bg-blue-600'));
+  });
+
   await t.test('ChatMarkdown component wrapper works', () => {
     const html = renderToStaticMarkup(React.createElement(ChatMarkdown, { content: 'Xin chào **bạn**' }));
     assert.ok(html.includes('<strong') && html.includes('bạn</strong>'));

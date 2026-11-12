@@ -1,12 +1,13 @@
 import { locale } from '../../../i18n/languageStore.js';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
+import { classLevelFromCode, splitCode } from '../../manager/components/classSearch';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import {
   Search, MapPin, User, CheckCircle2, AlertCircle,
-  Repeat, Calendar, ShoppingBag,
+  Repeat, Calendar, ShoppingBag, Trash2,
   Clock, ArrowRight, ArrowLeft, Loader2, Sparkles, X, ChevronDown, Dumbbell, Sunrise, Sun, Sunset, RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -287,6 +288,26 @@ const BookClass = () => {
       }
     } catch (e) {
       console.error('Error fetching cart:', e);
+    }
+  };
+
+  const clearCart = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_ORIGIN}/api/v1/payment/cart/clear`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCartCount(0);
+      setCartTotal(0);
+      void fetchCart();
+      void fetchCourses(false);
+      window.dispatchEvent(new Event('cartUpdated'));
+
+      setToast({ visible: true, type: 'success', title: t('Success'), message: t('Cart cleared successfully') });
+      setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 2800);
+    } catch {
+      setToast({ visible: true, type: 'error', title: t('Error'), message: t('Failed to clear cart') });
+      setTimeout(() => setToast({ visible: false, type: 'error', title: '', message: '' }), 3000);
     }
   };
 
@@ -968,6 +989,9 @@ const BookClass = () => {
                 const isThisBooking = Number(booking) === Number(course.classId);
                 const isScheduleExpanded = expandedSchedules.has(course.classId);
                 const courseSubj = detectCourseSubject(course);
+                const { code: classCode, name: classDisplayName } = splitCode(course.className);
+                const levelBand = classLevelFromCode(classCode);
+                const levelLabel = levelBand === '1' ? t('Basic') : levelBand === '2' ? t('Advanced') : levelBand === '3' ? t('Intensive') : '';
 
                 return (
                   <div
@@ -983,6 +1007,18 @@ const BookClass = () => {
                     <div className="flex-1 space-y-3">
                       {/* Top Badges (Squared, Clean, No Emojis) */}
                       <div className="flex flex-wrap items-center gap-2">
+                        {classCode && (
+                          <span className="px-2.5 py-0.5 rounded-sm text-[11px] font-bold font-mono uppercase bg-blue-500/10 text-[var(--primary)] border border-blue-500/25">
+                            {classCode}
+                          </span>
+                        )}
+
+                        {levelLabel && (
+                          <span className="px-2.5 py-0.5 rounded-sm text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25">
+                            {levelLabel}
+                          </span>
+                        )}
+
                         {/* Subject Badge */}
                         <span className="px-2.5 py-0.5 rounded-sm text-[11px] font-bold font-mono uppercase bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-white/15">
                           {t("Subject:")} {t(courseSubj)}
@@ -1000,7 +1036,7 @@ const BookClass = () => {
 
                       {/* Class Title */}
                       <h3 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-                        {course.className}
+                        {classDisplayName || course.className}
                       </h3>
 
                       {/* Key Metadata */}
@@ -1159,6 +1195,70 @@ const BookClass = () => {
           </div>
         </div>
       )}
+
+      {/* Sticky Bottom Cart & Checkout Bar with Smooth Slide-Up Motion */}
+      <AnimatePresence>
+        {cartCount > 0 && (
+          <motion.div
+            initial={{ y: 150 }}
+            animate={{ y: 0 }}
+            exit={{ y: 150 }}
+            transition={{ type: "spring", stiffness: 320, damping: 30 }}
+            className="fixed bottom-4 z-40 pointer-events-none transition-[left] duration-200 ease-out flex justify-center px-4 sm:px-6"
+            style={{
+              left: 'var(--role-sidebar-width, 0px)',
+              right: 0,
+            }}
+          >
+            <div className={`pointer-events-auto w-full max-w-5xl p-4 sm:p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl backdrop-saturate-150 border flex flex-col sm:flex-row items-center justify-between gap-4 transition-[border-color,box-shadow] duration-300 shadow-[0_20px_50px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)] ${
+              isCartHighlighted
+                ? 'border-cyan-400 ring-2 ring-cyan-400/70 shadow-[0_0_28px_rgba(59,130,246,0.75)]'
+                : 'border-white/30 dark:border-white/10'
+            }`}>
+              <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
+                <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 text-white shrink-0 shadow-md shadow-blue-500/30">
+                  <ShoppingBag className="w-6 h-6" />
+                  <span className="absolute -top-2 -right-2 z-20 min-w-[22px] h-[22px] px-1 rounded-full bg-emerald-500 text-white text-[11px] font-black flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-md">
+                    {cartCount}
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] text-slate-900 dark:text-white font-bold">{t("Active Cart Allocation:")}</span>
+                    <span className="text-[11px] text-amber-500 font-extrabold uppercase">{cartCount}{' '}{t("items selected")}</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-[12px] text-slate-500 dark:text-slate-400">{t("Subtotal:")}</span>
+                    <span className="text-xl font-black text-slate-900 dark:text-white">{formatMoney(cartTotal)}</span>
+                    <span className="text-[12px] text-blue-600 dark:text-blue-400 font-bold">{t("VND")}</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden md:inline ml-1">{t("(15% Member Rebate Calculated)")}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={clearCart}
+                  className="hidden md:flex items-center gap-1.5 px-4 py-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/25 hover:border-rose-500/40 text-[13px] font-semibold transition-all shadow-xs active:scale-95 cursor-pointer"
+                  title={t("Clear")}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{t("Clear")}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/member/cart')}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[14px] font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-95 cursor-pointer"
+                >
+                  <span>{t("Proceed to Checkout")}</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

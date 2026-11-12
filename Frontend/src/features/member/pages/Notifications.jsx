@@ -4,7 +4,11 @@ import axios from 'axios';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatDateTime } from '../../../utils/displayFormat';
 import { ConfirmModal } from '../../../components/ui/confirm-modal';
-import { getSavedMemberNotificationPreferences, isMemberNotificationAllowed } from '../memberUtils';
+import {
+  extractInvoiceIdFromNotification,
+  formatMemberNotificationTitle,
+  parseMemberNotificationBody
+} from '../memberUtils';
 import { 
   Bell, 
   BellOff, 
@@ -79,14 +83,19 @@ const getNotificationMeta = (type, title = '', message = '') => {
         iconStyle: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
         action: { label: t('View Workout Plan'), path: '/member/dashboard' }
       };
-    case 'PAYMENT':
+    case 'PAYMENT': {
+      const invId = extractInvoiceIdFromNotification({ title, message });
       return {
         badge: t('Payment'),
         icon: CreditCard,
         badgeStyle: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
         iconStyle: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-        action: { label: t('View Invoices'), path: '/member/billing' }
+        action: {
+          label: t('View Invoices'),
+          path: invId ? `/member/billing?invoiceId=${invId}` : '/member/billing'
+        }
       };
+    }
     case 'MEMBERSHIP':
       return {
         badge: t('Membership Package'),
@@ -168,21 +177,6 @@ const getNotificationMeta = (type, title = '', message = '') => {
   }
 };
 
-const formatNotificationTitle = (title) => {
-  if (!title) return '';
-  return t(title);
-};
-
-const formatNotificationMessage = (msg) => {
-  if (!msg) return '';
-  const match = msg.match(/^Your invoice (\d+) is complete\.$/i);
-  if (match) {
-    const id = match[1];
-    return t("Invoice #{0} has been paid successfully. Please click 'View Invoices' below to check transaction details.", id);
-  }
-  return t(msg);
-};
-
 const getPaginationRange = (current, total) => {
   if (total <= 7) {
     return Array.from({ length: total }, (_, i) => i + 1);
@@ -209,7 +203,6 @@ const Notifications = () => {
   const pageSize = 8;
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
-  const [prefs, setPrefs] = useState(() => getSavedMemberNotificationPreferences());
   const [reschedules, setReschedules] = useState([]);
   const [reschedBusyId, setReschedBusyId] = useState(null);
   const [showResolvedHistory, setShowResolvedHistory] = useState(false);
@@ -272,7 +265,6 @@ const Notifications = () => {
     fetchNotifications();
 
     const handleSync = () => {
-      setPrefs(getSavedMemberNotificationPreferences());
       fetchNotifications();
     };
 
@@ -781,6 +773,8 @@ const Notifications = () => {
                 const isUnread = !(notification.isRead ?? notification.read);
                 const meta = getNotificationMeta(notification.type, notification.title, notification.message);
                 const IconComponent = meta.icon;
+                const displayTitle = formatMemberNotificationTitle(notification.title, lang);
+                const bodyParts = parseMemberNotificationBody(notification.message, lang);
 
                 return (
                   <div
@@ -810,19 +804,10 @@ const Notifications = () => {
                             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${meta.badgeStyle}`}>
                               {meta.badge}
                             </span>
-                            {!isMemberNotificationAllowed(notification, prefs) && (
-                              <span
-                                className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-500/10 text-slate-500 dark:text-slate-400 border-slate-500/20 flex items-center gap-1"
-                                title={t("Muted according to Notification Preferences")}
-                              >
-                                <BellOff className="w-2.5 h-2.5" />
-                                <span>{t("Muted")}</span>
-                              </span>
-                            )}
                             <h3 className={`text-sm leading-snug tracking-tight ${
                               isUnread ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300'
                             }`}>
-                              {formatNotificationTitle(notification.title)}
+                              {displayTitle}
                             </h3>
                           </div>
 
@@ -842,12 +827,47 @@ const Notifications = () => {
                           </div>
                         </div>
 
-                        {/* Message */}
-                        <p className={`text-xs mt-1.5 leading-relaxed whitespace-pre-line ${
+                        {/* Friendly structured message */}
+                        <div className={`text-xs mt-2 leading-relaxed space-y-2 ${
                           isUnread ? 'text-slate-600 dark:text-slate-300' : 'text-slate-500 dark:text-slate-400'
                         }`}>
-                          {formatNotificationMessage(notification.message)}
-                        </p>
+                          {bodyParts.lead && <p>{bodyParts.lead}</p>}
+
+                          {(bodyParts.details.length > 0 || bodyParts.bullets.length > 0) && (
+                            <div className="rounded-xl bg-black/[0.025] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.07] px-3 py-2.5 space-y-1.5">
+                              {bodyParts.details.map((row, rIdx) => (
+                                <div key={rIdx} className="space-y-1">
+                                  <div className="flex items-baseline gap-1.5 flex-wrap">
+                                    <span className="font-semibold text-slate-700 dark:text-slate-200">{row.label}:</span>
+                                    {row.value && (
+                                      <span className={row.label.toLowerCase().includes('tiền') || row.label.toLowerCase().includes('amount') ? 'font-mono font-bold text-emerald-600 dark:text-emerald-400' : 'font-medium text-slate-700 dark:text-slate-200'}>
+                                        {row.value}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {row.items.length > 0 && (
+                                    <ul className="pl-3.5 space-y-0.5 list-disc text-slate-700 dark:text-slate-200">
+                                      {row.items.map((itemText, iIdx) => (
+                                        <li key={iIdx}>{itemText}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              ))}
+                              {bodyParts.bullets.length > 0 && (
+                                <ul className="pl-3.5 space-y-0.5 list-disc text-slate-700 dark:text-slate-200">
+                                  {bodyParts.bullets.map((bText, bIdx) => (
+                                    <li key={bIdx}>{bText}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )}
+
+                          {bodyParts.outro && (
+                            <p className="text-[11.5px] text-slate-500 dark:text-slate-400">{bodyParts.outro}</p>
+                          )}
+                        </div>
 
                         {/* Actions line */}
                         {(meta.action || isUnread) && (

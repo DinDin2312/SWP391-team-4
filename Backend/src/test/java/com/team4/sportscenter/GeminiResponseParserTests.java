@@ -34,6 +34,27 @@ class GeminiResponseParserTests {
     }
 
     @Test
+    void text_combinesMultipleNonThoughtParts() {
+        Map<String, Object> body = Map.of(
+                "candidates", List.of(
+                        Map.of(
+                                "content", Map.of(
+                                        "parts", List.of(
+                                                Map.of("thought", true, "text", "internal reasoning"),
+                                                Map.of("text", "Phần 1 "),
+                                                Map.of("text", "Phần 2")
+                                        )
+                                )
+                        )
+                )
+        );
+
+        Optional<String> text = parser.text(body);
+        assertTrue(text.isPresent());
+        assertEquals("Phần 1 Phần 2", text.get());
+    }
+
+    @Test
     void text_emptyWhenNoCandidates() {
         Map<String, Object> body = Map.of("candidates", Collections.emptyList());
         Optional<String> text = parser.text(body);

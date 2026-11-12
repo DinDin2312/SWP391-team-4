@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  CheckCircle2, Clock, Sparkles, CreditCard, Dumbbell, DollarSign, Check, Copy, Send, AlertCircle, AlertTriangle
+  CheckCircle2, Clock, Sparkles, CreditCard, Dumbbell, DollarSign, Check, Copy, Send, AlertTriangle
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
@@ -116,7 +116,8 @@ const BenefitOptionCard = ({
 export const ClassCancellationPreviewCard = ({
   preview,
   preferredResolution,
-  onSelectResolution
+  onSelectResolution,
+  showCourseName = true
 }) => {
   useLanguage();
   if (!preview) return null;
@@ -158,10 +159,12 @@ export const ClassCancellationPreviewCard = ({
 
       {/* Course Progress & Pricing Breakdown */}
       <div className="p-4 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] space-y-3">
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-[var(--text-muted)]">{t('Course Name')}:</span>
-          <span className="font-bold text-[var(--text)]">{preview.className}</span>
-        </div>
+        {showCourseName && (
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-[var(--text-muted)]">{t('Course Name')}:</span>
+            <span className="font-bold text-[var(--text)]">{preview.className}</span>
+          </div>
+        )}
         <div className="flex justify-between items-center text-sm">
           <span className="text-[var(--text-muted)]">{t('Course Tuition')}:</span>
           <span className="font-bold text-[var(--text)]">{formatMoney(preview.classPrice)}</span>
@@ -187,7 +190,7 @@ export const ClassCancellationPreviewCard = ({
           />
         </div>
 
-        {preview.hasStarted && (
+        {preview.hasStarted && !preview.exceedsEightyPercent && (
           <div className="pt-2 border-t border-[var(--border)] flex justify-between items-center">
             <span className="text-xs font-semibold text-[var(--text-muted)]">
               {t('Estimated Prorated Credit Value:')}
@@ -200,114 +203,65 @@ export const ClassCancellationPreviewCard = ({
       </div>
 
       {/* Member Compensation Benefit Selection */}
-      <div className="space-y-2.5 pt-1">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-          <label className="text-xs font-extrabold text-[var(--text)] uppercase tracking-wide flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span>{t('Select Desired Compensation Benefit')}</span>
-          </label>
-          <span className="text-[11px] font-semibold text-[var(--text-muted)]">
-            {t('Choose how you would like to be compensated if this class is cancelled.')}
-          </span>
-        </div>
-
-        {preview.exceedsEightyPercent && (
-          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-800 dark:text-rose-300 flex items-start gap-2.5 mb-2.5">
-            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
-            <div className="text-xs space-y-1">
-              <span className="font-extrabold block">
-                {t('Ineligible for Tuition Retention or Benefit Exchange')}
-              </span>
-              <p className="opacity-90 leading-relaxed font-medium">
-                {t('Per center policy, courses with attendance exceeding 80% cannot be refunded or exchanged for vouchers/passes. All compensation options are closed.')}
-              </p>
-            </div>
+      {!preview.exceedsEightyPercent && (
+        <div className="space-y-2.5 pt-1">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <label className="text-xs font-extrabold text-[var(--text)] uppercase tracking-wide flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span>{t('Select Desired Compensation Benefit')}</span>
+            </label>
+            <span className="text-[11px] font-semibold text-[var(--text-muted)]">
+              {t('Choose how you would like to be compensated if this class is cancelled.')}
+            </span>
           </div>
-        )}
 
-        <div className="grid grid-cols-1 gap-2.5">
-          <BenefitOptionCard
-            optionKey="ISSUE_CREDIT"
-            selectedKey={preview.exceedsEightyPercent ? '' : preferredResolution}
-            onSelect={onSelectResolution}
-            disabled={preview.exceedsEightyPercent}
-            icon={CreditCard}
-            title={t('Course Credit Voucher (Recommended)')}
-            badgeText={
-              preview.exceedsEightyPercent
-                ? t('Not Eligible (>80%)')
-                : !preview.hasStarted
-                ? `100% ${t('Tuition Value')}`
-                : formatMoney((preview.proratedCredit ?? preview.estimatedCreditAmount))
-            }
-            desc={
-              preview.exceedsEightyPercent
-                ? t('Ineligible per center policy (>80% attended).')
-                : t('100% or prorated value credited for 60 days to book any other class or gym package.')
-            }
-            subtext={
-              preview.exceedsEightyPercent
-                ? t('Ineligible per center policy')
-                : !preview.hasStarted
-                ? t('Auto-issued instantly (1-click)')
-                : t('Quick reception review')
-            }
-            themeKey={preview.exceedsEightyPercent ? 'rose' : 'emerald'}
-          />
+          <div className="grid grid-cols-1 gap-2.5">
+            <BenefitOptionCard
+              optionKey="ISSUE_CREDIT"
+              selectedKey={preferredResolution}
+              onSelect={onSelectResolution}
+              icon={CreditCard}
+              title={t('Course Credit Voucher (Recommended)')}
+              badgeText={
+                !preview.hasStarted
+                  ? `100% ${t('Tuition Value')}`
+                  : formatMoney((preview.proratedCredit ?? preview.estimatedCreditAmount))
+              }
+              desc={t('100% or prorated value credited for 60 days to book any other class or gym package.')}
+              subtext={!preview.hasStarted ? t('Auto-issued instantly (1-click)') : t('Quick reception review')}
+              themeKey="emerald"
+            />
 
-          <BenefitOptionCard
-            optionKey="GYM_PASS"
-            selectedKey={preview.exceedsEightyPercent ? '' : preferredResolution}
-            onSelect={onSelectResolution}
-            disabled={preview.exceedsEightyPercent}
-            icon={Dumbbell}
-            title={t('Free 1-Month Gym Pass')}
-            badgeText={
-              preview.exceedsEightyPercent
-                ? t('Not Eligible (>80%)')
-                : `1 ${t('Month')} VIP`
-            }
-            desc={
-              preview.exceedsEightyPercent
-                ? t('Ineligible per center policy (>80% attended).')
-                : t('Exchange remaining sessions for 1 full month of unlimited gym & fitness access.')
-            }
-            subtext={
-              preview.exceedsEightyPercent
-                ? t('Ineligible per center policy')
-                : t('Instant activation upon review')
-            }
-            themeKey={preview.exceedsEightyPercent ? 'rose' : 'blue'}
-          />
+            <BenefitOptionCard
+              optionKey="GYM_PASS"
+              selectedKey={preferredResolution}
+              onSelect={onSelectResolution}
+              icon={Dumbbell}
+              title={t('Free 1-Month Gym Pass')}
+              badgeText={`1 ${t('Month')} VIP`}
+              desc={t('Exchange remaining sessions for 1 full month of unlimited gym & fitness access.')}
+              subtext={t('Instant activation upon review')}
+              themeKey="blue"
+            />
 
-          <BenefitOptionCard
-            optionKey="CASH_REFUND"
-            selectedKey={preview.exceedsEightyPercent ? '' : preferredResolution}
-            onSelect={onSelectResolution}
-            disabled={preview.exceedsEightyPercent}
-            icon={DollarSign}
-            title={t('Cash / Bank Refund Request')}
-            badgeText={
-              preview.exceedsEightyPercent
-                ? t('Not Eligible (>80%)')
-                : !preview.hasStarted
-                ? formatMoney(preview.classPrice)
-                : formatMoney((preview.proratedCredit ?? preview.estimatedCreditAmount))
-            }
-            desc={
-              preview.exceedsEightyPercent
-                ? t('Ineligible per center policy (>80% attended).')
-                : t('Request remaining class tuition refunded via bank transfer or cash at counter.')
-            }
-            subtext={
-              preview.exceedsEightyPercent
-                ? t('Ineligible per center policy')
-                : t('Requires Center Manager approval')
-            }
-            themeKey={preview.exceedsEightyPercent ? 'rose' : 'purple'}
-          />
+            <BenefitOptionCard
+              optionKey="CASH_REFUND"
+              selectedKey={preferredResolution}
+              onSelect={onSelectResolution}
+              icon={DollarSign}
+              title={t('Cash / Bank Refund Request')}
+              badgeText={
+                !preview.hasStarted
+                  ? formatMoney(preview.classPrice)
+                  : formatMoney((preview.proratedCredit ?? preview.estimatedCreditAmount))
+              }
+              desc={t('Request remaining class tuition refunded via bank transfer or cash at counter.')}
+              subtext={t('Requires Center Manager approval')}
+              themeKey="purple"
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -478,6 +432,20 @@ export const ClassCancellationFormSection = ({
     );
   }
 
+  if (preview.exceedsEightyPercent) {
+    return (
+      <div className="flex items-center justify-end pt-1">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-opacity cursor-pointer"
+        >
+          {t('Close')}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 pt-2">
       <div className="space-y-2">
@@ -505,11 +473,7 @@ export const ClassCancellationFormSection = ({
           rows={3}
           value={reasonContent}
           onChange={(e) => onChangeReasonContent(e.target.value)}
-          placeholder={
-            preview?.exceedsEightyPercent
-              ? t('Class attendance exceeded 80% (ineligible for refund/perks). Please state your personal reason or circumstances for requesting class withdrawal for reception review.')
-              : t('Please specify your reason (e.g. medical reason, work relocation). Receptionist will review and approve your credit voucher or compensation.')
-          }
+          placeholder={t('Please specify your reason (e.g. medical reason, work relocation). Receptionist will review and approve your credit voucher or compensation.')}
           className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
           required
         />

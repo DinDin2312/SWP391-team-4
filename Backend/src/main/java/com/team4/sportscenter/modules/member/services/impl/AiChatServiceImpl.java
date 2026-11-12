@@ -22,13 +22,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -96,18 +100,21 @@ public class AiChatServiceImpl implements AiChatService {
         CompletableFuture.runAsync(() -> {
             try {
                 if (!geminiClient.isConfigured()) {
-                    emitter.send(SseEmitter.event().name("delta").data("Sorry, the Google Gemini API Key is not configured. Please add the Key to application.properties!"));
+                    emitter.send(SseEmitter.event().name("delta").data(Map.of("text", "Sorry, the Google Gemini API Key is not configured. Please add the Key to application.properties!")));
                     emitter.send(SseEmitter.event().name("done").data(Map.of("sources", Collections.emptyList())));
                     emitter.complete();
                     return;
                 }
 
                 if (userMessage == null || userMessage.trim().isEmpty()) {
-                    emitter.send(SseEmitter.event().name("delta").data("Xin chào! Mình là NEXUS AI, trợ lý ảo của NEXUS Sports Lab. Bạn cần mình hỗ trợ gì về gói tập, lớp học hay bài tập hôm nay không? 💪"));
+                    emitter.send(SseEmitter.event().name("delta").data(Map.of("text", "Xin chào! Mình là NEXUS AI, trợ lý ảo của NEXUS Sports Lab. Bạn cần mình hỗ trợ gì về gói tập, lớp học hay bài tập hôm nay không? 💪")));
                     emitter.send(SseEmitter.event().name("done").data(Map.of("sources", Collections.emptyList())));
                     emitter.complete();
                     return;
                 }
+
+                // Flush headers early so the UI switches to a live progress state immediately.
+                emitter.send(SseEmitter.event().name("status").data(Map.of("stage", "searching")));
 
                 List<RetrievedChunk> knowledgeChunks = retrievalService.retrieve(userMessage, Audience.MEMBER);
                 String systemPrompt = buildSystemPrompt(userMessage, email, knowledgeChunks);
@@ -118,10 +125,12 @@ public class AiChatServiceImpl implements AiChatService {
                     citations.add(new AiChatResponse.SourceCitation(i + 1, c.documentTitle(), c.category()));
                 }
 
+                emitter.send(SseEmitter.event().name("status").data(Map.of("stage", "generating")));
+
                 List<Turn> sanitizedHistory = sanitizeHistory(history);
                 Optional<String> fullText = geminiClient.stream(sanitizedHistory, systemPrompt + userMessage, 1200, delta -> {
                     try {
-                        emitter.send(SseEmitter.event().name("delta").data(delta));
+                        emitter.send(SseEmitter.event().name("delta").data(Map.of("text", delta)));
                     } catch (Exception e) {
                         log.warn("Failed to send SSE delta: {}", e.getMessage());
                     }
@@ -131,7 +140,7 @@ public class AiChatServiceImpl implements AiChatService {
                     emitter.send(SseEmitter.event().name("done").data(Map.of("sources", citations, "fullText", fullText.get())));
                     emitter.complete();
                 } else {
-                    emitter.send(SseEmitter.event().name("delta").data("Sorry, the Google AI Server is currently overloaded due to high traffic. Please wait a moment and try again later!"));
+                    emitter.send(SseEmitter.event().name("delta").data(Map.of("text", "Sorry, the Google AI Server is currently overloaded due to high traffic. Please wait a moment and try again later!")));
                     emitter.send(SseEmitter.event().name("done").data(Map.of("sources", Collections.emptyList())));
                     emitter.complete();
                 }
@@ -150,11 +159,10 @@ public class AiChatServiceImpl implements AiChatService {
     private String buildSystemPrompt(String userMessage, String email, List<RetrievedChunk> knowledgeChunks) {
         // Fetch Packages
         List<PackageResponse> packages = memberService.getAllPackages();
-        String packagesListString = packages.stream()
-            .map(p -> "[" + p.getPackageId() + "] " + p.getPackageName() + " (" + p.getDurationDays() + " ngày, " + p.getPrice() + " VND)")
-            .collect(Collectors.joining("\n"));
+        String packagesListString = formatPackagesForPrompt(packages);
 
-        List<AvailableClassResponse> classes = memberService.getAvailableClasses();
+        // Pass explicit email so CompletableFuture async streaming threads keep enrollment & cart flags intact.
+        List<AvailableClassResponse> classes = memberService.getAvailableClasses(email);
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
         List<Booking> myExistingBookings = (email != null && !email.trim().isEmpty())
@@ -168,18 +176,17 @@ public class AiChatServiceImpl implements AiChatService {
             .filter(c -> !Boolean.TRUE.equals(c.getIsBookedByMe()) && !Boolean.TRUE.equals(c.getIsPendingPayment()) && (c.getMaxSlots() - c.getBookedSlots() > 0))
             .toList();
 
-        // Slimming live data: limit to top 15 classes matching question keywords
-        if (openClasses.size() > 8) {
-            String q = (userMessage != null) ? userMessage.toLowerCase() : "";
-            openClasses = openClasses.stream()
-                .sorted((c1, c2) -> Integer.compare(scoreClassMatch(c2, q), scoreClassMatch(c1, q)))
-                .limit(8)
-                .toList();
-        }
+        openClasses = selectClassesForPrompt(openClasses, userMessage);
 
         String classesListString = openClasses.isEmpty() ? "No classes currently available for booking." : openClasses.stream()
             .map(c -> {
                 Optional<String> conflictOpt = findConflictNote(c.getClassId(), myExistingBookings);
+                String subject = (c.getSubjectName() != null && !c.getSubjectName().isBlank())
+                        ? c.getSubjectName()
+                        : "Khác";
+                String room = (c.getRoomName() != null && !c.getRoomName().isBlank())
+                        ? c.getRoomName()
+                        : "Phòng tiêu chuẩn";
                 String pattern = (c.getSchedulePattern() != null && !c.getSchedulePattern().isBlank())
                         ? c.getSchedulePattern()
                         : "Lịch linh hoạt";
@@ -195,6 +202,8 @@ public class AiChatServiceImpl implements AiChatService {
                 int remaining = Math.max(0, (c.getMaxSlots() != null ? c.getMaxSlots() : 0) - (c.getBookedSlots() != null ? c.getBookedSlots() : 0));
 
                 String base = "[" + c.getClassId() + "] Tên: " + c.getClassName()
+                        + " | Bộ môn: " + subject
+                        + " | Phòng: " + room
                         + " | HLV: " + c.getCoachName()
                         + " | Số buổi: " + sessions + " buổi"
                         + " | Lịch: " + pattern + " (" + nextTime + ")"
@@ -239,11 +248,11 @@ public class AiChatServiceImpl implements AiChatService {
         return "You are NEXUS AI, a cool, friendly, and energetic personal trainer & assistant EXCLUSIVELY for NEXUS Sports Lab.\n" +
                 knowledgeBlock +
                 "Your tone must be natural, engaging, and conversational (like a human gym buddy). Do NOT sound like a robotic customer service bot.\n" +
-                "Keep responses concise, lively, and directly to the point (2 to 4 sentences unless the user explicitly asks for a detailed plan/routine).\n" +
+                "Keep conversational intro and outro concise, lively, and directly to the point (1 to 3 sentences unless the user asks for a detailed routine), EXCEPT never summarize or omit rows when listing available classes or membership packages.\n" +
                 "Use short, modern phrasing, and sprinkle a few emojis naturally. Always answer in the exact same language the user speaks (e.g. Vietnamese or English).\n\n" +
                 "=== CLASS PRESENTATION AS AN INTERACTIVE TABLE (MANDATORY FORMAT) ===\n" +
-                "When the user asks for available classes, courses, or schedule options (e.g. asking for 'lớp bơi', 'lớp yoga', 'lớp gym', 'có lớp nào...'):\n" +
-                "1. Always present the top 3 to 4 best matching classes as a clean, standard Markdown table using this EXACT header and column structure:\n\n" +
+                "When the user asks for available classes, courses, or schedule options (e.g. asking for 'lớp bơi', 'lớp yoga', 'lớp võ', 'lớp gym', 'có lớp nào...'):\n" +
+                "1. Present all directly matching open classes requested by the user (or 5 to 7 diverse options across subjects for general browsing) from AVAILABLE CLASSES below as a clean, standard Markdown table using this EXACT header and column structure:\n\n" +
                 "| Lớp học & HLV | Số buổi | Lịch học (Thứ) | Học phí | Đăng ký |\n" +
                 "| :--- | :---: | :--- | :---: | :---: |\n" +
                 "| **[Tên lớp]**<br>HLV: [Tên HLV] | [Số buổi] buổi | [Thứ / Lịch học] | [Học phí] | [Đăng ký](/member/book-class?classId=[ID]) |\n\n" +
@@ -252,6 +261,14 @@ public class AiChatServiceImpl implements AiChatService {
                 "   - Do NOT display raw database ID brackets like '[139]' inside the visible class name or price cells.\n" +
                 "   - Before or after the table, give a warm, brief 1-sentence tip encouraging the member to click on any row in the table to view details and enroll.\n" +
                 "   - If the user specifically asks you to auto-add or register a specific class directly into their cart, append [ACTION:BOOK_CLASS:class_id] at the VERY END as instructed below.\n\n" +
+                "=== PACKAGE PRESENTATION AS AN INTERACTIVE TABLE (MANDATORY FORMAT) ===\n" +
+                "When the user asks for membership packages, pricing, or plans (e.g. 'có những gói tập nào', 'danh sách gói', 'bảng giá gói hội viên', 'gói AI'):\n" +
+                "1. Include ALL matching packages listed under '--- PACKAGES ---' below (all " + packages.size() + " active packages when asking generally: Gym access, Trial, AI, and Combo — NEVER silently omit packages!):\n\n" +
+                "| Gói hội viên | Phân loại | Thời hạn | Giá | Chi tiết |\n" +
+                "| :--- | :--- | :---: | :---: | :---: |\n" +
+                "| **[Tên gói]** | [Loại gói] | [Số ngày] ngày | [Giá] | [Xem gói](/member/package-store?packageId=[ID]) |\n\n" +
+                "2. Do NOT show raw numeric ID brackets like '[10]' inside visible text cells, keep links to `/member/package-store?packageId=[ID]`, and invite the member to click any row to view benefits or register.\n" +
+                "   - If the user asks you to add a specific package directly to cart, append [ACTION:ADD_CART:package_id] at the VERY END.\n\n" +
                 "=== STRICT SCOPE & TOKEN-SAVING POLICY (ANTI-ABUSE GUARDRAIL) ===\n" +
                 "1. ALLOWED TOPICS ONLY:\n" +
                 "   - NEXUS Sports Lab services: membership packages, class bookings, schedules, coaches, gym facilities, cart/checkout, account settings.\n" +
@@ -272,7 +289,7 @@ public class AiChatServiceImpl implements AiChatService {
                 "When you auto-add a package or book a class, casually mention that you are sending the booking request to their cart (e.g. 'Để mình gửi yêu cầu thêm ... vào giỏ hàng cho bạn nhé! Chờ hệ thống kiểm tra slot và lịch một xíu nha 💃') instead of guaranteeing it is already 100% completed or booked.\n\n" +
                 "CRITICAL KNOWLEDGE BASE:\n" +
                 "IMPORTANT BUSINESS RULE: Membership PACKAGES only grant free Gym access (GYM_ACCESS), AI Assistant access (AI_ACCESS), Combo Gym + AI (COMBO), or VIP (PREMIUM). Packages NEVER include or pay for Coach-led sport courses (Yoga, Swimming, Zumba, Spinning, etc.). Coach-led courses (AVAILABLE CLASSES) are enrolled and paid for separately per course!\n" +
-                "--- PACKAGES (ONLY GYM & AI ACCESS) ---\n" +
+                "--- PACKAGES (ONLY GYM & AI ACCESS — TOTAL ACTIVE: " + packages.size() + " PACKAGES) ---\n" +
                 packagesListString + "\n" +
                 "--- AVAILABLE CLASSES (COACH-LED COURSES - CAN BE BOOKED SEPARATELY) ---\n" +
                 classesListString + "\n" +
@@ -362,16 +379,146 @@ public class AiChatServiceImpl implements AiChatService {
         return valid;
     }
 
-    private int scoreClassMatch(AvailableClassResponse c, String q) {
-        if (q == null || q.isBlank()) return 0;
+    private static final int MAX_PROMPT_CLASSES = 20;
+
+    private static final Set<String> QUERY_STOP_WORDS = Set.of(
+            "cho", "toi", "minh", "ban", "xin", "xem", "tim", "hoi", "muon",
+            "danh", "sach", "lop", "hoc", "khoa", "mon", "cac", "nhung", "nao",
+            "co", "con", "hien", "tai", "nay", "khong", "la", "va", "ve", "gi",
+            "voi", "cua", "nha", "nhe", "duoc", "khongg", "trung", "tam", "o",
+            "the", "all", "list", "class", "classes", "course", "courses", "available", "me", "show"
+    );
+
+    private static final List<List<String>> SUBJECT_SYNONYM_GROUPS = List.of(
+            List.of("vo", "boxing", "kickfit", "kickboxing", "muay", "tu ve", "doi khang", "dam boc", "vo dai", "vo thuat", "box"),
+            List.of("gym", "the hinh", "powerlifting", "free-weight", "hypertrophy", "tang co", "siet co", "cu ta"),
+            List.of("boi", "swim", "thuy lieu", "be boi", "boi sai", "boi ech", "boi buom"),
+            List.of("dap xe", "xe dap", "spinning", "rpm"),
+            List.of("zumba", "nhay", "dance", "aerobic", "latin", "samba"),
+            List.of("yoga", "thien", "vinyasa", "yin", "gian co", "tri lieu"),
+            List.of("pilates", "reformer", "core", "chinh dang")
+    );
+
+    static String formatPackagesForPrompt(List<PackageResponse> packages) {
+        if (packages == null || packages.isEmpty()) {
+            return "No membership packages currently available.";
+        }
+        return packages.stream()
+                .map(p -> {
+                    String typeLabel = (p.getPackageTypeName() != null && !p.getPackageTypeName().isBlank())
+                            ? p.getPackageTypeName()
+                            : (p.getPackageType() != null ? p.getPackageType() : "STANDARD");
+                    String priceStr = (p.getPrice() == null || p.getPrice().longValue() <= 0)
+                            ? "Miễn phí (0 đ)"
+                            : String.format("%,d đ", p.getPrice().longValue());
+                    String limitNote = (p.getPurchaseLimitPerMember() != null && p.getPurchaseLimitPerMember() > 0)
+                            ? " | Giới hạn: tối đa " + p.getPurchaseLimitPerMember() + " lần/hội viên"
+                            : "";
+                    return "[" + p.getPackageId() + "] Tên: " + p.getPackageName()
+                            + " | Loại: " + typeLabel
+                            + " | Thời hạn: " + p.getDurationDays() + " ngày"
+                            + " | Giá: " + priceStr
+                            + limitNote;
+                })
+                .collect(Collectors.joining("\n"));
+    }
+
+    static String foldForSearch(String input) {
+        if (input == null || input.isBlank()) return "";
+        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .replace('đ', 'd')
+                .replace('Đ', 'd')
+                .toLowerCase(Locale.ROOT);
+        return normalized.replaceAll("[^a-z0-9\\s-]", " ").replaceAll("\\s+", " ").trim();
+    }
+
+    static List<AvailableClassResponse> selectClassesForPrompt(List<AvailableClassResponse> openClasses, String userMessage) {
+        if (openClasses == null || openClasses.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String foldedQuery = foldForSearch(userMessage);
+        if (!foldedQuery.isEmpty()) {
+            List<AvailableClassResponse> matched = openClasses.stream()
+                    .map(c -> Map.entry(c, scoreClassMatch(c, foldedQuery)))
+                    .filter(e -> e.getValue() > 0)
+                    .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+                    .limit(MAX_PROMPT_CLASSES)
+                    .map(Map.Entry::getKey)
+                    .toList();
+
+            if (!matched.isEmpty()) {
+                return matched;
+            }
+        }
+
+        if (openClasses.size() <= MAX_PROMPT_CLASSES) {
+            return openClasses;
+        }
+
+        // For broad browsing questions, pick round-robin across subjects so every sport is represented.
+        Map<String, List<AvailableClassResponse>> bySubject = new LinkedHashMap<>();
+        for (AvailableClassResponse c : openClasses) {
+            String key = (c.getSubjectName() != null && !c.getSubjectName().isBlank()) ? c.getSubjectName() : "Other";
+            bySubject.computeIfAbsent(key, ignored -> new ArrayList<>()).add(c);
+        }
+
+        List<AvailableClassResponse> balanced = new ArrayList<>(MAX_PROMPT_CLASSES);
+        int round = 0;
+        while (balanced.size() < MAX_PROMPT_CLASSES) {
+            boolean addedInRound = false;
+            for (List<AvailableClassResponse> bucket : bySubject.values()) {
+                if (round < bucket.size()) {
+                    balanced.add(bucket.get(round));
+                    addedInRound = true;
+                    if (balanced.size() >= MAX_PROMPT_CLASSES) break;
+                }
+            }
+            if (!addedInRound) break;
+            round++;
+        }
+        return balanced;
+    }
+
+    static int scoreClassMatch(AvailableClassResponse c, String foldedQuery) {
+        if (c == null || foldedQuery == null || foldedQuery.isBlank()) return 0;
+
+        String name = foldForSearch(c.getClassName());
+        String subject = foldForSearch(c.getSubjectName());
+        String room = foldForSearch(c.getRoomName());
+        String coach = foldForSearch(c.getCoachName());
+        String combined = (subject + " " + name + " " + room + " " + coach).trim();
+
         int score = 0;
-        String name = (c.getClassName() != null) ? c.getClassName().toLowerCase() : "";
-        String coach = (c.getCoachName() != null) ? c.getCoachName().toLowerCase() : "";
-        for (String word : q.split("\\s+")) {
-            if (word.length() < 2) continue;
-            if (name.contains(word)) score += 3;
+        for (String word : foldedQuery.split("\\s+")) {
+            if (word.length() < 2 || QUERY_STOP_WORDS.contains(word)) continue;
+            if (subject.contains(word)) score += 5;
+            if (name.contains(word)) score += 4;
+            if (room.contains(word)) score += 3;
             if (coach.contains(word)) score += 2;
         }
+
+        for (List<String> group : SUBJECT_SYNONYM_GROUPS) {
+            boolean queryHitsGroup = group.stream().anyMatch(term -> containsQueryTerm(foldedQuery, term));
+            if (!queryHitsGroup) continue;
+
+            boolean classHitsGroup = group.stream().anyMatch(term -> containsQueryTerm(combined, term));
+            if (classHitsGroup) {
+                score += 6;
+            }
+        }
         return score;
+    }
+
+    private static boolean containsQueryTerm(String text, String term) {
+        if (text.isEmpty() || term.isEmpty()) return false;
+        if (term.length() <= 3 && !term.contains(" ")) {
+            for (String token : text.split("[\\s-]+")) {
+                if (token.equals(term)) return true;
+            }
+            return false;
+        }
+        return text.contains(term);
     }
 }

@@ -286,7 +286,7 @@ public class ManagerService {
                 throw new IllegalArgumentException("Cancel upcoming sessions before deactivating the class");
             }
         }
-        managerRepository.requireSubject(request.subjectId());
+        String subjectName = managerRepository.requireSubject(request.subjectId());
         validateStatus(request.status(), CLASS_STATUSES);
         User coach = findUser(request.coachId());
         if (!"Coach".equalsIgnoreCase(coach.getRole().getRoleName()) || !"ACTIVE".equalsIgnoreCase(coach.getStatus())) {
@@ -312,9 +312,28 @@ public class ManagerService {
                     + " already has " + clash.get("otherClass") + " at " + at.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy")) + ".");
         }
         if(id!=null) packageBenefits.validateClassRoom(id,request.roomId());
-        int savedId = managerRepository.saveClass(id, request);
+        String effectiveClassName = ClassCodeGenerator.resolveClassName(
+                request.className(),
+                subjectName,
+                request.levelBand(),
+                Boolean.TRUE.equals(request.autoCode()),
+                id,
+                managerRepository.classNames()
+        );
+        ManagerRequests.ClassRequest effectiveRequest = new ManagerRequests.ClassRequest(
+                effectiveClassName,
+                request.subjectId(),
+                request.coachId(),
+                request.roomId(),
+                request.price(),
+                request.maxSlots(),
+                request.status(),
+                request.levelBand(),
+                request.autoCode()
+        );
+        int savedId = managerRepository.saveClass(id, effectiveRequest);
         managerRepository.linkRoomSubject(request.roomId(), request.subjectId());
-        audit(actor, id == null ? "CREATE" : "UPDATE", "CLASS", savedId, request.className() + " - HLV " + coach.getFullName());
+        audit(actor, id == null ? "CREATE" : "UPDATE", "CLASS", savedId, effectiveClassName + " - HLV " + coach.getFullName());
         return savedId;
     }
 

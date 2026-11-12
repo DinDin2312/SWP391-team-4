@@ -156,6 +156,32 @@ test("operationPayload normalizes subject, room, class, schedule and series payl
       status: "ACTIVE",
     },
   );
+  assert.deepEqual(
+    operationPayload("class", {
+      classCode: "yoga-203",
+      classTitle: "Yoga Nâng Cao",
+      levelBand: "2",
+      autoCode: true,
+      subjectId: "2",
+      coachId: "4",
+      roomId: "2",
+      maxSlots: "20",
+      price: "750000",
+      status: "ACTIVE",
+    }),
+    {
+      classId: undefined,
+      className: "[YOGA-203] Yoga Nâng Cao",
+      subjectId: 2,
+      coachId: 4,
+      roomId: 2,
+      maxSlots: 20,
+      price: 750000,
+      status: "ACTIVE",
+      autoCode: true,
+      levelBand: 2,
+    },
+  );
 
   const form = {
     classId: "2",
@@ -238,7 +264,7 @@ test("class form offers subject coaches and puts the subject's rooms first", () 
   assert.equal(roomFitsSubject(data.rooms, "", 1), false);
 });
 
-import { classSubjectOptions, seatLimit, duplicateClassName, conflictParts, overlappingIds } from "./operationsUtils.js";
+import { classSubjectOptions, seatLimit, duplicateClassName, duplicateClassCode, conflictParts, overlappingIds } from "./operationsUtils.js";
 test("inactive rooms and subjects are hidden unless already assigned; limits, duplicates, conflicts, overlaps", () => {
   const data = { subjects: [{ subjectId: 1, subjectName: "Swim" }, { subjectId: 2, subjectName: "Old", status: "INACTIVE" }],
     rooms: [{ roomId: 5, roomName: "Pool", capacity: 20, subjectIds: [1] }, { roomId: 6, roomName: "Broken", capacity: 10, status: "MAINTENANCE", subjectIds: [1] }] };
@@ -247,10 +273,14 @@ test("inactive rooms and subjects are hidden unless already assigned; limits, du
   assert.deepEqual(classRoomOptions(data, 1).map(o => o.value), [5]);
   assert.deepEqual(classRoomOptions(data, 1, 6).map(o => o.value), [5, 6]);
   assert.equal(seatLimit(data.rooms, 5), 20); assert.equal(seatLimit(data.rooms, 99), null);
-  const classes = [{ classId: 1, className: "Bơi A" }];
-  assert.equal(duplicateClassName(classes, " bơi a ", undefined), true);
-  assert.equal(duplicateClassName(classes, "Bơi A", 1), false);
+  const classes = [{ classId: 1, className: "[SWIM-101] Bơi A" }];
+  assert.equal(duplicateClassName(classes, " [swim-101] bơi a ", undefined), true);
+  assert.equal(duplicateClassName(classes, "[SWIM-101] Bơi A", 1), false);
   assert.equal(duplicateClassName(classes, "", undefined), false);
+  assert.equal(duplicateClassCode(classes, "swim-101", undefined), true);
+  assert.equal(duplicateClassCode(classes, "SWIM-101", 1), false);
+  assert.equal(duplicateClassCode(classes, "SWIM-102", undefined), false);
+  assert.equal(duplicateClassCode(classes, "", undefined), false);
   assert.deepEqual(conflictParts("Schedule conflict: the room already has Yoga [Y1] at 09:00 05/11/2026."), { who: "room", className: "Yoga [Y1]", at: "09:00 05/11/2026" });
   assert.equal(conflictParts("Other error"), null);
   const ids = overlappingIds([

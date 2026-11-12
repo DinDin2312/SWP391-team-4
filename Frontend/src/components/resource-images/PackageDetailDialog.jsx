@@ -3,6 +3,7 @@ import { CalendarDays, ChevronDown, History, Package, Pencil, ShieldCheck, Users
 import { codeLabel, t, useLanguage } from '../../i18n/useLanguage';
 import { formatDate, formatDateTime, formatMoney } from '../../utils/displayFormat';
 import ResourcePhoto from './ResourcePhoto';
+import { defaultPackageCoverUrl } from './resourceImages';
 import { auditValue } from './packageAudit';
 import './package-detail.css';
 
@@ -54,7 +55,7 @@ export default function PackageDetailDialog({ id, load, loadHistory, onClose, on
         {error && <div className="package-detail-notice" role="alert"><p>{t(error)}</p><button type="button" onClick={() => { setError(''); setData(null); setAttempt(n => n + 1); }}>{t('Retry')}</button></div>}
         {data && <>
           <section className="package-detail-hero" aria-label={t('Overview')}>
-            <div className="package-detail-cover"><ResourcePhoto imagePath={data.imagePath} name={data.packageName} variant="cover" fallback={<><Package size={40} strokeWidth={1.5} aria-hidden="true" /><span>{t('No photo yet')}</span></>} /></div>
+            <div className="package-detail-cover"><ResourcePhoto imagePath={data.imagePath} fallbackSource={defaultPackageCoverUrl(data)} name={data.packageName} variant="cover" fallback={<><Package size={40} strokeWidth={1.5} aria-hidden="true" /><span>{t('No photo yet')}</span></>} /></div>
             <div className="package-detail-intro">
               <div className="package-detail-badges"><span className="package-detail-type">{typeName}</span>{data.sellingStatus && <span className={`package-detail-status ${data.sellingStatus === 'SELLING' ? 'selling' : 'stopped'}`}><i aria-hidden="true" />{t(data.sellingStatus === 'SELLING' ? 'Selling' : 'Stopped')}</span>}</div>
               <h3>{data.packageName}</h3>

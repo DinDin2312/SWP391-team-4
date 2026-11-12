@@ -9,12 +9,12 @@ audience: MEMBER
 ## 1. Phân biệt Gói Hội Viên (Packages) và Khóa Học Có HLV (Classes)
 Tại NEXUS Sports Lab, Gói hội viên và Khóa học bộ môn được tách biệt hoàn toàn:
 - **Gói Hội Viên (Membership Packages - `/member/packages`)**: Chỉ dùng để mở quyền sử dụng phòng tập Gym tự do và tính năng Trợ lý thông minh NEXUS AI, bao gồm:
-  1. **Gói Tập Gym Tự Do (`GYM_ACCESS`)**: Mở quyền ra vào khu vực Phòng Gym tự do trong thời hạn gói (1 tháng, 3 tháng, 6 tháng, 12 tháng).
+  1. **Gói Tập Gym Tự Do (`GYM_ACCESS`)**: Mở quyền ra vào khu vực Phòng Gym tự do trong thời hạn gói (1 ngày tập thử miễn phí, 1 tháng, 3 tháng, 1 năm).
   2. **Gói Trợ Lý Thông Minh AI (`AI_ACCESS`)**: Mở khóa tính năng chat tư vấn dinh dưỡng, lịch tập và hỗ trợ tự động cùng Trợ lý NEXUS AI.
   3. **Gói Combo Gym + AI (`COMBO`)**: Kết hợp quyền tập Gym tự do và sử dụng Trợ lý NEXUS AI.
   4. **Gói Hội Viên VIP (`PREMIUM`)**: Quyền lợi tập Gym tự do, sử dụng Trợ lý NEXUS AI và khu vực tiện ích VIP (Sauna/Locker VIP).
   - *Lưu ý quan trọng*: Gói hội viên (`PACKAGES`) **KHÔNG** bao gồm và **KHÔNG** dùng để đăng ký hay trừ buổi các lớp học/khóa học có Huấn luyện viên.
-- **Khóa Học Có Huấn Luyện Viên (Classes / Courses - `/member/book-class`)**: Các lớp học bộ môn có HLV giảng dạy theo lịch cố định (như Yoga, Bơi lội, Zumba, Đạp xe Spinning, Thể hình...) được đăng ký và thanh toán học phí riêng theo từng khóa học.
+- **Khóa Học Có Huấn Luyện Viên (Classes / Courses - `/member/book-class`)**: Các lớp học bộ môn có HLV giảng dạy theo lịch cố định (như Yoga, Bơi lội, Zumba, Đạp xe Spinning, Thể hình, Boxing & Kickfit, Pilates Reformer...) được đăng ký và thanh toán học phí riêng theo từng khóa học.
 
 ## 2. Quy trình Đăng ký Khóa học Trực tuyến (`/member/book-class`)
 - Bước 1: Đăng nhập vào ứng dụng NEXUS Sports Lab và truy cập mục **"Đặt lịch học"** (Book Class - `/member/book-class`).

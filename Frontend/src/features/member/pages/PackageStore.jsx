@@ -3,7 +3,7 @@ import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search, ShoppingBag, CreditCard, CalendarCheck, RefreshCw,
   Dumbbell, Bot, Crown, Flame, Trophy, Activity, Snowflake,
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Meteors } from '../../../components/ui/meteors';
 import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
+import { defaultPackageCoverUrl } from '../../../components/resource-images/resourceImages';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_ORIGIN } from '../../../config/apiBase.js';
 
@@ -21,6 +22,7 @@ const loadStoreDetail=id=>axios.get(`${API_ORIGIN}/api/v1/member/packages/${id}`
 const PackageStore = () => {
   useLanguage();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [detailId,setDetailId]=useState(null);
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +61,24 @@ const PackageStore = () => {
       clearTimeout(highlightTimer);
     };
   }, []);
+
+  useEffect(() => {
+    const pkgParam = searchParams.get('packageId');
+    if (!pkgParam || loading || packages.length === 0) return;
+    const targetId = Number(pkgParam);
+    const matched = packages.find((p) => Number(p.packageId) === targetId);
+    if (!matched) return;
+
+    setActiveCategory('all');
+    setSearchTerm('');
+    setDetailId(matched.packageId);
+    setTimeout(() => {
+      document.getElementById(`ai-package-${matched.packageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    const next = new URLSearchParams(searchParams);
+    next.delete('packageId');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, loading, packages]);
 
   const fetchPackages = async () => {
     try {
@@ -390,10 +410,7 @@ const PackageStore = () => {
 
               <div className="relative z-10">
                 {/* Bento Cover Image with Ambient Glowing Light */}
-                <div className="relative mb-5 rounded-2xl overflow-hidden aspect-[16/10] bg-gradient-to-br from-blue-50/70 via-slate-100/80 to-indigo-50/60 dark:from-slate-900/95 dark:via-slate-850 dark:to-slate-950 border border-slate-200/90 dark:border-white/10 flex items-center justify-center group-hover:border-primary/40 transition-all duration-300 shadow-sm dark:shadow-inner">
-                  {/* Ambient Glow */}
-                  <div className={`absolute inset-0 bg-radial-[at_50%_35%] ${isPopular ? 'from-blue-500/20 dark:from-blue-500/25 via-indigo-500/10' : 'from-primary/15 dark:from-primary/20 via-primary/5'} to-transparent pointer-events-none`} />
-
+                <div className="pkg-store-cover relative mb-5 rounded-2xl overflow-hidden aspect-[16/10] bg-gradient-to-br from-blue-50/70 via-slate-100/80 to-indigo-50/60 dark:from-slate-900/95 dark:via-slate-850 dark:to-slate-950 border border-slate-200/90 dark:border-white/10 flex items-center justify-center group-hover:border-primary/40 transition-all duration-300 shadow-sm dark:shadow-inner">
                   {isPopular && (
                     <div className="absolute top-3.5 left-3.5 z-20 px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-extrabold tracking-wider uppercase shadow-md shadow-blue-500/30 border border-white/25 flex items-center gap-1.5 pointer-events-none backdrop-blur-md">
                       <Flame className="w-3.5 h-3.5 text-amber-300" />
@@ -401,18 +418,31 @@ const PackageStore = () => {
                     </div>
                   )}
 
-                  {pkg.imagePath ? (
-                    <ResourcePhoto imagePath={pkg.imagePath} name={pkg.packageName} variant="cover" />
-                  ) : (
-                    <div className="relative z-10 flex flex-col items-center justify-center gap-2 group-hover:scale-105 transition-transform duration-300">
-                      <div className="w-16 h-16 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/90 dark:border-white/10 flex items-center justify-center shadow-md dark:shadow-black/40">
-                        <Icon className="w-8 h-8 text-blue-600 dark:text-blue-400 drop-shadow-[0_0_10px_rgba(59,130,246,0.3)] dark:drop-shadow-[0_0_12px_rgba(59,130,246,0.6)]" />
+                  <ResourcePhoto
+                    imagePath={pkg.imagePath}
+                    fallbackSource={defaultPackageCoverUrl(pkg)}
+                    name={pkg.packageName}
+                    variant="cover"
+                    fallback={
+                      <div className="relative z-10 flex flex-col items-center justify-center gap-2 group-hover:scale-105 transition-transform duration-300">
+                        <div className="w-16 h-16 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/90 dark:border-white/10 flex items-center justify-center shadow-md dark:shadow-black/40">
+                          <Icon className="w-8 h-8 text-blue-600 dark:text-blue-400 drop-shadow-[0_0_10px_rgba(59,130,246,0.3)] dark:drop-shadow-[0_0_12px_rgba(59,130,246,0.6)]" />
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    }
+                  />
+
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-slate-950/10 to-slate-950/25 pointer-events-none z-10" />
+
+                  <span
+                    className="absolute bottom-3 left-3.5 z-20 w-8 h-8 rounded-xl bg-slate-950/55 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-sm pointer-events-none"
+                    aria-hidden="true"
+                  >
+                    <Icon className="w-4 h-4" />
+                  </span>
 
                   {/* Corner Duration Badge */}
-                  <span className="absolute top-3.5 right-3.5 z-20 px-3 py-1 rounded-lg bg-white/95 dark:bg-slate-950/80 border border-slate-200/90 dark:border-white/15 text-[11px] font-black tracking-wider text-slate-800 dark:text-white uppercase shadow-sm">
+                  <span className="absolute top-3.5 right-3.5 z-20 px-3 py-1 rounded-lg bg-white/95 dark:bg-slate-950/85 border border-slate-200/90 dark:border-white/15 text-[11px] font-black tracking-wider text-slate-800 dark:text-white uppercase shadow-sm backdrop-blur-md">
                     {pkg.durationDays}{' '}{t("Days")}
                   </span>
                 </div>

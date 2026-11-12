@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   getReasonLabel,
+  getRescheduleReasonDetail,
   getStatusMeta,
   formatDateTime,
   formatScheduleSlot,
@@ -15,7 +16,35 @@ test('coachRescheduleUtils: maps reason categories to bilingual labels', () => {
   assert.equal(getReasonLabel('UNAVAILABLE_NO_SUB', 'en'), 'No substitute coach available');
   assert.equal(getReasonLabel('SICK_LEAVE', 'vi'), 'Nghỉ ốm / Khám chữa bệnh');
   assert.equal(getReasonLabel('SICK_LEAVE', 'en'), 'Sick leave / Medical');
+  assert.equal(getReasonLabel('NO_SUBSTITUTE_SICK', 'vi'), 'Nghỉ ốm đột xuất (Không có HLV dạy thay)');
+  assert.equal(getReasonLabel('NO_SUBSTITUTE_EMERGENCY', 'vi'), 'Việc khẩn cấp (Không có HLV dạy thay)');
+  assert.equal(getReasonLabel('NO_SUBSTITUTE_EMERGENCY', 'en'), 'Urgent emergency (No substitute coach)');
+  assert.equal(getReasonLabel('BUSINESS_TRIP', 'vi'), 'Công tác / Tham gia tập huấn');
+  assert.equal(getReasonLabel('FACILITY_ISSUE', 'en'), 'Facility / Equipment issue');
   assert.equal(getReasonLabel('UNKNOWN_CODE', 'vi'), 'UNKNOWN_CODE');
+});
+
+test('coachRescheduleUtils: extracts custom coach explanation for expandable detail panel', () => {
+  const withDetail = getRescheduleReasonDetail({
+    reasonCategory: 'NO_SUBSTITUTE_EMERGENCY',
+    reasonDetails: 'HLV gia đình có việc khẩn tại quê, không tìm được HLV thay thế.'
+  }, 'vi');
+  assert.equal(withDetail.reasonLabel, 'Việc khẩn cấp (Không có HLV dạy thay)');
+  assert.equal(withDetail.hasCustomDetail, true);
+  assert.equal(withDetail.detailText, 'HLV gia đình có việc khẩn tại quê, không tìm được HLV thay thế.');
+
+  const duplicateLabel = getRescheduleReasonDetail({
+    reasonCategory: 'SICK_LEAVE',
+    reasonDetails: 'Nghỉ ốm / Khám chữa bệnh'
+  }, 'vi');
+  assert.equal(duplicateLabel.hasCustomDetail, false);
+  assert.equal(duplicateLabel.detailText, '');
+
+  const rawEnumDetail = getRescheduleReasonDetail({
+    reasonCategory: 'NO_SUBSTITUTE_SICK',
+    reasonDetails: 'NO_SUBSTITUTE_SICK'
+  }, 'vi');
+  assert.equal(rawEnumDetail.hasCustomDetail, false);
 });
 
 test('coachRescheduleUtils: returns correct status meta and badges', () => {

@@ -83,16 +83,16 @@ export const getCategoryLabel = (category) => {
     case 'CLASS_CANCELLATION': return t('Class Cancellation & Proration');
     case 'FACILITY_ISSUE': return t('Facility & Equipment Report');
     case 'COACH_FEEDBACK': return t('Coach & Training Feedback');
-    case 'SCHEDULE_SUPPORT': return t('Schedule & Absence Support');
+    case 'SCHEDULE_SUPPORT': return t('General Inquiry & Feedback');
     case 'COMPLAINT': return t('Customer Complaint & Service Feedback');
     default: return t('General Inquiry & Feedback');
   }
 };
 
-export const getCategoryBadge = (category) => {
+export const getCategoryBadge = (category, { compact = false } = {}) => {
   switch (category) {
     case 'CLASS_CANCELLATION':
-      return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300">{t('Class Cancellation')}</span>;
+      return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300">{t(compact ? 'Cancel Class' : 'Class Cancellation')}</span>;
     case 'FACILITY_ISSUE':
       return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300">{t('Facility Issue')}</span>;
     case 'COACH_FEEDBACK':
@@ -100,7 +100,7 @@ export const getCategoryBadge = (category) => {
     case 'COMPLAINT':
       return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-red-500/10 text-red-700 dark:text-red-300">{t('Complaint')}</span>;
     default:
-      return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300">{t('General Inquiry')}</span>;
+      return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300">{t(compact ? 'Inquiry' : 'General Inquiry')}</span>;
   }
 };
 
@@ -115,24 +115,24 @@ export const getPriorityLabel = (priority) => {
   }
 };
 
-export const getPreferredResolutionBadge = (pref) => {
+export const getPreferredResolutionBadge = (pref, { compact = false } = {}) => {
   switch (pref) {
     case 'ISSUE_CREDIT':
       return (
         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 inline-flex items-center gap-1">
-          <CreditCard className="w-3 h-3" /> {t('Credit Voucher')}
+          <CreditCard className="w-3 h-3" /> {t(compact ? 'Credit Refund' : 'Credit Voucher')}
         </span>
       );
     case 'GYM_PASS':
       return (
         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 inline-flex items-center gap-1">
-          <Dumbbell className="w-3 h-3" /> {t('1-Month Gym Pass')}
+          <Dumbbell className="w-3 h-3" /> {t(compact ? 'Gym Pass' : '1-Month Gym Pass')}
         </span>
       );
     case 'CASH_REFUND':
       return (
         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 inline-flex items-center gap-1">
-          <DollarSign className="w-3 h-3" /> {t('Cash / Bank Refund')}
+          <DollarSign className="w-3 h-3" /> {t(compact ? 'Cash Refund' : 'Cash / Bank Refund')}
         </span>
       );
     default:
@@ -234,43 +234,87 @@ export const getDisplayTitle = (title) => {
 /**
  * Strips redundant automated prefixes from support ticket titles
  */
+const META_FIELD_MATCHERS = [
+  { key: 'aspect', labelKey: 'Coach Feedback Topic', regex: /^(?:Feedback Aspect|Nội dung góp ý HLV|Khía cạnh góp ý|Chủ đề góp ý|Chủ đề|Aspect):\s*(.+)$/i },
+  { key: 'targetInfo', labelKey: 'Associated Target', regex: /^(?:Associated Class|Lớp học liên quan|Lớp học|HLV|Coach):\s*(.+)$/i },
+  { key: 'area', labelKey: 'Facility Area', regex: /^(?:Khu vực|Area|Facility Area):\s*(.+)$/i },
+  { key: 'equipment', labelKey: 'Equipment / Location', regex: /^(?:Thiết bị|Equipment|Vị trí|Location|Device\s*\/\s*Location Detail|Tên máy\s*\/\s*Vị trí cụ thể):\s*(.+)$/i },
+  { key: 'supportType', labelKey: 'Support Type', regex: /^(?:Loại hỗ trợ|Support Type|Chủ đề hỗ trợ):\s*(.+)$/i },
+  { key: 'detail', labelKey: 'Schedule / Detail', regex: /^(?:Chi tiết|Details?|Detail|Thời gian|Schedule|Incident Date\s*&\s*Time|Thời gian xảy ra sự việc(?:\s*\(Nếu có\))?):\s*(.+)$/i },
+  { key: 'complaintType', labelKey: 'Complaint Type', regex: /^(?:Loại khiếu nại|Complaint Type|Loại phản ánh|Complaint Area|Lĩnh vực khiếu nại):\s*(.+)$/i },
+  { key: 'reason', labelKey: 'Reason', regex: /^(?:Lý do|Reason):\s*(.+)$/i }
+];
+
+/**
+ * Parses leading [Key: Value | Key2: Value2] body metadata across support ticket categories
+ * while preserving plain class-code prefixes such as [YOGA-101] Question....
+ */
+export const parseSupportRequestDetails = (content, req = {}) => {
+  const rawContent = String(content || '').trim();
+  const isCoachFeedback = req?.category === 'COACH_FEEDBACK';
+  const result = {
+    fields: {},
+    chips: [],
+    aspect: '',
+    targetInfo: '',
+    bodyText: rawContent,
+    hasStructuredMeta: false
+  };
+
+  const prefixMatch = rawContent.match(/^\[((?:[^\[\]\r\n]|\[[^\]\r\n]*\])+)\]\s*([\s\S]*)$/);
+  if (prefixMatch) {
+    const metaStr = prefixMatch[1].trim();
+    const restText = prefixMatch[2].trim();
+    const looksStructured = metaStr.includes(':') || metaStr.includes('|') || isCoachFeedback;
+
+    if (looksStructured) {
+      result.hasStructuredMeta = true;
+      result.bodyText = restText;
+
+      const parts = metaStr.split('|').map((s) => s.trim()).filter(Boolean);
+      for (const part of parts) {
+        let matched = false;
+        for (const matcher of META_FIELD_MATCHERS) {
+          const m = part.match(matcher.regex);
+          if (m && m[1]?.trim()) {
+            const value = m[1].trim();
+            if (!result.fields[matcher.key]) {
+              result.fields[matcher.key] = value;
+            }
+            result.chips.push({ key: matcher.key, labelKey: matcher.labelKey, value });
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) {
+          const genericPair = part.match(/^([^:]{2,40}):\s*(.+)$/);
+          if (genericPair && genericPair[2]?.trim()) {
+            result.chips.push({ key: 'extra', labelKey: genericPair[1].trim(), value: genericPair[2].trim() });
+          } else if (isCoachFeedback && !result.fields.aspect) {
+            result.fields.aspect = part;
+          } else {
+            result.chips.push({ key: 'extra', labelKey: 'Detail', value: part });
+          }
+        }
+      }
+    }
+  }
+
+  result.aspect = result.fields.aspect || (isCoachFeedback ? t('Coach & Training Feedback') : '');
+  result.targetInfo = result.fields.targetInfo || req?.className || '';
+  return result;
+};
+
 /**
  * Parses structured coach feedback metadata from content string
  */
 export const parseCoachFeedback = (content, req = {}) => {
   if (!content && !req.title) return { aspect: '', targetInfo: '', comment: '' };
-  const rawContent = String(content || '').trim();
-
-  const greedyMatch = rawContent.match(/^\[([\s\S]*)\]\s*([\s\S]*)$/);
-  if (greedyMatch) {
-    const metaStr = greedyMatch[1];
-    const comment = greedyMatch[2].trim();
-
-    let aspect = '';
-    let targetInfo = '';
-
-    const parts = metaStr.split('|').map(s => s.trim());
-    for (const part of parts) {
-      if (/^(Feedback Aspect|Nội dung góp ý HLV|Chủ đề|Aspect):/i.test(part)) {
-        aspect = part.replace(/^(Feedback Aspect|Nội dung góp ý HLV|Chủ đề|Aspect):\s*/i, '').trim();
-      } else if (/^(Associated Class|Lớp học liên quan|Lớp học|HLV|Coach):/i.test(part)) {
-        targetInfo = part.replace(/^(Associated Class|Lớp học liên quan|Lớp học|HLV|Coach):\s*/i, '').trim();
-      } else if (!aspect) {
-        aspect = part;
-      }
-    }
-
-    if (!targetInfo && req.className) {
-      targetInfo = req.className;
-    }
-
-    return { aspect, targetInfo, comment: comment || req.title || '' };
-  }
-
+  const details = parseSupportRequestDetails(content, { ...req, category: 'COACH_FEEDBACK' });
   return {
-    aspect: t('Coach & Training Feedback'),
-    targetInfo: req.className || '',
-    comment: rawContent || req.title || ''
+    aspect: details.aspect,
+    targetInfo: details.targetInfo,
+    comment: details.bodyText || req.title || ''
   };
 };
 
@@ -290,6 +334,39 @@ export const cleanSupportTitle = (req) => {
     .replace(/^Yêu cầu hỗ trợ:\s*/i, '')
     .trim();
   return cleaned || raw || req.className || '';
+};
+
+/**
+ * Returns a single-line summary for support tables without repeating category badges or class names.
+ */
+export const getCompactSupportSummary = (req, parsedDetails) => {
+  if (!req) return '';
+  const details = parsedDetails || parseSupportRequestDetails(req.content, req);
+  if (req.category === 'COACH_FEEDBACK') {
+    if (details.fields.aspect) return t(details.fields.aspect);
+    return details.bodyText || t('Coach & Training Feedback');
+  }
+
+  const title = cleanSupportTitle(req);
+  if (req.category === 'CLASS_CANCELLATION' || req.category === 'REFUND_REQUEST') {
+    const normalizedClass = String(req.className || '').trim().toLowerCase();
+    const normalizedTitle = title.trim().toLowerCase();
+    const isBoilerplate = !normalizedTitle
+      || /^(?:xin\s+)?h[ủu]y\s+l[ớơ]p\b/i.test(title)
+      || /^(?:request\s+)?cancel/i.test(title)
+      || /^\[[a-z0-9\s-]+\]/i.test(title)
+      || (normalizedClass && (normalizedTitle === normalizedClass || normalizedTitle.includes(normalizedClass)));
+    if (isBoilerplate) {
+      return (details.fields.reason ? t(details.fields.reason) : '') || details.bodyText || title;
+    }
+  }
+
+  return title
+    || details.fields.supportType
+    || details.fields.complaintType
+    || details.fields.equipment
+    || details.bodyText
+    || '';
 };
 
 /**
@@ -340,4 +417,50 @@ export const formatRespondedAt = (val) => {
     // fallback
   }
   return String(val).replace('T', ' ').slice(0, 16);
+};
+
+/**
+ * Computes cancellation eligibility & attendance progress against center 80% policy.
+ */
+export const getAttendancePolicySummary = (req = {}) => {
+  const total = Number(req?.totalSessions) || 0;
+  const attended = Number(req?.attendedSessions) || 0;
+  const remaining = req?.remainingSessions != null
+    ? Number(req.remainingSessions)
+    : Math.max(0, total - attended);
+  const percent = total > 0 ? Math.min(100, Math.round((attended / total) * 100)) : 0;
+  const exceedsEightyPercent = total > 0 && (attended / total > 0.8);
+  const isCancellationLike = Boolean(
+    req?.category === 'CLASS_CANCELLATION' ||
+    req?.category === 'REFUND_REQUEST' ||
+    (req?.preferredResolution && ['ISSUE_CREDIT', 'GYM_PASS', 'CASH_REFUND'].includes(req.preferredResolution)) ||
+    (req?.title && /cancellation|hủy|bảo lưu|retention/i.test(req.title))
+  );
+
+  return {
+    attended,
+    total,
+    remaining,
+    percent,
+    exceedsEightyPercent,
+    isCancellationLike
+  };
+};
+
+export const isCashRefundRequest = (req = {}) => {
+  const pref = String(req?.preferredResolution || '').toUpperCase();
+  return pref === 'CASH_REFUND' || pref === 'MANAGER_REFUND';
+};
+
+export const isManagerOnlySupportTicket = (req = {}) =>
+  req?.category === 'COACH_FEEDBACK' ||
+  req?.category === 'FACILITY_ISSUE' ||
+  req?.status === 'ESCALATED' ||
+  isCashRefundRequest(req);
+
+export const canStaffProcessTicket = (req = {}, isManager = false) => {
+  if (!req?.status) return false;
+  const isOpen = req.status === 'PENDING' || req.status === 'IN_PROGRESS' || req.status === 'ESCALATED';
+  if (!isOpen) return false;
+  return isManager ? true : !isManagerOnlySupportTicket(req);
 };

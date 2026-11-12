@@ -7,7 +7,11 @@ import {
   getSavedMemberNotificationPreferences,
   isMemberNotificationAllowed,
   filterMemberNotifications,
-  getMemberUnreadCount
+  getMemberUnreadCount,
+  extractInvoiceIdFromNotification,
+  formatMemberNotificationTitle,
+  parseMemberNotificationBody,
+  formatPaymentMethodLabel
 } from './memberUtils.js';
 
 test('calculateAttendanceStats: calculates correctly with mixed attendance', () => {
@@ -227,4 +231,73 @@ test('filterMemberNotifications and getMemberUnreadCount: filters array and coun
     clubPromotions: false
   });
   assert.equal(unreadWithWorkoutDisabled, 1); // only id 4
+
+  // Explicit BOOKING type must follow workoutReminder even if class name contains 'thể lực'
+  const swimBooking = {
+    type: 'BOOKING',
+    title: 'Đăng ký lớp học thành công / Class Enrolled',
+    message: '[SWIM-103] Bơi Sải Thể Lực & Tốc Độ Đường Đua (20 buổi)'
+  };
+  assert.equal(isMemberNotificationAllowed(swimBooking, {
+    workoutReminder: true,
+    membershipExpiry: false,
+    coachFeedback: false,
+    clubPromotions: false
+  }), true);
+});
+
+test('notification formatters and invoice extraction localize cleanly without mixed languages', () => {
+  assert.equal(extractInvoiceIdFromNotification(null), null);
+  assert.equal(
+    extractInvoiceIdFromNotification({ title: 'Thanh toán thành công / Payment Successful #715', message: '' }),
+    '715'
+  );
+  assert.equal(
+    extractInvoiceIdFromNotification({ title: '', message: 'Invoice #INV-000714 confirmed' }),
+    '714'
+  );
+
+  assert.equal(formatMemberNotificationTitle('', 'vi'), '');
+  assert.equal(
+    formatMemberNotificationTitle('Thanh toán thành công / Payment Successful #715', 'vi'),
+    'Thanh toán thành công — Hóa đơn #INV-000715'
+  );
+  assert.equal(
+    formatMemberNotificationTitle('Thanh toán thành công / Payment Successful #715', 'en'),
+    'Payment Successful — Invoice #INV-000715'
+  );
+  assert.equal(
+    formatMemberNotificationTitle('Đăng ký lớp học thành công / Class Enrolled', 'en'),
+    'Class Enrolled'
+  );
+  assert.equal(formatMemberNotificationTitle('Bảo trì hệ thống', 'vi'), 'Bảo trì hệ thống');
+
+  const parsedVi = parseMemberNotificationBody(
+    'Hóa đơn #715 đã thanh toán thành công.\n• Dịch vụ:\n  - Khóa học: [SWIM-103] Bơi Sải (10 buổi)\n  - Khóa học: [SWIM-104] Bơi Lội (10 buổi)\n• Số tiền: 2,500,000 đ (PAYOS)\nCảm ơn bạn đã lựa chọn Sports Center!',
+    'vi'
+  );
+  assert.equal(parsedVi.lead, 'Hóa đơn #INV-000715 đã thanh toán thành công.');
+  assert.equal(parsedVi.details.length, 2);
+  assert.equal(parsedVi.details[0].items.length, 2);
+  assert.equal(parsedVi.details[1].value, '2,500,000 đ (PAYOS)');
+  assert.equal(parsedVi.outro, 'Cảm ơn bạn đã lựa chọn NEXUS Sports Lab!');
+
+  const parsedEn = parseMemberNotificationBody(
+    'Bạn đã thanh toán và đăng ký thành công 2 khóa học:\n- [SWIM-103]\n- [SWIM-104]\nVui lòng kiểm tra chi tiết trong Lịch của tôi.',
+    'en'
+  );
+  assert.ok(parsedEn.lead.includes('Enrolled in 2 courses'));
+  assert.equal(parsedEn.bullets.length, 2);
+  assert.equal(parsedEn.outro, 'Check your upcoming sessions in My Schedule.');
+
+  assert.deepEqual(parseMemberNotificationBody('', 'vi'), { lead: '', details: [], bullets: [], outro: '' });
+  assert.ok(parseMemberNotificationBody('Your invoice 714 is complete.', 'en').lead.includes('#INV-000714'));
+  assert.ok(parseMemberNotificationBody('Your invoice 714 is complete.', 'vi').lead.includes('#INV-000714'));
+
+  assert.equal(formatPaymentMethodLabel('PAYOS', 'vi'), 'PayOS / Chuyển khoản QR');
+  assert.equal(formatPaymentMethodLabel('VNPAY', 'vi'), 'VNPay');
+  assert.equal(formatPaymentMethodLabel('MOMO', 'vi'), 'MoMo');
+  assert.equal(formatPaymentMethodLabel('CASH', 'vi'), 'Tiền mặt tại quầy');
+  assert.equal(formatPaymentMethodLabel('', 'en'), 'Bank Transfer');
+  assert.equal(formatPaymentMethodLabel('CARD', 'en'), 'CARD');
 });

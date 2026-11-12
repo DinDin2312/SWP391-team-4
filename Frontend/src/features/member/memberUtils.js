@@ -112,10 +112,25 @@ export function isMemberNotificationAllowed(notification, preferences = null) {
   const type = (notification.type || 'SYSTEM').toUpperCase();
   const text = `${notification.title || ''} ${notification.message || ''}`.toLowerCase();
 
-  // 1. Club news & tournament promotions
+  // Explicit category types always win over loose keyword matches inside class/package names.
+  if (type === 'PROMOTION' || type === 'ANNOUNCEMENT') {
+    return prefs.clubPromotions === true;
+  }
+  if (type === 'COACH' || type === 'WORKOUT' || type === 'WORKOUT_FEEDBACK') {
+    return prefs.coachFeedback !== false;
+  }
+  if (type === 'BOOKING' || type === 'SCHEDULE') {
+    return prefs.workoutReminder !== false;
+  }
+  if (type === 'MEMBERSHIP' || type === 'PAYMENT') {
+    return prefs.membershipExpiry !== false;
+  }
+  if (type === 'SUPPORT' || type === 'SUPPORT_REVOKED' || type === 'URGENT') {
+    return true;
+  }
+
+  // Fallback keyword classification only for generic SYSTEM notifications
   if (
-    type === 'PROMOTION' ||
-    type === 'ANNOUNCEMENT' ||
     text.includes('ưu đãi') ||
     text.includes('khuyến mãi') ||
     text.includes('giải đấu') ||
@@ -128,11 +143,7 @@ export function isMemberNotificationAllowed(notification, preferences = null) {
     return prefs.clubPromotions === true;
   }
 
-  // 2. Coach feedback & workout evaluations
   if (
-    type === 'COACH' ||
-    type === 'WORKOUT' ||
-    type === 'WORKOUT_FEEDBACK' ||
     text.includes('đánh giá') ||
     text.includes('tiến độ') ||
     text.includes('thể lực') ||
@@ -149,10 +160,7 @@ export function isMemberNotificationAllowed(notification, preferences = null) {
     return prefs.coachFeedback !== false;
   }
 
-  // 3. 30-minute workout reminder & Class schedule
   if (
-    type === 'BOOKING' ||
-    type === 'SCHEDULE' ||
     text.includes('lớp') ||
     text.includes('class') ||
     text.includes('buổi tập') ||
@@ -166,10 +174,7 @@ export function isMemberNotificationAllowed(notification, preferences = null) {
     return prefs.workoutReminder !== false;
   }
 
-  // 4. Membership package expiry & Billing alerts
   if (
-    type === 'MEMBERSHIP' ||
-    type === 'PAYMENT' ||
     text.includes('hết hạn') ||
     text.includes('gói tập') ||
     text.includes('membership') ||
@@ -183,8 +188,135 @@ export function isMemberNotificationAllowed(notification, preferences = null) {
     return prefs.membershipExpiry !== false;
   }
 
-  // 5. System alerts, account security, and support tickets: always allowed
   return true;
+}
+
+/**
+ * Extract numeric invoice id from notification title or message (e.g. "#715" or "#INV-000715").
+ */
+export function extractInvoiceIdFromNotification(notification) {
+  if (!notification) return null;
+  const raw = `${notification.title || ''} ${notification.message || ''}`;
+  const match = raw.match(/#(?:INV-)?0*(\d+)/i) || raw.match(/invoice\s+#?0*(\d+)/i);
+  return match ? match[1] : null;
+}
+
+/**
+ * Format bilingual or raw notification title cleanly according to active UI language ("vi" | "en").
+ */
+export function formatMemberNotificationTitle(title, lang = 'vi') {
+  if (!title) return '';
+  const clean = String(title).trim();
+
+  const payMatch = clean.match(/^Thanh toán thành công \/ Payment Successful #(\d+)$/i);
+  if (payMatch) {
+    const code = `#INV-${payMatch[1].padStart(6, '0')}`;
+    return lang === 'vi'
+      ? `Thanh toán thành công — Hóa đơn ${code}`
+      : `Payment Successful — Invoice ${code}`;
+  }
+
+  const slashIdx = clean.indexOf(' / ');
+  if (slashIdx !== -1) {
+    const viPart = clean.slice(0, slashIdx).trim();
+    const enPart = clean.slice(slashIdx + 3).trim();
+    return lang === 'vi' ? viPart : enPart;
+  }
+
+  return clean;
+}
+
+/**
+ * Parse notification body into structured friendly parts localized cleanly in VI/EN.
+ */
+export function parseMemberNotificationBody(message, lang = 'vi') {
+  if (!message) {
+    return { lead: '', details: [], bullets: [], outro: '' };
+  }
+
+  let text = String(message).trim();
+  const legacyCompleteMatch = text.match(/^Your invoice (\d+) is complete\.$/i);
+  if (legacyCompleteMatch) {
+    const code = `#INV-${legacyCompleteMatch[1].padStart(6, '0')}`;
+    return {
+      lead: lang === 'vi'
+        ? `Hóa đơn ${code} đã thanh toán thành công. Bấm "Xem hóa đơn" bên dưới để xem chi tiết giao dịch.`
+        : `Invoice ${code} has been paid successfully. Click "View Invoices" below to inspect transaction details.`,
+      details: [],
+      bullets: [],
+      outro: ''
+    };
+  }
+
+  // Normalize brand & mixed Vietnamese/English phrasing consistently
+  text = text
+    .replace(/Sports Center!/gi, 'NEXUS Sports Lab!')
+    .replace(/Sports Center/gi, 'NEXUS Sports Lab')
+    .replace(/Hóa đơn #(\d+)\b/gi, (_, num) =>
+      lang === 'vi'
+        ? `Hóa đơn #INV-${num.padStart(6, '0')}`
+        : `Invoice #INV-${num.padStart(6, '0')}`
+    );
+
+  if (lang === 'vi') {
+    text = text
+      .replace(/trong My Schedule/gi, 'trong mục Lịch của tôi')
+      .replace(/mục Package Benefits/gi, 'mục Gói hội viên của tôi');
+  } else {
+    text = text
+      .replace(/đã thanh toán thành công\./gi, 'has been paid successfully.')
+      .replace(/• Dịch vụ:/gi, '• Services:')
+      .replace(/• Số tiền:/gi, '• Amount:')
+      .replace(/Cảm ơn bạn đã lựa chọn NEXUS Sports Lab!/gi, 'Thank you for choosing NEXUS Sports Lab!')
+      .replace(/Bạn đã thanh toán và đăng ký thành công khóa học:/gi, 'Payment confirmed! Enrolled in course:')
+      .replace(/Bạn đã thanh toán và đăng ký thành công (\d+) khóa học:/gi, 'Payment confirmed! Enrolled in $1 courses:')
+      .replace(/Vui lòng kiểm tra (?:chi tiết|lịch học) trong (?:mục )?(?:Lịch của tôi|My Schedule)\./gi, 'Check your upcoming sessions in My Schedule.');
+  }
+
+  const lines = text.split(/\r?\n/).map((l) => l.trimEnd()).filter((l) => l.trim().length > 0);
+  const details = [];
+  const bullets = [];
+  const prose = [];
+
+  for (const rawLine of lines) {
+    const trimmed = rawLine.trim();
+    if (trimmed.startsWith('• ')) {
+      const colonIdx = trimmed.indexOf(':');
+      if (colonIdx !== -1) {
+        const label = trimmed.slice(2, colonIdx).trim();
+        const value = trimmed.slice(colonIdx + 1).trim();
+        details.push({ label, value, items: [] });
+        continue;
+      }
+    }
+    if (trimmed.startsWith('- ')) {
+      const itemText = trimmed.slice(2).trim();
+      if (details.length > 0 && !details[details.length - 1].value) {
+        details[details.length - 1].items.push(itemText);
+      } else {
+        bullets.push(itemText);
+      }
+      continue;
+    }
+    prose.push(trimmed);
+  }
+
+  const lead = prose[0] || '';
+  const outro = prose.length > 1 ? prose.slice(1).join(' ') : '';
+  return { lead, details, bullets, outro };
+}
+
+/**
+ * Friendly payment method label for invoice header display.
+ */
+export function formatPaymentMethodLabel(method, lang = 'vi') {
+  const upper = String(method || '').trim().toUpperCase();
+  if (!upper) return lang === 'vi' ? 'Chuyển khoản ngân hàng' : 'Bank Transfer';
+  if (upper === 'PAYOS' || upper === 'VIETQR') return lang === 'vi' ? 'PayOS / Chuyển khoản QR' : 'PayOS / Bank QR';
+  if (upper === 'VNPAY') return 'VNPay';
+  if (upper === 'MOMO') return 'MoMo';
+  if (upper === 'CASH') return lang === 'vi' ? 'Tiền mặt tại quầy' : 'Cash at Front Desk';
+  return method;
 }
 
 /**

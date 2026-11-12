@@ -38,7 +38,7 @@ function parseInline(text, keyPrefix = 'inline', options = {}) {
       const isSafeHttp = /^https?:\/\//i.test(linkUrl);
 
       if (isInternalPath) {
-        const isClassBooking = linkUrl.includes('/member/book-class');
+        const isActionButtonLink = linkUrl.includes('/member/book-class') || linkUrl.includes('/member/package-store');
         elements.push(
           <a
             key={key}
@@ -50,13 +50,13 @@ function parseInline(text, keyPrefix = 'inline', options = {}) {
                 options.onNavigate(linkUrl);
               }
             }}
-            className={isClassBooking
+            className={isActionButtonLink
               ? "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-2xs transition-transform active:scale-95 cursor-pointer no-underline whitespace-nowrap"
               : "text-blue-500 hover:text-blue-600 underline font-medium cursor-pointer"
             }
           >
             {parseInline(linkText, `${key}-text`, options)}
-            {isClassBooking && <span aria-hidden="true" className="text-[10px] ml-0.5">➔</span>}
+            {isActionButtonLink && <span aria-hidden="true" className="text-[10px] ml-0.5">➔</span>}
           </a>
         );
       } else if (isSafeHttp) {
@@ -240,7 +240,7 @@ export function renderChatMarkdown(text, options = {}) {
             <tbody className="divide-y divide-slate-200 dark:divide-white/10 text-xs">
               {rows.map((rowCells, rIdx) => {
                 const rowRaw = rowCells.join(' ');
-                const rowLinkMatch = rowRaw.match(/\[([^\]]+)\]\((\/member\/book-class[^\)]*)\)/);
+                const rowLinkMatch = rowRaw.match(/\[([^\]]+)\]\((\/member\/(?:book-class|package-store)[^)]*)\)/);
                 const rowTargetUrl = rowLinkMatch ? rowLinkMatch[2] : null;
 
                 return (

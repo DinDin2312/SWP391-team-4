@@ -150,6 +150,7 @@ test('Cross-module UI/UX consistency: Support badges, ProtectedRoute RBAC, and R
       const badgeHtml = renderToStaticMarkup(supportUtils.getCategoryBadge(cat));
       assert.match(badgeHtml, /<span/);
     }
+    assert.equal(supportUtils.getCategoryLabel('SCHEDULE_SUPPORT'), supportUtils.getCategoryLabel('GENERAL_INQUIRY'));
     for (const prio of ['URGENT', 'HIGH', 'LOW', 'NORMAL']) {
       assert.ok(supportUtils.getPriorityLabel(prio));
       const prioHtml = renderToStaticMarkup(supportUtils.getPriorityBadge(prio));
@@ -161,9 +162,41 @@ test('Cross-module UI/UX consistency: Support badges, ProtectedRoute RBAC, and R
 
     for (const pref of ['ISSUE_CREDIT', 'GYM_PASS', 'CASH_REFUND']) {
       const prefHtml = renderToStaticMarkup(supportUtils.getPreferredResolutionBadge(pref));
+      const compactPrefHtml = renderToStaticMarkup(supportUtils.getPreferredResolutionBadge(pref, { compact: true }));
       assert.match(prefHtml, /<span/);
+      assert.match(compactPrefHtml, /<span/);
     }
+    assert.match(renderToStaticMarkup(supportUtils.getCategoryBadge('CLASS_CANCELLATION', { compact: true })), /Cancel Class|Hủy lớp/);
+    assert.match(renderToStaticMarkup(supportUtils.getCategoryBadge('GENERAL_INQUIRY', { compact: true })), /Inquiry|Hỏi đáp/);
     assert.equal(supportUtils.getPreferredResolutionBadge('NONE'), null);
+    assert.equal(supportUtils.getPreferredResolutionBadge('NONE', { compact: true }), null);
+
+    // Compact table summary strips redundant boilerplate prefixes/class names cleanly
+    assert.equal(supportUtils.getCompactSupportSummary(null), '');
+    assert.equal(
+      supportUtils.getCompactSupportSummary({
+        category: 'COACH_FEEDBACK',
+        content: '[Khía cạnh góp ý: Phương pháp giảng dạy & Truyền đạt | Lớp học liên quan: YOGA-102] Rất tốt'
+      }),
+      'Teaching Method & Delivery'
+    );
+    assert.equal(
+      supportUtils.getCompactSupportSummary({
+        category: 'CLASS_CANCELLATION',
+        title: 'Xin hủy lớp [YOGA-102] & nhận mã hoàn Credit',
+        className: '[YOGA-102] Yoga Giảm Cân',
+        content: '[Lý do: Thay đổi lịch làm việc cá nhân] Công ty chuyển ca'
+      }),
+      'Thay đổi lịch làm việc cá nhân'
+    );
+    assert.equal(
+      supportUtils.getCompactSupportSummary({
+        category: 'FACILITY_ISSUE',
+        title: 'Điều hòa phòng [P201] bị chảy nước',
+        content: '[Khu vực: Studio | Thiết bị: Điều hòa] Cần sửa gấp'
+      }),
+      'Điều hòa phòng [P201] bị chảy nước'
+    );
 
     // Status badges differentiate Member view vs Receptionist view consistently
     for (const st of ['PENDING', 'IN_PROGRESS', 'APPROVED', 'RESOLVED', 'ESCALATED', 'REJECTED', 'CUSTOM']) {
@@ -180,6 +213,118 @@ test('Cross-module UI/UX consistency: Support badges, ProtectedRoute RBAC, and R
     );
     assert.equal(supportUtils.formatRespondedAt(''), '');
     assert.match(supportUtils.formatRespondedAt('2026-04-20T10:30:00'), /2026/);
+
+    // Generalized support metadata parser & 80% attendance policy helper
+    const facilityParsed = supportUtils.parseSupportRequestDetails(
+      '[Khu vực: Phòng tập Studio / Yoga | Thiết bị: Điều hòa góc trái] Nước chảy rỉ xuống sàn',
+      { category: 'FACILITY_ISSUE' }
+    );
+    assert.equal(facilityParsed.hasStructuredMeta, true);
+    assert.equal(facilityParsed.fields.area, 'Phòng tập Studio / Yoga');
+    assert.equal(facilityParsed.fields.equipment, 'Điều hòa góc trái');
+    assert.equal(facilityParsed.bodyText, 'Nước chảy rỉ xuống sàn');
+    assert.equal(facilityParsed.chips.length, 2);
+
+    const inquiryParsed = supportUtils.parseSupportRequestDetails(
+      '[Loại hỗ trợ: Yêu cầu chuyển giờ học | Chi tiết: Tuần 12/11 | Ghi chú thêm: Khung giờ tối] Xin hỗ trợ đổi buổi.',
+      { category: 'GENERAL_INQUIRY' }
+    );
+    assert.equal(inquiryParsed.fields.supportType, 'Yêu cầu chuyển giờ học');
+    assert.equal(inquiryParsed.fields.detail, 'Tuần 12/11');
+    assert.equal(inquiryParsed.chips[2].labelKey, 'Ghi chú thêm');
+    assert.equal(inquiryParsed.bodyText, 'Xin hỗ trợ đổi buổi.');
+
+    const complaintParsed = supportUtils.parseSupportRequestDetails(
+      '[Complaint Area: Staff / Receptionist Service | Incident Date & Time: Yesterday 18:00] Cần hỗ trợ xác minh lại thái độ phục vụ.',
+      { category: 'COMPLAINT' }
+    );
+    assert.equal(complaintParsed.fields.complaintType, 'Staff / Receptionist Service');
+    assert.equal(complaintParsed.fields.detail, 'Yesterday 18:00');
+    assert.equal(complaintParsed.chips[0].labelKey, 'Complaint Type');
+    assert.equal(complaintParsed.chips[1].labelKey, 'Schedule / Detail');
+    assert.equal(complaintParsed.bodyText, 'Cần hỗ trợ xác minh lại thái độ phục vụ.');
+
+    const coachParsed = supportUtils.parseCoachFeedback(
+      '[Khía cạnh góp ý: Phương pháp giảng dạy & Truyền đạt | Lớp học liên quan: YOGA-102] Giáo trình hơi nhanh.',
+      { className: 'YOGA-102 Yoga Giảm Cân' }
+    );
+    assert.equal(coachParsed.aspect, 'Phương pháp giảng dạy & Truyền đạt');
+    assert.equal(coachParsed.targetInfo, 'YOGA-102');
+    assert.equal(coachParsed.comment, 'Giáo trình hơi nhanh.');
+
+    const nestedCoachParsed = supportUtils.parseCoachFeedback(
+      '[Khía cạnh góp ý: Phương pháp giảng dạy & Truyền đạt | Lớp học liên quan: [YOGA-102] Yoga Giảm Cân & Thon Gọn Vóc Dáng (HLV Trần Mai Anh)] Cô Mai Anh hướng dẫn điều chỉnh nhịp thở.',
+      { className: 'Yoga Giảm Cân & Thon Gọn Vóc Dáng' }
+    );
+    assert.equal(nestedCoachParsed.aspect, 'Phương pháp giảng dạy & Truyền đạt');
+    assert.equal(nestedCoachParsed.targetInfo, '[YOGA-102] Yoga Giảm Cân & Thon Gọn Vóc Dáng (HLV Trần Mai Anh)');
+    assert.equal(nestedCoachParsed.comment, 'Cô Mai Anh hướng dẫn điều chỉnh nhịp thở.');
+
+    const fallbackCoach = supportUtils.parseCoachFeedback('Rất hài lòng với buổi tập', { className: 'GYM-101' });
+    assert.equal(fallbackCoach.targetInfo, 'GYM-101');
+    assert.equal(fallbackCoach.comment, 'Rất hài lòng với buổi tập');
+    assert.deepEqual(supportUtils.parseCoachFeedback('', {}), { aspect: '', targetInfo: '', comment: '' });
+
+    const plainClassPrefix = supportUtils.parseSupportRequestDetails(
+      '[YOGA-101] Cho em hỏi lịch học tuần sau?',
+      { category: 'GENERAL_INQUIRY' }
+    );
+    assert.equal(plainClassPrefix.hasStructuredMeta, false);
+    assert.equal(plainClassPrefix.bodyText, '[YOGA-101] Cho em hỏi lịch học tuần sau?');
+
+    const eligiblePolicy = supportUtils.getAttendancePolicySummary({
+      category: 'CLASS_CANCELLATION',
+      attendedSessions: 4,
+      totalSessions: 5
+    });
+    assert.equal(eligiblePolicy.isCancellationLike, true);
+    assert.equal(eligiblePolicy.percent, 80);
+    assert.equal(eligiblePolicy.remaining, 1);
+    assert.equal(eligiblePolicy.exceedsEightyPercent, false);
+
+    const overLimitPolicy = supportUtils.getAttendancePolicySummary({
+      category: 'CLASS_CANCELLATION',
+      attendedSessions: 13,
+      totalSessions: 15,
+      remainingSessions: 2
+    });
+    assert.equal(overLimitPolicy.exceedsEightyPercent, true);
+    assert.equal(overLimitPolicy.percent, 87);
+    assert.equal(overLimitPolicy.remaining, 2);
+
+    const emptyPolicy = supportUtils.getAttendancePolicySummary({});
+    assert.equal(emptyPolicy.isCancellationLike, false);
+    assert.equal(emptyPolicy.percent, 0);
+    assert.equal(emptyPolicy.exceedsEightyPercent, false);
+
+    assert.equal(supportUtils.isCashRefundRequest({ preferredResolution: 'CASH_REFUND' }), true);
+    assert.equal(supportUtils.isCashRefundRequest({ preferredResolution: 'MANAGER_REFUND' }), true);
+    assert.equal(supportUtils.isCashRefundRequest({ preferredResolution: 'ISSUE_CREDIT' }), false);
+
+    const creditTicket = { category: 'CLASS_CANCELLATION', preferredResolution: 'ISSUE_CREDIT', status: 'PENDING' };
+    const cashTicket = { category: 'CLASS_CANCELLATION', preferredResolution: 'CASH_REFUND', status: 'PENDING' };
+    const coachTicket = { category: 'COACH_FEEDBACK', status: 'PENDING' };
+    const facilityTicket = { category: 'FACILITY_ISSUE', status: 'PENDING' };
+    const escalatedTicket = { category: 'COMPLAINT', status: 'ESCALATED' };
+    const closedTicket = { category: 'CLASS_CANCELLATION', preferredResolution: 'ISSUE_CREDIT', status: 'APPROVED' };
+
+    assert.equal(supportUtils.isManagerOnlySupportTicket(creditTicket), false);
+    assert.equal(supportUtils.isManagerOnlySupportTicket(cashTicket), true);
+    assert.equal(supportUtils.isManagerOnlySupportTicket(coachTicket), true);
+    assert.equal(supportUtils.isManagerOnlySupportTicket(facilityTicket), true);
+    assert.equal(supportUtils.isManagerOnlySupportTicket(escalatedTicket), true);
+
+    assert.equal(supportUtils.canStaffProcessTicket(creditTicket, false), true);
+    assert.equal(supportUtils.canStaffProcessTicket(cashTicket, false), false);
+    assert.equal(supportUtils.canStaffProcessTicket(cashTicket, true), true);
+    assert.equal(supportUtils.canStaffProcessTicket(coachTicket, false), false);
+    assert.equal(supportUtils.canStaffProcessTicket(coachTicket, true), true);
+    assert.equal(supportUtils.canStaffProcessTicket(facilityTicket, false), false);
+    assert.equal(supportUtils.canStaffProcessTicket(facilityTicket, true), true);
+    assert.equal(supportUtils.canStaffProcessTicket(escalatedTicket, false), false);
+    assert.equal(supportUtils.canStaffProcessTicket(escalatedTicket, true), true);
+    assert.equal(supportUtils.canStaffProcessTicket(closedTicket, true), false);
+    assert.equal(supportUtils.canStaffProcessTicket({}, true), false);
 
     // RBAC ProtectedRoute consistency: unauthenticated -> /login, wrong role -> /login, allowed role -> content
     const renderProtected = (userRole, allowedRoles) =>

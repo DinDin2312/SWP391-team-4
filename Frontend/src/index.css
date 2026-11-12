@@ -53,6 +53,12 @@ body {
 button, input { font: inherit; }
 button { color: inherit; }
 
+/* Hide native browser password reveal/clear buttons (e.g. Microsoft Edge) to avoid duplicate eye icons */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
 .login-page {
   position: relative;
   isolation: isolate;

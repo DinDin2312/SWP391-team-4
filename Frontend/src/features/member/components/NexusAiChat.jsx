@@ -6,7 +6,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { renderChatMarkdown } from '../chatMarkdown.jsx';
 import { normalizeChatResponse } from '../chatSources.js';
-import { parseSseChunk, stripPartialActionTag } from '../chatStream.js';
+import { runSmoothAiChat } from '../chatStream.js';
 import { CyberFoxAvatar } from '../../../components/CyberFoxMascot';
 import { API_ORIGIN } from '../../../config/apiBase.js';
 
@@ -61,9 +61,21 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
   const navigate = useNavigate();
 
   const messagesEndRef = useRef(null);
+  const chatScrollRef = useRef(null);
+  const streamAbortRef = useRef(null);
+
+  useEffect(() => () => {
+    streamAbortRef.current?.abort();
+  }, []);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = chatScrollRef.current;
+    const isAnyStreaming = messages.some((m) => m.isStreaming);
+    if (container && isAnyStreaming) {
+      const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+      if (distanceToBottom > 140) return;
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior: isAnyStreaming ? 'auto' : 'smooth' });
   }, [messages, isOpen]);
 
   // Khởi tạo và đồng bộ Web Speech API theo ngôn ngữ giọng nói đã chọn (mặc định vi-VN)
@@ -267,6 +279,9 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
 
   const handleCloseSessionClick = (e) => {
     e.stopPropagation();
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = null;
+    setIsLoading(false);
     setIsDragging(false);
     setExitMode('topbar');
     if (isListening && recognitionRef.current) {
@@ -473,110 +488,59 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
         text: m.text
       }));
 
-    let streamedAnyChunk = false;
-    let accumulatedText = '';
+    streamAbortRef.current?.abort();
+    const controller = new AbortController();
+    streamAbortRef.current = controller;
 
     try {
-      const response = await fetch(`${API_ORIGIN}/api/v1/member/ai/chat/stream`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + token
+      await runSmoothAiChat({
+        streamUrl: `${API_ORIGIN}/api/v1/member/ai/chat/stream`,
+        fallbackUrl: `${API_ORIGIN}/api/v1/member/ai/chat`,
+        token,
+        message: userMsg.text,
+        history,
+        signal: controller.signal,
+        normalizeFallback: normalizeChatResponse,
+        onStartBubble: () => {
+          setMessages((prev) => [
+            ...prev,
+            { id: botMsgId, sender: 'bot', text: '', streamStage: 'searching', isStreaming: true }
+          ]);
         },
-        body: JSON.stringify({ message: userMsg.text, history })
-      });
-
-      if (!response.ok || !response.body) {
-        throw new Error('Stream request not ok: ' + response.status);
-      }
-
-      setMessages((prev) => [...prev, { id: botMsgId, sender: 'bot', text: '', isStreaming: true }]);
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let streamBuffer = '';
-      let donePayload = null;
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        streamBuffer += decoder.decode(value, { stream: true });
-        const parsed = parseSseChunk(streamBuffer);
-        streamBuffer = parsed.rest;
-
-        for (const evt of parsed.events) {
-          if (evt.event === 'delta') {
-            streamedAnyChunk = true;
-            accumulatedText += evt.data;
-            const visibleText = stripPartialActionTag(accumulatedText);
-            setMessages((prev) =>
-              prev.map((m) => (m.id === botMsgId ? { ...m, text: visibleText } : m))
-            );
-          } else if (evt.event === 'done') {
-            try {
-              donePayload = JSON.parse(evt.data);
-            } catch {}
-          }
-        }
-      }
-
-      const fullText = (donePayload && donePayload.fullText) || accumulatedText;
-      const sources = (donePayload && donePayload.sources) || [];
-
-      let cleanedText = fullText;
-      const actionMatches = [...fullText.matchAll(/\[ACTION:(.*?)\]/g)];
-      if (actionMatches.length > 0) {
-        cleanedText = fullText.replace(/\[ACTION:(.*?)\]/g, '').trim();
-        const hasCartAction = actionMatches.some((m) =>
-          /^(ADD_CART|BOOK_CLASS):/i.test(m[1].trim())
-        );
-        for (const match of actionMatches) {
-          await executeAction(match[1], hasCartAction);
-        }
-      }
-
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === botMsgId ? { ...m, text: cleanedText, sources, isStreaming: false } : m
-        )
-      );
-    } catch (streamErr) {
-      console.warn('Streaming failed, falling back to REST endpoint:', streamErr);
-
-      if (!streamedAnyChunk) {
-        try {
-          const res = await axios.post(
-            `${API_ORIGIN}/api/v1/member/ai/chat`,
-            { message: userMsg.text, history },
-            { headers: { Authorization: 'Bearer ' + token } }
+        onStage: (stage) => {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === botMsgId ? { ...m, streamStage: stage } : m))
           );
-
-          const normalized = normalizeChatResponse(res.data);
-          let rawText = normalized.text;
-          const sources = normalized.sources;
-          const actionMatches = [...rawText.matchAll(/\[ACTION:(.*?)\]/g)];
-
-          if (actionMatches.length > 0) {
-            rawText = rawText.replace(/\[ACTION:(.*?)\]/g, '').trim();
-            const hasCartAction = actionMatches.some((m) =>
-              /^(ADD_CART|BOOK_CLASS):/i.test(m[1].trim())
-            );
-            for (const match of actionMatches) {
-              await executeAction(match[1], hasCartAction);
+        },
+        onText: (visibleText) => {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === botMsgId ? { ...m, text: visibleText } : m))
+          );
+        },
+        onFinalize: async ({ fullText, sources, interrupted }) => {
+          let cleanedText = fullText;
+          if (!interrupted) {
+            const actionMatches = [...fullText.matchAll(/\[ACTION:(.*?)\]/g)];
+            if (actionMatches.length > 0) {
+              cleanedText = fullText.replace(/\[ACTION:(.*?)\]/g, '').trim();
+              const hasCartAction = actionMatches.some((m) =>
+                /^(ADD_CART|BOOK_CLASS):/i.test(m[1].trim())
+              );
+              for (const match of actionMatches) {
+                await executeAction(match[1], hasCartAction);
+              }
             }
+          } else {
+            cleanedText = fullText.replace(/\[ACTION:[^\]]*\]?/g, '').trim();
           }
 
-          setMessages((prev) => {
-            const exists = prev.some((m) => m.id === botMsgId);
-            if (exists) {
-              return prev.map((m) =>
-                m.id === botMsgId ? { ...m, text: rawText, sources, isStreaming: false } : m
-              );
-            }
-            return [...prev, { id: botMsgId, sender: 'bot', text: rawText, sources }];
-          });
-        } catch {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === botMsgId ? { ...m, text: cleanedText, sources, isStreaming: false } : m
+            )
+          );
+        },
+        onError: () => {
           setMessages((prev) => [
             ...prev.filter((m) => m.id !== botMsgId),
             {
@@ -586,15 +550,11 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
             }
           ]);
         }
-      } else {
-        const cleanedText = stripPartialActionTag(accumulatedText);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === botMsgId ? { ...m, text: cleanedText, isStreaming: false } : m
-          )
-        );
-      }
+      });
     } finally {
+      if (streamAbortRef.current === controller) {
+        streamAbortRef.current = null;
+      }
       setIsLoading(false);
     }
   };
@@ -679,12 +639,12 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
             </div>
 
             {/* CHAT AREA */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-[var(--surface)] custom-scrollbar relative z-10">
+            <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-[var(--surface)] custom-scrollbar relative z-10">
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`flex gap-2 max-w-[85%] ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                     <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center mt-1 shadow-sm ${msg.sender === 'user' ? 'bg-[var(--primary)] text-white' : 'bg-slate-900 border border-cyan-400/50'}`}>
-                      {msg.sender === 'user' ? <User className="w-3.5 h-3.5" /> : <CyberFoxAvatar direction="DIRECT_HOVER" className="w-6 h-6" />}
+                      {msg.sender === 'user' ? <User className="w-3.5 h-3.5" /> : <CyberFoxAvatar direction="DIRECT_HOVER" className={`w-6 h-6 ${msg.isStreaming ? 'animate-pulse' : ''}`} />}
                     </div>
                     <div className="space-y-1">
                       <div className={`p-3 text-[13.5px] leading-relaxed shadow-sm ${
@@ -692,11 +652,30 @@ const NexusAiChat = ({ isOpen, onMinimize, onClose, openOrigin = 'fox' }) => {
                           ? 'bg-[var(--primary)] text-white rounded-2xl rounded-tr-sm whitespace-pre-wrap'
                           : 'bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--border)] rounded-2xl rounded-tl-sm'
                       }`}>
-                        {msg.sender === 'user' ? msg.text : renderChatMarkdown(msg.text, { onNavigate: (url) => navigate(url) })}
-                        {msg.isStreaming && <span className="inline-block w-1.5 h-3.5 ml-1 bg-blue-500 animate-pulse align-middle" />}
+                        {msg.sender === 'user' ? (
+                          msg.text
+                        ) : msg.isStreaming && !msg.text ? (
+                          <div className="flex items-center gap-2 py-0.5 text-xs text-[var(--text-muted)]">
+                            <span className="inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" />
+                              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.18s' }} />
+                              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.36s' }} />
+                            </span>
+                            <span className="animate-pulse">
+                              {msg.streamStage === 'searching' ? t('Looking up data...') : t('Writing response...')}
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            {renderChatMarkdown(msg.text, { onNavigate: (url) => navigate(url) })}
+                            {msg.isStreaming && (
+                              <span className="inline-block w-1.5 h-3.5 ml-1 bg-blue-500 animate-pulse align-middle rounded-sm" />
+                            )}
+                          </>
+                        )}
                       </div>
 
-                      {msg.sender === 'bot' && msg.sources && msg.sources.length > 0 && (
+                      {msg.sender === 'bot' && !msg.isStreaming && msg.sources && msg.sources.length > 0 && (
                         <div className="flex flex-wrap items-center gap-1.5 pt-0.5 pl-1">
                           <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">
                             <BookOpen className="w-3 h-3 text-blue-500" />
