@@ -1625,7 +1625,7 @@ const MemberCheckInView = ({
             }}
           >
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
-              <thead style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--bg)' }}>
+              <thead style={{ position: 'sticky', top: 0, zIndex: 30, backgroundColor: 'var(--bg)' }}>
                 <tr style={{ backgroundColor: 'var(--bg)', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
                   <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '130px', backgroundColor: 'var(--bg)' }}>
                     {t('Member')}

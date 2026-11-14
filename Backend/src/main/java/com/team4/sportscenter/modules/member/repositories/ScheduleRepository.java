@@ -10,6 +10,7 @@ import java.util.List;
 public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
     @Query("SELECT s FROM Schedule s " +
            "JOIN FETCH s.gymClass c " +
+           "LEFT JOIN FETCH c.subject subj " +
            "JOIN FETCH c.coach u " +
            "JOIN FETCH c.room r " +
            "WHERE s.startTime >= :currentTime AND s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND c.status='ACTIVE' " +

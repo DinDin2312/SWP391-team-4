@@ -322,7 +322,12 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
                 .paymentDate(LocalDateTime.now())
                 .build();
         paymentRepository.saveAndFlush(payment);
-        if(totalAmount.signum()==0){finishPayment(invoice,true,appliedCredit!=null?("CREDIT-"+appliedCredit.getCreditCode()):("FREE-"+invoice.getInvoiceId()));return "/member/memberships";}
+        if (totalAmount.signum() == 0) {
+            finishPayment(invoice, true, appliedCredit != null ? ("CREDIT-" + appliedCredit.getCreditCode()) : ("FREE-" + invoice.getInvoiceId()));
+            return appliedCredit != null
+                    ? "/member/payment-result?directStatus=" + invoice.getStatus() + "&invoiceId=" + invoice.getInvoiceId()
+                    : "/member/memberships";
+        }
 
         if ("payos".equalsIgnoreCase(paymentMethod) || "vietqr".equalsIgnoreCase(paymentMethod)) {
             return createPayOSUrl(invoice.getInvoiceId(), totalAmount, user);
@@ -918,9 +923,16 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         invoice.setStatus("PAID");invoiceRepository.save(invoice);
         if (maybeCredit.isPresent()) {
             var c = maybeCredit.get();
-            if (c.getStatus() == com.team4.sportscenter.modules.support.enums.CreditStatus.ACTIVE) {
-                c.setStatus(com.team4.sportscenter.modules.support.enums.CreditStatus.USED);
-                c.setRemainingAmount(BigDecimal.ZERO);
+            boolean paidRemainderOnline = invoice.getTotalAmount() != null && invoice.getTotalAmount().signum() > 0;
+            if (paidRemainderOnline || c.getRemainingAmount() == null || c.getRemainingAmount().signum() <= 0) {
+                if (c.getStatus() == com.team4.sportscenter.modules.support.enums.CreditStatus.ACTIVE) {
+                    c.setStatus(com.team4.sportscenter.modules.support.enums.CreditStatus.USED);
+                    c.setRemainingAmount(BigDecimal.ZERO);
+                    userCreditRepository.save(c);
+                }
+            } else {
+                // 0-VND checkout only consumed part of the credit: keep remaining balance ACTIVE and reusable.
+                c.setUsedInvoiceId(null);
                 userCreditRepository.save(c);
             }
         }

@@ -665,6 +665,84 @@ class SystemComprehensiveUnitTests {
     }
 
     @Test
+    void paymentServiceCheckoutPreservesRemainingCreditAndRedirectsZeroAmountCreditToPaymentResult() {
+        BookingRepository bookingRepo = mock(BookingRepository.class);
+        com.team4.sportscenter.modules.member.repositories.UserMembershipRepository membershipRepo = mock(com.team4.sportscenter.modules.member.repositories.UserMembershipRepository.class);
+        UserRepository userRepo = mock(UserRepository.class);
+        InvoiceRepository invoiceRepo = mock(InvoiceRepository.class);
+        InvoiceDetailRepository detailRepo = mock(InvoiceDetailRepository.class);
+        PaymentRepository paymentRepo = mock(PaymentRepository.class);
+        com.team4.sportscenter.config.VNPayConfig vnPay = mock(com.team4.sportscenter.config.VNPayConfig.class);
+        com.team4.sportscenter.config.PayOSConfig payOS = mock(com.team4.sportscenter.config.PayOSConfig.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        com.team4.sportscenter.modules.member.services.PackageCommerceService commerce = mock(com.team4.sportscenter.modules.member.services.PackageCommerceService.class);
+        com.team4.sportscenter.modules.notification.services.NotificationService notifService = mock(com.team4.sportscenter.modules.notification.services.NotificationService.class);
+        PackageTypeCatalog pkgTypes = mock(PackageTypeCatalog.class);
+        com.team4.sportscenter.modules.support.repositories.UserCreditRepository creditRepo = mock(com.team4.sportscenter.modules.support.repositories.UserCreditRepository.class);
+
+        com.team4.sportscenter.modules.payment.services.impl.PaymentServiceImpl paymentService = new com.team4.sportscenter.modules.payment.services.impl.PaymentServiceImpl(
+            bookingRepo, membershipRepo, userRepo, invoiceRepo, detailRepo, paymentRepo,
+            vnPay, payOS, jdbc, commerce, notifService, pkgTypes, creditRepo
+        );
+
+        User member = User.builder().userId(19).email("member19@gym.vn").loyaltyPoints(0).build();
+        com.team4.sportscenter.modules.member.entities.Package pkg = com.team4.sportscenter.modules.member.entities.Package.builder()
+                .packageId(1).packageName("Thẻ Gym 1 Tháng").packageType("GYM_ACCESS").durationDays(30)
+                .price(new BigDecimal("500000")).build();
+        com.team4.sportscenter.modules.member.entities.UserMembership pending =
+                com.team4.sportscenter.modules.member.entities.UserMembership.builder()
+                        .membershipId(101).user(member).aPackage(pkg).status("PENDING").build();
+        com.team4.sportscenter.modules.support.entities.UserCredit credit =
+                com.team4.sportscenter.modules.support.entities.UserCredit.builder()
+                        .creditId(124).user(member).creditCode("CR-NX-2026-19")
+                        .amount(new BigDecimal("1400000")).remainingAmount(new BigDecimal("1400000"))
+                        .status(com.team4.sportscenter.modules.support.enums.CreditStatus.ACTIVE)
+                        .expiryDate(java.time.LocalDate.now().plusDays(30))
+                        .build();
+
+        when(userRepo.findByEmail("member19@gym.vn")).thenReturn(Optional.of(member));
+        when(bookingRepo.findAllBookingsByEmail("member19@gym.vn")).thenReturn(List.of());
+        when(membershipRepo.findByEmailAndStatus("member19@gym.vn", "PENDING")).thenReturn(List.of(pending));
+        when(creditRepo.findByCreditCode("CR-NX-2026-19")).thenReturn(Optional.of(credit));
+        when(invoiceRepo.saveAndFlush(any(Invoice.class))).thenAnswer(inv -> {
+            Invoice saved = inv.getArgument(0);
+            saved.setInvoiceId(701);
+            return saved;
+        });
+        when(paymentRepo.findByInvoice_InvoiceId(701)).thenReturn(Optional.of(
+                PaymentEntity.builder().paymentMethod("PAYOS").build()
+        ));
+        when(creditRepo.findByUsedInvoiceId(701)).thenReturn(Optional.of(credit));
+        when(membershipRepo.findByCheckoutInvoiceId(701)).thenReturn(List.of(pending));
+
+        String redirectUrl = paymentService.checkout("member19@gym.vn", "127.0.0.1", "payos", "CR-NX-2026-19");
+
+        assertEquals("/member/payment-result?directStatus=PAID&invoiceId=701", redirectUrl);
+        assertEquals(new BigDecimal("900000"), credit.getRemainingAmount());
+        assertEquals(com.team4.sportscenter.modules.support.enums.CreditStatus.ACTIVE, credit.getStatus());
+        assertNull(credit.getUsedInvoiceId());
+
+        // Second checkout consumes exact remaining balance
+        pending.setStatus("PENDING");
+        pkg.setPrice(new BigDecimal("900000"));
+        when(invoiceRepo.saveAndFlush(any(Invoice.class))).thenAnswer(inv -> {
+            Invoice saved = inv.getArgument(0);
+            saved.setInvoiceId(702);
+            return saved;
+        });
+        when(paymentRepo.findByInvoice_InvoiceId(702)).thenReturn(Optional.of(
+                PaymentEntity.builder().paymentMethod("PAYOS").build()
+        ));
+        when(creditRepo.findByUsedInvoiceId(702)).thenReturn(Optional.of(credit));
+        when(membershipRepo.findByCheckoutInvoiceId(702)).thenReturn(List.of(pending));
+
+        String secondRedirect = paymentService.checkout("member19@gym.vn", "127.0.0.1", "payos", "CR-NX-2026-19");
+        assertEquals("/member/payment-result?directStatus=PAID&invoiceId=702", secondRedirect);
+        assertEquals(0, credit.getRemainingAmount().signum());
+        assertEquals(com.team4.sportscenter.modules.support.enums.CreditStatus.USED, credit.getStatus());
+    }
+
+    @Test
     void userControllerUploadsAndDeletesAvatarSuccessfully() {
         UserRepository userRepo = mock(UserRepository.class);
         com.team4.sportscenter.modules.auth.services.UserService userService = mock(com.team4.sportscenter.modules.auth.services.UserService.class);
