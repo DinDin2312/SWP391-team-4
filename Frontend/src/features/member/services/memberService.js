@@ -141,8 +141,9 @@ export const memberService = {
     return await axiosClient.get(`/v1/member/support/classes/${classId}/cancel-preview`);
   },
 
-  cancelClassDirectly: async (classId) => {
-    return await axiosClient.post(`/v1/member/support/classes/${classId}/cancel-direct`, {});
+  cancelClassDirectly: async (classId, options = {}) => {
+    const payload = options?.acceptForfeit ? { acceptForfeit: true } : {};
+    return await axiosClient.post(`/v1/member/support/classes/${classId}/cancel-direct`, payload);
   },
 
   getTransferClassPreview: async (classId) => {

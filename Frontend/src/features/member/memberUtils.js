@@ -345,3 +345,40 @@ export function getMemberUnreadCount(notifications, preferences = null) {
     return !(n.isRead ?? n.read);
   }).length;
 }
+
+/**
+ * Builds a scannable NEXUS check-in QR payload string for member passes and class sessions.
+ */
+export function buildMemberQrPayload({ userId = null, email = null, membershipId = null, bookingId = null } = {}) {
+  const numericUserId = Number(userId) > 0 ? Number(userId) : null;
+  const numericMembershipId = Number(membershipId) > 0 ? Number(membershipId) : null;
+  const numericBookingId = Number(bookingId) > 0 ? Number(bookingId) : null;
+
+  if (numericUserId) {
+    if (numericBookingId) return `NEXUS-PASS-${numericUserId}-BK-${numericBookingId}`;
+    if (numericMembershipId) return `NEXUS-PASS-${numericUserId}-PKG-${numericMembershipId}`;
+    return `NEXUS-PASS-${numericUserId}`;
+  }
+
+  const trimmedEmail = typeof email === 'string' && email.includes('@') ? email.trim() : null;
+  if (trimmedEmail) {
+    if (numericBookingId || numericMembershipId) {
+      return JSON.stringify({
+        email: trimmedEmail,
+        ...(numericMembershipId ? { membershipId: numericMembershipId } : {}),
+        ...(numericBookingId ? { bookingId: numericBookingId } : {}),
+      });
+    }
+    return trimmedEmail;
+  }
+
+  return '';
+}
+
+/**
+ * Builds QR image URL for a given NEXUS check-in payload.
+ */
+export function buildMemberQrImageUrl(payload, size = 220) {
+  if (!payload) return '';
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(payload)}`;
+}

@@ -6,8 +6,10 @@ export const useClassCancellation = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState(null);
+  const [step, setStep] = useState('CHOICE');
 
   const loadPreview = useCallback(async (classId) => {
+    setStep('CHOICE');
     if (!classId) {
       setPreview(null);
       setError('');
@@ -29,17 +31,19 @@ export const useClassCancellation = () => {
     }
   }, []);
 
-  const executeDirectCancel = useCallback(async (classId) => {
+  const executeDirectCancel = useCallback(async (classId, options = {}) => {
     try {
       setLoading(true);
       setError('');
-      const res = await memberService.cancelClassDirectly(classId);
+      const res = await memberService.cancelClassDirectly(classId, options);
       const resultObj = {
-        type: 'DIRECT_CANCEL_SUCCESS',
+        type: res.forfeitAccepted ? 'FORFEIT_CANCEL_SUCCESS' : 'DIRECT_CANCEL_SUCCESS',
         requestId: res.requestId,
         creditCode: res.creditCode,
         creditAmount: res.creditAmount,
         expiryDate: res.expiryDate,
+        cancelledBookingsCount: res.cancelledBookingsCount,
+        forfeitAccepted: Boolean(res.forfeitAccepted),
         message: res.message
       };
       return { success: true, data: resultObj };
@@ -57,6 +61,7 @@ export const useClassCancellation = () => {
     setLoading(false);
     setError('');
     setPreview(null);
+    setStep('CHOICE');
   }, []);
 
   return {
@@ -65,6 +70,8 @@ export const useClassCancellation = () => {
     setError,
     preview,
     setPreview,
+    step,
+    setStep,
     loadPreview,
     executeDirectCancel,
     reset

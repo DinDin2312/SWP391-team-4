@@ -2,19 +2,22 @@ import { locale } from '../../../i18n/languageStore.js';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import CancelClassPolicyModal from '../components/CancelClassPolicyModal';
 import TransferClassModal from '../components/TransferClassModal';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, Plus, MapPin,
   User, CheckCircle2, Clock, Dumbbell, Award, QrCode, X, ArrowRightLeft
 } from 'lucide-react';
+import { AuthContext } from '../../../context/AuthContext';
 import MemberWorkoutsModal from '../components/MemberWorkoutsModal';
 import MemberAssessmentsModal from '../components/MemberAssessmentsModal';
+import MemberSessionQrModal from '../components/MemberSessionQrModal';
 import { memberService } from '../services/memberService';
 
 const MySchedule = () => {
   useLanguage();
   const navigate = useNavigate();
+  const { userInfo } = useContext(AuthContext);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [bookings, setBookings] = useState([]);
@@ -386,45 +389,12 @@ const MySchedule = () => {
         onClose={() => setAssessmentModal({ isOpen: false, classId: 'ALL' })}
         initialClassId={assessmentModal.classId}
       />
-      {qrModal.isOpen && qrModal.session && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setQrModal({ isOpen: false, session: null })}>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 max-w-sm w-full shadow-2xl flex flex-col items-center gap-4 relative" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setQrModal({ isOpen: false, session: null })} className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text)]">
-              <X className="w-5 h-5" />
-            </button>
-            <div className="w-12 h-12 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
-              <QrCode className="w-6 h-6" />
-            </div>
-            <div className="text-center">
-              <h3 className="text-lg font-bold text-[var(--text)]">{t("Session Check-in Pass")}</h3>
-              <p className="text-xs text-[var(--text-muted)] mt-1">{qrModal.session.className}</p>
-            </div>
-            <div className="p-4 bg-white rounded-xl border border-[var(--border)] flex flex-col items-center gap-2">
-              <QrCode className="w-36 h-36 text-slate-900" />
-              <span className="font-mono text-xs font-bold text-slate-700 tracking-widest">
-                NXS-{qrModal.session.bookingId || qrModal.session.classId || 'PASS'}-{new Date(qrModal.session.startTime).getDate()}
-              </span>
-            </div>
-            <div className="w-full text-xs text-[var(--text-muted)] bg-[var(--bg)] rounded-xl p-3 border border-[var(--border)] flex flex-col gap-1.5">
-              <div className="flex justify-between">
-                <span>{t("Coach:")}</span>
-                <span className="font-semibold text-[var(--text)]">{qrModal.session.coachName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>{t("Location:")}</span>
-                <span className="font-semibold text-[var(--text)]">{qrModal.session.roomName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>{t("Status:")}</span>
-                <span className="font-semibold text-[var(--success-text)]">{codeLabel(qrModal.session.status)}</span>
-              </div>
-            </div>
-            <button onClick={() => setQrModal({ isOpen: false, session: null })} className="w-full py-2.5 rounded-xl bg-[var(--primary)] text-[color:var(--on-primary)] font-bold text-xs">
-              {t("Done")}
-            </button>
-          </div>
-        </div>
-      )}
+      <MemberSessionQrModal
+        isOpen={qrModal.isOpen}
+        onClose={() => setQrModal({ isOpen: false, session: null })}
+        session={qrModal.session}
+        userInfo={userInfo}
+      />
     </div>
   );
 };

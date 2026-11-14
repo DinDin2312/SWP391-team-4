@@ -601,6 +601,7 @@ public class ManagerRepository {
                        COUNT(um.membership_id) subscribers,
                        COUNT(CASE WHEN um.status='ACTIVE' AND um.start_date<=CURDATE() AND um.end_date>=CURDATE() THEN 1 END) activeSubscribers
                 FROM PACKAGES p LEFT JOIN USER_MEMBERSHIPS um ON um.package_id=p.package_id
+                WHERE p.package_type <> 'AI_ACCESS'
                 GROUP BY p.package_id,p.package_name,p.package_type,p.duration_days,p.price,p.image_path,p.selling_status,p.purchase_limit_per_member ORDER BY p.package_id DESC
                 """);
     }

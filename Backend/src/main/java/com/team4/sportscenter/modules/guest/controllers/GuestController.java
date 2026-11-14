@@ -42,7 +42,8 @@ public class GuestController {
         List<Package> packages = packageRepository.findAll();
         var allBenefits=packageBenefits.allPackageBenefits();
         var typeNames=packageTypes.names();
-        List<PackageResponse> response = packages.stream().filter(pkg->"SELLING".equals(pkg.getSellingStatus()))
+        List<PackageResponse> response = packages.stream()
+                .filter(pkg -> "SELLING".equals(pkg.getSellingStatus()) && !"AI_ACCESS".equalsIgnoreCase(pkg.getPackageType()))
                 .map(pkg -> PackageResponse.builder()
                         .packageId(pkg.getPackageId())
                         .packageName(pkg.getPackageName())

@@ -484,7 +484,14 @@ public class MemberServiceImpl implements MemberService {
     public List<com.team4.sportscenter.modules.member.dtos.response.PackageResponse> getAllPackages() {
         var allBenefits = packageBenefits.allPackageBenefits();
         var typeNames = packageTypes.names();
+        java.util.Map<Integer, Long> purchaseCounts = new java.util.HashMap<>();
+        for (Object[] row : membershipRepository.countPurchasesByPackage()) {
+            if (row[0] instanceof Number id && row[1] instanceof Number cnt) {
+                purchaseCounts.put(id.intValue(), cnt.longValue());
+            }
+        }
         return packageRepository.findBySellingStatus("SELLING").stream()
+                .filter(p -> !"AI_ACCESS".equalsIgnoreCase(p.getPackageType()))
                 .map(p -> com.team4.sportscenter.modules.member.dtos.response.PackageResponse.builder()
                         .packageId(p.getPackageId())
                         .packageName(p.getPackageName())
@@ -492,7 +499,10 @@ public class MemberServiceImpl implements MemberService {
                         .packageTypeName(typeNames.get(p.getPackageType()))
                         .durationDays(p.getDurationDays() != null ? p.getDurationDays() : 30)
                         .price(p.getPrice() != null ? p.getPrice() : java.math.BigDecimal.ZERO)
+                        .description(p.getDescription())
+                        .terms(p.getTerms())
                         .purchaseLimitPerMember(p.getPurchaseLimitPerMember())
+                        .registrationCount(purchaseCounts.getOrDefault(p.getPackageId(), 0L))
                         .imagePath(p.getImagePath())
                         .benefits(allBenefits.getOrDefault(p.getPackageId(), List.of()))
                         .build())

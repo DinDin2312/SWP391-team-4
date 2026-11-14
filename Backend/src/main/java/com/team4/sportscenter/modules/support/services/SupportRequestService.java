@@ -20,6 +20,8 @@ public interface SupportRequestService {
 
     Map<String, Object> cancelClassDirectly(Integer classId, String memberEmail);
 
+    Map<String, Object> cancelClassDirectly(Integer classId, String memberEmail, boolean acceptForfeit);
+
     TransferClassPreviewResponse getTransferClassPreview(Integer classId, String memberEmail);
 
     Map<String, Object> transferClassDirectly(Integer fromClassId, Integer toClassId, String memberEmail);

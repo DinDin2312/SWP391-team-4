@@ -21,7 +21,9 @@ import {
   getComplaintTypeLabel,
   getCategoryLabel,
   getStatusBadge,
-  getPriorityBadge
+  getPriorityBadge,
+  processEvidenceFile,
+  EvidencePreviewBox
 } from '../../../utils/supportDisplayUtils';
 import {
   ClassCancellationPreviewCard,
@@ -111,8 +113,10 @@ const MemberSupportView = () => {
   const [ticketForm, setTicketForm] = useState({
     category: 'CLASS_CANCELLATION',
     classId: '',
-    preferredResolution: 'ISSUE_CREDIT', // 'ISSUE_CREDIT' | 'GYM_PASS' | 'CASH_REFUND'
+    preferredResolution: 'ISSUE_CREDIT',
     cancellationReason: 'CLASS_CANCELLATION',
+    evidenceUrl: '',
+    evidenceFileName: '',
     coachAspect: 'TEACHING_METHOD',
     facilityArea: 'GYM_FLOOR',
     facilityDevice: '',
@@ -131,6 +135,8 @@ const MemberSupportView = () => {
     setError: setPreviewError,
     preview: cancelPreview,
     setPreview: setCancelPreview,
+    step: cancelStep,
+    setStep: setCancelStep,
     loadPreview: fetchCancelPreview,
     executeDirectCancel
   } = useClassCancellation();
@@ -139,6 +145,7 @@ const MemberSupportView = () => {
   const [modalSuccess, setModalSuccess] = useState(null);
   const [modalCopiedCode, setModalCopiedCode] = useState(false);
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  const [facilityUploadError, setFacilityUploadError] = useState('');
 
   const activeCat = CATEGORY_OPTIONS.find(c => c.key === ticketForm.category) || CATEGORY_OPTIONS[0];
   const ActiveCatIcon = activeCat.icon;
@@ -154,17 +161,17 @@ const MemberSupportView = () => {
       (t) =>
         (t.status === 'PENDING' || t.status === 'IN_PROGRESS' || t.status === 'ESCALATED') &&
         (t.category === 'CLASS_CANCELLATION' || t.category === 'REFUND_REQUEST') &&
-        t.gymClass?.classId
+        (t.classId ?? t.gymClass?.classId)
     );
   }, [tickets]);
 
   const pendingClassIds = useMemo(() => {
-    return new Set(pendingCancellationTickets.map((t) => String(t.gymClass.classId)));
+    return new Set(pendingCancellationTickets.map((t) => String(t.classId ?? t.gymClass?.classId)));
   }, [pendingCancellationTickets]);
 
   const existingPendingTicketForSelectedClass = useMemo(() => {
     if (!ticketForm.classId) return null;
-    return pendingCancellationTickets.find((t) => String(t.gymClass?.classId) === String(ticketForm.classId));
+    return pendingCancellationTickets.find((t) => String(t.classId ?? t.gymClass?.classId) === String(ticketForm.classId));
   }, [pendingCancellationTickets, ticketForm.classId]);
 
   const [withdrawingId, setWithdrawingId] = useState(null);
@@ -239,11 +246,14 @@ const MemberSupportView = () => {
     setModalCopiedCode(false);
     setCancelPreview(null);
     setPreviewError('');
+    setFacilityUploadError('');
     setTicketForm({
       category: 'CLASS_CANCELLATION',
       classId: classes.length > 0 ? String(classes[0].classId) : '',
       preferredResolution: 'ISSUE_CREDIT',
       cancellationReason: 'CLASS_CANCELLATION',
+      evidenceUrl: '',
+      evidenceFileName: '',
       coachAspect: 'TEACHING_METHOD',
       facilityArea: 'GYM_FLOOR',
       facilityDevice: '',
@@ -260,7 +270,7 @@ const MemberSupportView = () => {
   useEffect(() => {
     if (isModalOpen && ticketForm.category === 'CLASS_CANCELLATION') {
       if (!ticketForm.classId && classes.length > 0) {
-        setTicketForm(prev => ({ ...prev, classId: String(classes[0].classId) }));
+        setTicketForm(prev => ({ ...prev, classId: String(classes[0].classId), evidenceUrl: '', evidenceFileName: '' }));
       } else if (ticketForm.classId) {
         void fetchCancelPreview(ticketForm.classId);
       }
@@ -270,9 +280,9 @@ const MemberSupportView = () => {
     }
   }, [isModalOpen, ticketForm.category, ticketForm.classId, classes]);
 
-  const handleDirectCancel = async (classId) => {
+  const handleDirectCancel = async (classId, options = {}) => {
     setCreating(true);
-    const res = await executeDirectCancel(classId);
+    const res = await executeDirectCancel(classId, options);
     setCreating(false);
     if (res.success) {
       setModalSuccess(res.data);
@@ -291,34 +301,26 @@ const MemberSupportView = () => {
     const supportsClass = ['CLASS_CANCELLATION', 'COACH_FEEDBACK', 'GENERAL_INQUIRY'].includes(ticketForm.category);
     const finalClassId = supportsClass && ticketForm.classId ? Number.parseInt(ticketForm.classId, 10) : null;
     let finalPreferredResolution = null;
+    let finalEvidenceUrl = null;
 
     if (ticketForm.category === 'CLASS_CANCELLATION') {
       if (!finalClassId) {
         showToast(t('Please select an enrolled class to cancel or retain.'), 'error');
         return;
       }
-      if (cancelPreview?.exceedsEightyPercent) {
-        showToast(t('Per center policy, classes past 80% attendance cannot be cancelled for refunds, credits, or passes.'), 'error');
-        return;
-      }
       if (!ticketForm.content.trim()) {
         showToast(t('Please describe the reason for your support request.'), 'error');
         return;
       }
+      if (!cancelPreview?.canDirectCancelWithCredit && !ticketForm.evidenceUrl) {
+        showToast(t('Please attach supporting evidence (image or PDF) for Admin approval.'), 'error');
+        return;
+      }
       finalTitle = t('Cancellation & Retention Request for') + ` ${cancelPreview?.className || ''}`;
       finalContent = `[${t('Reason')}: ${getReasonLabel(ticketForm.cancellationReason)}] ${ticketForm.content.trim()}`;
-      finalPreferredResolution = ticketForm.preferredResolution;
-
-      // Smart Priority Calculation for Cancellation:
-      if (ticketForm.preferredResolution === 'CASH_REFUND') {
-        finalPriority = 'HIGH'; // Cash refund involves Manager financial review
-      } else if (ticketForm.cancellationReason === 'CLASS_CANCELLATION') {
-        finalPriority = 'HIGH'; // Mid-course medical or emergency reason
-      } else if (cancelPreview?.hasStarted) {
-        finalPriority = 'HIGH'; // Course in progress: time-sensitive
-      } else {
-        finalPriority = 'NORMAL';
-      }
+      finalPreferredResolution = 'ISSUE_CREDIT';
+      finalEvidenceUrl = ticketForm.evidenceUrl || null;
+      finalPriority = 'HIGH';
     } else if (ticketForm.category === 'COACH_FEEDBACK') {
       if (!ticketForm.content.trim()) {
         showToast(t('Please provide your feedback description.'), 'error');
@@ -338,8 +340,17 @@ const MemberSupportView = () => {
         showToast(t('Please fill in title and description.'), 'error');
         return;
       }
+      if (!ticketForm.evidenceUrl) {
+        showToast(t('Please attach a photo as evidence of the facility issue.'), 'error');
+        return;
+      }
+      if (String(ticketForm.evidenceUrl).startsWith('data:application/pdf')) {
+        showToast(t('Only photo evidence files (PNG, JPG, WEBP) are supported.'), 'error');
+        return;
+      }
       finalTitle = ticketForm.title.trim();
       finalContent = `[${t('Facility Area')}: ${getFacilityAreaLabel(ticketForm.facilityArea)}${ticketForm.facilityDevice ? ` | ${t('Device / Location Detail')}: ${ticketForm.facilityDevice}` : ''}] ${ticketForm.content.trim()}`;
+      finalEvidenceUrl = ticketForm.evidenceUrl;
       finalPriority = ticketForm.facilityUrgency || 'NORMAL';
     } else if (ticketForm.category === 'COMPLAINT') {
       if (!ticketForm.title.trim() || !ticketForm.content.trim()) {
@@ -372,24 +383,24 @@ const MemberSupportView = () => {
         preferredResolution: finalPreferredResolution,
         title: finalTitle,
         content: finalContent,
+        evidenceUrl: finalEvidenceUrl,
         priority: finalPriority
       };
       const res = await memberService.createSupportRequest(payload);
 
-      let prefLabel = '';
-      if (finalPreferredResolution === 'ISSUE_CREDIT') prefLabel = t('Course Credit Voucher');
-      if (finalPreferredResolution === 'GYM_PASS') prefLabel = t('Free 1-Month Gym Pass');
-      if (finalPreferredResolution === 'CASH_REFUND') prefLabel = t('Cash / Bank Refund');
+      const prefLabel = finalPreferredResolution === 'ISSUE_CREDIT' ? t('Course Credit Voucher') : '';
 
       setModalSuccess({
         type: 'SUPPORT_REQUEST_SUBMITTED',
         requestId: res.requestId,
         preferredLabel: prefLabel,
-        message: ticketForm.category === 'COACH_FEEDBACK'
-          ? t('Coach feedback and complaints are sent directly to Center Management for objective assessment and confidential handling.')
-          : ticketForm.category === 'FACILITY_ISSUE'
-            ? t('Facility and equipment reports are routed directly to Center Management for technical inspection and resolution.')
-            : t('Your support ticket has been submitted to Reception. Our staff will review your request and issue a credit or alternative resolution.')
+        message: ticketForm.category === 'CLASS_CANCELLATION'
+          ? t('Your cancellation request and evidence have been sent to Admin / Center Management for review. Your current schedule remains unchanged until approved.')
+          : ticketForm.category === 'COACH_FEEDBACK'
+            ? t('Coach feedback and complaints are sent directly to Center Management for objective assessment and confidential handling.')
+            : ticketForm.category === 'FACILITY_ISSUE'
+              ? t('Facility and equipment reports are routed directly to Center Management for technical inspection and resolution.')
+              : t('Your support ticket has been submitted to Reception. Our staff will review your request and issue a credit or alternative resolution.')
       });
       await fetchData();
     } catch (err) {
@@ -762,13 +773,20 @@ const MemberSupportView = () => {
                           );
                         })()}
 
-                        {tkt.preferredResolution && (
+                        {tkt.evidenceUrl && (
+                          <div className="space-y-1.5">
+                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                              {t('Supporting Evidence File / Photo')}
+                            </div>
+                            <EvidencePreviewBox evidenceUrl={tkt.evidenceUrl} />
+                          </div>
+                        )}
+
+                        {tkt.preferredResolution && tkt.preferredResolution === 'ISSUE_CREDIT' && (
                           <div className="flex items-center gap-2 text-xs text-slate-500">
                             <span className="font-semibold">{t('Preferred Compensation')}:</span>
                             <span className="font-bold text-[#0071E3]">
-                              {tkt.preferredResolution === 'ISSUE_CREDIT' && t('Credit Voucher')}
-                              {tkt.preferredResolution === 'GYM_PASS' && t('1-Month Gym Pass')}
-                              {tkt.preferredResolution === 'CASH_REFUND' && t('Cash / Bank Refund')}
+                              {t('Credit Voucher')}
                             </span>
                           </div>
                         )}
@@ -938,7 +956,7 @@ const MemberSupportView = () => {
                   <h3 id="ticket-modal-title" className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                     {modalSuccess ? (
                       modalSuccess.type === 'DIRECT_CANCEL_SUCCESS'
-                        ? t('Class Cancelled & 100% Credit Granted!')
+                        ? t('Class Cancelled & 50% Credit Granted!')
                         : t('Support Ticket Submitted!')
                     ) : ticketForm.category === 'CLASS_CANCELLATION' ? (
                       t('Class Cancellation & Refund Policy')
@@ -949,7 +967,7 @@ const MemberSupportView = () => {
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {modalSuccess ? (
                       modalSuccess.type === 'DIRECT_CANCEL_SUCCESS'
-                        ? t('100% credit granted to your wallet.')
+                        ? t('50% credit granted to your wallet.')
                         : t('Ticket ID') + `: #${modalSuccess.requestId}`
                     ) : ticketForm.category === 'CLASS_CANCELLATION' && cancelPreview ? (
                       cancelPreview.className
@@ -1034,7 +1052,13 @@ const MemberSupportView = () => {
                                 key={cat.key}
                                 type="button"
                                 onClick={() => {
-                                  setTicketForm({ ...ticketForm, category: cat.key });
+                                  setTicketForm({
+                                    ...ticketForm,
+                                    category: cat.key,
+                                    evidenceUrl: '',
+                                    evidenceFileName: ''
+                                  });
+                                  setFacilityUploadError('');
                                   setCategoryDropdownOpen(false);
                                 }}
                                 className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all ${
@@ -1145,23 +1169,26 @@ const MemberSupportView = () => {
                         <div className="space-y-4">
                           <ClassCancellationPreviewCard
                             preview={cancelPreview}
-                            preferredResolution={ticketForm.preferredResolution}
-                            onSelectResolution={(res) => setTicketForm({ ...ticketForm, preferredResolution: res })}
                           />
 
                           <ClassCancellationFormSection
                             preview={cancelPreview}
-                            preferredResolution={ticketForm.preferredResolution}
+                            step={cancelStep}
+                            onStepChange={setCancelStep}
                             reasonCategory={ticketForm.cancellationReason}
                             onChangeReasonCategory={(val) => setTicketForm({ ...ticketForm, cancellationReason: val })}
                             reasonContent={ticketForm.content}
                             onChangeReasonContent={(val) => setTicketForm({ ...ticketForm, content: val })}
+                            evidenceUrl={ticketForm.evidenceUrl}
+                            evidenceFileName={ticketForm.evidenceFileName}
+                            onChangeEvidence={(url, name) => setTicketForm(prev => ({ ...prev, evidenceUrl: url, evidenceFileName: name }))}
                             submitting={creating}
                             onClose={handleCloseModal}
-                            onDirectCancel={() => handleDirectCancel(ticketForm.classId)}
+                            onDirectCancel={(opts) => handleDirectCancel(ticketForm.classId, opts)}
                             onSubmitSupport={handleCreateTicket}
                             directCancelDisabled={!cancelPreview.canDirectCancelWithCredit || !!existingPendingTicketForSelectedClass}
                             supportSubmitDisabled={!!existingPendingTicketForSelectedClass}
+                            forfeitCancelDisabled={!!existingPendingTicketForSelectedClass}
                           />
                         </div>
                       )}
@@ -1370,6 +1397,52 @@ const MemberSupportView = () => {
                           required
                         />
                       </div>
+
+                      {ticketForm.category === 'FACILITY_ISSUE' && (
+                        <div className="space-y-1.5">
+                          <label htmlFor="facility-evidence-upload" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            {t('Facility Issue Photo Evidence')} <span className="text-rose-500">*</span>
+                          </label>
+                          <label
+                            htmlFor="facility-evidence-upload"
+                            className="block p-3.5 rounded-xl border border-dashed border-black/[0.15] dark:border-white/[0.18] hover:border-[#0071E3] bg-black/[0.02] dark:bg-white/[0.03] text-center cursor-pointer transition-colors"
+                          >
+                            <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                              {t('Upload photo (PNG, JPG, WEBP - max 10 MB)')}
+                            </span>
+                            <input
+                              id="facility-evidence-upload"
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                setFacilityUploadError('');
+                                try {
+                                  const processed = await processEvidenceFile(file, { imageOnly: true });
+                                  setTicketForm(prev => ({
+                                    ...prev,
+                                    evidenceUrl: processed.dataUrl,
+                                    evidenceFileName: processed.fileName
+                                  }));
+                                } catch (err) {
+                                  setFacilityUploadError(err.message || t('Failed to process evidence file.'));
+                                }
+                                e.target.value = '';
+                              }}
+                              className="sr-only"
+                            />
+                          </label>
+                          {facilityUploadError && (
+                            <p className="text-xs text-rose-500 font-medium">{facilityUploadError}</p>
+                          )}
+                          <EvidencePreviewBox
+                            evidenceUrl={ticketForm.evidenceUrl}
+                            fileName={ticketForm.evidenceFileName}
+                            onClear={() => setTicketForm(prev => ({ ...prev, evidenceUrl: '', evidenceFileName: '' }))}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </form>
@@ -1393,7 +1466,8 @@ const MemberSupportView = () => {
                   disabled={
                     creating ||
                     !ticketForm.content.trim() ||
-                    (ticketForm.category !== 'COACH_FEEDBACK' && !ticketForm.title.trim())
+                    (ticketForm.category !== 'COACH_FEEDBACK' && !ticketForm.title.trim()) ||
+                    (ticketForm.category === 'FACILITY_ISSUE' && !ticketForm.evidenceUrl)
                   }
                   className="px-6 py-2.5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] text-white font-semibold text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm shadow-blue-500/25 disabled:opacity-50 active:scale-95 cursor-pointer"
                 >

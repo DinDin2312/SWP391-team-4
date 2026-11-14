@@ -46,6 +46,9 @@ public class SupportRequest {
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "evidence_url", columnDefinition = "LONGTEXT")
+    private String evidenceUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
     @Builder.Default

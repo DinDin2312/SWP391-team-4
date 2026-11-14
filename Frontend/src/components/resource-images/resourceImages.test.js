@@ -12,6 +12,8 @@ test('defaultPackageCoverUrl maps package tiers to distinct curated cover images
   assert.equal(defaultPackageCoverUrl({ packageType: 'AI_ACCESS', durationDays: 30 }), '/images/pkg-ai-personal.jpg');
   assert.equal(defaultPackageCoverUrl({ packageType: 'AI_ACCESS', durationDays: 90 }), '/images/pkg-ai-premium.jpg');
   assert.equal(defaultPackageCoverUrl({ packageType: 'AI_ACCESS', durationDays: 365 }), '/images/pkg-ai-vip.jpg');
+  assert.equal(defaultPackageCoverUrl({ packageType: 'POOL_ACCESS', durationDays: 30 }), '/images/swimming-poster.jpg');
+  assert.equal(defaultPackageCoverUrl({ packageType: 'SAUNA_ACCESS', durationDays: 30 }), '/images/studio-poster.jpg');
   assert.equal(defaultPackageCoverUrl({ packageType: 'COMBO', durationDays: 30 }), '/images/pkg-combo-ai.jpg');
 });
 

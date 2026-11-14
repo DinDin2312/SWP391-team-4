@@ -16,13 +16,13 @@ import { InfiniteMovingCards } from '../../../components/ui/infinite-moving-card
 import { splitCode, classLevelFromCode } from '../../manager/components/classSearch';
 import { resourceImageUrl } from '../../../components/resource-images/resourceImages';
 
+const GUEST_COURSES_PER_PAGE = 6;
+
 const LandingPage = () => {
   const language = useLanguage();
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showSchedule, setShowSchedule] = useState(false);
-  const [scheduleSearch, setScheduleSearch] = useState('');
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [packageCategory, setPackageCategory] = useState('ALL');
   
@@ -37,8 +37,10 @@ const LandingPage = () => {
   const [selectedTimeSlots, setSelectedTimeSlots] = useState([]);
   const [selectedDate, setSelectedDate] = useState('ALL');
   const [selectedCourseDetail, setSelectedCourseDetail] = useState(null);
+  const [classPage, setClassPage] = useState(1);
 
   const toggleDay = (dayId) => {
+    setClassPage(1);
     if (dayId === 'ALL') {
       setSelectedDays([]);
       return;
@@ -49,6 +51,7 @@ const LandingPage = () => {
   };
 
   const toggleTimeSlot = (slotId) => {
+    setClassPage(1);
     if (slotId === 'ALL') {
       setSelectedTimeSlots([]);
       return;
@@ -64,6 +67,7 @@ const LandingPage = () => {
     setDayMatchMode('ANY');
     setSelectedTimeSlots([]);
     setSelectedDate('ALL');
+    setClassPage(1);
   };
 
   const isClassFiltered = Boolean(
@@ -230,37 +234,43 @@ const LandingPage = () => {
     });
   }, [classes, selectedSubject, selectedDays, dayMatchMode, selectedTimeSlots, selectedDate, classSearch]);
 
+  const totalClassPages = Math.max(1, Math.ceil(filteredClasses.length / GUEST_COURSES_PER_PAGE));
+  const safeClassPage = Math.min(classPage, totalClassPages);
+  const paginatedClasses = useMemo(() => {
+    const start = (safeClassPage - 1) * GUEST_COURSES_PER_PAGE;
+    return filteredClasses.slice(start, start + GUEST_COURSES_PER_PAGE);
+  }, [filteredClasses, safeClassPage]);
+
+  const handleGuestClassPageChange = (nextPage) => {
+    const clamped = Math.max(1, Math.min(totalClassPages, nextPage));
+    setClassPage(clamped);
+    const sectionEl = document.getElementById('classes');
+    if (sectionEl) {
+      sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   // Filtered packages by tab category
   const filteredPackages = useMemo(() => {
     if (!packages || packages.length === 0) return defaultPackages;
-    // Hide 0 price trials from the primary public showcase grid to keep it premium
-    const valid = packages.filter(p => (p.price || 0) > 0);
+    // Hide 0 price trials and retired AI / Gym+AI packages from public showcase grid
+    const valid = packages.filter((p) => {
+      const name = (p.packageName || '').toLowerCase();
+      return (p.price || 0) > 0 && p.packageType !== 'AI_ACCESS' && !name.includes('gym + ai') && !name.includes('gym+ai');
+    });
     if (packageCategory === 'ALL') return valid.slice(0, 6);
     if (packageCategory === 'GYM') {
       return valid.filter(p => p.packageType === 'GYM_ACCESS' && !p.packageName.toLowerCase().includes('bơi') && !p.packageName.toLowerCase().includes('combo')).slice(0, 6);
     }
     if (packageCategory === 'POOL_COMBO') {
-      return valid.filter(p => p.packageName.toLowerCase().includes('bơi') || p.packageName.toLowerCase().includes('combo')).slice(0, 6);
-    }
-    if (packageCategory === 'AI') {
-      return valid.filter(p => p.packageType === 'AI_ACCESS').slice(0, 6);
+      return valid.filter((p) => {
+        const type = (p.packageType || '').toUpperCase();
+        const name = (p.packageName || '').toLowerCase();
+        return type === 'POOL_ACCESS' || type === 'SAUNA_ACCESS' || name.includes('bơi') || name.includes('xông hơi') || name.includes('sauna') || name.includes('combo');
+      }).slice(0, 6);
     }
     return valid.slice(0, 6);
   }, [packages, packageCategory]);
-
-  // Filter weekly class schedules in modal
-  const filteredSchedules = useMemo(() => {
-    const q = scheduleSearch.trim().toLowerCase();
-    if (!q) return classes;
-    return classes.filter((c) => {
-      const patternLabel = formatPatternText(c.schedulePattern, isVi);
-      const haystack = [c.className, c.subjectName, c.coachName, c.roomName, patternLabel]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [classes, scheduleSearch, isVi]);
 
   const toggleFaq = (index) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
@@ -279,38 +289,38 @@ const LandingPage = () => {
         return String(b || '');
       });
     }
+    const type = (pkg.packageType || '').toUpperCase();
     const name = (pkg.packageName || '').toLowerCase();
-    const type = pkg.packageType || '';
 
-    if (type === 'AI_ACCESS' || name.includes('ai')) {
-      return [
-        'Trợ lý AI xây dựng giáo án tập luyện cá nhân 24/7',
-        'Phân tích chỉ số cơ và nhịp tim qua từng buổi',
-        'Gợi ý chế độ ăn thâm hụt / tăng cơ theo mục tiêu',
-        `Thời hạn sử dụng ${pkg.durationDays} ngày linh hoạt`
-      ];
-    }
-    if (name.includes('bơi')) {
+    if (type === 'POOL_ACCESS' || name.includes('bơi')) {
       return [
         'Bể bơi 4 mùa nước ấm 25m điện phân muối khoáng',
         'Tự do bơi lội và thư giãn cơ sau giờ làm việc',
-        'Miễn phí phòng xông hơi đá muối Sauna VIP',
-        `Thời hạn sử dụng ${pkg.durationDays} ngày`
+        'Miễn phí tủ đồ RFID & khu tắm tráng nước nóng',
+        tr(`Thời hạn sử dụng ${pkg.durationDays} ngày`, `Valid for ${pkg.durationDays} days`)
+      ];
+    }
+    if (type === 'SAUNA_ACCESS' || name.includes('xông hơi') || name.includes('sauna')) {
+      return [
+        'Phòng xông hơi khô đá muối Himalaya & xông hơi ướt',
+        'Phục hồi cơ bắp, giảm căng thẳng sau tập luyện',
+        'Miễn phí tủ đồ RFID & khu tắm tráng nóng lạnh',
+        tr(`Thời hạn sử dụng ${pkg.durationDays} ngày`, `Valid for ${pkg.durationDays} days`)
       ];
     }
     if (name.includes('combo')) {
       return [
-        'Full quyền sử dụng sàn Gym Tầng 1 và Trợ lý AI',
+        'Full quyền sử dụng sàn Gym Tầng 1 và tiện ích nâng cao',
         'Không giới hạn giờ xông hơi Sauna & Locker thông minh',
         'Đo chỉ số cơ thể InBody định kỳ hàng tuần',
-        `Thời hạn sử dụng ${pkg.durationDays} ngày`
+        tr(`Thời hạn sử dụng ${pkg.durationDays} ngày`, `Valid for ${pkg.durationDays} days`)
       ];
     }
     return [
       'Toàn quyền tập luyện sàn Gym Tầng 1 chuẩn Olympic',
       'Miễn phí tủ đồ RFID & phòng tắm nóng lạnh',
       'Được HLV trực sàn hướng dẫn kỹ thuật cơ bản',
-      `Thời hạn sử dụng ${pkg.durationDays} ngày`
+      tr(`Thời hạn sử dụng ${pkg.durationDays} ngày`, `Valid for ${pkg.durationDays} days`)
     ];
   };
 
@@ -350,13 +360,13 @@ const LandingPage = () => {
             <a href="#facilities" className="hover:text-blue-400 transition-colors">{t("Facilities")}</a>
             <a href="#classes" className="hover:text-blue-400 transition-colors">{t("Classes")}</a>
             <a href="#pricing" className="hover:text-blue-400 transition-colors">{t("Pricing")}</a>
-            <button 
-              onClick={() => setShowSchedule(true)} 
+            <a 
+              href="#classes" 
               className="hover:text-blue-400 transition-colors flex items-center gap-1.5"
             >
               <Calendar className="w-4 h-4 text-blue-400" />
-              <span>{t("Schedule")}</span>
-            </button>
+              <span>{t("Courses & Roadmap")}</span>
+            </a>
             <a href="#faq" className="hover:text-blue-400 transition-colors">{t("FAQ")}</a>
           </div>
 
@@ -419,16 +429,14 @@ const LandingPage = () => {
                 >
                   {t("Pricing")}
                 </a>
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    setShowSchedule(true);
-                  }}
+                <a
+                  href="#classes"
+                  onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-600/10 hover:text-blue-400 text-left transition-colors"
                 >
                   <Calendar className="w-4 h-4 text-blue-400" />
-                  <span>{t("Schedule")}</span>
-                </button>
+                  <span>{t("Courses & Roadmap")}</span>
+                </a>
                 <a 
                   href="#faq" 
                   onClick={() => setMobileMenuOpen(false)}
@@ -562,35 +570,35 @@ const LandingPage = () => {
                   <div className="h-52 relative overflow-hidden">
                     <img 
                       src={item.image} 
-                      alt={item.name}
+                      alt={t(item.name)}
                       loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#060b17] via-black/40 to-transparent"></div>
                     <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-xs font-bold text-blue-400 flex items-center gap-1.5">
                       <IconComp className="w-3.5 h-3.5" />
-                      <span>{item.floor}</span>
+                      <span>{t(item.floor)}</span>
                     </div>
                     <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-emerald-500/20 backdrop-blur-md border border-emerald-500/30 text-xs font-bold text-emerald-300">
-                      {item.badge}
+                      {t(item.badge)}
                     </div>
                   </div>
 
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
                       <div className="text-xs uppercase font-bold tracking-wider text-blue-400 mb-1">
-                        {item.category}
+                        {t(item.category)}
                       </div>
                       <h3 className="text-xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">
-                        {item.name}
+                        {t(item.name)}
                       </h3>
                       <p className="text-slate-400 text-sm leading-relaxed mb-4">
-                        {item.description}
+                        {t(item.description)}
                       </p>
                     </div>
 
                     <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-slate-400">
-                      <span>{t("Capacity")}: <strong className="text-white">{item.capacity}</strong></span>
+                      <span>{t("Capacity")}: <strong className="text-white">{t(item.capacity)}</strong></span>
                     </div>
                   </div>
                 </div>
@@ -626,14 +634,6 @@ const LandingPage = () => {
                 )}
               </p>
             </div>
-            <button 
-              onClick={() => setShowSchedule(true)} 
-              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-2 border border-slate-700 transition-colors shadow-lg shrink-0 self-start md:self-auto"
-            >
-              <Calendar className="w-4 h-4" />
-              <span>{t("View all schedule")}</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
           </div>
 
           {loadingClasses ? (
@@ -853,6 +853,7 @@ const LandingPage = () => {
                       onClick={() => {
                         setSelectedSubject('ALL');
                         setSelectedDate('ALL');
+                        setClassPage(1);
                       }}
                       className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         selectedSubject === 'ALL'
@@ -869,6 +870,7 @@ const LandingPage = () => {
                         onClick={() => {
                           setSelectedSubject(subj.name);
                           setSelectedDate('ALL');
+                          setClassPage(1);
                         }}
                         className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                           selectedSubject === subj.name
@@ -887,13 +889,19 @@ const LandingPage = () => {
                       type="text"
                       placeholder={tr('Tìm khóa học, mã lớp, HLV, phòng...', 'Search course, code, coach, room...')}
                       value={classSearch}
-                      onChange={(e) => setClassSearch(e.target.value)}
+                      onChange={(e) => {
+                        setClassSearch(e.target.value);
+                        setClassPage(1);
+                      }}
                       className="w-full pl-10 pr-8 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                     />
                     {classSearch && (
                       <button
                         type="button"
-                        onClick={() => setClassSearch('')}
+                        onClick={() => {
+                          setClassSearch('');
+                          setClassPage(1);
+                        }}
                         aria-label={tr('Xóa tìm kiếm', 'Clear search')}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
                       >
@@ -917,7 +925,10 @@ const LandingPage = () => {
                         <div className="flex items-center bg-slate-900 border border-slate-800 p-0.5 rounded-lg text-[11px] font-semibold">
                           <button
                             type="button"
-                            onClick={() => setDayMatchMode('ANY')}
+                            onClick={() => {
+                              setDayMatchMode('ANY');
+                              setClassPage(1);
+                            }}
                             className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                               dayMatchMode === 'ANY'
                                 ? 'bg-slate-800 text-white font-bold shadow-xs'
@@ -928,7 +939,10 @@ const LandingPage = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setDayMatchMode('EXACT')}
+                            onClick={() => {
+                              setDayMatchMode('EXACT');
+                              setClassPage(1);
+                            }}
                             className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                               dayMatchMode === 'EXACT'
                                 ? 'bg-blue-600 text-white font-bold shadow-xs'
@@ -943,7 +957,10 @@ const LandingPage = () => {
                         {selectedDays.length > 0 && (
                           <button
                             type="button"
-                            onClick={() => setSelectedDays([])}
+                            onClick={() => {
+                              setSelectedDays([]);
+                              setClassPage(1);
+                            }}
                             className="text-blue-400 hover:underline font-semibold cursor-pointer text-xs shrink-0"
                           >
                             {tr('Tất cả các thứ', 'All Days')}
@@ -983,7 +1000,10 @@ const LandingPage = () => {
                       {selectedTimeSlots.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => setSelectedTimeSlots([])}
+                          onClick={() => {
+                            setSelectedTimeSlots([]);
+                            setClassPage(1);
+                          }}
                           className="text-blue-400 hover:underline font-semibold cursor-pointer text-xs"
                         >
                           {tr('Mọi khung giờ', 'All Times')}
@@ -1002,8 +1022,8 @@ const LandingPage = () => {
                             onClick={() => toggleTimeSlot(slot.id)}
                             className={`px-3 py-2 rounded-xl text-xs transition-all flex flex-col items-start gap-0.5 cursor-pointer border ${
                               isActive
-                                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 border-blue-500'
-                                : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 border-slate-800'
+                                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 border border-blue-500'
+                                : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-800'
                             }`}
                           >
                             <div className="flex items-center gap-1.5 font-bold">
@@ -1030,7 +1050,10 @@ const LandingPage = () => {
                     {selectedDate !== 'ALL' && (
                       <button
                         type="button"
-                        onClick={() => setSelectedDate('ALL')}
+                        onClick={() => {
+                          setSelectedDate('ALL');
+                          setClassPage(1);
+                        }}
                         className="text-blue-400 hover:underline font-semibold cursor-pointer text-xs"
                       >
                         {tr('Tất cả ngày', 'All dates')}
@@ -1041,7 +1064,10 @@ const LandingPage = () => {
                   <div className="flex items-center gap-2 overflow-x-auto pb-1">
                     <button
                       type="button"
-                      onClick={() => setSelectedDate('ALL')}
+                      onClick={() => {
+                        setSelectedDate('ALL');
+                        setClassPage(1);
+                      }}
                       className={`flex flex-col items-center justify-center px-3.5 py-2 rounded-xl min-w-[74px] transition-all cursor-pointer border shrink-0 ${
                         selectedDate === 'ALL'
                           ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/25 border-blue-500'
@@ -1067,7 +1093,10 @@ const LandingPage = () => {
                         <button
                           key={dateStr}
                           type="button"
-                          onClick={() => setSelectedDate(dateStr)}
+                          onClick={() => {
+                            setSelectedDate(dateStr);
+                            setClassPage(1);
+                          }}
                           className={`flex flex-col items-center justify-center px-3.5 py-2 rounded-xl min-w-[74px] transition-all cursor-pointer border shrink-0 ${
                             isActive
                               ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/25 border-blue-500'
@@ -1091,8 +1120,9 @@ const LandingPage = () => {
               </div>
 
               {filteredClasses.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredClasses.map((course, idx) => {
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {paginatedClasses.map((course, idx) => {
                 const { code: classCode, name: classDisplayName } = splitCode(course.className);
                 const levelBand = classLevelFromCode(classCode);
                 const levelLabel = levelText(levelBand, isVi);
@@ -1285,6 +1315,52 @@ const LandingPage = () => {
                   </div>
                 );
               })}
+                  </div>
+
+                  {totalClassPages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-[#0a1122] border border-slate-800 shadow-lg">
+                      <div className="text-xs font-medium text-slate-400">
+                        {tr(
+                          `Hiển thị ${(safeClassPage - 1) * GUEST_COURSES_PER_PAGE + 1}–${Math.min(safeClassPage * GUEST_COURSES_PER_PAGE, filteredClasses.length)} trong tổng số ${filteredClasses.length} lớp học`,
+                          `Showing ${(safeClassPage - 1) * GUEST_COURSES_PER_PAGE + 1}–${Math.min(safeClassPage * GUEST_COURSES_PER_PAGE, filteredClasses.length)} of ${filteredClasses.length} classes`
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                        <button
+                          type="button"
+                          onClick={() => handleGuestClassPageChange(safeClassPage - 1)}
+                          disabled={safeClassPage <= 1}
+                          className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
+                          <span>{tr('Trước', 'Prev')}</span>
+                        </button>
+                        {Array.from({ length: totalClassPages }, (_, i) => i + 1).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            onClick={() => handleGuestClassPageChange(pageNum)}
+                            className={`min-w-[36px] h-[36px] px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                              safeClassPage === pageNum
+                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 border border-blue-500'
+                                : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => handleGuestClassPageChange(safeClassPage + 1)}
+                          disabled={safeClassPage >= totalClassPages}
+                          className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <span>{tr('Sau', 'Next')}</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-blue-400" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="bg-[#0a1122] border border-slate-800 rounded-3xl p-12 text-center space-y-3">
@@ -1374,8 +1450,7 @@ const LandingPage = () => {
               {[
                 { id: 'ALL', label: t('Tất cả gói tập') },
                 { id: 'GYM', label: t('Gym & Thể Hình') },
-                { id: 'POOL_COMBO', label: t('Bơi Lội & Combo') },
-                { id: 'AI', label: t('Trợ Lý AI') },
+                { id: 'POOL_COMBO', label: t('Bể Bơi & Xông Hơi') },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -1417,7 +1492,7 @@ const LandingPage = () => {
                       <span className="text-xs uppercase font-bold tracking-wider text-blue-400">
                         {codeLabel(pkg.packageType || 'MEMBERSHIP')}
                       </span>
-                      <h3 className="text-2xl font-bold text-white mt-1 line-clamp-1">{pkg.packageName}</h3>
+                      <h3 className="text-2xl font-bold text-white mt-1 line-clamp-1">{t(pkg.packageName)}</h3>
                     </div>
 
                     <div className="mb-6 pb-6 border-b border-slate-800">
@@ -1520,138 +1595,6 @@ const LandingPage = () => {
           </div>
         </div>
       </section>
-
-      {/* Schedule Modal */}
-      <AnimatePresence>
-        {showSchedule && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-[#0a1122] border border-slate-700 shadow-2xl shadow-blue-900/30 rounded-3xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden relative"
-            >
-              {/* Modal Header */}
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 p-6 border-b border-slate-800 bg-[#0a1122] z-10 shrink-0">
-                <div>
-                  <h3 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                    <Calendar className="w-6 h-6 text-blue-500" />
-                    {t("Weekly Class Schedule")}
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {t("Lịch học công khai cập nhật thời gian thực theo từng bộ môn và phòng tập.")}
-                  </p>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  {/* Search box */}
-                  <div className="relative w-full sm:w-80">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder={t("Tìm lớp, HLV...")}
-                      value={scheduleSearch}
-                      onChange={(e) => setScheduleSearch(e.target.value)}
-                      className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  <button 
-                    onClick={() => setShowSchedule(false)} 
-                    aria-label={t("Close")}
-                    className="p-2 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-full transition-colors shrink-0"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-              
-              {/* Modal Body */}
-              <div className="overflow-y-auto px-6 pb-6 custom-scrollbar relative">
-                <table className="w-full text-left border-collapse text-slate-300">
-                  <thead className="sticky top-0 bg-[#0a1122] z-20 shadow-md">
-                    <tr className="border-b border-slate-700 text-blue-400 text-xs uppercase tracking-wider">
-                      <th className="p-4 pt-6 font-bold min-w-[240px]">{tr('Thứ học & Khung giờ', 'Days & Time Slot')}</th>
-                      <th className="p-4 pt-6 font-bold min-w-[280px]">{t("Class & Coach")}</th>
-                      <th className="p-4 pt-6 font-bold min-w-[240px]">{t("Room")}</th>
-                      <th className="p-4 pt-6 font-bold min-w-[140px]">{t("Price")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredSchedules.length > 0 ? (
-                      filteredSchedules.map((course, idx) => {
-                        const timing = formatCourseTiming(course, isVi);
-                        const maxSlots = Number(course.maxSlots) || 0;
-                        const displayBooked = Math.min(maxSlots || Number(course.bookedSlots || 0), Number(course.bookedSlots || 0));
-                        const spotsLeft = Math.max(0, maxSlots - displayBooked);
-                        const isFull = maxSlots > 0 && spotsLeft <= 0;
-                        return (
-                          <tr key={course.classId || idx} className="border-b border-slate-800/50 hover:bg-blue-900/10 transition-colors group">
-                            <td className="p-4 align-top whitespace-nowrap">
-                              <div className="font-bold text-white group-hover:text-blue-300">
-                                {timing.patternText}
-                              </div>
-                              <div className="text-xs font-semibold text-blue-400 mt-0.5">
-                                {timing.timeStr} ({course.durationMinutes || 60} {tr('phút', 'min')})
-                              </div>
-                              <div className="text-[11px] text-slate-400 mt-1">
-                                {tr('Khai giảng:', 'Starts:')} {timing.nextDateStr} • {course.totalSessions || 0} {tr('buổi', 'sessions')}
-                              </div>
-                            </td>
-                            <td className="p-4 align-top font-medium">
-                              <div className="text-white font-bold">{course.className}</div>
-                              <div className="text-xs text-slate-400 font-normal mt-0.5">
-                                {t("Coach")} {course.coachName}
-                              </div>
-                            </td>
-                            <td className="p-4 align-top text-slate-300 text-sm">
-                              <div>{course.roomName}</div>
-                              {maxSlots > 0 && (
-                                <div className="text-[11px] text-slate-400 mt-0.5">
-                                  {displayBooked}/{maxSlots} {tr('học viên', 'enrolled')}{' '}
-                                  <span className={isFull ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>
-                                    ({isFull ? tr('Đã đủ chỗ', 'Full') : tr(`Còn ${spotsLeft} chỗ trống`, `${spotsLeft} spots left`)})
-                                  </span>
-                                </div>
-                              )}
-                            </td>
-                            <td className="p-4 align-top whitespace-nowrap">
-                              <div className="text-emerald-400 font-bold">
-                                {(course.price || 0).toLocaleString('vi-VN')} {t("₫")}
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedCourseDetail(course);
-                                  setShowSchedule(false);
-                                }}
-                                className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
-                              >
-                                <BookOpen className="w-3 h-3" />
-                                <span>{tr('Xem lộ trình', 'View roadmap')}</span>
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan="4" className="p-12 text-center text-slate-500 bg-slate-900/20 rounded-xl">
-                          <Dumbbell className="w-8 h-8 mx-auto mb-3 opacity-20" />
-                          {classes.length === 0 
-                            ? t("No schedules available right now.") 
-                            : t("Không tìm thấy lớp học phù hợp với từ khóa.")
-                          }
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* Course Detail & Full Session Roadmap Modal */}
       <AnimatePresence>
@@ -1888,7 +1831,7 @@ const LandingPage = () => {
                 <li><a href="#facilities" className="hover:text-blue-400 transition-colors">{t("Facilities")}</a></li>
                 <li><a href="#classes" className="hover:text-blue-400 transition-colors">{t("Classes")}</a></li>
                 <li><a href="#pricing" className="hover:text-blue-400 transition-colors">{t("Pricing")}</a></li>
-                <li><button onClick={() => setShowSchedule(true)} className="hover:text-blue-400 transition-colors">{t("Weekly Schedule")}</button></li>
+                <li><a href="#classes" className="hover:text-blue-400 transition-colors">{t("Courses & Roadmap")}</a></li>
                 <li><a href="#faq" className="hover:text-blue-400 transition-colors">{t("FAQ")}</a></li>
               </ul>
             </div>
@@ -1978,7 +1921,7 @@ const defaultPackages = [
     benefits: [
       'Toàn quyền sử dụng Gym, Bể bơi 4 mùa & Yoga',
       'Không giới hạn giờ xông hơi đá muối Sauna VIP',
-      'Trợ lý AI xây dựng giáo án cá nhân hóa 24/7',
+      'Đo chỉ số InBody và tư vấn lộ trình định kỳ',
       '02 buổi tập kèm 1-1 với Huấn Luyện Viên',
     ],
   },

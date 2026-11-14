@@ -23,11 +23,13 @@ import {
   GraduationCap,
   Zap,
   Key,
+  QrCode,
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
 import { AuthContext } from '../../../context/AuthContext';
 import MemberDetailModal from './MemberDetailModal';
 import CoachCheckInTab from './CoachCheckInTab';
+import QrScannerModal from './QrScannerModal';
 import MemberTierAvatar from '../../../components/MemberTierAvatar';
 import {
   formatCheckInNote,
@@ -98,6 +100,7 @@ const MemberCheckInView = ({
   // Feedback banner & Detail modal
   const [feedback, setFeedback] = useState(null);
   const [detailModalUserId, setDetailModalUserId] = useState(null);
+  const [qrScannerOpen, setQrScannerOpen] = useState(false);
 
   const showFeedback = (type, message) => {
     setFeedback({ type, message });
@@ -148,7 +151,7 @@ const MemberCheckInView = ({
     }
   }, []);
 
-  const handleSelectMember = useCallback(async (member) => {
+  const handleSelectMember = useCallback(async (member, preferredMembershipId = null, preferredBookingId = null) => {
     setSelectedMember(member);
     setSelectedMemberDetail(null);
     setSelectedMembershipId('');
@@ -159,7 +162,7 @@ const MemberCheckInView = ({
     if (!member) {
       setMemberMemberships([]);
       setMemberBookings([]);
-      return;
+      return null;
     }
     setLoadingMemberships(true);
     try {
@@ -177,18 +180,38 @@ const MemberCheckInView = ({
       );
 
       if (activeOnes.length > 0) {
-        setSelectedMembershipId(String(activeOnes[0].membershipId));
-      }
-      if (todaysClasses.length > 0) {
-        setSelectedBookingId(String(todaysClasses[0].bookingId));
-        if (todaysClasses[0].roomId) {
-          setSelectedRoomId(String(todaysClasses[0].roomId));
+        const preferredActive = preferredMembershipId
+          ? activeOnes.find((m) => Number(m.membershipId) === Number(preferredMembershipId))
+          : null;
+        setSelectedMembershipId(String((preferredActive || activeOnes[0]).membershipId));
+      } else if (preferredMembershipId) {
+        const preferredUpcoming = pkgList.find(
+          (m) => m.status === 'UPCOMING' && Number(m.membershipId) === Number(preferredMembershipId)
+        );
+        if (preferredUpcoming) {
+          setSelectedMembershipId(String(preferredUpcoming.membershipId));
         }
       }
+      let matchedTodayClass = null;
+      if (todaysClasses.length > 0) {
+        matchedTodayClass = preferredBookingId
+          ? todaysClasses.find((b) => Number(b.bookingId) === Number(preferredBookingId)) || null
+          : null;
+        const chosenClass = matchedTodayClass || todaysClasses[0];
+        setSelectedBookingId(String(chosenClass.bookingId));
+        if (chosenClass.roomId) {
+          setSelectedRoomId(String(chosenClass.roomId));
+        }
+      }
+      const requestedBooking = preferredBookingId
+        ? bksList.find((b) => Number(b.bookingId) === Number(preferredBookingId)) || null
+        : null;
+      return { matchedTodayClass, requestedBooking };
     } catch (err) {
       console.error('Error loading member profile for check-in:', err);
       setMemberMemberships([]);
       setMemberBookings([]);
+      return null;
     } finally {
       setLoadingMemberships(false);
     }
@@ -209,6 +232,95 @@ const MemberCheckInView = ({
       }
     });
   }, [initialMemberId, fetchMembersList, handleSelectMember]);
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === 'F2' && checkInSubTab === 'member') {
+        e.preventDefault();
+        setQrScannerOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [checkInSubTab]);
+
+  const handleQrDetected = useCallback(async (parsed) => {
+    setQrScannerOpen(false);
+    const lookupKeyword = parsed.userId ? String(parsed.userId) : (parsed.email || '');
+
+    let match = members.find((m) =>
+      (parsed.userId && Number(m.userId) === Number(parsed.userId)) ||
+      (parsed.email && m.email?.toLowerCase() === parsed.email.toLowerCase())
+    );
+
+    if (!match && lookupKeyword) {
+      const freshList = await fetchMembersList(lookupKeyword);
+      match = freshList.find((m) =>
+        (parsed.userId && Number(m.userId) === Number(parsed.userId)) ||
+        (parsed.email && m.email?.toLowerCase() === parsed.email.toLowerCase())
+      ) || freshList[0];
+    }
+
+    if (!match && parsed.userId) {
+      try {
+        const detail = await receptionistService.getMemberDetail(parsed.userId);
+        if (detail?.userId) {
+          match = {
+            userId: detail.userId,
+            fullName: detail.fullName,
+            email: detail.email,
+            phone: detail.phone,
+            status: detail.status || 'ACTIVE',
+            avatarPath: detail.avatarPath,
+            avatarUrl: detail.avatarUrl,
+          };
+        }
+      } catch {
+        match = null;
+      }
+    }
+
+    if (!match) {
+      showFeedback('error', t('No member account matches this QR code.'));
+      return;
+    }
+
+    setMemberKeyword(match.fullName || String(match.userId));
+    const selectionResult = await handleSelectMember(
+      match,
+      parsed.membershipId || null,
+      parsed.bookingId || null
+    );
+    if (parsed.bookingId && !selectionResult?.matchedTodayClass) {
+      if (selectionResult?.requestedBooking) {
+        showFeedback(
+          'error',
+          t('QR verified for {0} (#{1}), but session "{2}" in this QR is not scheduled for today.', [
+            match.fullName,
+            match.userId,
+            selectionResult.requestedBooking.className || `#${parsed.bookingId}`,
+          ])
+        );
+      } else {
+        showFeedback(
+          'error',
+          t('QR verified for {0} (#{1}) — session #{2} is no longer valid for today check-in.', [
+            match.fullName,
+            match.userId,
+            parsed.bookingId,
+          ])
+        );
+      }
+      return;
+    }
+    showFeedback(
+      'success',
+      t('QR verified for {0} (#{1}). Review package & schedule below and confirm Check-in.', [
+        match.fullName,
+        match.userId,
+      ])
+    );
+  }, [members, fetchMembersList, handleSelectMember]);
 
   const handleSearchMembersSubmit = (e) => {
     e.preventDefault();
@@ -855,6 +967,29 @@ const MemberCheckInView = ({
                 </button>
               )}
             </div>
+            <button
+              type="button"
+              onClick={() => setQrScannerOpen(true)}
+              title="F2"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.6rem 0.85rem',
+                borderRadius: '0.65rem',
+                border: '1px solid var(--border)',
+                backgroundColor: 'var(--primary-soft)',
+                color: 'var(--primary)',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+              }}
+            >
+              <QrCode style={{ width: '16px', height: '16px' }} />
+              <span>{t('Scan QR')}</span>
+            </button>
           </form>
 
           {/* Member Quick List (shown when no member is selected) */}
@@ -1329,9 +1464,36 @@ const MemberCheckInView = ({
                           </div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
                             {hasGymAccess
-                              ? `${t('Package:')} ${activeMemberships[0]?.packageName || t('Active Gym Package')}`
+                              ? `${t('Package:')} ${selectedMembershipObj?.packageName || activeMemberships[0]?.packageName || t('Active Gym Package')}`
                               : t('No active gym package')}
                           </div>
+                          {activeMemberships.length > 1 && (
+                            <div style={{ marginTop: '0.45rem' }}>
+                              <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                                {t('Check-in Package')}
+                              </label>
+                              <select
+                                value={selectedMembershipId}
+                                onChange={(e) => setSelectedMembershipId(e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '0.42rem 0.6rem',
+                                  borderRadius: '0.5rem',
+                                  border: '1px solid var(--border)',
+                                  backgroundColor: 'var(--surface)',
+                                  color: 'var(--text)',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {activeMemberships.map((m) => (
+                                  <option key={m.membershipId} value={String(m.membershipId)}>
+                                    {m.packageName} ({m.daysRemaining}d)
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1929,6 +2091,13 @@ const MemberCheckInView = ({
           onClose={() => setDetailModalUserId(null)}
         />
       )}
+
+      {/* QR Pass Scanner Modal */}
+      <QrScannerModal
+        isOpen={qrScannerOpen}
+        onClose={() => setQrScannerOpen(false)}
+        onDetected={handleQrDetected}
+      />
     </div>
   );
 };

@@ -282,15 +282,15 @@ test('Cross-module UI/UX consistency: Support badges, ProtectedRoute RBAC, and R
     assert.equal(eligiblePolicy.remaining, 1);
     assert.equal(eligiblePolicy.exceedsEightyPercent, false);
 
-    const overLimitPolicy = supportUtils.getAttendancePolicySummary({
+    const highAttendancePolicy = supportUtils.getAttendancePolicySummary({
       category: 'CLASS_CANCELLATION',
       attendedSessions: 13,
       totalSessions: 15,
       remainingSessions: 2
     });
-    assert.equal(overLimitPolicy.exceedsEightyPercent, true);
-    assert.equal(overLimitPolicy.percent, 87);
-    assert.equal(overLimitPolicy.remaining, 2);
+    assert.equal(highAttendancePolicy.exceedsEightyPercent, false);
+    assert.equal(highAttendancePolicy.percent, 87);
+    assert.equal(highAttendancePolicy.remaining, 2);
 
     const emptyPolicy = supportUtils.getAttendancePolicySummary({});
     assert.equal(emptyPolicy.isCancellationLike, false);
@@ -308,13 +308,14 @@ test('Cross-module UI/UX consistency: Support badges, ProtectedRoute RBAC, and R
     const escalatedTicket = { category: 'COMPLAINT', status: 'ESCALATED' };
     const closedTicket = { category: 'CLASS_CANCELLATION', preferredResolution: 'ISSUE_CREDIT', status: 'APPROVED' };
 
-    assert.equal(supportUtils.isManagerOnlySupportTicket(creditTicket), false);
+    assert.equal(supportUtils.isManagerOnlySupportTicket(creditTicket), true);
     assert.equal(supportUtils.isManagerOnlySupportTicket(cashTicket), true);
     assert.equal(supportUtils.isManagerOnlySupportTicket(coachTicket), true);
     assert.equal(supportUtils.isManagerOnlySupportTicket(facilityTicket), true);
     assert.equal(supportUtils.isManagerOnlySupportTicket(escalatedTicket), true);
 
-    assert.equal(supportUtils.canStaffProcessTicket(creditTicket, false), true);
+    assert.equal(supportUtils.canStaffProcessTicket(creditTicket, false), false);
+    assert.equal(supportUtils.canStaffProcessTicket(creditTicket, true), true);
     assert.equal(supportUtils.canStaffProcessTicket(cashTicket, false), false);
     assert.equal(supportUtils.canStaffProcessTicket(cashTicket, true), true);
     assert.equal(supportUtils.canStaffProcessTicket(coachTicket, false), false);

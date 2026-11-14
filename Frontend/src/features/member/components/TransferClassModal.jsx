@@ -100,7 +100,7 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                 {t('Class Transfer')}
               </h3>
               <p className="text-xs text-on-surface-variant">
-                {t('Switch to an equivalent class of the same price before course start')}
+                {t('Switch to an equivalent class of the same price at least 24 hours before start')}
               </p>
             </div>
           </div>
@@ -189,12 +189,12 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                   {preview.canTransfer ? (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      {t('Not Started · Eligible for Transfer')}
+                      {t('Eligible (≥24h Before Start)')}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                       <AlertTriangle className="w-3.5 h-3.5" />
-                      {t('Already Started')}
+                      {t(preview.hasStarted ? 'Already Started' : 'Within 24h Cutoff')}
                     </span>
                   )}
                 </div>
@@ -244,7 +244,7 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                         {t('Select an Equivalent Class to Transfer To')}
                       </h4>
                       <p className="text-xs text-on-surface-variant">
-                        {t('List of equivalent-priced classes')} ({formatMoney(preview.classPrice)}) {t('not yet started and without schedule conflicts')}
+                        {t('List of equivalent-priced classes')} ({formatMoney(preview.classPrice)}) {t('starting at least 24 hours from now without schedule conflicts')}
                       </p>
                     </div>
                     <span className="px-2 py-0.5 rounded text-xs font-semibold bg-surface-container-high text-on-surface-variant">
@@ -255,13 +255,23 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                   {(!preview.equivalentClasses || preview.equivalentClasses.length === 0) ? (
                     <div className="text-center py-10 px-4 rounded-xl border border-dashed border-border bg-surface-container/30 text-on-surface-variant text-sm">
                       <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="font-medium">{t('No other equivalent-priced classes are currently available before start.')}</p>
+                      <p className="font-medium">{t('No suitable classes available for transfer.')}</p>
                       <p className="text-xs mt-1 text-on-surface-variant/80">
-                        {t('Please check back later or contact Reception if you wish to retain or cancel your class.')}
+                        {t('No open non-conflicting classes of the same subject and price were found right now.')}
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
+                    <div className="space-y-3">
+                      {!preview.equivalentClasses.some((c) => c.canSelect) && (
+                        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span>
+                            {t('No suitable classes available for transfer.')}{' '}
+                            {t('All classes of the same subject and price are currently full or conflict with your schedule.')}
+                          </span>
+                        </div>
+                      )}
+                      <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
                       {preview.equivalentClasses.map((item) => {
                         const isSelected = selectedTargetId === item.classId;
                         const canSelect = item.canSelect;
@@ -358,6 +368,7 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                           </div>
                         );
                       })}
+                      </div>
                     </div>
                   )}
                 </div>

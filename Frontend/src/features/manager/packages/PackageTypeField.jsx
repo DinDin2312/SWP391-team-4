@@ -29,7 +29,7 @@ export default function PackageTypeField({value,onChange,onCatalog,inputProps}) 
     </div>
     {draft && <div className="pkg-type-draft">
       <label htmlFor={id}>{t('Package type name')}<input id={id} value={name} maxLength={255} disabled={saving} onChange={event=>setName(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();save();}}}/></label>
-      <small>{t('Package types are shared categories for gym and AI access plans.')}</small>
+      <small>{t('Package types are shared categories for gym, pool, sauna, and amenity plans.')}</small>
       <div className="pkg-photo-buttons"><button type="button" className="manager-primary" disabled={saving} onClick={save}>{t(saving?'Saving...':'Save package type')}</button><button type="button" className="manager-secondary" disabled={saving} onClick={()=>{setDraft(null);setError('');}}>{t('Cancel')}</button></div>
     </div>}
     {error && <div className="manager-field-error" role="alert">{t(error)}{!types.length && <button type="button" className="manager-secondary" onClick={()=>{setError('');setLoading(true);setAttempt(n=>n+1);}}>{t('Retry')}</button>}</div>}

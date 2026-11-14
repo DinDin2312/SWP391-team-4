@@ -36,6 +36,8 @@
 .pkg-type svg { flex-shrink:0; }
 .pkg-name > .pkg-type { flex-shrink:0; padding:8px; border-radius:8px; background:var(--surface-hover); }
 .pkg-type-gym { color:var(--primary); }
+.pkg-type-pool { color:var(--info-text, var(--primary)); }
+.pkg-type-sauna { color:var(--warning-text, var(--primary)); }
 .pkg-type-ai { color:var(--info-text, var(--primary)); }
 .pkg-type-premium { color:var(--warning-text, var(--text)); }
 .pkg-type-combo { color:var(--accent, var(--primary)); }

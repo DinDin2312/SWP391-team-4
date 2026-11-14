@@ -4,6 +4,8 @@ import CancelClassPolicyModal from '../components/CancelClassPolicyModal';
 import MemberAssessmentsModal from '../components/MemberAssessmentsModal';
 import SelfAssessmentModal from '../components/SelfAssessmentModal';
 import BodyTransformationModal from '../components/BodyTransformationModal';
+import MemberSessionQrModal from '../components/MemberSessionQrModal';
+import { buildMemberQrPayload, buildMemberQrImageUrl } from '../memberUtils';
 import { formatDate } from '../../../utils/displayFormat';
 import React, { useState, useContext } from 'react';
 import MemberTierAvatar from '../../../components/MemberTierAvatar';
@@ -24,7 +26,7 @@ import {
   Clock,
   MapPin,
   User, TrendingUp,
-  X, Scale, Sparkles, Star, Award, MessageSquare, PlusCircle,
+  Scale, Sparkles, Star, Award, MessageSquare, PlusCircle,
   CreditCard,
 } from 'lucide-react';
 
@@ -79,6 +81,7 @@ const CustomerDashboard = () => {
   const [totalCheckIns, setTotalCheckIns] = useState(0);
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   const [memberTier, setMemberTier] = useState('MEMBER');
+  const [profileUserId, setProfileUserId] = useState(null);
   const [recentActivities, setRecentActivities] = useState([]);
 
   const fetchDashboardData = React.useCallback(async () => {
@@ -99,6 +102,7 @@ const CustomerDashboard = () => {
       if (profileData) {
         setLoyaltyPoints(profileData.loyaltyPoints || 0);
         setMemberTier(profileData.memberTier || 'MEMBER');
+        if (profileData.userId) setProfileUserId(profileData.userId);
       }
       setRecentActivities(Array.isArray(recentData) ? recentData : []);
       const health = healthData?.data || healthData;
@@ -989,7 +993,13 @@ const CustomerDashboard = () => {
                   {/* QR Code section */}
                   <div className="p-4 rounded-2xl bg-white shadow-xs ring-1 ring-black/5 dark:ring-white/10 flex items-center justify-center my-4">
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=NEXUS-${dynamicMemberId}-${userInfo?.email}`}
+                      src={buildMemberQrImageUrl(
+                        buildMemberQrPayload({
+                          userId: userInfo?.userId || profileUserId,
+                          email: userInfo?.email,
+                        }) || `NEXUS-${dynamicMemberId}-${userInfo?.email}`,
+                        120
+                      )}
                       alt="Nexus Pass QR"
                       className="w-full max-w-[120px] rounded-lg"
                     />
@@ -1006,7 +1016,7 @@ const CustomerDashboard = () => {
                           coachName: fullName,
                           roomName: t("Main Gate"),
                           status: membership ? membership.status : 'ACTIVE',
-                          bookingId: dynamicMemberId,
+                          isTurnstile: true,
                           startTime: new Date().toISOString()
                         }
                       })}
@@ -1253,47 +1263,14 @@ const CustomerDashboard = () => {
         }}
       />
 
-      {qrModal.isOpen && qrModal.session && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setQrModal({ isOpen: false, session: null })}>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 max-w-sm w-full shadow-2xl flex flex-col items-center gap-4 relative" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setQrModal({ isOpen: false, session: null })} className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text)]">
-              <X className="w-5 h-5" />
-            </button>
-            <div className="w-12 h-12 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
-              <QrCode className="w-6 h-6" />
-            </div>
-            <div className="text-center">
-              <h3 className="text-lg font-bold text-[var(--text)]">{t("Session Check-in Pass")}</h3>
-              <p className="text-xs text-[var(--text-muted)] mt-1">{qrModal.session.className}</p>
-            </div>
-            <div className="p-4 bg-white rounded-xl border border-[var(--border)] flex flex-col items-center gap-2">
-              <QrCode className="w-36 h-36 text-slate-900" />
-              <span className="font-mono text-xs font-bold text-slate-700 tracking-widest">
-                NXS-{qrModal.session.bookingId || qrModal.session.classId || dynamicMemberId}
-              </span>
-            </div>
-            <div className="w-full text-xs text-[var(--text-muted)] bg-[var(--bg)] rounded-xl p-3 border border-[var(--border)] flex flex-col gap-1.5">
-              <div className="flex justify-between">
-                <span>{t("Coach:")}</span>
-                <span className="font-semibold text-[var(--text)]">{qrModal.session.coachName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>{t("Location:")}</span>
-                <span className="font-semibold text-[var(--text)]">{qrModal.session.roomName}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>{t("Status:")}</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusBadgeClass(qrModal.session.status)}`}>
-                  {codeLabel(qrModal.session.status)}
-                </span>
-              </div>
-            </div>
-            <button onClick={() => setQrModal({ isOpen: false, session: null })} className="w-full py-2.5 rounded-xl bg-[var(--primary)] text-[color:var(--on-primary)] font-bold text-xs">
-              {t("Done")}
-            </button>
-          </div>
-        </div>
-      )}
+      <MemberSessionQrModal
+        isOpen={qrModal.isOpen}
+        onClose={() => setQrModal({ isOpen: false, session: null })}
+        session={qrModal.session}
+        userInfo={userInfo}
+        fallbackUserId={profileUserId}
+        getStatusBadgeClass={getStatusBadgeClass}
+      />
     </div>
   );
 };

@@ -15,6 +15,8 @@ export function defaultPackageCoverUrl(pkg) {
     if (days >= 60) return '/images/pkg-ai-premium.jpg';
     return '/images/pkg-ai-personal.jpg';
   }
+  if (type === 'POOL_ACCESS') return '/images/swimming-poster.jpg';
+  if (type === 'SAUNA_ACCESS') return '/images/studio-poster.jpg';
   if (type === 'COMBO') return '/images/pkg-combo-ai.jpg';
   if (days > 0 && days <= 7) return '/images/crossfit-poster.jpg';
   if (days >= 300) return '/images/register-athlete.jpg';

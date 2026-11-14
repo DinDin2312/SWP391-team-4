@@ -8,11 +8,12 @@ audience: MEMBER
 
 ## 1. Phân biệt Gói Hội Viên (Packages) và Khóa Học Có HLV (Classes)
 Tại NEXUS Sports Lab, Gói hội viên và Khóa học bộ môn được tách biệt hoàn toàn:
-- **Gói Hội Viên (Membership Packages - `/member/packages`)**: Chỉ dùng để mở quyền sử dụng phòng tập Gym tự do và tính năng Trợ lý thông minh NEXUS AI, bao gồm:
+- **Gói Hội Viên (Membership Packages - `/member/packages`)**: Chỉ dùng để mở quyền sử dụng các khu vực tiện ích tự do, bao gồm:
   1. **Gói Tập Gym Tự Do (`GYM_ACCESS`)**: Mở quyền ra vào khu vực Phòng Gym tự do trong thời hạn gói (1 ngày tập thử miễn phí, 1 tháng, 3 tháng, 1 năm).
-  2. **Gói Trợ Lý Thông Minh AI (`AI_ACCESS`)**: Mở khóa tính năng chat tư vấn dinh dưỡng, lịch tập và hỗ trợ tự động cùng Trợ lý NEXUS AI.
-  3. **Gói Combo Gym + AI (`COMBO`)**: Kết hợp quyền tập Gym tự do và sử dụng Trợ lý NEXUS AI.
-  4. **Gói Hội Viên VIP (`PREMIUM`)**: Quyền lợi tập Gym tự do, sử dụng Trợ lý NEXUS AI và khu vực tiện ích VIP (Sauna/Locker VIP).
+  2. **Gói Sử Dụng Bể Bơi (`POOL_ACCESS`)**: Mở quyền bơi lội tự do tại Bể Bơi Bốn Mùa nước ấm 25m điện phân muối khoáng (1 tháng, 3 tháng).
+  3. **Gói Sử Dụng Phòng Xông Hơi (`SAUNA_ACCESS`)**: Mở quyền thư giãn & phục hồi tại khu Phòng Xông Hơi Sauna đá muối (1 tháng, 3 tháng).
+  4. **Trợ Lý Thông Minh NEXUS AI**: Mở **MIỄN PHÍ 100%** cho toàn bộ hội viên đã đăng nhập (trung tâm đã bỏ toàn bộ gói AI trả phí và Combo Gym + AI).
+  5. **Gói Combo (`COMBO`) & Hội Viên VIP (`PREMIUM`)**: Kết hợp quyền tập Gym tự do và các tiện ích nâng cao tại trung tâm.
   - *Lưu ý quan trọng*: Gói hội viên (`PACKAGES`) **KHÔNG** bao gồm và **KHÔNG** dùng để đăng ký hay trừ buổi các lớp học/khóa học có Huấn luyện viên.
 - **Khóa Học Có Huấn Luyện Viên (Classes / Courses - `/member/book-class`)**: Các lớp học bộ môn có HLV giảng dạy theo lịch cố định (như Yoga, Bơi lội, Zumba, Đạp xe Spinning, Thể hình, Boxing & Kickfit, Pilates Reformer...) được đăng ký và thanh toán học phí riêng theo từng khóa học.
 
@@ -29,6 +30,6 @@ Tại NEXUS Sports Lab, Gói hội viên và Khóa học bộ môn được tác
 - Nếu quá hạn xác nhận (`confirmation_deadline`) mà học viên chưa phản hồi, hoặc nếu số lượng học viên xác nhận tham gia thấp hơn sĩ số tối thiểu của lớp, hệ thống sẽ tự động xử lý hoàn quyền lợi cho học viên theo quy định trung tâm.
 
 ## 4. Thanh toán & Thời gian Giữ chỗ Giỏ hàng (`/member/cart`)
-- Khi chọn mua Gói hội viên (Gym / AI) hoặc đăng ký Khóa học có HLV trên hệ thống trực tuyến, đơn hàng sẽ được lưu trong Giỏ hàng (Shopping Cart) với thời gian giữ chỗ tối đa 15 phút.
+- Khi chọn mua Gói hội viên (Gym / Combo / VIP) hoặc đăng ký Khóa học có HLV trên hệ thống trực tuyến, đơn hàng sẽ được lưu trong Giỏ hàng (Shopping Cart) với thời gian giữ chỗ tối đa 15 phút.
 - Các phương thức thanh toán hỗ trợ: Thanh toán trực tuyến qua cổng thanh toán (VNPay / SePay QR) hoặc thanh toán trực tiếp tại Quầy Lễ Tân trung tâm.
 - Nếu sau 15 phút đơn hàng giữ chỗ chưa được thanh toán, hệ thống sẽ tự động giải phóng suất giữ chỗ để các hội viên khác có thể đăng ký.

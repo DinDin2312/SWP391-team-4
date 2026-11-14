@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Clock, RefreshCw, CheckCircle2, ShieldCheck, X, AlertCircle, ArrowUp, ArrowDown, Minus, ArrowUpRight, CreditCard, Dumbbell, DollarSign
+  Clock, RefreshCw, CheckCircle2, ShieldCheck, X, AlertCircle, ArrowUp, ArrowDown, Minus, ArrowUpRight, CreditCard, Dumbbell, DollarSign, FileText, Download, Image as ImageIcon
 } from 'lucide-react';
 import { t } from '../i18n/useLanguage';
 
@@ -133,6 +133,12 @@ export const getPreferredResolutionBadge = (pref, { compact = false } = {}) => {
       return (
         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 inline-flex items-center gap-1">
           <DollarSign className="w-3 h-3" /> {t(compact ? 'Cash Refund' : 'Cash / Bank Refund')}
+        </span>
+      );
+    case 'NO_REFUND':
+      return (
+        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20 inline-flex items-center gap-1">
+          {t('100% Tuition Forfeited')}
         </span>
       );
     default:
@@ -429,7 +435,7 @@ export const getAttendancePolicySummary = (req = {}) => {
     ? Number(req.remainingSessions)
     : Math.max(0, total - attended);
   const percent = total > 0 ? Math.min(100, Math.round((attended / total) * 100)) : 0;
-  const exceedsEightyPercent = total > 0 && (attended / total > 0.8);
+  const exceedsEightyPercent = false;
   const isCancellationLike = Boolean(
     req?.category === 'CLASS_CANCELLATION' ||
     req?.category === 'REFUND_REQUEST' ||
@@ -455,6 +461,8 @@ export const isCashRefundRequest = (req = {}) => {
 export const isManagerOnlySupportTicket = (req = {}) =>
   req?.category === 'COACH_FEEDBACK' ||
   req?.category === 'FACILITY_ISSUE' ||
+  req?.category === 'CLASS_CANCELLATION' ||
+  req?.category === 'REFUND_REQUEST' ||
   req?.status === 'ESCALATED' ||
   isCashRefundRequest(req);
 
@@ -463,4 +471,115 @@ export const canStaffProcessTicket = (req = {}, isManager = false) => {
   const isOpen = req.status === 'PENDING' || req.status === 'IN_PROGRESS' || req.status === 'ESCALATED';
   if (!isOpen) return false;
   return isManager ? true : !isManagerOnlySupportTicket(req);
+};
+
+/**
+ * Compresses image evidence via canvas or validates PDF evidence up to 3 MB, returning { dataUrl, fileName }.
+ */
+export const processEvidenceFile = (file, { imageOnly = false } = {}) =>
+  new Promise((resolve, reject) => {
+    if (!file) {
+      reject(new Error(t('Please select an evidence file.')));
+      return;
+    }
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+    const isImage = file.type.startsWith('image/');
+    if (imageOnly && !isImage) {
+      reject(new Error(t('Only photo evidence files (PNG, JPG, WEBP) are supported.')));
+      return;
+    }
+    if (!isPdf && !isImage) {
+      reject(new Error(t('Only image (PNG, JPG, WEBP) or PDF evidence files are supported.')));
+      return;
+    }
+    if (isPdf && file.size > 3 * 1024 * 1024) {
+      reject(new Error(t('PDF evidence file must not exceed 3 MB.')));
+      return;
+    }
+    if (isImage && file.size > 10 * 1024 * 1024) {
+      reject(new Error(t('Image file must not exceed 10 MB.')));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(t('Failed to read selected file.')));
+    reader.onload = (event) => {
+      const rawUrl = event?.target?.result;
+      if (isPdf) {
+        resolve({ dataUrl: rawUrl, fileName: file.name || 'evidence.pdf' });
+        return;
+      }
+      const img = new Image();
+      img.onerror = () => reject(new Error(t('Invalid or corrupted image file.')));
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.85), fileName: file.name || 'evidence.jpg' });
+      };
+      img.src = rawUrl;
+    };
+    reader.readAsDataURL(file);
+  });
+
+export const EvidencePreviewBox = ({ evidenceUrl, fileName, onClear }) => {
+  if (!evidenceUrl) return null;
+  const isPdf = String(evidenceUrl).startsWith('data:application/pdf') || /\.pdf(\?|$)/i.test(String(evidenceUrl));
+  const label = fileName || (isPdf ? t('Attached PDF Evidence') : t('Attached Image Evidence'));
+
+  return (
+    <div className="p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {isPdf ? (
+            <FileText className="w-4 h-4 text-rose-500 shrink-0" />
+          ) : (
+            <ImageIcon className="w-4 h-4 text-emerald-500 shrink-0" />
+          )}
+          <span className="text-xs font-bold text-[var(--text)] truncate">{label}</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href={evidenceUrl}
+            download={fileName || (isPdf ? 'cancellation-evidence.pdf' : 'cancellation-evidence.jpg')}
+            onClick={(e) => e.stopPropagation()}
+            className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[var(--primary-soft)] text-[var(--primary)] hover:opacity-85 inline-flex items-center gap-1 transition-opacity"
+          >
+            <Download className="w-3 h-3" />
+            <span>{t('Download')}</span>
+          </a>
+          {onClear && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="p-1 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+              aria-label={t('Remove file')}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {!isPdf && (
+        <img
+          src={evidenceUrl}
+          alt={t('Cancellation evidence')}
+          className="w-full max-h-56 object-contain rounded-lg bg-black/5 dark:bg-white/5 border border-[var(--border)]"
+        />
+      )}
+    </div>
+  );
 };
