@@ -6,6 +6,9 @@ import {
   formatCheckInAnomaly,
   formatCheckInPackage,
   formatFacilityName,
+  parseMemberQrPayload,
+  computeQrScanLayout,
+  binarizeQrRgba,
 } from './receptionistUtils.js';
 
 test('receptionistUtils: formatCheckInNote translates coach override check-in across EN and VI', () => {
@@ -131,4 +134,95 @@ test('receptionistUtils: Lost & Found bilingual i18n translates tabs, badges, ac
   assert.equal(t('Hội viên trung tâm'), 'Hội viên trung tâm');
   assert.equal(t('Khách ngoài / Khách vãng lai'), 'Khách ngoài / Khách vãng lai');
   assert.equal(t('(+{0} expiring)', [3]), '(+3 sắp hết)');
+});
+
+test('receptionistUtils: parseMemberQrPayload handles all supported QR formats and rejects invalid values', () => {
+  assert.deepEqual(parseMemberQrPayload('NEXUS-PASS-9906-PKG-42'), {
+    userId: 9906,
+    membershipId: 42,
+    bookingId: null,
+    email: null,
+    raw: 'NEXUS-PASS-9906-PKG-42',
+  });
+  assert.deepEqual(parseMemberQrPayload('NEXUS-PASS-9906-BK-315'), {
+    userId: 9906,
+    membershipId: null,
+    bookingId: 315,
+    email: null,
+    raw: 'NEXUS-PASS-9906-BK-315',
+  });
+  assert.deepEqual(parseMemberQrPayload('NEXUS-PASS-NX-019-VN'), {
+    userId: 19,
+    membershipId: null,
+    bookingId: null,
+    email: null,
+    raw: 'NEXUS-PASS-NX-019-VN',
+  });
+  assert.deepEqual(parseMemberQrPayload('  nexus-pass-9906  '), {
+    userId: 9906,
+    membershipId: null,
+    bookingId: null,
+    email: null,
+    raw: 'nexus-pass-9906',
+  });
+  assert.deepEqual(parseMemberQrPayload('NEXUS-9906-bich31699@gmail.com'), {
+    userId: 9906,
+    membershipId: null,
+    bookingId: null,
+    email: 'bich31699@gmail.com',
+    raw: 'NEXUS-9906-bich31699@gmail.com',
+  });
+  assert.deepEqual(parseMemberQrPayload('{"userId":19,"membershipId":7,"bookingId":88,"email":"dung@gmail.com"}'), {
+    userId: 19,
+    membershipId: 7,
+    bookingId: 88,
+    email: 'dung@gmail.com',
+    raw: '{"userId":19,"membershipId":7,"bookingId":88,"email":"dung@gmail.com"}',
+  });
+  assert.deepEqual(parseMemberQrPayload('#9906'), {
+    userId: 9906,
+    membershipId: null,
+    bookingId: null,
+    email: null,
+    raw: '#9906',
+  });
+  assert.deepEqual(parseMemberQrPayload('thai@gmail.com'), {
+    userId: null,
+    membershipId: null,
+    bookingId: null,
+    email: 'thai@gmail.com',
+    raw: 'thai@gmail.com',
+  });
+
+  // Invalid / unrelated payloads
+  assert.equal(parseMemberQrPayload(null), null);
+  assert.equal(parseMemberQrPayload('   '), null);
+  assert.equal(parseMemberQrPayload('NEXUS-PASS-MEMBER'), null);
+  assert.equal(parseMemberQrPayload('NXS-12-14'), null);
+  assert.equal(parseMemberQrPayload('{broken json}'), null);
+  assert.equal(parseMemberQrPayload('{"foo":1}'), null);
+  assert.equal(parseMemberQrPayload('0'), null);
+});
+
+test('receptionistUtils: computeQrScanLayout and binarizeQrRgba handle tight crops and contrast stretching', () => {
+  const smallCrop = computeQrScanLayout(160, 160);
+  assert.equal(smallCrop.upscaled, true);
+  assert.equal(smallCrop.drawWidth, 480);
+  assert.equal(smallCrop.drawHeight, 480);
+  assert.ok(smallCrop.padding >= 28);
+  assert.equal(smallCrop.canvasWidth, smallCrop.drawWidth + smallCrop.padding * 2);
+
+  const largeImg = computeQrScanLayout(2048, 1024, 1024);
+  assert.equal(largeImg.upscaled, false);
+  assert.equal(largeImg.drawWidth, 1024);
+  assert.equal(largeImg.drawHeight, 512);
+
+  // Low-contrast washed-out pixels: dark gray (90) vs light gray (200) -> binarized to 0 vs 255
+  const washedOut = new Uint8ClampedArray([
+    90, 90, 90, 255,
+    200, 200, 200, 255,
+  ]);
+  const crisp = binarizeQrRgba(washedOut);
+  assert.deepEqual([...crisp], [0, 0, 0, 255, 255, 255, 255, 255]);
+  assert.equal(binarizeQrRgba(new Uint8ClampedArray(0)).length, 0);
 });

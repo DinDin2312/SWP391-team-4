@@ -178,6 +178,17 @@ const checkMatchesTimeSlot = (course, slotId) => {
   return true;
 };
 
+const COURSES_PER_PAGE = 6;
+
+const sortCoursesStably = (list) => {
+  if (!Array.isArray(list)) return [];
+  return [...list].sort((a, b) => {
+    const timeDiff = new Date(a.nextSessionTime).getTime() - new Date(b.nextSessionTime).getTime();
+    if (timeDiff !== 0) return timeDiff;
+    return (Number(a.classId) || 0) - (Number(b.classId) || 0);
+  });
+};
+
 const BookClass = () => {
   const language = useLanguage();
   const isVi = language === 'vi';
@@ -199,8 +210,10 @@ const BookClass = () => {
   const [selectedDays, setSelectedDays] = useState([]);
   const [selectedTimeSlots, setSelectedTimeSlots] = useState([]);
   const [dayMatchMode, setDayMatchMode] = useState('ANY'); // 'ANY' | 'EXACT'
+  const [currentPage, setCurrentPage] = useState(1);
 
   const toggleDay = (dayId) => {
+    setCurrentPage(1);
     if (dayId === 'ALL') {
       setSelectedDays([]);
       return;
@@ -214,6 +227,7 @@ const BookClass = () => {
   };
 
   const toggleTimeSlot = (slotId) => {
+    setCurrentPage(1);
     if (slotId === 'ALL') {
       setSelectedTimeSlots([]);
       return;
@@ -269,12 +283,19 @@ const BookClass = () => {
     if (targetCourse) {
       lastHandledDeepLinkRef.current = deepLinkKey;
       const subject = detectCourseSubject(targetCourse);
-      setSelectedSubject(subject || 'ALL');
+      const targetSubject = subject || 'ALL';
+      setSelectedSubject(targetSubject);
       // Reset filters so the course card is not hidden
       setSearchTerm('');
       setSelectedDate('ALL');
       setSelectedDays([]);
       setSelectedTimeSlots([]);
+      setDayMatchMode('ANY');
+      const subjectCourses = sortCoursesStably(
+        courses.filter(s => targetSubject === 'ALL' || detectCourseSubject(s) === targetSubject)
+      );
+      const targetIdx = subjectCourses.findIndex(c => String(c.classId) === String(classIdParam));
+      setCurrentPage(targetIdx >= 0 ? Math.floor(targetIdx / COURSES_PER_PAGE) + 1 : 1);
       setHighlightedClassId(Number(classIdParam));
 
       // Scroll smoothly to target card
@@ -292,15 +313,6 @@ const BookClass = () => {
       }, 7000);
     }
   }, [classIdParam, location.key, courses]);
-
-  const sortCoursesStably = (list) => {
-    if (!Array.isArray(list)) return [];
-    return [...list].sort((a, b) => {
-      const timeDiff = new Date(a.nextSessionTime).getTime() - new Date(b.nextSessionTime).getTime();
-      if (timeDiff !== 0) return timeDiff;
-      return (Number(a.classId) || 0) - (Number(b.classId) || 0);
-    });
-  };
 
   const fetchCourses = async (isInitialLoad = false) => {
     try {
@@ -517,6 +529,22 @@ const BookClass = () => {
     }));
   }, [courses, selectedSubject, selectedDays, dayMatchMode, selectedTimeSlots, selectedDate, searchTerm]);
 
+  const totalCoursePages = Math.max(1, Math.ceil(filteredCourses.length / COURSES_PER_PAGE));
+  const safeCoursePage = Math.min(currentPage, totalCoursePages);
+  const paginatedCourses = useMemo(() => {
+    const start = (safeCoursePage - 1) * COURSES_PER_PAGE;
+    return filteredCourses.slice(start, start + COURSES_PER_PAGE);
+  }, [filteredCourses, safeCoursePage]);
+
+  const handleCoursePageChange = (nextPage) => {
+    const clamped = Math.max(1, Math.min(totalCoursePages, nextPage));
+    setCurrentPage(clamped);
+    const gridEl = document.getElementById('member-course-grid-top');
+    if (gridEl) {
+      gridEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const isFiltered = Boolean(
     searchTerm.trim() ||
     selectedDays.length > 0 ||
@@ -530,6 +558,7 @@ const BookClass = () => {
     setSelectedTimeSlots([]);
     setSelectedDate('ALL');
     setDayMatchMode('ANY');
+    setCurrentPage(1);
   };
 
   return (
@@ -775,7 +804,7 @@ const BookClass = () => {
         /* ======================================================== */
         /* MODE 2: DETAIL VIEW - CLASSES OF SELECTED SUBJECT        */
         /* ======================================================== */
-        <div className="space-y-6">
+        <div id="member-course-grid-top" className="space-y-6">
           {/* Refined Navigation Header + Quick Subject Switcher */}
           <div className="p-4 sm:p-5 rounded-2xl bg-[var(--surface)] dark:bg-[#0a1122] text-slate-900 dark:text-white border border-slate-300 dark:border-slate-800 space-y-4 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -808,7 +837,7 @@ const BookClass = () => {
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-200 dark:border-slate-800/80">
               <button
                 type="button"
-                onClick={() => { setSelectedSubject('ALL'); setSelectedDate('ALL'); }}
+                onClick={() => { setSelectedSubject('ALL'); setSelectedDate('ALL'); setCurrentPage(1); }}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   selectedSubject === 'ALL'
                     ? 'bg-[var(--primary)] text-white shadow-sm'
@@ -821,7 +850,7 @@ const BookClass = () => {
                 <button
                   key={subj.name}
                   type="button"
-                  onClick={() => { setSelectedSubject(subj.name); setSelectedDate('ALL'); }}
+                  onClick={() => { setSelectedSubject(subj.name); setSelectedDate('ALL'); setCurrentPage(1); }}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     selectedSubject === subj.name
                       ? 'bg-[var(--primary)] text-white shadow-sm'
@@ -843,14 +872,14 @@ const BookClass = () => {
                 <input
                   type="text"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                   placeholder={t("Search by class name, coach, or room...")}
                   className="w-full pl-10 pr-9 py-2 text-xs sm:text-sm rounded-md bg-[var(--bg)] border border-slate-300 dark:border-white/15 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[var(--primary)] transition-colors"
                 />
                 {searchTerm && (
                   <button
                     type="button"
-                    onClick={() => setSearchTerm('')}
+                    onClick={() => { setSearchTerm(''); setCurrentPage(1); }}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -884,7 +913,7 @@ const BookClass = () => {
                   <div className="flex items-center bg-slate-200/80 dark:bg-white/10 p-0.5 rounded-md text-[11px] font-semibold">
                     <button
                       type="button"
-                      onClick={() => setDayMatchMode('ANY')}
+                      onClick={() => { setDayMatchMode('ANY'); setCurrentPage(1); }}
                       className={`px-2 py-0.5 rounded-sm transition-all cursor-pointer ${
                         dayMatchMode === 'ANY'
                           ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-bold'
@@ -895,7 +924,7 @@ const BookClass = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setDayMatchMode('EXACT')}
+                      onClick={() => { setDayMatchMode('EXACT'); setCurrentPage(1); }}
                       className={`px-2 py-0.5 rounded-sm transition-all cursor-pointer ${
                         dayMatchMode === 'EXACT'
                           ? 'bg-[var(--primary)] text-white shadow-2xs font-bold'
@@ -910,7 +939,7 @@ const BookClass = () => {
                   {selectedDays.length > 0 && (
                     <button
                       type="button"
-                      onClick={() => setSelectedDays([])}
+                      onClick={() => { setSelectedDays([]); setCurrentPage(1); }}
                       className="text-[var(--primary)] hover:underline font-semibold cursor-pointer text-xs shrink-0"
                     >
                       {t("Show all days")}
@@ -951,7 +980,7 @@ const BookClass = () => {
                 {selectedTimeSlots.length > 0 && (
                   <button
                     type="button"
-                    onClick={() => setSelectedTimeSlots([])}
+                    onClick={() => { setSelectedTimeSlots([]); setCurrentPage(1); }}
                     className="text-[var(--primary)] hover:underline font-semibold cursor-pointer text-xs"
                   >
                     {t("Show all times")}
@@ -997,7 +1026,7 @@ const BookClass = () => {
                 {selectedDate !== 'ALL' && (
                   <button
                     type="button"
-                    onClick={() => setSelectedDate('ALL')}
+                    onClick={() => { setSelectedDate('ALL'); setCurrentPage(1); }}
                     className="text-[var(--primary)] hover:underline font-semibold cursor-pointer text-xs"
                   >
                     {t("Show all dates")}
@@ -1009,7 +1038,7 @@ const BookClass = () => {
                 {/* All Dates Pill */}
                 <button
                   type="button"
-                  onClick={() => setSelectedDate('ALL')}
+                  onClick={() => { setSelectedDate('ALL'); setCurrentPage(1); }}
                   className={`flex flex-col items-center justify-center px-3.5 py-2 rounded-md min-w-[65px] transition-all cursor-pointer ${
                     selectedDate === 'ALL'
                       ? 'bg-[var(--primary)] text-white font-bold shadow-xs border border-[var(--primary)]'
@@ -1036,7 +1065,7 @@ const BookClass = () => {
                     <button
                       key={dateStr}
                       type="button"
-                      onClick={() => setSelectedDate(dateStr)}
+                      onClick={() => { setSelectedDate(dateStr); setCurrentPage(1); }}
                       className={`flex flex-col items-center justify-center px-3.5 py-2 rounded-md min-w-[68px] transition-all cursor-pointer ${
                         isActive
                           ? 'bg-[var(--primary)] text-white font-bold shadow-xs border border-[var(--primary)]'
@@ -1089,8 +1118,9 @@ const BookClass = () => {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredCourses.map((course, idx) => {
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {paginatedCourses.map((course, idx) => {
                   const rawBooked = Number(course.bookedSlots) || 0;
                   const maxSlots = Number(course.maxSlots) || 0;
                   const displayBooked = Math.min(maxSlots || rawBooked, rawBooked);
@@ -1340,6 +1370,52 @@ const BookClass = () => {
                     </div>
                   );
                 })}
+                </div>
+
+                {totalCoursePages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-[var(--surface)] dark:bg-[#0a1122] border border-slate-300 dark:border-slate-800 shadow-xs">
+                    <div className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                      {tr(
+                        `Hiển thị ${(safeCoursePage - 1) * COURSES_PER_PAGE + 1}–${Math.min(safeCoursePage * COURSES_PER_PAGE, filteredCourses.length)} trong tổng số ${filteredCourses.length} lớp học`,
+                        `Showing ${(safeCoursePage - 1) * COURSES_PER_PAGE + 1}–${Math.min(safeCoursePage * COURSES_PER_PAGE, filteredCourses.length)} of ${filteredCourses.length} classes`
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                      <button
+                        type="button"
+                        onClick={() => handleCoursePageChange(safeCoursePage - 1)}
+                        disabled={safeCoursePage <= 1}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      >
+                        <ArrowLeft className="w-3.5 h-3.5" />
+                        <span>{tr('Trước', 'Prev')}</span>
+                      </button>
+                      {Array.from({ length: totalCoursePages }, (_, i) => i + 1).map((pageNum) => (
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => handleCoursePageChange(pageNum)}
+                          className={`min-w-[34px] h-[34px] px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            safeCoursePage === pageNum
+                              ? 'bg-[var(--primary)] text-white shadow-sm'
+                              : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-800'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => handleCoursePageChange(safeCoursePage + 1)}
+                        disabled={safeCoursePage >= totalCoursePages}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      >
+                        <span>{tr('Sau', 'Next')}</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

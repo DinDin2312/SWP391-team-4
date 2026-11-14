@@ -89,13 +89,15 @@ class AiChatClassMatchingTests {
         List<PackageResponse> pkgs = List.of(
                 PackageResponse.builder().packageId(1).packageName("Thẻ Gym 1 Tháng").packageType("GYM_ACCESS").packageTypeName("Quyền vào phòng gym").durationDays(30).price(BigDecimal.valueOf(500000)).build(),
                 PackageResponse.builder().packageId(5).packageName("Thẻ Tập Thử VIP (1 Ngày)").packageType("GYM_ACCESS").packageTypeName("Quyền vào phòng gym").durationDays(1).price(BigDecimal.ZERO).purchaseLimitPerMember(1).build(),
-                PackageResponse.builder().packageId(10).packageName("Gói Combo Gym + AI 1 Tháng").packageType("COMBO").packageTypeName("Combo (Gym + AI)").durationDays(30).price(BigDecimal.valueOf(550000)).build()
+                PackageResponse.builder().packageId(13).packageName("Gói Bể Bơi Bốn Mùa 1 Tháng").packageType("POOL_ACCESS").packageTypeName("Pool access").durationDays(30).price(BigDecimal.valueOf(450000)).build(),
+                PackageResponse.builder().packageId(15).packageName("Gói Phòng Xông Hơi Sauna 1 Tháng").packageType("SAUNA_ACCESS").packageTypeName("Sauna access").durationDays(30).price(BigDecimal.valueOf(350000)).build()
         );
 
         String formatted = (String) method.invoke(null, pkgs);
         assertTrue(formatted.contains("Thẻ Gym 1 Tháng"));
         assertTrue(formatted.contains("Miễn phí (0 đ)"));
         assertTrue(formatted.contains("tối đa 1 lần/hội viên"));
-        assertTrue(formatted.contains("Combo (Gym + AI)"));
+        assertTrue(formatted.contains("Pool access"));
+        assertTrue(formatted.contains("Sauna access"));
     }
 }

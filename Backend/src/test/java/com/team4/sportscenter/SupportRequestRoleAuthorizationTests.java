@@ -129,7 +129,7 @@ class SupportRequestRoleAuthorizationTests {
     }
 
     @Test
-    void respondToRequestAllowsReceptionistForCreditCancellationAndRejectsCashRefund() {
+    void respondToRequestAllowsManagerOnlyForCancellationAndRejectsCashOrGymPass() {
         User member = User.builder().userId(10).email("member@gym.vn").fullName("Member").build();
         GymClass yoga = GymClass.builder().classId(2).className("[YOGA-102]").price(new BigDecimal("750000")).build();
         LocalDateTime now = LocalDateTime.now();
@@ -141,20 +141,9 @@ class SupportRequestRoleAuthorizationTests {
                 .category(SupportCategory.CLASS_CANCELLATION)
                 .preferredResolution("ISSUE_CREDIT")
                 .priority(SupportPriority.HIGH)
-                .status(SupportStatus.PENDING)
+                .status(SupportStatus.ESCALATED)
                 .title("Xin hủy lớp [YOGA-102]")
-                .createdAt(now.minusHours(2))
-                .build();
-
-        SupportRequest cashRequest = SupportRequest.builder()
-                .requestId(95)
-                .user(member)
-                .gymClass(yoga)
-                .category(SupportCategory.CLASS_CANCELLATION)
-                .preferredResolution("CASH_REFUND")
-                .priority(SupportPriority.HIGH)
-                .status(SupportStatus.PENDING)
-                .title("Xin hoàn tiền mặt")
+                .evidenceUrl("data:image/jpeg;base64,evidence")
                 .createdAt(now.minusHours(2))
                 .build();
 
@@ -165,11 +154,19 @@ class SupportRequestRoleAuthorizationTests {
                 .role(Role.builder().roleId(2).roleName("Receptionist").build())
                 .build();
 
+        User manager = User.builder()
+                .userId(1)
+                .email("manager@gym.vn")
+                .fullName("Quản Lý")
+                .role(Role.builder().roleId(1).roleName("Center Manager").build())
+                .build();
+
+        List<Booking> memberBookings = buildBookings(member, yoga, now, 3, 2, false);
+
         when(supportRequestRepository.findById(94)).thenReturn(Optional.of(creditRequest));
-        when(supportRequestRepository.findById(95)).thenReturn(Optional.of(cashRequest));
         when(userRepository.findByEmail("reception@gym.vn")).thenReturn(Optional.of(receptionist));
-        when(bookingRepository.findAllBookingsByEmail("member@gym.vn"))
-                .thenReturn(buildBookings(member, yoga, now, 3, 2, false));
+        when(userRepository.findByEmail("manager@gym.vn")).thenReturn(Optional.of(manager));
+        when(bookingRepository.findAllBookingsByEmail("member@gym.vn")).thenReturn(memberBookings);
         when(supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(10)).thenReturn(List.of());
         when(userCreditRepository.findBySupportRequestRequestId(94)).thenReturn(Optional.empty());
         when(supportRequestRepository.save(any(SupportRequest.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -177,30 +174,169 @@ class SupportRequestRoleAuthorizationTests {
         RespondSupportRequest approveCredit = RespondSupportRequest.builder()
                 .status(SupportStatus.APPROVED)
                 .resolutionType("ISSUE_CREDIT")
-                .responseNote("Lễ tân đã duyệt bảo lưu tín dụng.")
+                .responseNote("Quản lý đã duyệt hủy lớp và cấp Voucher.")
                 .build();
 
-        SupportRequestResponse okRes = supportRequestService.respondToRequest(94, approveCredit, "reception@gym.vn");
-        assertEquals(SupportStatus.APPROVED, okRes.getStatus());
+        // Receptionist must NOT process ESCALATED / CLASS_CANCELLATION requests
+        IllegalStateException recEx = assertThrows(
+                IllegalStateException.class,
+                () -> supportRequestService.respondToRequest(94, approveCredit, "reception@gym.vn")
+        );
+        assertTrue(recEx.getMessage().contains("Admin / Quản lý"));
 
+        // Cash refund & Gym pass must be blocked even for Manager
         RespondSupportRequest tryCashAction = RespondSupportRequest.builder()
                 .status(SupportStatus.APPROVED)
                 .resolutionType("CASH_REFUND")
                 .responseNote("Duyệt hoàn tiền mặt.")
                 .build();
+        RespondSupportRequest tryGymPassAction = RespondSupportRequest.builder()
+                .status(SupportStatus.APPROVED)
+                .resolutionType("GYM_PASS")
+                .responseNote("Đổi thẻ gym.")
+                .build();
 
-        IllegalStateException cashTicketEx = assertThrows(
-                IllegalStateException.class,
-                () -> supportRequestService.respondToRequest(95, approveCredit, "reception@gym.vn")
-        );
-        assertTrue(cashTicketEx.getMessage().contains("hoàn tiền mặt"));
+        assertThrows(IllegalStateException.class, () -> supportRequestService.respondToRequest(94, tryCashAction, "manager@gym.vn"));
+        assertThrows(IllegalStateException.class, () -> supportRequestService.respondToRequest(94, tryGymPassAction, "manager@gym.vn"));
 
-        creditRequest.setStatus(SupportStatus.PENDING);
-        IllegalStateException cashActionEx = assertThrows(
-                IllegalStateException.class,
-                () -> supportRequestService.respondToRequest(94, tryCashAction, "reception@gym.vn")
-        );
-        assertTrue(cashActionEx.getMessage().contains("hoàn tiền mặt"));
+        // If Manager rejects first (using a fresh copy), future bookings remain CONFIRMED
+        SupportRequest rejectableReq = SupportRequest.builder()
+                .requestId(96)
+                .user(member)
+                .gymClass(yoga)
+                .category(SupportCategory.CLASS_CANCELLATION)
+                .preferredResolution("ISSUE_CREDIT")
+                .priority(SupportPriority.HIGH)
+                .status(SupportStatus.ESCALATED)
+                .title("Xin hủy lớp [YOGA-102]")
+                .createdAt(now.minusHours(2))
+                .build();
+        when(supportRequestRepository.findById(96)).thenReturn(Optional.of(rejectableReq));
+        when(userCreditRepository.findBySupportRequestRequestId(96)).thenReturn(Optional.empty());
+
+        RespondSupportRequest rejectAction = RespondSupportRequest.builder()
+                .status(SupportStatus.REJECTED)
+                .resolutionType("REJECT")
+                .responseNote("Bằng chứng chưa hợp lệ.")
+                .build();
+        SupportRequestResponse rejectedRes = supportRequestService.respondToRequest(96, rejectAction, "manager@gym.vn");
+        assertEquals(SupportStatus.REJECTED, rejectedRes.getStatus());
+        assertTrue(memberBookings.stream().allMatch(b -> "CONFIRMED".equals(b.getStatus())));
+
+        // When Manager approves ISSUE_CREDIT, un-attended bookings become CANCELLED
+        SupportRequestResponse okRes = supportRequestService.respondToRequest(94, approveCredit, "manager@gym.vn");
+        assertEquals(SupportStatus.APPROVED, okRes.getStatus());
+        long cancelledCount = memberBookings.stream().filter(b -> "CANCELLED".equals(b.getStatus())).count();
+        assertEquals(2L, cancelledCount);
+    }
+
+    @Test
+    void sevenDayRuleDirectCancelGrants50PercentAndLateCancelRequiresEvidenceWithScheduleRetained() {
+        User member = User.builder().userId(10).email("member@gym.vn").fullName("Member").build();
+        GymClass earlyClass = GymClass.builder().classId(11).className("[YOGA-EARLY]").price(new BigDecimal("1000000")).build();
+        GymClass lateClass = GymClass.builder().classId(12).className("[YOGA-LATE]").price(new BigDecimal("1000000")).build();
+        LocalDateTime now = LocalDateTime.now();
+
+        Schedule earlySched = Schedule.builder().scheduleId(501).gymClass(earlyClass)
+                .startTime(now.plusDays(9)).endTime(now.plusDays(9).plusHours(1)).build();
+        List<Booking> earlyBookings = List.of(Booking.builder().bookingId(601).user(member).schedule(earlySched)
+                .status("CONFIRMED").attendanceStatus("NOT_YET").build());
+
+        Schedule lateSched = Schedule.builder().scheduleId(502).gymClass(lateClass)
+                .startTime(now.plusDays(3)).endTime(now.plusDays(3).plusHours(1)).build();
+        List<Booking> lateBookings = List.of(Booking.builder().bookingId(602).user(member).schedule(lateSched)
+                .status("CONFIRMED").attendanceStatus("NOT_YET").build());
+
+        when(userRepository.findByEmail("member@gym.vn")).thenReturn(Optional.of(member));
+        when(coachClassRepository.findById(11)).thenReturn(Optional.of(earlyClass));
+        when(coachClassRepository.findById(12)).thenReturn(Optional.of(lateClass));
+        when(supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(10)).thenReturn(List.of());
+        when(supportRequestRepository.save(any(SupportRequest.class))).thenAnswer(inv -> {
+            SupportRequest r = inv.getArgument(0);
+            if (r.getRequestId() == null) r.setRequestId(300);
+            return r;
+        });
+
+        // >= 7 days: direct cancel eligible with 50% voucher
+        when(bookingRepository.findAllBookingsByEmail("member@gym.vn")).thenReturn(earlyBookings);
+        var earlyPreview = supportRequestService.getCancelClassPreview(11, "member@gym.vn");
+        assertTrue(earlyPreview.isCanDirectCancelWithCredit());
+        assertFalse(earlyPreview.isWithinSevenDays());
+        assertEquals(new BigDecimal("500000"), earlyPreview.getEstimatedCreditAmount());
+
+        Map<String, Object> directResult = supportRequestService.cancelClassDirectly(11, "member@gym.vn");
+        assertEquals(new BigDecimal("500000"), directResult.get("creditAmount"));
+        assertEquals("CANCELLED", earlyBookings.get(0).getStatus());
+
+        // < 7 days: direct cancel blocked; createSupportRequest requires evidence and keeps bookings CONFIRMED
+        when(bookingRepository.findAllBookingsByEmail("member@gym.vn")).thenReturn(lateBookings);
+        var latePreview = supportRequestService.getCancelClassPreview(12, "member@gym.vn");
+        assertFalse(latePreview.isCanDirectCancelWithCredit());
+        assertTrue(latePreview.isWithinSevenDays());
+        assertThrows(IllegalStateException.class, () -> supportRequestService.cancelClassDirectly(12, "member@gym.vn"));
+
+        CreateSupportRequest missingEvidence = CreateSupportRequest.builder()
+                .classId(12)
+                .category(SupportCategory.CLASS_CANCELLATION)
+                .title("Xin hủy lớp muộn")
+                .content("Công tác đột xuất")
+                .build();
+        IllegalStateException evEx = assertThrows(IllegalStateException.class,
+                () -> supportRequestService.createSupportRequest(missingEvidence, "member@gym.vn"));
+        assertTrue(evEx.getMessage().contains("bằng chứng"));
+
+        CreateSupportRequest withEvidence = CreateSupportRequest.builder()
+                .classId(12)
+                .category(SupportCategory.CLASS_CANCELLATION)
+                .preferredResolution("CASH_REFUND")
+                .title("Xin hủy lớp muộn")
+                .content("Có quyết định điều động công tác")
+                .evidenceUrl("data:image/jpeg;base64,/9j/valid")
+                .build();
+        when(userCreditRepository.findBySupportRequestRequestId(300)).thenReturn(Optional.empty());
+
+        SupportRequestResponse created = supportRequestService.createSupportRequest(withEvidence, "member@gym.vn");
+        assertEquals(SupportStatus.ESCALATED, created.getStatus());
+        assertEquals("ISSUE_CREDIT", created.getPreferredResolution());
+        assertEquals("data:image/jpeg;base64,/9j/valid", created.getEvidenceUrl());
+        assertEquals("CONFIRMED", lateBookings.get(0).getStatus());
+    }
+
+    @Test
+    void cancelClassDirectlyWithAcceptForfeitCancelsRemainingSessionsWithoutCredit() {
+        User member = User.builder().userId(10).email("member@gym.vn").fullName("Hội Viên A").build();
+        GymClass startedClass = GymClass.builder().classId(13).className("[GYM-201] Gym Nâng Cao").price(new BigDecimal("800000")).build();
+        LocalDateTime now = LocalDateTime.now();
+
+        Schedule pastSchedule = Schedule.builder().scheduleId(131).gymClass(startedClass)
+                .startTime(now.minusDays(2)).endTime(now.minusDays(2).plusHours(1)).build();
+        Schedule futureSchedule = Schedule.builder().scheduleId(132).gymClass(startedClass)
+                .startTime(now.plusDays(2)).endTime(now.plusDays(2).plusHours(1)).build();
+
+        Booking attendedBooking = Booking.builder().bookingId(1301).user(member).schedule(pastSchedule)
+                .status("CONFIRMED").attendanceStatus("PRESENT").build();
+        Booking remainingBooking = Booking.builder().bookingId(1302).user(member).schedule(futureSchedule)
+                .status("CONFIRMED").build();
+
+        when(userRepository.findByEmail("member@gym.vn")).thenReturn(Optional.of(member));
+        when(coachClassRepository.findById(13)).thenReturn(Optional.of(startedClass));
+        when(bookingRepository.findAllBookingsByEmail("member@gym.vn")).thenReturn(List.of(attendedBooking, remainingBooking));
+        when(supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(10)).thenReturn(List.of());
+        when(supportRequestRepository.save(any(SupportRequest.class))).thenAnswer(inv -> {
+            SupportRequest r = inv.getArgument(0);
+            if (r.getRequestId() == null) r.setRequestId(399);
+            return r;
+        });
+
+        Map<String, Object> result = supportRequestService.cancelClassDirectly(13, "member@gym.vn", true);
+        assertEquals(true, result.get("success"));
+        assertEquals(true, result.get("forfeitAccepted"));
+        assertEquals(1, result.get("cancelledBookingsCount"));
+        assertEquals(BigDecimal.ZERO, result.get("creditAmount"));
+        assertNull(result.get("creditCode"));
+        assertEquals("CONFIRMED", attendedBooking.getStatus());
+        assertEquals("CANCELLED", remainingBooking.getStatus());
+        verify(userCreditRepository, never()).save(any());
     }
 
     @Test
@@ -289,7 +425,55 @@ class SupportRequestRoleAuthorizationTests {
     }
 
     @Test
-    void createSupportRequestBlocksCancellationOverEightyPercent() {
+    void createSupportRequestRequiresReasonAndEvidenceForLateCancellationEvenAfterMostSessions() {
+        User member = User.builder().userId(7).email("oanh@gym.vn").fullName("Nguyễn Kiều Oanh").build();
+        GymClass yoga = GymClass.builder().classId(2).className("[YOGA-102]").price(new BigDecimal("750000")).build();
+        LocalDateTime now = LocalDateTime.now();
+
+        when(userRepository.findByEmail("oanh@gym.vn")).thenReturn(Optional.of(member));
+        when(coachClassRepository.findById(2)).thenReturn(Optional.of(yoga));
+        when(bookingRepository.findAllBookingsByEmail("oanh@gym.vn"))
+                .thenReturn(buildBookings(member, yoga, now, 5, 1, false));
+        when(supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(7)).thenReturn(List.of());
+        when(userRepository.findByRoleNameIgnoreCase(any())).thenReturn(List.of());
+        when(supportRequestRepository.save(any(SupportRequest.class))).thenAnswer(inv -> {
+            SupportRequest r = inv.getArgument(0);
+            if (r.getRequestId() == null) r.setRequestId(301);
+            return r;
+        });
+
+        CreateSupportRequest withoutEvidence = CreateSupportRequest.builder()
+                .classId(2)
+                .category(SupportCategory.CLASS_CANCELLATION)
+                .preferredResolution("ISSUE_CREDIT")
+                .title("Xin hủy lớp [YOGA-102]")
+                .content("Chuyển ca làm")
+                .build();
+
+        IllegalStateException missingEvidenceEx = assertThrows(
+                IllegalStateException.class,
+                () -> supportRequestService.createSupportRequest(withoutEvidence, "oanh@gym.vn")
+        );
+        assertTrue(missingEvidenceEx.getMessage().contains("bằng chứng"));
+        verify(supportRequestRepository, never()).save(any());
+
+        CreateSupportRequest withEvidence = CreateSupportRequest.builder()
+                .classId(2)
+                .category(SupportCategory.CLASS_CANCELLATION)
+                .preferredResolution("ISSUE_CREDIT")
+                .title("Xin hủy lớp [YOGA-102]")
+                .content("Có quyết định điều chuyển công tác đột xuất")
+                .evidenceUrl("data:image/png;base64,iVBORw0KGgo=")
+                .build();
+
+        SupportRequestResponse created = supportRequestService.createSupportRequest(withEvidence, "oanh@gym.vn");
+        assertEquals(SupportStatus.ESCALATED, created.getStatus());
+        assertEquals("ISSUE_CREDIT", created.getPreferredResolution());
+        assertEquals("data:image/png;base64,iVBORw0KGgo=", created.getEvidenceUrl());
+    }
+
+    @Test
+    void completedCourseLocksCancellationPreviewDirectCancelAndComplaintSubmission() {
         User member = User.builder().userId(7).email("oanh@gym.vn").fullName("Nguyễn Kiều Oanh").build();
         GymClass yoga = GymClass.builder().classId(2).className("[YOGA-102]").price(new BigDecimal("750000")).build();
         LocalDateTime now = LocalDateTime.now();
@@ -298,42 +482,52 @@ class SupportRequestRoleAuthorizationTests {
         when(coachClassRepository.findById(2)).thenReturn(Optional.of(yoga));
         when(bookingRepository.findAllBookingsByEmail("oanh@gym.vn"))
                 .thenReturn(buildBookings(member, yoga, now, 5, 0, false));
-        when(supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(7)).thenReturn(List.of());
 
-        CreateSupportRequest createDto = CreateSupportRequest.builder()
+        var preview = supportRequestService.getCancelClassPreview(2, "oanh@gym.vn");
+        assertEquals(0, preview.getRemainingSessions());
+        assertFalse(preview.isCanDirectCancelWithCredit());
+        assertFalse(preview.isEligibleForVoucher());
+        assertEquals(BigDecimal.ZERO, preview.getEstimatedCreditAmount());
+        assertEquals("Bạn đã hoàn thành khóa học rồi.", preview.getMessage());
+
+        IllegalStateException directEx = assertThrows(
+                IllegalStateException.class,
+                () -> supportRequestService.cancelClassDirectly(2, "oanh@gym.vn", true)
+        );
+        assertTrue(directEx.getMessage().contains("hoàn thành khóa học"));
+
+        CreateSupportRequest completedComplaint = CreateSupportRequest.builder()
                 .classId(2)
                 .category(SupportCategory.CLASS_CANCELLATION)
-                .preferredResolution("ISSUE_CREDIT")
                 .title("Xin hủy lớp [YOGA-102]")
-                .content("Chuyển ca làm")
+                .content("Muốn khiếu nại hoàn tiền dù đã học xong")
+                .evidenceUrl("data:image/png;base64,iVBORw0KGgo=")
                 .build();
-
-        IllegalStateException ex = assertThrows(
+        IllegalStateException createEx = assertThrows(
                 IllegalStateException.class,
-                () -> supportRequestService.createSupportRequest(createDto, "oanh@gym.vn")
+                () -> supportRequestService.createSupportRequest(completedComplaint, "oanh@gym.vn")
         );
-        assertTrue(ex.getMessage().contains("80%"));
+        assertTrue(createEx.getMessage().contains("hoàn thành khóa học"));
         verify(supportRequestRepository, never()).save(any());
     }
 
     @Test
-    void createdAtCutoffProtectsEligibleTicketAndAutoRejectsIfAttendedPastLimit() {
+    void searchRequestsForStaffKeepsLateCancellationTicketEscalatedEvenAfterAllSessionsElapsed() {
         User member = User.builder().userId(7).email("oanh@gym.vn").fullName("Nguyễn Kiều Oanh").build();
         GymClass yoga = GymClass.builder().classId(2).className("[YOGA-102]").price(new BigDecimal("750000")).build();
         LocalDateTime submittedAt = LocalDateTime.now().minusDays(2);
 
-        // 4 sessions before submittedAt + 1 session between submittedAt and now (yesterday)
-        java.util.ArrayList<Booking> notYetOn5th = new java.util.ArrayList<>();
+        java.util.ArrayList<Booking> bookings = new java.util.ArrayList<>();
         for (int i = 0; i < 4; i++) {
             Schedule s = Schedule.builder().scheduleId(i + 1).gymClass(yoga)
                     .startTime(submittedAt.minusDays(4 - i)).endTime(submittedAt.minusDays(4 - i).plusHours(1)).build();
-            notYetOn5th.add(Booking.builder().bookingId(i + 1).user(member).schedule(s)
+            bookings.add(Booking.builder().bookingId(i + 1).user(member).schedule(s)
                     .status("CONFIRMED").attendanceStatus("PRESENT").build());
         }
         Schedule elapsedAfterSubmit = Schedule.builder().scheduleId(5).gymClass(yoga)
                 .startTime(LocalDateTime.now().minusHours(2)).endTime(LocalDateTime.now().minusHours(1)).build();
-        notYetOn5th.add(Booking.builder().bookingId(5).user(member).schedule(elapsedAfterSubmit)
-                .status("CONFIRMED").attendanceStatus("NOT_YET").build());
+        bookings.add(Booking.builder().bookingId(5).user(member).schedule(elapsedAfterSubmit)
+                .status("CONFIRMED").attendanceStatus("PRESENT").build());
 
         SupportRequest ticket = SupportRequest.builder()
                 .requestId(94)
@@ -341,37 +535,24 @@ class SupportRequestRoleAuthorizationTests {
                 .gymClass(yoga)
                 .category(SupportCategory.CLASS_CANCELLATION)
                 .preferredResolution("ISSUE_CREDIT")
-                .status(SupportStatus.PENDING)
+                .status(SupportStatus.ESCALATED)
                 .priority(SupportPriority.HIGH)
                 .title("Xin hủy lớp [YOGA-102]")
                 .createdAt(submittedAt)
                 .build();
 
         Pageable pageable = PageRequest.of(0, 10);
-        when(supportRequestRepository.findByCategoryInAndStatusIn(any(), any())).thenReturn(List.of(ticket));
         when(supportRequestRepository.searchSupportRequests(any(), any(), any(), eq(pageable)))
                 .thenReturn(new PageImpl<>(List.of(ticket), pageable, 1));
         when(userCreditRepository.findBySupportRequestRequestId(94)).thenReturn(Optional.empty());
-        when(bookingRepository.findAllBookingsByEmail("oanh@gym.vn")).thenReturn(notYetOn5th);
+        when(bookingRepository.findAllBookingsByEmail("oanh@gym.vn")).thenReturn(bookings);
 
-        // Subcase 1: Member waited in queue & did NOT check in 5th session -> stays 4/5 (80%) PENDING & eligible for 150k
         Page<SupportRequestResponse> page = supportRequestService.searchRequestsForStaff(null, null, null, pageable);
         SupportRequestResponse res = page.getContent().get(0);
-        assertEquals(SupportStatus.PENDING, res.getStatus());
-        assertEquals(4, res.getAttendedSessions());
-        assertEquals(new BigDecimal("150000"), res.getCalculatedCreditAmount());
-
-        // Subcase 2: Member checked in PRESENT on 5th session -> exceeds 80%, auto-rejected cleanly (no longer PENDING)
-        notYetOn5th.get(4).setAttendanceStatus("PRESENT");
-        when(supportRequestRepository.save(any(SupportRequest.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(notificationRepository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        Page<SupportRequestResponse> pageAfterAttendance = supportRequestService.searchRequestsForStaff(null, null, null, pageable);
-        SupportRequestResponse rejectedRes = pageAfterAttendance.getContent().get(0);
-        assertEquals(SupportStatus.REJECTED, rejectedRes.getStatus());
-        assertEquals(5, rejectedRes.getAttendedSessions());
-        assertEquals(BigDecimal.ZERO, rejectedRes.getCalculatedCreditAmount());
-        verify(notificationRepository).save(any(Notification.class));
+        assertEquals(SupportStatus.ESCALATED, res.getStatus());
+        assertEquals(5, res.getAttendedSessions());
+        assertEquals(0, res.getRemainingSessions());
+        assertEquals(BigDecimal.ZERO, res.getCalculatedCreditAmount());
     }
 
     @Test
@@ -402,16 +583,43 @@ class SupportRequestRoleAuthorizationTests {
         when(userRepository.findByRoleNameIgnoreCase("Receptionist")).thenReturn(List.of(receptionist));
         when(notificationRepository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        CreateSupportRequest missingPhotoDto = CreateSupportRequest.builder()
+                .category(SupportCategory.FACILITY_ISSUE)
+                .title("[Sự cố CSVC] Máy chạy bộ số 3 bị kẹt băng tải")
+                .content("Cần kỹ thuật viên kiểm tra an toàn trước giờ cao điểm.")
+                .build();
+        IllegalStateException missingPhotoEx = assertThrows(
+                IllegalStateException.class,
+                () -> supportRequestService.createSupportRequest(missingPhotoDto, "member@gym.vn")
+        );
+        assertTrue(missingPhotoEx.getMessage().contains("ảnh chụp"));
+        verify(supportRequestRepository, never()).save(any());
+
+        CreateSupportRequest pdfInsteadOfPhotoDto = CreateSupportRequest.builder()
+                .category(SupportCategory.FACILITY_ISSUE)
+                .title("[Sự cố CSVC] Máy chạy bộ số 3 bị kẹt băng tải")
+                .content("Cần kỹ thuật viên kiểm tra an toàn trước giờ cao điểm.")
+                .evidenceUrl("data:application/pdf;base64,JVBERi0xLjQ=")
+                .build();
+        IllegalStateException pdfEx = assertThrows(
+                IllegalStateException.class,
+                () -> supportRequestService.createSupportRequest(pdfInsteadOfPhotoDto, "member@gym.vn")
+        );
+        assertTrue(pdfEx.getMessage().contains("ảnh chụp"));
+        verify(supportRequestRepository, never()).save(any());
+
         CreateSupportRequest createDto = CreateSupportRequest.builder()
                 .category(SupportCategory.FACILITY_ISSUE)
                 .title("[Sự cố CSVC] Máy chạy bộ số 3 bị kẹt băng tải")
                 .content("Cần kỹ thuật viên kiểm tra an toàn trước giờ cao điểm.")
+                .evidenceUrl("data:image/jpeg;base64,/9j/valid")
                 .build();
 
         SupportRequestResponse response = supportRequestService.createSupportRequest(createDto, "member@gym.vn");
 
         assertEquals(SupportStatus.ESCALATED, response.getStatus());
         assertEquals(SupportPriority.HIGH, response.getPriority());
+        assertEquals("data:image/jpeg;base64,/9j/valid", response.getEvidenceUrl());
 
         ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository, times(3)).save(notifCaptor.capture());
@@ -499,5 +707,60 @@ class SupportRequestRoleAuthorizationTests {
         assertEquals(SupportCategory.GENERAL_INQUIRY, SupportCategory.fromString("SCHEDULE_SUPPORT"));
         assertEquals(SupportCategory.GENERAL_INQUIRY, SupportCategory.fromString("schedule_request"));
         assertEquals(SupportCategory.CLASS_CANCELLATION, SupportCategory.fromString("CLASS_CANCELLATION"));
+    }
+
+    @Test
+    void transferIsBlockedWhileCancellationRequestAwaitsAdminApproval() {
+        User member = User.builder().userId(10).email("member@gym.vn").fullName("Member").build();
+        GymClass fromClass = GymClass.builder().classId(12).className("Yoga K2").price(new BigDecimal("1000000")).status("ACTIVE").build();
+        GymClass toClass = GymClass.builder().classId(13).className("Yoga K3").price(new BigDecimal("1000000")).status("ACTIVE").build();
+        LocalDateTime now = LocalDateTime.now();
+
+        Schedule sched = Schedule.builder().scheduleId(502).gymClass(fromClass)
+                .startTime(now.plusDays(3)).endTime(now.plusDays(3).plusHours(1)).build();
+        List<Booking> bookings = List.of(Booking.builder().bookingId(602).user(member).schedule(sched)
+                .status("CONFIRMED").attendanceStatus("NOT_YET").build());
+
+        SupportRequest pendingCancel = SupportRequest.builder()
+                .requestId(401)
+                .user(member)
+                .gymClass(fromClass)
+                .category(SupportCategory.CLASS_CANCELLATION)
+                .preferredResolution("ISSUE_CREDIT")
+                .status(SupportStatus.ESCALATED)
+                .title("Xin hủy lớp muộn")
+                .build();
+
+        when(userRepository.findByEmail("member@gym.vn")).thenReturn(Optional.of(member));
+        when(coachClassRepository.findById(12)).thenReturn(Optional.of(fromClass));
+        when(bookingRepository.findAllBookingsByEmail("member@gym.vn")).thenReturn(bookings);
+        when(supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(10)).thenReturn(List.of(pendingCancel));
+
+        var preview = supportRequestService.getTransferClassPreview(12, "member@gym.vn");
+        assertFalse(preview.isCanTransfer());
+        assertTrue(preview.isBlockedByPendingRequest());
+        assertTrue(preview.getMessage().contains("#401"));
+        assertTrue(preview.getEquivalentClasses().isEmpty());
+
+        when(coachClassRepository.findById(13)).thenReturn(Optional.of(toClass));
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> supportRequestService.transferClassDirectly(12, 13, "member@gym.vn"));
+        assertTrue(ex.getMessage().contains("#401"));
+        verify(bookingRepository, never()).save(any());
+        verify(bookingRepository, never()).saveAllAndFlush(any());
+        verify(userCreditRepository, never()).save(any());
+    }
+
+    @Test
+    void getMemberCreditsIsReadOnlyAndNeverAutoMintsVouchers() {
+        User member = User.builder().userId(10).email("member@gym.vn").fullName("Member").build();
+        when(userRepository.findByEmail("member@gym.vn")).thenReturn(Optional.of(member));
+        when(userCreditRepository.findByUserUserIdOrderByCreatedAtDesc(10)).thenReturn(List.of());
+
+        var credits = supportRequestService.getMemberCredits("member@gym.vn");
+        assertTrue(credits.isEmpty());
+        verify(userCreditRepository, never()).save(any());
+        verify(supportRequestRepository, never()).save(any());
+        verify(bookingRepository, never()).save(any());
     }
 }

@@ -18,7 +18,10 @@ public class PackageResponse {
     private String packageTypeName;
     private Integer durationDays;
     private BigDecimal price;
+    private String description;
+    private String terms;
     private Integer purchaseLimitPerMember;
+    private Long registrationCount;
     private Boolean canPurchase;
     private String purchaseBlockCode;
     private String purchaseBlockReason;

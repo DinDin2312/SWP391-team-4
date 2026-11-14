@@ -57,7 +57,12 @@ public class ManagerController {
     }
 
     @PostMapping("/classes/{id}/deactivate")
-    public Map<String, Integer> deactivateClass(@PathVariable Integer id, org.springframework.security.core.Authentication auth) { return Map.of("cancelledSessions", managerService.deactivateClass(id, auth.getName())); }
+    public Map<String, Object> deactivateClass(@PathVariable Integer id,
+                                               @RequestBody(required = false) Map<String, String> body,
+                                               org.springframework.security.core.Authentication auth) {
+        String reason = body != null ? body.get("reason") : null;
+        return managerService.deactivateClass(id, reason, auth.getName());
+    }
 
     @GetMapping("/dashboard")
     public Map<String, Object> dashboard() { return managerService.dashboard(); }

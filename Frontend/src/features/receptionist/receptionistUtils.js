@@ -51,3 +51,146 @@ export function formatFacilityName(facilityName, translate = t) {
   if (!facilityName || typeof facilityName !== 'string') return '—';
   return translate(facilityName.trim());
 }
+
+/**
+ * Parses member pass / package / session check-in QR payloads emitted by member pages or manual input.
+ * Supports:
+ * - NEXUS-PASS-<userId>-PKG-<membershipId>
+ * - NEXUS-PASS-<userId>-BK-<bookingId>
+ * - NEXUS-PASS-NX-0<userId>-VN
+ * - NEXUS-PASS-<userId>
+ * - NEXUS-<userId>-<email>
+ * - JSON { userId, membershipId, bookingId, email }
+ * - #<userId>, <userId>, or email
+ */
+export function parseMemberQrPayload(rawText) {
+  if (!rawText || typeof rawText !== 'string') return null;
+  const trimmed = rawText.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    try {
+      const data = JSON.parse(trimmed);
+      const userId = Number(data?.userId) > 0 ? Number(data.userId) : null;
+      const membershipId = Number(data?.membershipId) > 0 ? Number(data.membershipId) : null;
+      const bookingId = Number(data?.bookingId) > 0 ? Number(data.bookingId) : null;
+      const email = typeof data?.email === 'string' && data.email.includes('@') ? data.email.trim() : null;
+      if (userId || email) return { userId, membershipId, bookingId, email, raw: trimmed };
+    } catch {
+      return null;
+    }
+  }
+
+  const pkgPassMatch = /^NEXUS-PASS-(\d+)-PKG-(\d+)$/i.exec(trimmed);
+  if (pkgPassMatch) {
+    return {
+      userId: Number(pkgPassMatch[1]),
+      membershipId: Number(pkgPassMatch[2]),
+      bookingId: null,
+      email: null,
+      raw: trimmed,
+    };
+  }
+
+  const bookingPassMatch = /^NEXUS-PASS-(\d+)-BK-(\d+)$/i.exec(trimmed);
+  if (bookingPassMatch) {
+    return {
+      userId: Number(bookingPassMatch[1]),
+      membershipId: null,
+      bookingId: Number(bookingPassMatch[2]),
+      email: null,
+      raw: trimmed,
+    };
+  }
+
+  const settingsCardMatch = /^NEXUS-PASS-NX-0*(\d+)-VN$/i.exec(trimmed);
+  if (settingsCardMatch && Number(settingsCardMatch[1]) > 0) {
+    return {
+      userId: Number(settingsCardMatch[1]),
+      membershipId: null,
+      bookingId: null,
+      email: null,
+      raw: trimmed,
+    };
+  }
+
+  const passMatch = /^NEXUS-PASS-(\d+)$/i.exec(trimmed);
+  if (passMatch) {
+    return { userId: Number(passMatch[1]), membershipId: null, bookingId: null, email: null, raw: trimmed };
+  }
+
+  const dashEmailMatch = /^NEXUS-(\d+)-([^\s]+@[^\s]+)$/i.exec(trimmed);
+  if (dashEmailMatch) {
+    return { userId: Number(dashEmailMatch[1]), membershipId: null, bookingId: null, email: dashEmailMatch[2], raw: trimmed };
+  }
+
+  const idMatch = /^#?(\d+)$/.exec(trimmed);
+  if (idMatch && Number(idMatch[1]) > 0) {
+    return { userId: Number(idMatch[1]), membershipId: null, bookingId: null, email: null, raw: trimmed };
+  }
+
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    return { userId: null, membershipId: null, bookingId: null, email: trimmed, raw: trimmed };
+  }
+
+  return null;
+}
+
+/**
+ * Computes padded canvas dimensions for cropped or small QR images so jsQR always
+ * receives a sufficient white quiet-zone border and readable pixel density.
+ */
+export function computeQrScanLayout(srcWidth, srcHeight, maxSide = 1024) {
+  const safeW = Math.max(1, Math.round(Number(srcWidth) || 1));
+  const safeH = Math.max(1, Math.round(Number(srcHeight) || 1));
+  const longest = Math.max(safeW, safeH);
+
+  let scale = 1;
+  if (longest > maxSide) {
+    scale = maxSide / longest;
+  } else if (longest < 360) {
+    scale = Math.min(3, 480 / longest);
+  }
+
+  const drawWidth = Math.max(1, Math.round(safeW * scale));
+  const drawHeight = Math.max(1, Math.round(safeH * scale));
+  const padding = Math.max(28, Math.round(Math.max(drawWidth, drawHeight) * 0.12));
+
+  return {
+    drawWidth,
+    drawHeight,
+    padding,
+    canvasWidth: drawWidth + padding * 2,
+    canvasHeight: drawHeight + padding * 2,
+    upscaled: scale > 1,
+  };
+}
+
+/**
+ * Produces a high-contrast black/white RGBA buffer to help jsQR decode phone-screen
+ * glare, shadows, or washed-out webcam captures.
+ */
+export function binarizeQrRgba(rgbaData) {
+  if (!rgbaData || !rgbaData.length) return new Uint8ClampedArray(0);
+  const out = new Uint8ClampedArray(rgbaData.length);
+  let minLum = 255;
+  let maxLum = 0;
+
+  for (let i = 0; i < rgbaData.length; i += 4) {
+    const lum = Math.round(rgbaData[i] * 0.299 + rgbaData[i + 1] * 0.587 + rgbaData[i + 2] * 0.114);
+    if (lum < minLum) minLum = lum;
+    if (lum > maxLum) maxLum = lum;
+    out[i] = lum;
+  }
+
+  const threshold = Math.round((minLum + maxLum) * 0.5);
+  for (let i = 0; i < rgbaData.length; i += 4) {
+    const val = out[i] <= threshold ? 0 : 255;
+    out[i] = val;
+    out[i + 1] = val;
+    out[i + 2] = val;
+    out[i + 3] = 255;
+  }
+
+  return out;
+}

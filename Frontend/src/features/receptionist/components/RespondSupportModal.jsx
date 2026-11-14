@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   X, AlertTriangle, CheckCircle2, ShieldAlert,
   Send, User, Phone, Mail, BookOpen, Clock,
-  CreditCard, ArrowUpRight, DollarSign, RotateCcw, Dumbbell, Sparkles,
-  Wrench, UserCheck, AlertCircle, Copy, Check
+  CreditCard, ArrowUpRight, RotateCcw, Sparkles,
+  Wrench, UserCheck, Copy, Check
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
@@ -17,7 +17,8 @@ import {
   parseSupportRequestDetails,
   getAttendancePolicySummary,
   isCashRefundRequest,
-  canStaffProcessTicket
+  canStaffProcessTicket,
+  EvidencePreviewBox
 } from '../../../utils/supportDisplayUtils';
 import receptionistService from '../services/receptionistService';
 import { splitCode } from '../../manager/components/classSearch';
@@ -141,7 +142,7 @@ const NON_CANCELLATION_RESOLUTIONS = {
 const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSuccess }) => {
   const currentLang = useLanguage();
 
-  const [resolutionType, setResolutionType] = useState('ISSUE_CREDIT'); // 'ISSUE_CREDIT' | 'GYM_PASS' | 'ESCALATE' | 'REJECT'
+  const [resolutionType, setResolutionType] = useState('ISSUE_CREDIT'); // 'ISSUE_CREDIT' | 'ESCALATE' | 'REJECT'
   const [creditAmount, setCreditAmount] = useState(0);
   const [validDays, setValidDays] = useState(60);
   const [responseNote, setResponseNote] = useState('');
@@ -154,7 +155,6 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
 
   const policy = getAttendancePolicySummary(request);
   const isClassCancellationOrCompensation = policy.isCancellationLike;
-  const exceedsEightyPercent = policy.exceedsEightyPercent;
   const details = parseSupportRequestDetails(request?.content, request);
 
   const getNoteTemplate = (type, amt = creditAmount, days = validDays) => {
@@ -172,10 +172,6 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
       switch (type) {
         case 'ISSUE_CREDIT':
           return `${rolePrefix} đã duyệt bảo lưu${clsNameVi} và cấp Credit ${formattedAmt} (hạn ${parsedDays} ngày).`;
-        case 'GYM_PASS':
-          return `${rolePrefix} đã duyệt đổi${clsNameVi} sang Thẻ tập Gym 01 tháng (${formattedAmt}, hạn ${parsedDays} ngày).`;
-        case 'CASH_REFUND':
-          return `Quản lý trung tâm đã duyệt hoàn ${formattedAmt}${clsNameVi} qua tiền mặt / chuyển khoản.`;
         case 'ACKNOWLEDGE_AND_TRAIN':
           return `${rolePrefix} đã ghi nhận phản hồi về HLV${clsNameVi} và trao đổi với bộ môn để cải thiện chất lượng giảng dạy.`;
         case 'TRANSFER_CLASS_SUGGESTION':
@@ -193,9 +189,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
         case 'ESCALATE':
           return `${rolePrefix} đã chuyển tiếp yêu cầu lên Quản lý trung tâm xem xét, giải quyết.`;
         case 'REJECT':
-          return exceedsEightyPercent
-            ? `${rolePrefix} từ chối yêu cầu do lớp đã học quá 80% số buổi theo quy chế trung tâm.`
-            : `${rolePrefix} rất tiếc chưa thể duyệt yêu cầu do chưa đáp ứng điều kiện quy định.`;
+          return `${rolePrefix} rất tiếc chưa thể duyệt yêu cầu do chưa đáp ứng điều kiện quy định.`;
         case 'APPROVE_GENERAL':
         default:
           return `${rolePrefix} đã tiếp nhận và xử lý yêu cầu của bạn.`;
@@ -204,10 +198,6 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
       switch (type) {
         case 'ISSUE_CREDIT':
           return `${rolePrefix} approved tuition retention${clsNameEn} with a ${parsedDays}-day credit of ${formattedAmt}.`;
-        case 'GYM_PASS':
-          return `${rolePrefix} approved switching${clsNameEn} to a 1-month Gym Pass (${formattedAmt}, ${parsedDays} days).`;
-        case 'CASH_REFUND':
-          return `Center Management approved a refund of ${formattedAmt}${clsNameEn} via cash or bank transfer.`;
         case 'ACKNOWLEDGE_AND_TRAIN':
           return `${rolePrefix} acknowledged coach feedback${clsNameEn} and will review with the Head of Department.`;
         case 'TRANSFER_CLASS_SUGGESTION':
@@ -225,9 +215,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
         case 'ESCALATE':
           return `${rolePrefix} escalated the request to Center Management for review.`;
         case 'REJECT':
-          return exceedsEightyPercent
-            ? `${rolePrefix} declined the request as class attendance exceeded 80%.`
-            : `${rolePrefix} could not approve this request under center policy.`;
+          return `${rolePrefix} could not approve this request under center policy.`;
         case 'APPROVE_GENERAL':
         default:
           return `${rolePrefix} received and processed your request.`;
@@ -280,20 +268,10 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
       setCreditAmount(suggested);
       setValidDays(60);
 
-      const pref = request.preferredResolution;
       let defaultType = 'APPROVE_GENERAL';
 
       if (isClassCancellationOrCompensation) {
-        if (pref === 'GYM_PASS') {
-          defaultType = 'GYM_PASS';
-        } else if (pref === 'CASH_REFUND') {
-          defaultType = isManager ? 'CASH_REFUND' : 'ESCALATE';
-        } else if (exceedsEightyPercent) {
-          defaultType = 'REJECT';
-        } else {
-          // Default or ISSUE_CREDIT
-          defaultType = isManager && (request.status === 'ESCALATED') ? 'CASH_REFUND' : 'ISSUE_CREDIT';
-        }
+        defaultType = 'ISSUE_CREDIT';
       } else if (request.category === 'COACH_FEEDBACK') {
         defaultType = isManager ? 'ACKNOWLEDGE_AND_TRAIN' : 'ESCALATE';
       } else if (request.category === 'FACILITY_ISSUE') {
@@ -314,6 +292,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
   const isEscalatedForReceptionist = !isManager && request?.status === 'ESCALATED';
   const isCoachFeedbackForReceptionist = !isManager && request?.category === 'COACH_FEEDBACK';
   const isFacilityIssueForReceptionist = !isManager && request?.category === 'FACILITY_ISSUE';
+  const isCancellationForReceptionist = !isManager && (request?.category === 'CLASS_CANCELLATION' || request?.category === 'REFUND_REQUEST');
   const isCashRefundForReceptionist = !isManager && !isClosed && isCashRefundRequest(request);
   const isReadOnly = isClosed || !canStaffProcessTicket(request, isManager);
 
@@ -333,7 +312,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
       let status = 'APPROVED';
       let finalCreditAmount = null;
 
-      if (resolutionType === 'ISSUE_CREDIT' || resolutionType === 'CASH_REFUND' || resolutionType === 'GYM_PASS') {
+      if (resolutionType === 'ISSUE_CREDIT') {
         status = 'APPROVED';
         let parsed = Number.parseFloat(creditAmount) || 0;
         if (parsed <= 0) {
@@ -356,8 +335,8 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
         resolutionType,
         responseNote: responseNote.trim(),
         creditAmount: finalCreditAmount,
-        validityDays: (resolutionType === 'ISSUE_CREDIT' || resolutionType === 'GYM_PASS') ? Number.parseInt(validDays, 10) : 60,
-        creditExpiryDays: (resolutionType === 'ISSUE_CREDIT' || resolutionType === 'GYM_PASS') ? Number.parseInt(validDays, 10) : 60
+        validityDays: resolutionType === 'ISSUE_CREDIT' ? Number.parseInt(validDays, 10) : 60,
+        creditExpiryDays: resolutionType === 'ISSUE_CREDIT' ? Number.parseInt(validDays, 10) : 60
       });
 
       if (onSuccess) onSuccess();
@@ -401,57 +380,19 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
         {
           actionType: 'ISSUE_CREDIT',
           icon: CreditCard,
-          title: t('Issue Credit Voucher (Recommended)'),
-          desc: exceedsEightyPercent
-            ? t('Ineligible per center policy (>80% attended).')
-            : t('Generates 60-day voucher code for member to re-enroll without losing money.'),
-          color: exceedsEightyPercent ? 'rose' : 'emerald',
-          disabled: exceedsEightyPercent,
-          isMemberChoice: !exceedsEightyPercent && (request.preferredResolution === 'ISSUE_CREDIT' || !request.preferredResolution)
+          title: t('Issue Credit Voucher (Approved)'),
+          desc: t('Generates 60-day Credit Voucher and releases class bookings for the member.'),
+          color: 'emerald',
+          disabled: false,
+          isMemberChoice: true
         },
-        {
-          actionType: 'GYM_PASS',
-          icon: Clock,
-          title: t('Grant Free 1-Month Gym Pass'),
-          desc: exceedsEightyPercent
-            ? t('Ineligible per center policy (>80% attended).')
-            : t('Alternative perk when student prefers gym workouts over class credit.'),
-          color: exceedsEightyPercent ? 'rose' : 'blue',
-          disabled: exceedsEightyPercent,
-          isMemberChoice: !exceedsEightyPercent && request.preferredResolution === 'GYM_PASS'
-        },
-        isManager
-          ? {
-              actionType: 'CASH_REFUND',
-              icon: DollarSign,
-              title: t('Approve Cash / Bank Refund'),
-              desc: exceedsEightyPercent
-                ? t('Ineligible per center policy (>80% attended).')
-                : t('Authorizes cash disbursement or bank transfer to refund tuition to member.'),
-              color: exceedsEightyPercent ? 'rose' : 'purple',
-              disabled: exceedsEightyPercent,
-              isMemberChoice: !exceedsEightyPercent && request.preferredResolution === 'CASH_REFUND'
-            }
-          : {
-              actionType: 'ESCALATE',
-              icon: ArrowUpRight,
-              title: t('Escalate to Center Manager'),
-              desc: exceedsEightyPercent
-                ? t('Ineligible per center policy (>80% attended).')
-                : t('For special cash refunds or high-dispute exceptions.'),
-              color: exceedsEightyPercent ? 'rose' : 'purple',
-              disabled: exceedsEightyPercent,
-              isMemberChoice: false
-            },
         {
           actionType: 'REJECT',
           icon: X,
-          title: exceedsEightyPercent ? t('Reject Request (>80% Policy)') : t('Reject Request'),
-          desc: exceedsEightyPercent
-            ? t('Class attended sessions exceeded 80%. Refunds and vouchers are unavailable.')
-            : t('Decline request because it does not meet center policy.'),
+          title: t('Reject Request'),
+          desc: t('Decline cancellation request; member bookings stay unchanged on schedule.'),
           color: 'rose',
-          isMemberChoice: request.preferredResolution === 'REJECT'
+          isMemberChoice: false
         }
       ];
     } else {
@@ -683,33 +624,15 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                   <div className="space-y-1.5 pt-0.5">
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="font-semibold text-[var(--text-muted)]">
-                        {t('Attendance Progress')}: <strong className="text-[var(--text)]">{policy.percent}%</strong> / 80% {t('policy limit')}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                        exceedsEightyPercent
-                          ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                          : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                      }`}>
-                        {exceedsEightyPercent ? t('>80% Over limit') : t('<=80% Eligible')}
+                        {t('Attendance Progress')}: <strong className="text-[var(--text)]">{policy.percent}%</strong>
                       </span>
                     </div>
                     <div className="relative h-2 rounded-full bg-[var(--surface)] border border-[var(--border)] overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all ${exceedsEightyPercent ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                        className="h-full rounded-full transition-all bg-emerald-500"
                         style={{ width: `${policy.percent}%` }}
                       />
-                      <div
-                        className="absolute top-0 bottom-0 w-0.5 bg-amber-500/80"
-                        style={{ left: '80%' }}
-                        title="80%"
-                      />
                     </div>
-                  </div>
-                )}
-                {isClassCancellationOrCompensation && exceedsEightyPercent && (
-                  <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-xs text-rose-700 dark:text-rose-300 font-semibold flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{t('Attendance exceeded 80% — not eligible for refunds or vouchers.')}</span>
                   </div>
                 )}
                 {isClassCancellationOrCompensation && (
@@ -726,6 +649,16 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
             );
           })()}
 
+          {/* Uploaded Evidence Preview (for late cancellation & admin audit) */}
+          {request.evidenceUrl && (
+            <div className="space-y-1.5">
+              <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">
+                {t('Supporting Evidence File / Photo')}
+              </div>
+              <EvidencePreviewBox evidenceUrl={request.evidenceUrl} />
+            </div>
+          )}
+
           {/* Member's Requested Benefit (concise single-row badge) */}
           {request.preferredResolution && (
             <div className="px-3.5 py-2.5 rounded-xl border bg-[var(--surface-hover)] border-[var(--border)] flex items-center justify-between gap-2 shadow-sm">
@@ -733,24 +666,13 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                 <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 {t('Requested Benefit')}
               </span>
-              {request.preferredResolution === 'ISSUE_CREDIT' && (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
-                  <CreditCard className="w-3 h-3" /> {t('Credit Voucher')}
-                </span>
-              )}
-              {request.preferredResolution === 'GYM_PASS' && (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 inline-flex items-center gap-1">
-                  <Dumbbell className="w-3 h-3" /> {t('1-Month Gym Pass')}
-                </span>
-              )}
-              {isCashRefundRequest(request) && (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 inline-flex items-center gap-1">
-                  <DollarSign className="w-3 h-3" /> {t('Cash / Bank Refund')}
-                </span>
-              )}
-              {request.preferredResolution === 'NONE' && (
+              {request.preferredResolution === 'NONE' ? (
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-500/10 text-slate-600 dark:text-slate-300 border border-slate-500/20">
                   {t('No Compensation')}
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
+                  <CreditCard className="w-3 h-3" /> {t('Credit Voucher')}
                 </span>
               )}
             </div>
@@ -759,7 +681,7 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
           {/* If Read-Only (Closed Ticket or Admin-Only Ticket for Receptionist): Show Concise Summary */}
           {isReadOnly ? (
             <div className="space-y-4">
-              {(isCoachFeedbackForReceptionist || isFacilityIssueForReceptionist) && !isClosed && (
+              {(isCoachFeedbackForReceptionist || isFacilityIssueForReceptionist || isCancellationForReceptionist) && !isClosed && (
                 <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1">
                   <div className="flex items-center gap-2 text-xs font-bold text-purple-900 dark:text-purple-200">
                     <ArrowUpRight className="w-4 h-4 text-purple-700 dark:text-purple-400" />
@@ -768,24 +690,26 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                   <p className="text-xs text-[var(--text)] leading-relaxed font-medium">
                     {isCoachFeedbackForReceptionist
                       ? t('Coach feedback is handled confidentially by Center Management.')
-                      : t('Facility and equipment reports are routed directly to Center Management for technical inspection and resolution.')}
+                      : isCancellationForReceptionist
+                        ? t('Only Admin / Center Management can review evidence and approve or reject class cancellation requests.')
+                        : t('Facility and equipment reports are routed directly to Center Management for technical inspection and resolution.')}
                   </p>
                 </div>
               )}
 
-              {!isCoachFeedbackForReceptionist && !isFacilityIssueForReceptionist && isCashRefundForReceptionist && (
+              {!isCoachFeedbackForReceptionist && !isFacilityIssueForReceptionist && !isCancellationForReceptionist && isCashRefundForReceptionist && (
                 <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1">
                   <div className="flex items-center gap-2 text-xs font-bold text-amber-900 dark:text-amber-200">
                     <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     <span>{t('Admin-Only Action')}</span>
                   </div>
                   <p className="text-xs text-[var(--text)] leading-relaxed font-medium">
-                    {t('Only Admin / Center Management can process cash or bank refunds.')}
+                    {t('Only Admin / Center Management can review and finalize this request.')}
                   </p>
                 </div>
               )}
 
-              {!isCoachFeedbackForReceptionist && !isFacilityIssueForReceptionist && !isCashRefundForReceptionist && isEscalatedForReceptionist && (
+              {!isCoachFeedbackForReceptionist && !isFacilityIssueForReceptionist && !isCancellationForReceptionist && !isCashRefundForReceptionist && isEscalatedForReceptionist && (
                 <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1">
                   <div className="flex items-center gap-2 text-xs font-bold text-purple-900 dark:text-purple-200">
                     <ArrowUpRight className="w-4 h-4 text-purple-700 dark:text-purple-400" />
@@ -834,23 +758,6 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                         <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
                           {formatMoney(request.generatedCreditAmount || request.calculatedCreditAmount)}
                         </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* If Cash Refund Approved */}
-                  {request.status === 'APPROVED' && !request.generatedCreditCode && isClassCancellationOrCompensation && (
-                    <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <div className="text-xs font-bold text-purple-700 dark:text-purple-400 flex items-center gap-1.5">
-                          <DollarSign className="w-4 h-4" /> {t('Direct Cash / Bank Refund Approved')}
-                        </div>
-                        <div className="text-xs text-[var(--text-muted)] mt-1 font-medium">
-                          {t('Authorized by Center Management')}
-                        </div>
-                      </div>
-                      <div className="text-base font-extrabold text-purple-600 dark:text-purple-400">
-                        {formatMoney(request.calculatedCreditAmount ?? request.classPrice)}
                       </div>
                     </div>
                   )}
@@ -959,29 +866,13 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                 </div>
               </div>
 
-              {/* Conditional Amount & Benefit Fields (Credit Voucher or Cash Refund) */}
-              {(resolutionType === 'ISSUE_CREDIT' || resolutionType === 'CASH_REFUND') && (
-                <div
-                  className={`p-4 rounded-xl bg-[var(--surface-hover)] border-2 space-y-3 ${
-                    resolutionType === 'ISSUE_CREDIT' ? 'border-emerald-500/50' : 'border-purple-500/50'
-                  }`}
-                >
-                  {resolutionType === 'CASH_REFUND' && (
-                    <div className="flex items-center gap-2 text-xs font-extrabold text-[var(--text)]">
-                      <CheckCircle2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                      <span>{t('Confirm cash / bank refund order (Manager Authority)')}</span>
-                    </div>
-                  )}
-                  {resolutionType === 'ISSUE_CREDIT' && exceedsEightyPercent && (
-                    <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-xs text-rose-700 dark:text-rose-300 font-semibold flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{t('Warning: This class exceeded 80% attendance. Issuing voucher violates center policy.')}</span>
-                    </div>
-                  )}
+              {/* Conditional Amount & Validity Fields for Credit Voucher */}
+              {resolutionType === 'ISSUE_CREDIT' && (
+                <div className="p-4 rounded-xl bg-[var(--surface-hover)] border-2 border-emerald-500/50 space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div className="space-y-1.5">
                       <label htmlFor="resolution-amount-input" className="block text-xs font-black text-[var(--text)]">
-                        {resolutionType === 'ISSUE_CREDIT' ? t('Voucher Credit Amount (VND)') : t('Approved Refund Amount (VND)')}{' '}
+                        {t('Voucher Credit Amount (VND)')}{' '}
                         <span className="text-red-500 font-bold">*</span>
                       </label>
                       <input
@@ -991,56 +882,43 @@ const RespondSupportModal = ({ isOpen, request, isManager = false, onClose, onSu
                         step="any"
                         value={creditAmount}
                         onChange={(e) => handleAmountChange(e.target.value)}
-                        className={`w-full px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-[var(--text)] font-black text-base focus:outline-none focus:ring-2 ${
-                          resolutionType === 'ISSUE_CREDIT' ? 'focus:ring-emerald-500' : 'focus:ring-purple-500'
-                        }`}
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-[var(--text)] font-black text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         required
                       />
                     </div>
-                    {resolutionType === 'ISSUE_CREDIT' ? (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <label htmlFor="credit-validity-input" className="block text-xs font-black text-[var(--text)]">
-                            {t('Validity (Days)')} <span className="text-red-500 font-bold">*</span>
-                          </label>
-                          <div className="flex items-center gap-1">
-                            {[30, 60, 90].map((preset) => (
-                              <button
-                                key={preset}
-                                type="button"
-                                onClick={() => handleValidDaysChange(preset)}
-                                className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors ${
-                                  Number(validDays) === preset
-                                    ? 'bg-emerald-600 text-white border-emerald-600'
-                                    : 'bg-[var(--surface)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text)]'
-                                }`}
-                              >
-                                {preset} {t('days')}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <input
-                          id="credit-validity-input"
-                          type="number"
-                          min="7"
-                          max="365"
-                          value={validDays}
-                          onChange={(e) => handleValidDaysChange(e.target.value)}
-                          className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-[var(--text)] font-black text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                          required
-                        />
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-black text-[var(--text)]">
-                          {t('Payment Method')}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <label htmlFor="credit-validity-input" className="block text-xs font-black text-[var(--text)]">
+                          {t('Validity (Days)')} <span className="text-red-500 font-bold">*</span>
                         </label>
-                        <div className="px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-xs font-bold text-[var(--text)] flex items-center h-[46px]">
-                          {t('Cash at desk / Bank transfer')}
+                        <div className="flex items-center gap-1">
+                          {[30, 60, 90].map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => handleValidDaysChange(preset)}
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors ${
+                                Number(validDays) === preset
+                                  ? 'bg-emerald-600 text-white border-emerald-600'
+                                  : 'bg-[var(--surface)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text)]'
+                              }`}
+                            >
+                              {preset} {t('days')}
+                            </button>
+                          ))}
                         </div>
                       </div>
-                    )}
+                      <input
+                        id="credit-validity-input"
+                        type="number"
+                        min="7"
+                        max="365"
+                        value={validDays}
+                        onChange={(e) => handleValidDaysChange(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-[var(--surface)] border-2 border-[var(--border)] text-[var(--text)] font-black text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        required
+                      />
+                    </div>
                   </div>
                 </div>
               )}

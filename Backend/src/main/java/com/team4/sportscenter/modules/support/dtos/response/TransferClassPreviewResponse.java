@@ -26,6 +26,7 @@ public class TransferClassPreviewResponse {
     private String schedulePattern;
     private List<String> upcomingDates;
     private boolean hasStarted;
+    private boolean blockedByPendingRequest;
     private boolean canTransfer;
     private String message;
     private List<TransferClassOptionResponse> equivalentClasses;

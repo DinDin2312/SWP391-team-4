@@ -24,4 +24,7 @@ public interface UserMembershipRepository extends JpaRepository<UserMembership, 
 
     @Query("SELECT COUNT(um) > 0 FROM UserMembership um WHERE um.user.userId = :userId AND um.status = :status AND um.aPackage.packageId = :packageId")
     boolean existsByUser_UserIdAndStatusAndAPackage_PackageId(@Param("userId") Integer userId, @Param("status") String status, @Param("packageId") Integer packageId);
+
+    @Query("SELECT um.aPackage.packageId, COUNT(um) FROM UserMembership um WHERE um.status IN ('ACTIVE', 'EXPIRED') GROUP BY um.aPackage.packageId")
+    java.util.List<Object[]> countPurchasesByPackage();
 }

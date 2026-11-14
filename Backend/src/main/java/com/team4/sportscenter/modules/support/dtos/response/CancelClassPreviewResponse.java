@@ -18,7 +18,9 @@ public class CancelClassPreviewResponse {
     private Integer remainingSessions;
     private LocalDateTime firstSessionTime;
     private boolean hasStarted;
-    private boolean canDirectCancelWithCredit; // true if !hasStarted
+    private boolean withinSevenDays;
+    private long daysUntilStart;
+    private boolean canDirectCancelWithCredit; // true if !hasStarted && >= 7 days before firstSessionTime
     private boolean exceedsEightyPercent;
     private boolean eligibleForVoucher;
     private boolean eligibleForCompensation;

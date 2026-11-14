@@ -17,5 +17,6 @@ public class CreateSupportRequest {
     private String title;
     @NotBlank(message = "Content cannot be blank")
     private String content;
+    private String evidenceUrl;
     private SupportPriority priority;
 }

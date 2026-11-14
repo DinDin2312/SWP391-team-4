@@ -29,7 +29,7 @@ export function t(value, params = []) {
     .replace(/&(bull|nbsp|rarr|middot|amp|quot|apos);/g, (_,name)=>({bull:'•',nbsp:' ',rarr:'→',middot:'·',amp:'&',quot:'"',apos:"'"})[name]);
 }
 export const locale = () => language === 'vi' ? 'vi-VN' : 'en-GB';
-export const codeLabel = value => t(({ ACTIVE:'Active', INACTIVE:'Inactive', SCHEDULED:'Scheduled', COMPLETED:'Completed', CANCELLED:'Cancelled', CANCELLED_INSUFFICIENT_ATTENDEES:'Cancelled (Low Quorum)', CONFIRMED:'Confirmed', PENDING:'Pending', EXPIRED:'Expired', SUCCESS:'Success!', FAILED:'Payment Failed', PRESENT:'Present', ABSENT:'Absent', NOT_YET:'Not yet', GYM_ACCESS:'Gym access', AI_ACCESS:'AI access', COMBO:'Combo (Gym + AI)', PREMIUM:'Premium', SUBJECT_ACCESS:'Subject package', SUBSTITUTE_ASSIGNED:'Substitute Assigned', RESCHEDULED:'Rescheduled', PENDING_RESCHEDULE:'Pending Reschedule' })[value] || value);
+export const codeLabel = value => t(({ ACTIVE:'Active', INACTIVE:'Inactive', SCHEDULED:'Scheduled', COMPLETED:'Completed', CANCELLED:'Cancelled', CANCELLED_INSUFFICIENT_ATTENDEES:'Cancelled (Low Quorum)', CONFIRMED:'Confirmed', PENDING:'Pending', EXPIRED:'Expired', SUCCESS:'Success!', FAILED:'Payment Failed', PRESENT:'Present', ABSENT:'Absent', NOT_YET:'Not yet', GYM_ACCESS:'Gym access', POOL_ACCESS:'Pool access', SAUNA_ACCESS:'Sauna access', AI_ACCESS:'AI access', COMBO:'Combo (Gym & Amenities)', PREMIUM:'Premium', SUBJECT_ACCESS:'Subject package', SUBSTITUTE_ASSIGNED:'Substitute Assigned', RESCHEDULED:'Rescheduled', PENDING_RESCHEDULE:'Pending Reschedule' })[value] || value);
 export function localizedCopy(object) {
   return new Proxy(object, { get(target,key) {
     const value = target[key];

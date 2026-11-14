@@ -1,267 +1,78 @@
-import React from 'react';
-import {
-  CheckCircle2, Clock, Sparkles, CreditCard, Dumbbell, DollarSign, Check, Copy, Send, AlertTriangle
-} from 'lucide-react';
+import React, { useState } from 'react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
+import { processEvidenceFile, EvidencePreviewBox } from '../../../utils/supportDisplayUtils';
 
-export const CancellationGuaranteeNotice = () => {
-  useLanguage();
-  return (
-    <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
-      <p className="font-bold flex items-center gap-1.5">
-        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-        <span>{t('Terms & Guarantee:')}</span>
-      </p>
-      <ul className="list-disc pl-4 space-y-0.5 text-[11px]">
-        <li>{t('100% of your course price will be credited as a 60-day voucher.')}</li>
-        <li>{t('Use the voucher at checkout for any other class or gym membership.')}</li>
-        <li>{t('All upcoming sessions will be released for other members.')}</li>
-      </ul>
-    </div>
-  );
-};
-
-const BENEFIT_THEMES = {
-  emerald: {
-    selected: 'border-emerald-600 bg-emerald-500/10 dark:bg-emerald-500/15 ring-2 ring-emerald-500/30',
-    hover: 'hover:border-emerald-500/40',
-    iconActive: 'bg-emerald-600 text-white',
-    iconInactive: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    badge: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
-    subtext: 'text-emerald-600 dark:text-emerald-400',
-    checkBg: 'bg-emerald-600'
-  },
-  blue: {
-    selected: 'border-blue-600 bg-blue-500/10 dark:bg-blue-500/15 ring-2 ring-blue-500/30',
-    hover: 'hover:border-blue-500/40',
-    iconActive: 'bg-blue-600 text-white',
-    iconInactive: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-    badge: 'bg-blue-500/20 text-blue-700 dark:text-blue-300',
-    subtext: 'text-blue-600 dark:text-blue-400',
-    checkBg: 'bg-blue-600'
-  },
-  purple: {
-    selected: 'border-purple-600 bg-purple-500/10 dark:bg-purple-500/15 ring-2 ring-purple-500/30',
-    hover: 'hover:border-purple-500/40',
-    iconActive: 'bg-purple-600 text-white',
-    iconInactive: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
-    badge: 'bg-purple-500/20 text-purple-700 dark:text-purple-300',
-    subtext: 'text-purple-600 dark:text-purple-400',
-    checkBg: 'bg-purple-600'
-  }
-};
-
-const BenefitOptionCard = ({
-  optionKey,
-  selectedKey,
-  onSelect,
-  icon: Icon,
-  title,
-  badgeText,
-  desc,
-  subtext,
-  themeKey = 'emerald'
-}) => {
-  const isSelected = selectedKey === optionKey;
-  const theme = BENEFIT_THEMES[themeKey] || BENEFIT_THEMES.emerald;
-
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(optionKey)}
-      className={`p-3.5 rounded-xl border-2 text-left transition-all relative ${
-        isSelected
-          ? theme.selected
-          : `border-[var(--border)] bg-[var(--surface-hover)] ${theme.hover}`
-      }`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2.5">
-          <div
-            className={`p-2 rounded-lg mt-0.5 ${
-              isSelected ? theme.iconActive : theme.iconInactive
-            }`}
-          >
-            <Icon className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-black text-[var(--text)]">
-                {title}
-              </span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${theme.badge}`}>
-                {badgeText}
-              </span>
-            </div>
-            <p className="text-[11px] text-[var(--text-muted)] mt-1 leading-snug">
-              {desc}
-            </p>
-            <div className={`mt-1.5 text-[10px] font-semibold flex items-center gap-1 ${theme.subtext}`}>
-              <CheckCircle2 className="w-3 h-3" />
-              <span>{subtext}</span>
-            </div>
-          </div>
-        </div>
-        {isSelected && (
-          <div className={`w-5 h-5 rounded-full text-white flex items-center justify-center shrink-0 ${theme.checkBg}`}>
-            <Check className="w-3.5 h-3.5" />
-          </div>
-        )}
-      </div>
-    </button>
-  );
-};
+const isCourseCompleted = (preview) =>
+  (preview?.totalSessions ?? 0) > 0 && (preview?.remainingSessions ?? 0) <= 0;
 
 export const ClassCancellationPreviewCard = ({
   preview,
-  preferredResolution,
-  onSelectResolution,
   showCourseName = true
 }) => {
   useLanguage();
   if (!preview) return null;
 
+  const isCompleted = isCourseCompleted(preview);
+  const isDirectEligible = !isCompleted && Boolean(preview.canDirectCancelWithCredit);
+
   return (
-    <div className="space-y-4">
-      {/* Status Header Badge */}
+    <div className="space-y-2.5">
+      {/* Compact Policy / Completion Banner */}
       <div
-        className={`p-4 rounded-xl border ${
-          preview.exceedsEightyPercent
-            ? 'bg-rose-500/10 border-rose-500/25 text-rose-800 dark:text-rose-300'
-            : !preview.hasStarted
-            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-800 dark:text-emerald-300'
-            : 'bg-amber-500/10 border-amber-500/20 text-amber-800 dark:text-amber-300'
+        className={`p-3 rounded-xl border ${
+          isCompleted
+            ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-900 dark:text-emerald-200'
+            : isDirectEligible
+              ? 'bg-amber-500/10 border-amber-500/25 text-amber-900 dark:text-amber-200'
+              : 'bg-rose-500/10 border-rose-500/25 text-rose-900 dark:text-rose-200'
         }`}
       >
-        <div className="flex items-center gap-2.5 font-bold text-sm mb-1">
-          {preview.exceedsEightyPercent ? (
-            <>
-              <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
-              <span>{t('Class Attendance Exceeded 80% - Ineligible for Refund or Perks')}</span>
-            </>
-          ) : !preview.hasStarted ? (
-            <>
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span>{t('Class Has Not Started Yet - 100% Credit Eligible')}</span>
-            </>
-          ) : (
-            <>
-              <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
-              <span>{t('Class In Progress - Reception Support Required')}</span>
-            </>
-          )}
+        <div className="font-bold text-sm">
+          {isCompleted
+            ? t('Course Completed')
+            : isDirectEligible
+              ? t('Before 1 Week — 50% Voucher Refund')
+              : t('After 1 Week — 100% Tuition Forfeited')}
         </div>
-        <p className="text-xs leading-relaxed opacity-90">
-          {(preview.policyNotice || preview.message)}
+        <p className="text-xs mt-0.5 opacity-90">
+          {isCompleted
+            ? t('You have already completed this course.')
+            : isDirectEligible
+              ? t('50% tuition forfeited; remaining 50% refunded as a 60-day Voucher.')
+              : t('Choose immediate cancellation (0đ refund) or request a Voucher review from Admin.')}
         </p>
       </div>
 
-      {/* Course Progress & Pricing Breakdown */}
-      <div className="p-4 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] space-y-3">
+      {/* Compact Key-Value Summary */}
+      <div className="p-3 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] space-y-1.5 text-sm">
         {showCourseName && (
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-[var(--text-muted)]">{t('Course Name')}:</span>
-            <span className="font-bold text-[var(--text)]">{preview.className}</span>
+          <div className="flex justify-between items-center gap-3">
+            <span className="text-xs text-[var(--text-muted)]">{t('Course Name')}</span>
+            <span className="font-semibold text-[var(--text)] text-right">{preview.className}</span>
           </div>
         )}
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-[var(--text-muted)]">{t('Course Tuition')}:</span>
+        <div className="flex justify-between items-center gap-3">
+          <span className="text-xs text-[var(--text-muted)]">{t('Tuition')}</span>
           <span className="font-bold text-[var(--text)]">{formatMoney(preview.classPrice)}</span>
         </div>
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-[var(--text-muted)]">{t('Session Progress')}:</span>
+        <div className="flex justify-between items-center gap-3">
+          <span className="text-xs text-[var(--text-muted)]">{t('Progress')}</span>
           <span className="font-medium text-[var(--text)]">
-            {preview.attendedSessions} / {preview.totalSessions} {t('sessions taken')} ({preview.remainingSessions} {t('remaining')})
+            {preview.attendedSessions}/{preview.totalSessions} {t('sessions')} ({preview.remainingSessions} {t('left')})
           </span>
         </div>
-
-        {/* Progress bar */}
-        <div className="w-full bg-[var(--border)] h-2 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-[var(--primary)] rounded-full transition-all duration-300"
-            style={{
-              width: `${
-                preview.totalSessions > 0
-                  ? (preview.attendedSessions / preview.totalSessions) * 100
-                  : 0
-              }%`
-            }}
-          />
-        </div>
-
-        {preview.hasStarted && !preview.exceedsEightyPercent && (
-          <div className="pt-2 border-t border-[var(--border)] flex justify-between items-center">
+        {!isCompleted && (
+          <div className="pt-1.5 border-t border-[var(--border)] flex justify-between items-center gap-3">
             <span className="text-xs font-semibold text-[var(--text-muted)]">
-              {t('Estimated Prorated Credit Value:')}
+              {isDirectEligible ? t('50% Voucher (60 days)') : t('Est. Voucher (If Approved)')}
             </span>
             <span className="text-base font-extrabold text-[var(--primary)]">
-              {formatMoney((preview.proratedCredit ?? preview.estimatedCreditAmount))}
+              {formatMoney(preview.estimatedCreditAmount ?? preview.proratedCredit ?? 0)}
             </span>
           </div>
         )}
       </div>
-
-      {/* Member Compensation Benefit Selection */}
-      {!preview.exceedsEightyPercent && (
-        <div className="space-y-2.5 pt-1">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-            <label className="text-xs font-extrabold text-[var(--text)] uppercase tracking-wide flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <span>{t('Select Desired Compensation Benefit')}</span>
-            </label>
-            <span className="text-[11px] font-semibold text-[var(--text-muted)]">
-              {t('Choose how you would like to be compensated if this class is cancelled.')}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2.5">
-            <BenefitOptionCard
-              optionKey="ISSUE_CREDIT"
-              selectedKey={preferredResolution}
-              onSelect={onSelectResolution}
-              icon={CreditCard}
-              title={t('Course Credit Voucher (Recommended)')}
-              badgeText={
-                !preview.hasStarted
-                  ? `100% ${t('Tuition Value')}`
-                  : formatMoney((preview.proratedCredit ?? preview.estimatedCreditAmount))
-              }
-              desc={t('100% or prorated value credited for 60 days to book any other class or gym package.')}
-              subtext={!preview.hasStarted ? t('Auto-issued instantly (1-click)') : t('Quick reception review')}
-              themeKey="emerald"
-            />
-
-            <BenefitOptionCard
-              optionKey="GYM_PASS"
-              selectedKey={preferredResolution}
-              onSelect={onSelectResolution}
-              icon={Dumbbell}
-              title={t('Free 1-Month Gym Pass')}
-              badgeText={`1 ${t('Month')} VIP`}
-              desc={t('Exchange remaining sessions for 1 full month of unlimited gym & fitness access.')}
-              subtext={t('Instant activation upon review')}
-              themeKey="blue"
-            />
-
-            <BenefitOptionCard
-              optionKey="CASH_REFUND"
-              selectedKey={preferredResolution}
-              onSelect={onSelectResolution}
-              icon={DollarSign}
-              title={t('Cash / Bank Refund Request')}
-              badgeText={
-                !preview.hasStarted
-                  ? formatMoney(preview.classPrice)
-                  : formatMoney((preview.proratedCredit ?? preview.estimatedCreditAmount))
-              }
-              desc={t('Request remaining class tuition refunded via bank transfer or cash at counter.')}
-              subtext={t('Requires Center Manager approval')}
-              themeKey="purple"
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -278,88 +89,82 @@ export const ClassCancellationSuccessCard = ({
   if (!result) return null;
 
   return (
-    <div className="py-4 text-center space-y-4">
-      <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
-        <CheckCircle2 className="w-10 h-10" />
+    <div className="py-3 text-center space-y-4">
+      <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+        {t('Done')}
       </div>
 
       {result.type === 'DIRECT_CANCEL_SUCCESS' ? (
         <>
-          <h3 className="text-xl font-bold text-[var(--text)]">
-            {t('Class Cancelled & 100% Credit Granted!')}
+          <h3 className="text-lg font-bold text-[var(--text)]">
+            {t('Class Cancelled & 50% Credit Granted!')}
           </h3>
-          <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto">
-            {t('Because this class has not started yet, 100% of your course fee has been converted into a Course Credit Voucher valid for 60 days.')}
+          <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto">
+            {t('50% tuition forfeited; remaining 50% refunded as a 60-day Voucher.')}
           </p>
 
-          <div className="p-4 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] max-w-sm mx-auto text-left space-y-2">
-            <div className="text-xs text-[var(--text-muted)] font-medium">
-              {t('Credit Voucher Code')}
-            </div>
+          <div className="p-3.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] max-w-sm mx-auto text-left space-y-2 text-xs">
+            <div className="text-[var(--text-muted)] font-medium">{t('Credit Voucher Code')}</div>
             <div className="flex items-center justify-between bg-[var(--surface)] p-2.5 rounded-lg border border-[var(--border)]">
-              <code className="text-base font-bold text-[var(--primary)] tracking-wider">
+              <code className="text-sm font-bold text-[var(--primary)] tracking-wider">
                 {result.creditCode}
               </code>
               <button
                 type="button"
                 onClick={() => onCopyCode(result.creditCode)}
-                className="px-2.5 py-1 text-xs font-semibold rounded-md bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-colors flex items-center gap-1.5"
+                className="px-2.5 py-1 text-xs font-semibold rounded-md bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-colors cursor-pointer"
               >
-                {copiedCode ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 {copiedCode ? t('Copied') : t('Copy')}
               </button>
             </div>
-            <div className="flex justify-between text-xs pt-1">
+            <div className="flex justify-between pt-1">
               <span className="text-[var(--text-muted)]">{t('Amount:')}</span>
-              <span className="font-bold text-[var(--text)]">
-                {formatMoney(result.creditAmount)}
-              </span>
+              <span className="font-bold text-[var(--text)]">{formatMoney(result.creditAmount)}</span>
             </div>
-            <div className="flex justify-between text-xs">
+            <div className="flex justify-between">
               <span className="text-[var(--text-muted)]">{t('Valid Until:')}</span>
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                {result.expiryDate} (60 {t('days')})
-              </span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{result.expiryDate}</span>
             </div>
             {result.requestId && (
-              <div className="pt-2 border-t border-[var(--border)] flex justify-between items-center text-xs">
-                <span className="text-[var(--text-muted)]">{t('Ticket ID')}:</span>
-                <span className="font-bold text-[var(--text)]">
-                  #{result.requestId} &bull;{' '}
-                  <span className="text-emerald-600 font-bold">
-                    {t('Approved & Resolved')}
-                  </span>
-                </span>
+              <div className="pt-2 border-t border-[var(--border)] flex justify-between items-center">
+                <span className="text-[var(--text-muted)]">{t('Ticket ID')}</span>
+                <span className="font-bold text-[var(--text)]">#{result.requestId}</span>
               </div>
             )}
           </div>
         </>
+      ) : result.type === 'FORFEIT_CANCEL_SUCCESS' ? (
+        <>
+          <h3 className="text-lg font-bold text-[var(--text)]">
+            {t('Class Cancelled (100% Tuition Forfeited)')}
+          </h3>
+          <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto">
+            {t('Your remaining class sessions have been cancelled and released immediately. Per policy, no refund or credit voucher was issued.')}
+          </p>
+          <div className="p-3 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-xs font-medium text-[var(--text)] max-w-sm mx-auto">
+            {t('Ticket ID')}: #{result.requestId} &bull; {t('Approved & Resolved')}
+          </div>
+        </>
       ) : (
         <>
-          <h3 className="text-xl font-bold text-[var(--text)]">
-            {t('Support Ticket Submitted!')}
+          <h3 className="text-lg font-bold text-[var(--text)]">
+            {result.title || t('Voucher Request Submitted')}
           </h3>
-          <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto">
+          <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto">
             {result.message}
           </p>
-          {result.preferredLabel && (
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] text-xs font-bold border border-[var(--primary)]/20">
-              <span>{t('Requested Benefit')}:</span>
-              <span>{result.preferredLabel}</span>
-            </div>
-          )}
-          <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-medium">
+          <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-medium max-w-md mx-auto">
             {t('Ticket ID')}: #{result.requestId} &bull;{' '}
-            {t('You will receive a notification once Reception reviews and resolves your ticket.')}
+            {result.footerNote || t('Your current class schedule remains active on My Schedule until Admin approves your request.')}
           </div>
         </>
       )}
 
-      <div className="pt-4 flex items-center justify-center gap-3">
+      <div className="pt-2 flex items-center justify-center gap-3">
         <button
           type="button"
           onClick={onClose}
-          className="px-5 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors"
+          className="px-4 py-2 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-xs cursor-pointer"
         >
           {t('Close')}
         </button>
@@ -367,7 +172,7 @@ export const ClassCancellationSuccessCard = ({
           <button
             type="button"
             onClick={onViewDetails}
-            className="px-5 py-2.5 rounded-xl bg-[var(--primary)] text-white font-medium text-sm hover:opacity-90 transition-opacity"
+            className="px-4 py-2 rounded-xl bg-[var(--primary)] text-white font-medium text-xs hover:opacity-90 cursor-pointer"
           >
             {viewDetailsText || t('View My Credits & Tickets')}
           </button>
@@ -379,66 +184,36 @@ export const ClassCancellationSuccessCard = ({
 
 export const ClassCancellationFormSection = ({
   preview,
-  preferredResolution,
+  step = 'CHOICE',
+  onStepChange,
   reasonCategory,
   onChangeReasonCategory,
   reasonContent,
   onChangeReasonContent,
+  evidenceUrl = '',
+  evidenceFileName = '',
+  onChangeEvidence,
   submitting,
   onClose,
   onDirectCancel,
   onSubmitSupport,
   directCancelDisabled = false,
-  supportSubmitDisabled = false
+  supportSubmitDisabled = false,
+  forfeitCancelDisabled = false
 }) => {
   useLanguage();
+  const [uploadError, setUploadError] = useState('');
 
   if (!preview) return null;
 
-  if (!preview.hasStarted && preferredResolution === 'ISSUE_CREDIT') {
+  // Completed course (0 sessions left): lock cancellation and complaints completely
+  if (isCourseCompleted(preview)) {
     return (
-      <div className="space-y-4 pt-2">
-        <CancellationGuaranteeNotice />
-
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-            className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors cursor-pointer"
-          >
-            {t('Keep My Booking')}
-          </button>
-          <button
-            type="button"
-            onClick={onDirectCancel}
-            disabled={submitting || directCancelDisabled}
-            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-colors flex items-center gap-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {submitting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>{t('Processing...')}</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{t('Confirm Cancel & Receive Credit Now')}</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (preview.exceedsEightyPercent) {
-    return (
-      <div className="flex items-center justify-end pt-1">
+      <div className="flex justify-end pt-1">
         <button
           type="button"
           onClick={onClose}
-          className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-opacity cursor-pointer"
+          className="px-4 py-2 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-xs cursor-pointer"
         >
           {t('Close')}
         </button>
@@ -446,68 +221,213 @@ export const ClassCancellationFormSection = ({
     );
   }
 
-  return (
-    <div className="space-y-4 pt-2">
-      <div className="space-y-2">
-        <label htmlFor="cancel-reason-select" className="block text-xs font-bold text-[var(--text)]">
-          {t('Reason for Request')}
-        </label>
-        <select
-          id="cancel-reason-select"
-          value={reasonCategory}
-          onChange={(e) => onChangeReasonCategory(e.target.value)}
-          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-        >
-          <option value="CLASS_CANCELLATION">{t('Mid-Course Emergency / Medical / Relocation')}</option>
-          <option value="GENERAL_INQUIRY">{t('Schedule Conflict / Need Class Transfer')}</option>
-          <option value="COMPLAINT">{t('Course Quality / Other Reason')}</option>
-        </select>
-      </div>
-
-      <div className="space-y-2">
-        <label htmlFor="cancel-reason-content" className="block text-xs font-bold text-[var(--text)]">
-          {t('Detailed Situation & Note for Receptionist')} <span className="text-red-500">*</span>
-        </label>
-        <textarea
-          id="cancel-reason-content"
-          rows={3}
-          value={reasonContent}
-          onChange={(e) => onChangeReasonContent(e.target.value)}
-          placeholder={t('Please specify your reason (e.g. medical reason, work relocation). Receptionist will review and approve your credit voucher or compensation.')}
-          className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
-          required
-        />
-      </div>
-
-      <div className="flex items-center justify-end gap-3 pt-2">
+  // Early cancellation (>= 7 days before start): direct 50% voucher cancel
+  if (preview.canDirectCancelWithCredit) {
+    return (
+      <div className="flex items-center justify-end gap-2.5 pt-2">
         <button
           type="button"
           onClick={onClose}
           disabled={submitting}
-          className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-sm transition-colors cursor-pointer"
+          className="px-4 py-2 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-xs cursor-pointer"
         >
-          {t('Keep My Booking')}
+          {t('Keep Booking')}
         </button>
         <button
           type="button"
-          onClick={onSubmitSupport}
-          disabled={submitting || !reasonContent?.trim() || supportSubmitDisabled}
-          className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          onClick={() => onDirectCancel && onDirectCancel()}
+          disabled={submitting || directCancelDisabled}
+          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
-          {submitting ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>{t('Submitting...')}</span>
-            </>
-          ) : (
-            <>
-              <Send className="w-4 h-4" />
-              <span>{t('Send Request to Reception')}</span>
-            </>
-          )}
+          {submitting ? t('Processing...') : t('Confirm & Get 50% Voucher')}
         </button>
+      </div>
+    );
+  }
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError('');
+    try {
+      const processed = await processEvidenceFile(file);
+      if (onChangeEvidence) {
+        onChangeEvidence(processed.dataUrl, processed.fileName);
+      }
+    } catch (err) {
+      setUploadError(err.message || t('Failed to process evidence file.'));
+    }
+    e.target.value = '';
+  };
+
+  const noRemaining = (preview.remainingSessions ?? 0) <= 0;
+  const isForfeitSelected = step === 'CONFIRM_FORFEIT';
+  const isVoucherSelected = step === 'VOUCHER_FORM';
+
+  // Late cancellation: inline mode selector + dynamic section in the same modal
+  return (
+    <div className="space-y-3 pt-1">
+      <div className="text-xs font-bold text-[var(--text)]">
+        {t('Select Cancellation Option')}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <button
+          type="button"
+          onClick={() => onStepChange && onStepChange('CONFIRM_FORFEIT')}
+          disabled={submitting || forfeitCancelDisabled || noRemaining}
+          className={`w-full text-left p-3 rounded-xl border transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+            isForfeitSelected
+              ? 'border-rose-500 ring-2 ring-rose-500/25 bg-rose-500/10'
+              : 'border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10'
+          }`}
+        >
+          <div className="text-xs font-bold text-rose-700 dark:text-rose-300">
+            {t('Cancel Completely (0 Refund)')}
+          </div>
+          <p className="text-[11px] text-[var(--text-muted)] mt-0.5 leading-snug">
+            {t('Cancel remaining sessions immediately with no refund or voucher.')}
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onStepChange && onStepChange('VOUCHER_FORM')}
+          disabled={submitting || supportSubmitDisabled}
+          className={`w-full text-left p-3 rounded-xl border transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+            isVoucherSelected
+              ? 'border-[var(--primary)] ring-2 ring-[var(--primary-soft)] bg-[var(--primary-soft)]/40'
+              : 'border-[var(--border)] bg-[var(--surface-hover)] hover:border-[var(--primary)]'
+          }`}
+        >
+          <div className="text-xs font-bold text-[var(--text)]">
+            {t('Request Voucher Refund (Admin Review)')}
+          </div>
+          <p className="text-[11px] text-[var(--text-muted)] mt-0.5 leading-snug">
+            {t('Submit cancellation reason and supporting evidence for Admin approval.')}
+          </p>
+        </button>
+      </div>
+
+      {isForfeitSelected && (
+        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 space-y-2 text-xs">
+          <div className="font-bold text-rose-700 dark:text-rose-300">
+            {t('Confirm Full Cancellation')}
+          </div>
+          <p className="text-[var(--text)] leading-relaxed">
+            {t('Are you sure you want to cancel all remaining sessions of this class immediately?')}
+          </p>
+          <div className="pt-2 border-t border-rose-500/20 flex flex-wrap justify-between gap-2">
+            <span>
+              <span className="text-[var(--text-muted)]">{t('Remaining Sessions Cancelled:')} </span>
+              <strong className="text-[var(--text)]">{preview.remainingSessions} {t('sessions')}</strong>
+            </span>
+            <span>
+              <span className="text-[var(--text-muted)]">{t('Refund / Voucher:')} </span>
+              <strong className="text-rose-600 dark:text-rose-400">0 ₫</strong>
+            </span>
+          </div>
+        </div>
+      )}
+
+      {isVoucherSelected && (
+        <div className="p-3.5 rounded-xl bg-[var(--surface-hover)]/60 border border-[var(--border)] space-y-3">
+          <div className="space-y-1">
+            <label htmlFor="cancel-reason-select" className="block text-xs font-bold text-[var(--text)]">
+              {t('Reason for Request')}
+            </label>
+            <select
+              id="cancel-reason-select"
+              value={reasonCategory}
+              onChange={(e) => onChangeReasonCategory(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+            >
+              <option value="CLASS_CANCELLATION">{t('Mid-Course Emergency / Medical / Relocation')}</option>
+              <option value="GENERAL_INQUIRY">{t('Schedule Conflict / Urgent Work Commitment')}</option>
+              <option value="COMPLAINT">{t('Other Justified Reason')}</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="cancel-reason-content" className="block text-xs font-bold text-[var(--text)]">
+              {t('Detailed Reason')} <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              id="cancel-reason-content"
+              rows={2}
+              value={reasonContent}
+              onChange={(e) => onChangeReasonContent(e.target.value)}
+              placeholder={t('Please explain your late cancellation reason in detail (medical certificate, work transfer, emergency) for Admin approval.')}
+              className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs text-[var(--text)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-none"
+              required
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="cancel-evidence-upload" className="block text-xs font-bold text-[var(--text)]">
+              {t('Supporting Evidence File / Photo')} <span className="text-red-500">*</span>
+            </label>
+            <label
+              htmlFor="cancel-evidence-upload"
+              className="block p-3 rounded-xl border border-dashed border-[var(--border)] hover:border-[var(--primary)] bg-[var(--surface)] text-center cursor-pointer transition-colors"
+            >
+              <span className="text-xs font-medium text-[var(--text)]">
+                {t('Upload photo or PDF (PNG, JPG, WEBP, PDF - max 3 MB)')}
+              </span>
+              <input
+                id="cancel-evidence-upload"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,application/pdf"
+                onChange={handleFileChange}
+                className="sr-only"
+              />
+            </label>
+
+            {uploadError && (
+              <p className="text-xs text-rose-500 font-medium">{uploadError}</p>
+            )}
+
+            <EvidencePreviewBox
+              evidenceUrl={evidenceUrl}
+              fileName={evidenceFileName}
+              onClear={() => onChangeEvidence && onChangeEvidence('', '')}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-end gap-2.5 pt-1">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={submitting}
+          className="px-4 py-2 rounded-xl border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-hover)] font-medium text-xs cursor-pointer"
+        >
+          {t('Keep Booking')}
+        </button>
+
+        {isForfeitSelected && (
+          <button
+            type="button"
+            onClick={() => onDirectCancel && onDirectCancel({ acceptForfeit: true })}
+            disabled={submitting || forfeitCancelDisabled}
+            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {submitting ? t('Processing...') : t('Confirm Cancel (0 Refund)')}
+          </button>
+        )}
+
+        {isVoucherSelected && (
+          <button
+            type="button"
+            onClick={onSubmitSupport}
+            disabled={submitting || !reasonContent?.trim() || !evidenceUrl || supportSubmitDisabled}
+            className="px-4 py-2 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white font-semibold text-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {submitting ? t('Submitting...') : t('Submit Voucher Request')}
+          </button>
+        )}
       </div>
     </div>
   );
 };
-

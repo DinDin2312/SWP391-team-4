@@ -845,6 +845,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
     @Override
     public List<PackageResponse> getAllActivePackages() {
         return packageRepository.findBySellingStatus("SELLING").stream()
+                .filter(p -> !"AI_ACCESS".equalsIgnoreCase(p.getPackageType()))
                 .map(p -> PackageResponse.builder()
                         .packageId(p.getPackageId())
                         .packageName(p.getPackageName())
@@ -1044,7 +1045,10 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         }
 
         // 1. Tự động kiểm tra Quyền tập Gym (Gói tập có hiệu lực hôm nay)
-        List<UserMembership> memberships = userMembershipRepository.findByUser_UserId(user.getUserId());
+        List<UserMembership> memberships = prioritizeRequestedMembership(
+                userMembershipRepository.findByUser_UserId(user.getUserId()),
+                request.getMembershipId()
+        );
         UserMembership activeGymMembership = null;
         for (UserMembership um : memberships) {
             if ("ACTIVE".equalsIgnoreCase(um.getStatus())) {
@@ -2532,5 +2536,27 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             payload.put("auditId", generatedKey.longValue());
         }
         return payload;
+    }
+
+    /**
+     * Places the membership explicitly requested by receptionist/QR check-in first
+     * while preserving all fallback active packages.
+     */
+    public static List<UserMembership> prioritizeRequestedMembership(List<UserMembership> memberships, Integer requestedMembershipId) {
+        if (memberships == null || memberships.isEmpty() || requestedMembershipId == null) {
+            return memberships;
+        }
+        List<UserMembership> ordered = new ArrayList<>(memberships.size());
+        for (UserMembership um : memberships) {
+            if (requestedMembershipId.equals(um.getMembershipId())) {
+                ordered.add(um);
+            }
+        }
+        for (UserMembership um : memberships) {
+            if (!requestedMembershipId.equals(um.getMembershipId())) {
+                ordered.add(um);
+            }
+        }
+        return ordered;
     }
 }

@@ -1,15 +1,15 @@
 import PackageDetailDialog from '../../../components/resource-images/PackageDetailDialog';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search, ShoppingBag, CreditCard, CalendarCheck, RefreshCw,
-  Dumbbell, Bot, Crown, Flame, Trophy, Activity, Snowflake,
+  Dumbbell, Bot, Crown, Flame, Trophy, Activity, Snowflake, Waves,
   Lock, QrCode, FileCheck, ArrowRight, CheckCircle2,
   Trash2, ShoppingCart, Check, ShieldCheck, Tag,
-  DollarSign, BadgeCheck, AlertCircle
+  DollarSign, BadgeCheck, AlertCircle, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Meteors } from '../../../components/ui/meteors';
 import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
@@ -17,6 +17,68 @@ import { defaultPackageCoverUrl } from '../../../components/resource-images/reso
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_ORIGIN } from '../../../config/apiBase.js';
 
+
+const isRetiredPackage = (pkg) => {
+  const type = (pkg?.packageType || '').toUpperCase();
+  const name = (pkg?.packageName || '').toLowerCase();
+  return type === 'AI_ACCESS' || name.includes('gym + ai') || name.includes('gym+ai');
+};
+
+const PACKAGES_PER_PAGE = 6;
+
+const getPaginationRange = (current, total) => {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, '...', total];
+  if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+  return [1, '...', current - 1, current, current + 1, '...', total];
+};
+
+const PACKAGE_PRIVILEGES = {
+  GYM_ACCESS: [
+    'Full Sports Center & Equipment Access',
+    'Smart Locker & RFID Key Access',
+    'Hot Shower & Sauna Access',
+  ],
+  COMBO: [
+    'Full Sports Center & Equipment Access',
+    'Smart Locker & RFID Key Access',
+    'Hot Shower & Sauna Access',
+  ],
+  PREMIUM: [
+    'Full Sports Center & Equipment Access',
+    'Smart Locker & RFID Key Access',
+    'Hot Shower & Sauna Access',
+  ],
+  POOL_ACCESS: [
+    'Unlimited 25m Heated Saltwater Pool Access',
+    'Smart Locker & RFID Key Access',
+    'Hot Shower & Poolside Care Amenities',
+  ],
+  SAUNA_ACCESS: [
+    'Himalayan Salt Dry Sauna & Steam Room Access',
+    'Smart Locker & RFID Key Access',
+    'Hot Shower & Relaxation Lounge',
+  ],
+};
+
+function resolvePackagePrivileges(pkg, translate) {
+  if (Array.isArray(pkg.benefits) && pkg.benefits.length > 0) {
+    return pkg.benefits.slice(0, 4).map((b) => {
+      if (typeof b === 'string') return b;
+      const name = b.subjectName || translate('Subject');
+      const quota = b.sessionLimit ? `${b.sessionLimit} ${translate('sessions')}` : translate('Unlimited');
+      return `${name}: ${quota}`;
+    });
+  }
+  const termLines = String(pkg.terms || '')
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^[-*•]+\s*/, '').trim())
+    .filter(Boolean);
+  if (termLines.length > 0) return termLines.slice(0, 3);
+
+  const builtIn = PACKAGE_PRIVILEGES[pkg.packageType?.toUpperCase()];
+  return builtIn ? builtIn.map((item) => translate(item)) : [];
+}
 
 const loadStoreDetail=id=>axios.get(`${API_ORIGIN}/api/v1/member/packages/${id}`,{headers:{Authorization:`Bearer ${localStorage.getItem('token')}`}});
 const PackageStore = () => {
@@ -31,6 +93,8 @@ const PackageStore = () => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('featured');
+  const [currentPage, setCurrentPage] = useState(1);
+  const catalogTopRef = useRef(null);
 
   // Fake cart context until Backend Cart API supports packages
   const [cartCount, setCartCount] = useState(0);
@@ -66,11 +130,14 @@ const PackageStore = () => {
     const pkgParam = searchParams.get('packageId');
     if (!pkgParam || loading || packages.length === 0) return;
     const targetId = Number(pkgParam);
-    const matched = packages.find((p) => Number(p.packageId) === targetId);
+    const targetIdx = packages.findIndex((p) => Number(p.packageId) === targetId);
+    const matched = targetIdx >= 0 ? packages[targetIdx] : null;
     if (!matched) return;
 
     setActiveCategory('all');
     setSearchTerm('');
+    setSortBy('featured');
+    setCurrentPage(Math.floor(targetIdx / PACKAGES_PER_PAGE) + 1);
     setDetailId(matched.packageId);
     setTimeout(() => {
       document.getElementById(`ai-package-${matched.packageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -87,7 +154,7 @@ const PackageStore = () => {
       const response = await axios.get(`${API_ORIGIN}/api/v1/member/packages`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setPackages(response.data || []);
+      setPackages((response.data || []).filter((pkg) => !isRetiredPackage(pkg)));
       setError(null);
     } catch (err) {
       console.error(err);
@@ -100,6 +167,8 @@ const PackageStore = () => {
   const getPackageIcon = (type) => {
     switch (type?.toLowerCase()) {
       case 'gym_access': return Dumbbell;
+      case 'pool_access': return Waves;
+      case 'sauna_access': return Flame;
       case 'ai_access': return Bot;
       case 'premium': return Crown;
       case 'membership': return Dumbbell;
@@ -123,6 +192,32 @@ const PackageStore = () => {
       if (sortBy === 'duration') return (b.durationDays || 0) - (a.durationDays || 0);
       return 0;
     });
+
+  const popularPackageId = (() => {
+    if (!packages.length) return null;
+    const maxRegistrations = Math.max(0, ...packages.map((p) => Number(p.registrationCount || 0)));
+    const candidates = maxRegistrations > 0
+      ? packages.filter((p) => Number(p.registrationCount || 0) === maxRegistrations)
+      : packages;
+    const winner = candidates.reduce((best, cur) =>
+      Number(cur.price || 0) > Number(best.price || 0) ? cur : best,
+    candidates[0]);
+    return Number(winner?.price || 0) > 0 || maxRegistrations > 0 ? winner.packageId : null;
+  })();
+
+  const totalPages = Math.max(1, Math.ceil(filteredPackages.length / PACKAGES_PER_PAGE));
+  const validPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startRecord = filteredPackages.length === 0 ? 0 : (validPage - 1) * PACKAGES_PER_PAGE + 1;
+  const endRecord = Math.min(validPage * PACKAGES_PER_PAGE, filteredPackages.length);
+  const paginatedPackages = filteredPackages.slice(
+    (validPage - 1) * PACKAGES_PER_PAGE,
+    validPage * PACKAGES_PER_PAGE
+  );
+
+  const goToPage = (pageNum) => {
+    setCurrentPage(pageNum);
+    catalogTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const handleAddToCart = async (pkg) => {
     if (addedItems[pkg.packageId]||pkg.canPurchase===false) return;
@@ -253,7 +348,10 @@ const PackageStore = () => {
                 <input
                   type="text"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   placeholder={t("Search packages by name...")}
                   className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 text-sm pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 shadow-sm"
                 />
@@ -321,7 +419,7 @@ const PackageStore = () => {
       </div>
 
       {/* Interactive Filter Bar & View Toggle */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-space-md mb-space-lg">
+      <div ref={catalogTopRef} className="flex flex-col md:flex-row items-start md:items-center justify-between gap-space-md mb-space-lg scroll-mt-24">
         {/* Category Tabs */}
         <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto max-w-full">
           {[
@@ -332,7 +430,10 @@ const PackageStore = () => {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveCategory(tab.id)}
+                onClick={() => {
+                  setActiveCategory(tab.id);
+                  setCurrentPage(1);
+                }}
                 className={`flex items-center whitespace-nowrap gap-2 px-4 py-2 rounded-lg text-[13px] transition-all font-semibold ${
                   isActive
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
@@ -357,7 +458,10 @@ const PackageStore = () => {
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 px-2">{t("SORT:")}</span>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setCurrentPage(1);
+              }}
               className="bg-transparent text-slate-900 dark:text-white text-[12px] font-semibold focus:outline-none cursor-pointer pr-2 border-none"
             >
               <option className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white" value="featured">{t("Featured Packages")}</option>
@@ -386,9 +490,9 @@ const PackageStore = () => {
             <ShoppingBag className="w-10 h-10 mb-4 opacity-50" />
             <span className="text-sm font-semibold">{t("No packages available for this category.")}</span>
           </div>
-        ) : filteredPackages.map((pkg) => {
+        ) : paginatedPackages.map((pkg) => {
           const Icon = getPackageIcon(pkg.packageType);
-          const isPopular = pkg.price > 2000000;
+          const isPopular = pkg.packageId === popularPackageId;
           const isAdded = addedItems[pkg.packageId];
 
           return (
@@ -480,18 +584,21 @@ const PackageStore = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2.5 mb-6">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("Included Privileges")}</span>
-                  {(pkg.packageType === 'AI_ACCESS' || (pkg.packageName && pkg.packageName.toLowerCase().includes('ai'))
-                    ? ['24/7 AI Coach Consultation', 'Personalized Workout & Meal Plans', 'Real-time Form & Metric Analysis']
-                    : ['Full Sports Center & Equipment Access', 'Smart Locker & RFID Key Access', 'Hot Shower & Sauna Access']
-                  ).map((feature, idx) => (
-                    <div key={idx} className="flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5" />
-                      <span className="text-[13px] text-slate-700 dark:text-slate-300 font-medium leading-snug">{t(feature)}</span>
+                {(() => {
+                  const privileges = resolvePackagePrivileges(pkg, t);
+                  if (privileges.length === 0) return null;
+                  return (
+                    <div className="flex flex-col gap-2.5 mb-6">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("Included Privileges")}</span>
+                      {privileges.map((feature, idx) => (
+                        <div key={idx} className="flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5" />
+                          <span className="text-[13px] text-slate-700 dark:text-slate-300 font-medium leading-snug">{feature}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
               </div>
 
               <button
@@ -521,6 +628,68 @@ const PackageStore = () => {
           );
         })}
       </div>
+
+      {/* Pagination Controls */}
+      {!loading && !error && filteredPackages.length > 0 && (
+        <div className="mt-8 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1.5 order-2 sm:order-1 font-medium">
+            <span>{t("Showing")}</span>
+            <strong className="text-slate-900 dark:text-white font-bold">{startRecord}–{endRecord}</strong>
+            <span>{t("of")}</span>
+            <strong className="text-slate-900 dark:text-white font-bold">{filteredPackages.length}</strong>
+            <span>{t("verified packages")}</span>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1.5 order-1 sm:order-2 select-none">
+              <button
+                type="button"
+                onClick={() => goToPage(Math.max(1, validPage - 1))}
+                disabled={validPage === 1}
+                className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none text-xs text-slate-700 dark:text-slate-200 transition-all flex items-center gap-1 cursor-pointer font-semibold"
+                title={t("Previous")}
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{t("Previous")}</span>
+              </button>
+
+              <div className="flex items-center gap-1">
+                {getPaginationRange(validPage, totalPages).map((p, idx) =>
+                  p === '...' ? (
+                    <span key={`dots-${idx}`} className="px-2 py-1 text-xs text-slate-400 font-medium">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={`page-${p}`}
+                      type="button"
+                      onClick={() => goToPage(p)}
+                      className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        p === validPage
+                          ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30 ring-1 ring-blue-500'
+                          : 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => goToPage(Math.min(totalPages, validPage + 1))}
+                disabled={validPage === totalPages}
+                className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none text-xs text-slate-700 dark:text-slate-200 transition-all flex items-center gap-1 cursor-pointer font-semibold"
+                title={t("Next")}
+              >
+                <span className="hidden sm:inline">{t("Next")}</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Trust Indicators Footing */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12 py-4 px-2 text-center">

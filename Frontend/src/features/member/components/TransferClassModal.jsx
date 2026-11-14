@@ -65,6 +65,22 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
 
   const selectedTargetClass = preview?.equivalentClasses?.find(c => c.classId === selectedTargetId);
 
+  const sortedEquivalentClasses = [...(preview?.equivalentClasses || [])].sort((a, b) => {
+    if (a.canSelect !== b.canSelect) return a.canSelect ? -1 : 1;
+    const rank = (item) => {
+      if (preview?.subjectId != null && item.subjectId != null && item.subjectId === preview.subjectId) return 0;
+      const curSub = (preview?.subjectName || '').trim().toLowerCase();
+      const candSub = (item.subjectName || '').trim().toLowerCase();
+      if (curSub && candSub && curSub === candSub) return 0;
+      const curFirst = curSub.split(/\s+/)[0];
+      if (curFirst && (candSub.includes(curFirst) || (item.className || '').toLowerCase().includes(curFirst))) return 1;
+      return 2;
+    };
+    const rankDiff = rank(a) - rank(b);
+    if (rankDiff !== 0) return rankDiff;
+    return new Date(a.nextSessionTime || 0) - new Date(b.nextSessionTime || 0);
+  });
+
   const formatSchedule = (pattern) => {
     if (!pattern) return t('Custom schedule');
     return pattern
@@ -85,6 +101,18 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
     return t('Conflict with another class');
   };
 
+  const getUnavailableMessage = () => {
+    if (!preview?.message) return '';
+    const pendingMatch = preview.message.match(/#(\d+)/);
+    if (preview.blockedByPendingRequest && pendingMatch) {
+      return t(
+        'This class has a pending cancellation/refund request (#{0}) awaiting Admin approval and cannot be transferred. Please wait for review or withdraw that request first.',
+        [pendingMatch[1]]
+      );
+    }
+    return t(preview.message);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
       <div className="relative w-full max-w-3xl max-h-[90vh] bg-surface rounded-2xl border border-border shadow-2xl flex flex-col overflow-hidden text-on-surface">
@@ -100,7 +128,7 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                 {t('Class Transfer')}
               </h3>
               <p className="text-xs text-on-surface-variant">
-                {t('Switch to an equivalent class of the same price before course start')}
+                {t('Switch to an equivalent class of the same price at least 24 hours before start')}
               </p>
             </div>
           </div>
@@ -189,12 +217,12 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                   {preview.canTransfer ? (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      {t('Not Started · Eligible for Transfer')}
+                      {t('Eligible (≥24h Before Start)')}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                       <AlertTriangle className="w-3.5 h-3.5" />
-                      {t('Already Started')}
+                      {t(preview.blockedByPendingRequest ? 'Pending Support Request' : preview.hasStarted ? 'Already Started' : 'Within 24h Cutoff')}
                     </span>
                   )}
                 </div>
@@ -230,7 +258,7 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                 {!preview.canTransfer && (
                   <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>{t(preview.message)}</span>
+                    <span>{getUnavailableMessage()}</span>
                   </div>
                 )}
               </div>
@@ -244,7 +272,7 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                         {t('Select an Equivalent Class to Transfer To')}
                       </h4>
                       <p className="text-xs text-on-surface-variant">
-                        {t('List of equivalent-priced classes')} ({formatMoney(preview.classPrice)}) {t('not yet started and without schedule conflicts')}
+                        {t('List of equivalent-priced classes')} ({formatMoney(preview.classPrice)}) {t('starting at least 24 hours from now without schedule conflicts')}
                       </p>
                     </div>
                     <span className="px-2 py-0.5 rounded text-xs font-semibold bg-surface-container-high text-on-surface-variant">
@@ -255,14 +283,24 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                   {(!preview.equivalentClasses || preview.equivalentClasses.length === 0) ? (
                     <div className="text-center py-10 px-4 rounded-xl border border-dashed border-border bg-surface-container/30 text-on-surface-variant text-sm">
                       <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="font-medium">{t('No other equivalent-priced classes are currently available before start.')}</p>
+                      <p className="font-medium">{t('No suitable classes available for transfer.')}</p>
                       <p className="text-xs mt-1 text-on-surface-variant/80">
-                        {t('Please check back later or contact Reception if you wish to retain or cancel your class.')}
+                        {t('No open non-conflicting classes of the same subject and price were found right now.')}
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
-                      {preview.equivalentClasses.map((item) => {
+                    <div className="space-y-3">
+                      {!preview.equivalentClasses.some((c) => c.canSelect) && (
+                        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span>
+                            {t('No suitable classes available for transfer.')}{' '}
+                            {t('All classes of the same subject and price are currently full or conflict with your schedule.')}
+                          </span>
+                        </div>
+                      )}
+                      <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
+                      {sortedEquivalentClasses.map((item) => {
                         const isSelected = selectedTargetId === item.classId;
                         const canSelect = item.canSelect;
 
@@ -294,6 +332,12 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-on-surface-variant mb-2">
+                                  {item.nextSessionTime && (
+                                    <span className="flex items-center gap-1 font-medium text-on-surface">
+                                      <Calendar className="w-3 h-3 text-primary" />
+                                      {t('Starts:')} {formatDateTime(item.nextSessionTime)}
+                                    </span>
+                                  )}
                                   {item.coachName && (
                                     <span className="flex items-center gap-1">
                                       <User className="w-3 h-3" />
@@ -358,6 +402,7 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
                           </div>
                         );
                       })}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -373,6 +418,11 @@ const TransferClassModal = ({ isOpen, classId, onClose, onSuccess }) => {
               {selectedTargetClass ? (
                 <span>
                   {t('Will transfer to:')} <strong className="text-primary">{selectedTargetClass.className}</strong>
+                  {selectedTargetClass.nextSessionTime && (
+                    <span className="ml-1.5 text-on-surface-variant">
+                      ({t('Starts:')} {formatDateTime(selectedTargetClass.nextSessionTime)})
+                    </span>
+                  )}
                   <span className="ml-2 font-semibold text-emerald-600 dark:text-emerald-400">({t('0 VND difference')})</span>
                 </span>
               ) : (

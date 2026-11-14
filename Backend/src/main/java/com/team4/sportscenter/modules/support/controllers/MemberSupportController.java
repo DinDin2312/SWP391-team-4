@@ -35,8 +35,10 @@ public class MemberSupportController {
     @PostMapping("/classes/{classId}/cancel-direct")
     public ResponseEntity<Map<String, Object>> cancelClassDirectly(
             @PathVariable Integer classId,
+            @RequestBody(required = false) Map<String, Object> body,
             @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(supportRequestService.cancelClassDirectly(classId, userDetails.getUsername()));
+        boolean acceptForfeit = body != null && Boolean.TRUE.equals(body.get("acceptForfeit"));
+        return ResponseEntity.ok(supportRequestService.cancelClassDirectly(classId, userDetails.getUsername(), acceptForfeit));
     }
 
     @GetMapping("/classes/{classId}/transfer-preview")

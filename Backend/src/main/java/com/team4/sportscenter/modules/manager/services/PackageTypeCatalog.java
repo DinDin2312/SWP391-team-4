@@ -12,12 +12,12 @@ public class PackageTypeCatalog {
 
     public List<Map<String, Object>> list() {
         return jdbc.queryForList(
-                "SELECT type_code typeCode, type_name typeName, FALSE requiresSubjects FROM PACKAGE_TYPES WHERE type_code <> 'SUBJECT_ACCESS' ORDER BY type_name, type_code"
+                "SELECT type_code typeCode, type_name typeName, FALSE requiresSubjects FROM PACKAGE_TYPES WHERE type_code NOT IN ('SUBJECT_ACCESS', 'AI_ACCESS') ORDER BY type_name, type_code"
         );
     }
 
     public Map<String, Object> require(String code) {
-        if ("SUBJECT_ACCESS".equalsIgnoreCase(code)) {
+        if ("SUBJECT_ACCESS".equalsIgnoreCase(code) || "AI_ACCESS".equalsIgnoreCase(code)) {
             throw new IllegalArgumentException("Select an existing package type.");
         }
         var types = jdbc.queryForList(

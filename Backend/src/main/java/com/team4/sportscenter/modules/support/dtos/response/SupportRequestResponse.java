@@ -32,6 +32,7 @@ public class SupportRequestResponse {
     private String preferredResolution;
     private String title;
     private String content;
+    private String evidenceUrl;
     private SupportStatus status;
     private SupportPriority priority;
     

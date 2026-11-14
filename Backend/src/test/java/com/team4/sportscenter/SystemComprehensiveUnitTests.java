@@ -224,6 +224,7 @@ class SystemComprehensiveUnitTests {
 
         when(jdbc.queryForList(anyString(), eq("MISSING"))).thenReturn(List.of());
         assertThrows(IllegalArgumentException.class, () -> catalog.require("MISSING"));
+        assertThrows(IllegalArgumentException.class, () -> catalog.require("AI_ACCESS"));
 
         assertThrows(IllegalArgumentException.class, () -> catalog.save(null, "   ", false));
         assertThrows(IllegalArgumentException.class, () -> catalog.save(null, "x".repeat(256), false));

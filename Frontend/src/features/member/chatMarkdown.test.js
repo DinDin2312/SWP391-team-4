@@ -102,7 +102,7 @@ test('chatMarkdown tests', async (t) => {
   await t.test('renders package-store markdown table rows as interactive links', () => {
     const pkgMd = `| Gói hội viên | Phân loại | Thời hạn | Giá | Chi tiết |
 | :--- | :--- | :---: | :---: | :---: |
-| **Gói Combo Gym + AI 1 Tháng** | Combo (Gym + AI) | 30 ngày | 550,000 đ | [Xem gói](/member/package-store?packageId=10) |`;
+| **Gói Bể Bơi Bốn Mùa 1 Tháng** | Pool access | 30 ngày | 450,000 đ | [Xem gói](/member/package-store?packageId=10) |`;
 
     const html = renderToStaticMarkup(React.createElement('div', null, renderChatMarkdown(pkgMd)));
     assert.ok(html.includes('href="/member/package-store?packageId=10"'));

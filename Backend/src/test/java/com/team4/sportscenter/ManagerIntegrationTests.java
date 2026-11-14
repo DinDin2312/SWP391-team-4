@@ -286,7 +286,11 @@ class ManagerIntegrationTests {
             jdbc.update("DELETE d FROM INVOICE_DETAILS d JOIN INVOICES i ON i.invoice_id=d.invoice_id WHERE i.user_id=?",id);
             jdbc.update("DELETE FROM INVOICES WHERE user_id=?",id);
         }
-        for (Integer id : userIds) jdbc.update("DELETE FROM NOTIFICATIONS WHERE user_id=?", id);
+        for (Integer id : userIds) {
+            jdbc.update("DELETE FROM USER_CREDITS WHERE user_id=?", id);
+            jdbc.update("DELETE FROM SUPPORT_REQUESTS WHERE user_id=?", id);
+            jdbc.update("DELETE FROM NOTIFICATIONS WHERE user_id=?", id);
+        }
         for (Integer id : classIds) {
             jdbc.update("DELETE b FROM BOOKINGS b JOIN SCHEDULES s ON s.schedule_id=b.schedule_id WHERE s.class_id=?", id);
             jdbc.update("DELETE FROM SCHEDULES WHERE class_id=?", id);
@@ -740,7 +744,7 @@ class ManagerIntegrationTests {
         assertEquals(3,count("SELECT COUNT(*) FROM SCHEDULES WHERE class_id=?",course));
     }
 
-    @Test void cancellationUpdatesBookingsNotifiesOnceAndCannotReopen() {
+    @Test void cancellationUpdatesBookingsNotifiesOnceAndCannotReopen() throws Exception {
         int id = schedule(start);
         booking(id, "CONFIRMED");
         var cancelled = new ScheduleRequest(course, start, start.plusMinutes(90), "CANCELLED");
@@ -750,6 +754,18 @@ class ManagerIntegrationTests {
         assertThrows(IllegalArgumentException.class, () -> service.saveSchedule(id, cancelled, actor));
         assertThrows(IllegalArgumentException.class, () -> service.saveSchedule(id, new ScheduleRequest(course, start, start.plusMinutes(90), "SCHEDULED"), actor));
         assertEquals(1, count("SELECT COUNT(*) FROM NOTIFICATIONS WHERE user_id=?", member));
+
+        int s1 = schedule(start.plusDays(2)), s2 = schedule(start.plusDays(4));
+        booking(s1, "CONFIRMED");
+        booking(s2, "CONFIRMED");
+        var res = request("POST", "/api/manager/classes/" + course + "/deactivate", token(admin),
+                "{\"reason\":\"Không đủ học viên đăng ký mở lớp\"}");
+        assertEquals(200, res.statusCode(), res.body());
+        assertTrue(res.body().contains("\"cancelledSessions\":2") && res.body().contains("\"refundedMembers\":1"), res.body());
+        assertEquals("INACTIVE", jdbc.queryForObject("SELECT status FROM CLASSES WHERE class_id=?", String.class, course));
+        assertEquals(2, count("SELECT COUNT(*) FROM NOTIFICATIONS WHERE user_id=?", member));
+        assertEquals(1, count("SELECT COUNT(*) FROM SUPPORT_REQUESTS WHERE user_id=? AND class_id=? AND preferred_resolution='ISSUE_CREDIT' AND status='APPROVED'", member, course));
+        assertEquals(1, count("SELECT COUNT(*) FROM USER_CREDITS WHERE user_id=? AND class_id=? AND status='ACTIVE' AND amount=100000", member, course));
     }
 
     @Test void bookedSessionCannotChangeClassOrConflictWithStudents() {

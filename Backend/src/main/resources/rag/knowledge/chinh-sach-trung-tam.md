@@ -18,7 +18,7 @@ audience: ALL
 
 ## 3. Chính sách Gói Hội Viên & Đăng Ký Khóa Học Có HLV
 - **Phân tách Gói hội viên và Khóa học**:
-  - **Gói Hội Viên (`PACKAGES` tại `/member/packages`)**: Chỉ cấp quyền sử dụng Phòng Gym tự do (`GYM_ACCESS`), quyền truy cập Trợ lý thông minh NEXUS AI (`AI_ACCESS`), gói kết hợp (`COMBO`) và gói VIP (`PREMIUM`). Gói hội viên không bao gồm các khóa học bộ môn có Huấn luyện viên.
+  - **Gói Hội Viên (`PACKAGES` tại `/member/packages`)**: Chỉ cấp quyền sử dụng Phòng Gym tự do (`GYM_ACCESS`), gói kết hợp (`COMBO`) và gói VIP (`PREMIUM`). Tính năng **Trợ lý thông minh NEXUS AI được mở MIỄN PHÍ** cho toàn bộ hội viên (trung tâm đã ngừng bán gói thuê AI riêng). Gói hội viên không bao gồm các khóa học bộ môn có Huấn luyện viên.
   - **Khóa Học Bộ Môn (`CLASSES` tại `/member/book-class`)**: Các lớp học có HLV hướng dẫn (Yoga, Bơi lội, Zumba, Đạp xe Spinning...) được đăng ký và đóng học phí riêng theo từng khóa học qua Giỏ hàng.
 - **Chính sách Dời lịch Dạy bù & Bảo vệ quyền lợi Học viên**:
   - Khi Huấn luyện viên có việc đột xuất và được Quản lý phê duyệt dời lịch dạy bù, toàn bộ học viên của lớp sẽ nhận được thông báo tự động.

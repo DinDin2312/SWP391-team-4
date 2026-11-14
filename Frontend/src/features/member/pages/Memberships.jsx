@@ -5,6 +5,7 @@ import { AuthContext } from '../../../context/AuthContext';
 import PackageDetailDialog from '../../../components/resource-images/PackageDetailDialog';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import { formatDate } from '../../../utils/displayFormat';
+import { buildMemberQrPayload, buildMemberQrImageUrl } from '../memberUtils';
 import {
   CreditCard,
   Shield,
@@ -64,7 +65,8 @@ const Memberships = () => {
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrTargetPkg, setQrTargetPkg] = useState(null);
 
   useEffect(() => {
     fetchMyPackages();
@@ -142,11 +144,22 @@ const Memberships = () => {
     return list;
   }, [packages, activeFilter, searchQuery, activePackages, expiringPackages, pastPackages]);
 
-  const memberId = userInfo?.userId || 'MEMBER';
+  const memberId = userInfo?.userId || null;
   const memberName = userInfo?.fullName || 'Active Member';
-  const _memberEmail = userInfo?.email || '';
+  const displayMemberRef = memberId ? `#${memberId}` : (userInfo?.email || memberName);
 
-  const qrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=NEXUS-PASS-${encodeURIComponent(memberId)}`;
+  const passQrValue = buildMemberQrPayload({ userId: memberId, email: userInfo?.email });
+  const qrDataUrl = buildMemberQrImageUrl(passQrValue, 220);
+  const activeQrValue = buildMemberQrPayload({
+    userId: memberId,
+    email: userInfo?.email,
+    membershipId: qrTargetPkg?.membershipId || null,
+  });
+  const activeQrUrl = buildMemberQrImageUrl(activeQrValue, 220);
+  const closeQrModal = () => {
+    setQrModalOpen(false);
+    setQrTargetPkg(null);
+  };
 
   return (
     <div className="flex flex-col w-full pb-32 space-y-8">
@@ -163,7 +176,7 @@ const Memberships = () => {
       {qrModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
-          onClick={() => setQrModalOpen(false)}
+          onClick={closeQrModal}
         >
           <div
             className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 shadow-2xl border border-black/[0.06] dark:border-white/10 text-center space-y-5 animate-in zoom-in-95 duration-200"
@@ -175,12 +188,12 @@ const Memberships = () => {
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                  {t("Member Pass QR Code")}
+                  {qrTargetPkg ? qrTargetPkg.packageName : t("Member Pass QR Code")}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setQrModalOpen(false)}
+                  onClick={closeQrModal}
                 className="w-7 h-7 rounded-full bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/[0.1] text-slate-500 flex items-center justify-center cursor-pointer transition-all"
               >
                 <X className="w-4 h-4" />
@@ -189,12 +202,12 @@ const Memberships = () => {
 
             <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex flex-col items-center justify-center">
               <img
-                src={qrDataUrl}
+                src={activeQrUrl}
                 alt="Member Pass QR"
                 className="w-48 h-48 rounded-xl object-contain"
               />
               <span className="font-mono text-xs font-bold text-slate-700 tracking-wider mt-3">
-                NEXUS-#{memberId}
+                {qrTargetPkg ? `NEXUS-${displayMemberRef} • PKG-${qrTargetPkg.membershipId}` : `NEXUS-${displayMemberRef}`}
               </span>
             </div>
 
@@ -209,7 +222,7 @@ const Memberships = () => {
 
             <button
               type="button"
-              onClick={() => setQrModalOpen(false)}
+              onClick={closeQrModal}
               className="w-full py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-xs active:scale-95 transition-all cursor-pointer"
             >
               {t("Close")}
@@ -275,7 +288,7 @@ const Memberships = () => {
               </span>
               <span className="text-slate-300 dark:text-white/20">•</span>
               <span className="text-[11px] font-mono text-[#0071E3] dark:text-blue-400 font-semibold">
-                ID: #{memberId}
+                ID: {displayMemberRef}
               </span>
             </div>
 
@@ -318,7 +331,7 @@ const Memberships = () => {
           <div className="flex flex-col items-center sm:items-end justify-center gap-2.5 shrink-0">
             <button
               type="button"
-              onClick={() => setQrModalOpen(true)}
+              onClick={() => { setQrTargetPkg(null); setQrModalOpen(true); }}
               className="p-3 bg-white dark:bg-white/10 hover:bg-slate-50 dark:hover:bg-white/15 rounded-2xl border border-black/[0.08] dark:border-white/15 shadow-sm dark:shadow-none backdrop-blur-md flex flex-col items-center gap-2 active:scale-95 transition-all group cursor-pointer"
             >
               <div className="p-2 bg-white rounded-xl border border-black/[0.04] shadow-xs">
@@ -663,6 +676,17 @@ const Memberships = () => {
                       </button>
 
                       <div className="flex items-center gap-2">
+                        {isActive && !isFuture && (
+                          <button
+                            type="button"
+                            onClick={() => { setQrTargetPkg(pkg); setQrModalOpen(true); }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 transition-all cursor-pointer"
+                            title={t("Tap to view Check-in QR")}
+                          >
+                            <QrCode className="w-3.5 h-3.5 text-[#0071E3] dark:text-[#0A84FF]" />
+                            <span>{t("QR Pass")}</span>
+                          </button>
+                        )}
                         {isExpiringSoon && (
                           <button
                             type="button"

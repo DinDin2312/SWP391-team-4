@@ -11,7 +11,9 @@ import {
   extractInvoiceIdFromNotification,
   formatMemberNotificationTitle,
   parseMemberNotificationBody,
-  formatPaymentMethodLabel
+  formatPaymentMethodLabel,
+  buildMemberQrPayload,
+  buildMemberQrImageUrl
 } from './memberUtils.js';
 
 test('calculateAttendanceStats: calculates correctly with mixed attendance', () => {
@@ -300,4 +302,26 @@ test('notification formatters and invoice extraction localize cleanly without mi
   assert.equal(formatPaymentMethodLabel('CASH', 'vi'), 'Tiền mặt tại quầy');
   assert.equal(formatPaymentMethodLabel('', 'en'), 'Bank Transfer');
   assert.equal(formatPaymentMethodLabel('CARD', 'en'), 'CARD');
+});
+
+test('memberUtils: buildMemberQrPayload and buildMemberQrImageUrl build scannable payloads', () => {
+  assert.equal(buildMemberQrPayload({ userId: 19, bookingId: 315 }), 'NEXUS-PASS-19-BK-315');
+  assert.equal(buildMemberQrPayload({ userId: 19, membershipId: 42 }), 'NEXUS-PASS-19-PKG-42');
+  assert.equal(buildMemberQrPayload({ userId: 19, email: 'dung@gmail.com' }), 'NEXUS-PASS-19');
+  assert.equal(
+    buildMemberQrPayload({ email: 'dung@gmail.com', bookingId: 88 }),
+    '{"email":"dung@gmail.com","bookingId":88}'
+  );
+  assert.equal(
+    buildMemberQrPayload({ email: 'dung@gmail.com', membershipId: 7 }),
+    '{"email":"dung@gmail.com","membershipId":7}'
+  );
+  assert.equal(buildMemberQrPayload({ email: 'dung@gmail.com' }), 'dung@gmail.com');
+  assert.equal(buildMemberQrPayload({}), '');
+
+  assert.equal(
+    buildMemberQrImageUrl('NEXUS-PASS-19-BK-315', 200),
+    'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=NEXUS-PASS-19-BK-315'
+  );
+  assert.equal(buildMemberQrImageUrl(''), '');
 });

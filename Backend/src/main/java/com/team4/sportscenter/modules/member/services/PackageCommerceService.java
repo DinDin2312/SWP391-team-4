@@ -19,7 +19,8 @@ public class PackageCommerceService {
 
     @Transactional(propagation=org.springframework.transaction.annotation.Propagation.SUPPORTS,noRollbackFor=PackageRuleException.class)
     public void checkPurchase(int userId,int packageId,Integer ownInvoice,boolean requireSelling) {
-        var pkg=jdbc.queryForMap("SELECT selling_status,purchase_limit_per_member FROM PACKAGES WHERE package_id=?",packageId);
+        var pkg=jdbc.queryForMap("SELECT selling_status,purchase_limit_per_member,package_type FROM PACKAGES WHERE package_id=?",packageId);
+        if(requireSelling && "AI_ACCESS".equalsIgnoreCase(String.valueOf(pkg.get("package_type"))))throw new PackageRuleException("PACKAGE_NOT_SELLING","NEXUS AI is now free for all members; AI access packages are discontinued.");
         if(requireSelling && !"SELLING".equals(pkg.get("selling_status")))throw new PackageRuleException("PACKAGE_NOT_SELLING","This package is no longer selling. Choose a currently available package.");
         if(pkg.get("purchase_limit_per_member")==null)return;
         int limit=((Number)pkg.get("purchase_limit_per_member")).intValue();

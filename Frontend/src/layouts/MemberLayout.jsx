@@ -37,7 +37,7 @@ const MemberLayout = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
   const notifBellRef = useRef(null);
-  const [hasAiAccess, setHasAiAccess] = useState(false);
+  const hasAiAccess = true;
   const [aiNoticeVisible, setAiNoticeVisible] = useState(false);
   const aiPopoverRef = useRef(null);
   const aiNoticeTimerRef = useRef(null);
@@ -166,14 +166,11 @@ const MemberLayout = () => {
       try {
         const token = localStorage.getItem('token');
         if (token) {
-          const [cartRes, notifRes, myPkgsRes, profileRes] = await Promise.all([
+          const [cartRes, notifRes, profileRes] = await Promise.all([
             axios.get(`${API_ORIGIN}/api/v1/payment/cart`, {
               headers: { Authorization: `Bearer ${token}` }
             }).catch(() => ({ data: { items: [] } })),
             axios.get(`${API_ORIGIN}/api/v1/notifications`, {
-              headers: { Authorization: `Bearer ${token}` }
-            }).catch(() => ({ data: [] })),
-            axios.get(`${API_ORIGIN}/api/v1/member/my-packages`, {
               headers: { Authorization: `Bearer ${token}` }
             }).catch(() => ({ data: [] })),
             axios.get(`${API_ORIGIN}/api/v1/user/profile`, {
@@ -184,12 +181,11 @@ const MemberLayout = () => {
           setCartCount(cartRes.data.items?.length || 0);
           const memberNotifPrefs = getSavedMemberNotificationPreferences();
           setUnreadCount(getMemberUnreadCount(notifRes.data, memberNotifPrefs));
-          const hasAi = myPkgsRes.data.some(p => (p.packageType === 'AI_ACCESS' || p.packageType === 'COMBO') && p.status === 'ACTIVE');
-          setHasAiAccess(hasAi);
 
           if (profileRes?.data) {
             const p = profileRes.data;
             updateUserInfo({
+              ...(p.userId != null ? { userId: p.userId } : {}),
               avatarUrl: p.avatarUrl,
               fullName: p.fullName || userInfo?.fullName,
               memberTier: p.memberTier || 'MEMBER',
