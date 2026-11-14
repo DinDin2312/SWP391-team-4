@@ -2,16 +2,17 @@ import { locale } from '../../../i18n/languageStore.js';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { formatMoney } from '../../../utils/displayFormat';
 import { classLevelFromCode, splitCode } from '../../manager/components/classSearch';
-import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import {
   Search, MapPin, User, CheckCircle2, AlertCircle,
-  Repeat, Calendar, ShoppingBag, Trash2,
-  Clock, ArrowRight, ArrowLeft, Loader2, Sparkles, X, ChevronDown, Dumbbell, Sunrise, Sun, Sunset, RotateCcw
+  Repeat, Calendar, ShoppingBag, Trash2, BookOpen, Users,
+  Clock, ArrowRight, ArrowLeft, Loader2, Sparkles, X, Dumbbell, Sunrise, Sun, Sunset, RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_ORIGIN } from '../../../config/apiBase.js';
+import { resourceImageUrl } from '../../../components/resource-images/resourceImages';
 
 const detectCourseSubject = (course) => {
   if (course.subjectName && course.subjectName.trim()) {
@@ -49,6 +50,45 @@ const formatSchedulePattern = (pattern) => {
     Sun: 'Sun'
   };
   return pattern.split(',').map(d => dayMap[d.trim()] || d.trim()).join(', ');
+};
+
+const getSubjectFallbackImage = (course) => {
+  const text = `${course?.subjectName || ''} ${course?.className || ''}`.toLowerCase();
+  if (text.includes('bơi') || text.includes('swim')) return '/images/swimming-poster.jpg';
+  if (text.includes('box') || text.includes('kick') || text.includes('võ')) return '/images/boxing-poster.jpg';
+  if (text.includes('yoga') || text.includes('pilates') || text.includes('zumba') || text.includes('dance')) return '/images/studio-poster.jpg';
+  if (text.includes('đạp xe') || text.includes('spin') || text.includes('cycle') || text.includes('hiit') || text.includes('crossfit')) return '/images/crossfit-poster.jpg';
+  return '/images/gym-poster.jpg';
+};
+
+const getCourseCoverUrl = (course) => {
+  return resourceImageUrl(course?.imagePath) || getSubjectFallbackImage(course);
+};
+
+const getCourseDescription = (course) => {
+  return course?.subjectDescription?.trim() || '';
+};
+
+const formatCourseTiming = (course, isVi) => {
+  const dateFmtLocale = isVi ? 'vi-VN' : 'en-GB';
+  const nextObj = course?.nextSessionTime ? new Date(course.nextSessionTime) : null;
+  const hasValidNext = nextObj && !isNaN(nextObj.getTime());
+  const durationMin = Number(course?.durationMinutes) > 0 ? Number(course.durationMinutes) : 60;
+  const endObj = hasValidNext ? new Date(nextObj.getTime() + durationMin * 60000) : null;
+  const startClock = hasValidNext
+    ? nextObj.toLocaleTimeString(dateFmtLocale, { hour: '2-digit', minute: '2-digit', hour12: false })
+    : '--:--';
+  const endClock = endObj
+    ? endObj.toLocaleTimeString(dateFmtLocale, { hour: '2-digit', minute: '2-digit', hour12: false })
+    : '--:--';
+
+  return {
+    timeStr: hasValidNext ? `${startClock} - ${endClock}` : '--:--',
+    nextDateStr: hasValidNext
+      ? nextObj.toLocaleDateString(dateFmtLocale, { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : (isVi ? 'Sắp khai giảng' : 'Upcoming'),
+    patternText: formatSchedulePattern(course?.schedulePattern),
+  };
 };
 
 
@@ -139,11 +179,16 @@ const checkMatchesTimeSlot = (course, slotId) => {
 };
 
 const BookClass = () => {
-  useLanguage();
+  const language = useLanguage();
+  const isVi = language === 'vi';
+  const tr = (vi, en) => (isVi ? vi : en);
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const classIdParam = searchParams.get('classId');
   const [highlightedClassId, setHighlightedClassId] = useState(null);
+  const lastHandledDeepLinkRef = useRef('');
+  const highlightTimerRef = useRef(null);
   const [courses, setCourses] = useState([]);
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -184,7 +229,7 @@ const BookClass = () => {
   const [cartCount, setCartCount] = useState(0);
   const [cartTotal, setCartTotal] = useState(0);
   const [isCartHighlighted, setIsCartHighlighted] = useState(false);
-  const [expandedSchedules, setExpandedSchedules] = useState(new Set());
+  const [selectedCourseDetail, setSelectedCourseDetail] = useState(null);
 
   useEffect(() => {
     fetchCourses(true);
@@ -208,11 +253,21 @@ const BookClass = () => {
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    };
+  }, []);
+
   // Deep-link effect: when arriving via ?classId=139 from NEXUS AI Chat table
   useEffect(() => {
     if (!classIdParam || courses.length === 0) return;
+    const deepLinkKey = `${location.key || 'init'}:${classIdParam}`;
+    if (lastHandledDeepLinkRef.current === deepLinkKey) return;
+
     const targetCourse = courses.find(c => String(c.classId) === String(classIdParam));
     if (targetCourse) {
+      lastHandledDeepLinkRef.current = deepLinkKey;
       const subject = detectCourseSubject(targetCourse);
       setSelectedSubject(subject || 'ALL');
       // Reset filters so the course card is not hidden
@@ -230,13 +285,13 @@ const BookClass = () => {
         }
       }, 350);
 
-      // Remove highlight after 4.5 seconds
-      const timer = setTimeout(() => {
+      // Remove highlight after 7 seconds
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+      highlightTimerRef.current = setTimeout(() => {
         setHighlightedClassId(null);
-      }, 4500);
-      return () => clearTimeout(timer);
+      }, 7000);
     }
-  }, [classIdParam, courses]);
+  }, [classIdParam, location.key, courses]);
 
   const sortCoursesStably = (list) => {
     if (!Array.isArray(list)) return [];
@@ -313,6 +368,8 @@ const BookClass = () => {
 
   const handleBook = async (classId) => {
     if (booking !== null) return;
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    setHighlightedClassId(null);
     setBooking(classId);
     try {
       const token = localStorage.getItem('token');
@@ -340,18 +397,6 @@ const BookClass = () => {
     }
   };
 
-  const toggleSchedule = (classId) => {
-    setExpandedSchedules(prev => {
-      const next = new Set(prev);
-      if (next.has(classId)) {
-        next.delete(classId);
-      } else {
-        next.add(classId);
-      }
-      return next;
-    });
-  };
-
   const formatToastMessage = (msg) => {
     if (!msg || typeof msg !== 'string') return '';
     const conflictMatch = msg.match(/Schedule conflict! The session at (.*?) overlaps with your existing course: '(.*?)'\.?/i);
@@ -373,22 +418,34 @@ const BookClass = () => {
     const map = {};
     courses.forEach(c => {
       const subj = detectCourseSubject(c);
+      const desc = getCourseDescription(c);
+      const price = Number(c.price || 0);
+      const uploadedImg = Boolean(resourceImageUrl(c.imagePath));
+
       if (!map[subj]) {
         map[subj] = {
           name: subj,
+          description: desc,
           count: 0,
           courses: [],
           coaches: new Set(),
           rooms: new Set(),
-          minPrice: Number(c.price || 0)
+          minPrice: price,
+          coverUrl: getCourseCoverUrl(c),
+          hasCustomCover: uploadedImg,
         };
       }
       map[subj].count += 1;
       map[subj].courses.push(c);
+      if (!map[subj].description && desc) map[subj].description = desc;
+      if (!map[subj].hasCustomCover && uploadedImg) {
+        map[subj].coverUrl = getCourseCoverUrl(c);
+        map[subj].hasCustomCover = true;
+      }
       if (c.coachName) map[subj].coaches.add(c.coachName);
       if (c.roomName) map[subj].rooms.add(c.roomName);
-      if (c.price && Number(c.price) < map[subj].minPrice) {
-        map[subj].minPrice = Number(c.price);
+      if (price > 0 && (map[subj].minPrice === 0 || price < map[subj].minPrice)) {
+        map[subj].minPrice = price;
       }
     });
     return Object.values(map).sort((a, b) => a.name.localeCompare(b.name));
@@ -400,9 +457,10 @@ const BookClass = () => {
     if (!term) return subjectSummaries;
     return subjectSummaries.filter(subj => {
       return subj.name.toLowerCase().includes(term) ||
+        (subj.description && subj.description.toLowerCase().includes(term)) ||
         Array.from(subj.coaches).some(coach => coach.toLowerCase().includes(term)) ||
         Array.from(subj.rooms).some(room => room.toLowerCase().includes(term)) ||
-        subj.courses.some(c => c.className.toLowerCase().includes(term));
+        subj.courses.some(c => (c.className || '').toLowerCase().includes(term));
     });
   }, [subjectSummaries, searchTerm]);
 
@@ -450,9 +508,10 @@ const BookClass = () => {
       const matchesDate = !selectedDate || selectedDate === 'ALL' || (Boolean(s.nextSessionTime) && new Date(s.nextSessionTime).toDateString() === selectedDate);
       const term = searchTerm.trim().toLowerCase();
       const matchesSearch = !term ||
-                            s.className.toLowerCase().includes(term) ||
-                            s.coachName.toLowerCase().includes(term) ||
+                            (s.className && s.className.toLowerCase().includes(term)) ||
+                            (s.coachName && s.coachName.toLowerCase().includes(term)) ||
                             subj.toLowerCase().includes(term) ||
+                            (s.subjectDescription && s.subjectDescription.toLowerCase().includes(term)) ||
                             (s.roomName && s.roomName.toLowerCase().includes(term));
       return matchesSubject && matchesDay && matchesTime && matchesDate && matchesSearch;
     }));
@@ -555,7 +614,7 @@ const BookClass = () => {
             className="self-start sm:self-center px-4 py-2 rounded-md bg-[var(--primary)]/10 hover:bg-[var(--primary)]/15 text-[var(--primary)] border border-[var(--primary)]/20 text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all active:scale-95"
           >
             <ShoppingBag className="w-4 h-4" />
-            <span>{cartCount} {t("courses in cart")}</span>
+            <span>{cartCount} {tr('khóa học trong giỏ', 'courses in cart')}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         )}
@@ -614,9 +673,9 @@ const BookClass = () => {
           ) : filteredSubjectSummaries.length === 0 ? (
             <div className="p-12 text-center rounded-md bg-[var(--surface)] border border-slate-300 dark:border-white/15 space-y-3">
               <Dumbbell className="w-10 h-10 text-slate-400 mx-auto opacity-50" />
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">{t("No matching sports found")}</h3>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">{tr('Không tìm thấy bộ môn phù hợp', 'No matching sports found')}</h3>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                {t("Try clearing your search keyword to view all sports disciplines.")}
+                {tr('Thử xóa từ khóa tìm kiếm để xem toàn bộ các bộ môn.', 'Try clearing your search keyword to view all sports disciplines.')}
               </p>
               <button
                 type="button"
@@ -627,54 +686,84 @@ const BookClass = () => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredSubjectSummaries.map((subj) => (
                 <div
                   key={subj.name}
                   onClick={() => { setSelectedSubject(subj.name); resetFilters(); }}
-                  className="rounded-md bg-[var(--surface)] border border-slate-300 dark:border-white/15 p-5 flex flex-col justify-between hover:border-slate-800 dark:hover:border-white/40 transition-all shadow-xs hover:shadow-sm cursor-pointer group"
+                  className="bg-[var(--surface)] dark:bg-[#0a1122] border border-slate-300 dark:border-slate-800 hover:border-blue-500/50 rounded-3xl overflow-hidden flex flex-col justify-between transition-all duration-300 shadow-xs hover:shadow-xl hover:shadow-blue-500/10 cursor-pointer group"
                 >
                   <div>
-                    {/* Tag & Count */}
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 font-mono">
-                        {t("Sport Discipline")}
-                      </span>
-                      <span className="text-[11px] font-bold font-mono px-2 py-0.5 rounded-sm bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10">
-                        {subj.count} {t("classes")}
-                      </span>
+                    {/* Subject Cover Image */}
+                    <div className="relative h-44 overflow-hidden">
+                      <img
+                        src={subj.coverUrl}
+                        alt={subj.name}
+                        loading="lazy"
+                        onError={(e) => {
+                          if (!e.currentTarget.dataset.fallback) {
+                            e.currentTarget.dataset.fallback = '1';
+                            e.currentTarget.src = getSubjectFallbackImage({ subjectName: subj.name });
+                          }
+                        }}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 dark:from-[#0a1122] via-black/40 to-black/15" />
+                      <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between gap-2">
+                        <span className="px-3 py-1 rounded-full bg-black/65 backdrop-blur-md border border-white/10 text-[11px] font-bold text-blue-300">
+                          {t("Sport Discipline")}
+                        </span>
+                        <span className="px-3 py-1 rounded-full bg-blue-600/90 backdrop-blur-md text-[11px] font-bold text-white">
+                          {subj.count} {t("classes")}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Subject Name */}
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-[var(--primary)] transition-colors">
-                      {t(subj.name)}
-                    </h3>
+                    {/* Subject Body */}
+                    <div className="p-6 pb-4 space-y-3">
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-[var(--primary)] transition-colors">
+                        {t(subj.name)}
+                      </h3>
 
-                    {/* Room & Location */}
-                    {subj.rooms.size > 0 && (
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-2.5">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{Array.from(subj.rooms).join(' · ')}</span>
-                      </div>
-                    )}
+                      {subj.description && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
+                          {subj.description}
+                        </p>
+                      )}
 
-                    {/* Coach */}
-                    {subj.coaches.size > 0 && (
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{t("Coach")}: {Array.from(subj.coaches).join(', ')}</span>
+                      <div className="space-y-1.5 pt-1 text-xs text-slate-600 dark:text-slate-300">
+                        {subj.rooms.size > 0 && (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
+                            <span className="truncate">{Array.from(subj.rooms).join(' · ')}</span>
+                          </div>
+                        )}
+                        {subj.coaches.size > 0 && (
+                          <div className="flex items-center gap-2">
+                            <User className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
+                            <span className="truncate">
+                              {t("Coach")}: <strong className="text-slate-900 dark:text-white font-semibold">{Array.from(subj.coaches).join(', ')}</strong>
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
 
-                  {/* Card Footer */}
-                  <div className="pt-4 mt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      {t("Tuition from")}: <strong className="font-mono text-slate-900 dark:text-white">{formatMoney(subj.minPrice)}</strong>
-                    </span>
-                    <span className="text-xs font-bold text-[var(--primary)] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                  {/* Subject Footer */}
+                  <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800/90 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">
+                        {t("Tuition from")}
+                      </div>
+                      <div className="text-base font-black text-slate-900 dark:text-white">
+                        {formatMoney(subj.minPrice)}
+                      </div>
+                    </div>
+
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--primary)] group-hover:translate-x-0.5 transition-all">
                       <span>{t("View classes")}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-4 h-4 shrink-0" />
                     </span>
                   </div>
                 </div>
@@ -687,30 +776,61 @@ const BookClass = () => {
         /* MODE 2: DETAIL VIEW - CLASSES OF SELECTED SUBJECT        */
         /* ======================================================== */
         <div className="space-y-6">
-          {/* Refined Navigation Header - Clean Slate/Surface (No harsh black) */}
-          <div className="p-4 rounded-md bg-slate-100 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-slate-300 dark:border-white/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => { setSelectedSubject(null); resetFilters(); }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-white hover:bg-slate-50 dark:bg-slate-700 dark:hover:bg-slate-600 border border-slate-300 dark:border-white/20 text-xs font-semibold text-slate-700 dark:text-slate-100 transition-colors cursor-pointer shadow-2xs"
-              >
-                <ArrowLeft className="w-3.5 h-3.5 text-[var(--primary)]" />
-                <span>{t("Back to all sports")}</span>
-              </button>
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--primary)] font-mono">
-                  {t("Selected Sport")}
-                </span>
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
-                  {selectedSubject === 'ALL' ? t("All Active Classes") : t(selectedSubject)}
-                </h2>
+          {/* Refined Navigation Header + Quick Subject Switcher */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[var(--surface)] dark:bg-[#0a1122] text-slate-900 dark:text-white border border-slate-300 dark:border-slate-800 space-y-4 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setSelectedSubject(null); resetFilters(); }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-100 transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 text-[var(--primary)]" />
+                  <span>{t("Back to all sports")}</span>
+                </button>
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--primary)] font-mono">
+                    {t("Selected Sport")}
+                  </span>
+                  <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                    {selectedSubject === 'ALL' ? t("All Active Classes") : t(selectedSubject)}
+                  </h2>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-auto text-xs text-slate-600 dark:text-slate-300 font-medium">
+                <span className="font-bold text-[var(--primary)] font-mono text-sm">{filteredCourses.length}</span>
+                <span>{t("classes matching")}</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 self-start sm:self-auto text-xs text-slate-600 dark:text-slate-300 font-medium">
-              <span className="font-bold text-[var(--primary)] font-mono text-sm">{filteredCourses.length}</span>
-              <span>{t("classes matching")}</span>
+            {/* Quick Subject Switcher Pills */}
+            <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-200 dark:border-slate-800/80">
+              <button
+                type="button"
+                onClick={() => { setSelectedSubject('ALL'); setSelectedDate('ALL'); }}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  selectedSubject === 'ALL'
+                    ? 'bg-[var(--primary)] text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-slate-900/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800'
+                }`}
+              >
+                {tr(`Tất cả (${courses.length})`, `All (${courses.length})`)}
+              </button>
+              {subjectSummaries.map((subj) => (
+                <button
+                  key={subj.name}
+                  type="button"
+                  onClick={() => { setSelectedSubject(subj.name); setSelectedDate('ALL'); }}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    selectedSubject === subj.name
+                      ? 'bg-[var(--primary)] text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-900/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  {t(subj.name)} ({subj.count})
+                </button>
+              ))}
             </div>
           </div>
 
@@ -939,258 +1059,288 @@ const BookClass = () => {
             </div>
           </div>
 
-          {/* Courses List */}
-          <div className="space-y-4">
+          {/* Courses Grid */}
+          <div>
             {filteredCourses.length === 0 ? (
-              <div className="p-12 text-center rounded-md bg-[var(--surface)] border border-slate-300 dark:border-white/15 space-y-3">
+              <div className="p-12 text-center rounded-3xl bg-[var(--surface)] dark:bg-[#0a1122] border border-slate-300 dark:border-slate-800 space-y-3">
                 <Calendar className="w-8 h-8 text-slate-400 mx-auto opacity-50" />
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">{t("No courses found")}</h3>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                   {t("No courses match your filter criteria (Day of week, Time slot, or Start date). Try clearing some filters.")}
                 </p>
-                {isFiltered && (
-                  <button
-                    type="button"
-                    onClick={resetFilters}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-[var(--primary)] text-white text-xs font-semibold cursor-pointer hover:opacity-90 transition-opacity"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>{t("Clear all filters")}</span>
-                  </button>
-                )}
                 <div className="flex items-center justify-center gap-2 pt-2">
+                  {isFiltered && (
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--primary)] text-white hover:opacity-90 text-xs font-bold cursor-pointer shadow-xs"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>{t("Clear filters")}</span>
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => { setSelectedDate('ALL'); setSearchTerm(''); }}
-                    className="px-3 py-1.5 rounded-md bg-[var(--primary)] text-white hover:opacity-90 text-xs font-semibold cursor-pointer shadow-xs"
-                  >
-                    {t("Clear filters")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSubject(null)}
-                    className="px-3 py-1.5 rounded-md border border-slate-300 dark:border-white/15 text-xs font-semibold cursor-pointer"
+                    onClick={() => { setSelectedSubject(null); resetFilters(); }}
+                    className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold cursor-pointer"
                   >
                     {t("Back to all sports")}
                   </button>
                 </div>
               </div>
             ) : (
-              filteredCourses.map((course, idx) => {
-                const startTime = new Date(course.nextSessionTime);
-                const timeStr = startTime.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredCourses.map((course, idx) => {
+                  const rawBooked = Number(course.bookedSlots) || 0;
+                  const maxSlots = Number(course.maxSlots) || 0;
+                  const displayBooked = Math.min(maxSlots || rawBooked, rawBooked);
+                  const spotsLeft = Math.max(0, maxSlots - displayBooked);
+                  const isBooked = course.isBookedByMe;
+                  const isPending = !!course.isPendingPayment;
+                  const isFull = maxSlots > 0 && spotsLeft <= 0;
+                  const isThisBooking = Number(booking) === Number(course.classId);
+                  const isAnyHighlighted = highlightedClassId !== null;
+                  const isHighlighted = Number(highlightedClassId) === Number(course.classId);
+                  const courseSubj = detectCourseSubject(course);
+                  const { code: classCode, name: classDisplayName } = splitCode(course.className);
+                  const levelBand = classLevelFromCode(classCode);
+                  const levelLabel = levelBand === '1' ? t('Basic') : levelBand === '2' ? t('Advanced') : levelBand === '3' ? t('Intensive') : '';
+                  const timing = formatCourseTiming(course, isVi);
+                  const courseDescription = getCourseDescription(course);
 
-                const rawBooked = Number(course.bookedSlots) || 0;
-                const spotsLeft = Math.max(0, course.maxSlots - rawBooked);
-                const displayBooked = Math.min(course.maxSlots, rawBooked);
-                const isBooked = course.isBookedByMe;
-                const isPending = !!course.isPendingPayment;
-                const isFull = spotsLeft <= 0;
-                const isThisBooking = Number(booking) === Number(course.classId);
-                const isScheduleExpanded = expandedSchedules.has(course.classId);
-                const courseSubj = detectCourseSubject(course);
-                const { code: classCode, name: classDisplayName } = splitCode(course.className);
-                const levelBand = classLevelFromCode(classCode);
-                const levelLabel = levelBand === '1' ? t('Basic') : levelBand === '2' ? t('Advanced') : levelBand === '3' ? t('Intensive') : '';
-
-                return (
-                  <div
-                    key={course.classId || idx}
-                    id={`course-card-${course.classId}`}
-                    className={`rounded-md p-5 bg-[var(--surface)] border transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-5 ${
-                      highlightedClassId === course.classId
-                        ? 'border-blue-500 ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-900 shadow-lg shadow-blue-500/25 animate-pulse'
-                        : 'border-slate-300 dark:border-white/15 shadow-xs hover:shadow-sm'
-                    }`}
-                  >
-                    {/* Left/Main Information */}
-                    <div className="flex-1 space-y-3">
-                      {/* Top Badges (Squared, Clean, No Emojis) */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        {classCode && (
-                          <span className="px-2.5 py-0.5 rounded-sm text-[11px] font-bold font-mono uppercase bg-blue-500/10 text-[var(--primary)] border border-blue-500/25">
-                            {classCode}
+                  return (
+                    <div
+                      key={course.classId || idx}
+                      id={`course-card-${course.classId}`}
+                      className={`bg-[var(--surface)] dark:bg-[#0a1122] rounded-3xl overflow-hidden flex flex-col transition-all duration-500 group ${
+                        isHighlighted
+                          ? 'relative z-20 scale-[1.03] -translate-y-1.5 border-2 border-blue-600 dark:border-cyan-300 ring-4 ring-blue-500/50 dark:ring-cyan-400/70 shadow-[0_0_45px_rgba(37,99,235,0.45)] dark:shadow-[0_0_55px_rgba(34,211,238,0.65),0_0_20px_rgba(59,130,246,0.5)]'
+                          : isAnyHighlighted
+                          ? 'border border-slate-300 dark:border-slate-800 opacity-40 saturate-50 scale-[0.98]'
+                          : 'border border-slate-300 dark:border-slate-800 hover:border-blue-500/40 shadow-xs hover:shadow-xl hover:shadow-blue-500/10'
+                      }`}
+                    >
+                      {isHighlighted && (
+                        <div className="bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-600 text-white px-4 py-2 flex items-center justify-between text-[11px] font-black uppercase tracking-wider shadow-md shrink-0">
+                          <span className="flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                            <span>{tr('NEXUS AI — Lớp học đang chọn', 'NEXUS AI — Selected Course')}</span>
                           </span>
-                        )}
-
-                        {levelLabel && (
-                          <span className="px-2.5 py-0.5 rounded-sm text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25">
-                            {levelLabel}
-                          </span>
-                        )}
-
-                        {/* Subject Badge */}
-                        <span className="px-2.5 py-0.5 rounded-sm text-[11px] font-bold font-mono uppercase bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-white/15">
-                          {t("Subject:")} {t(courseSubj)}
-                        </span>
-
-                        <span className="px-2.5 py-0.5 rounded-sm text-xs font-bold bg-blue-500/10 text-[var(--primary)] border border-blue-500/20">
-                          {t("Full Course:")} {course.totalSessions} {t("sessions")}
-                        </span>
-
-                        <span className="px-2.5 py-0.5 rounded-sm text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-white/[0.06] dark:text-slate-300 border border-slate-200 dark:border-white/[0.06] flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{t("Starts:")} {timeStr} ({course.durationMinutes} {t("min")})</span>
-                        </span>
-                      </div>
-
-                      {/* Class Title */}
-                      <h3 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-                        {classDisplayName || course.className}
-                      </h3>
-
-                      {/* Key Metadata */}
-                      <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
-                        <div className="flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-[var(--primary)]" />
-                          <span>{t("Coach")} <strong className="text-slate-900 dark:text-white font-semibold">{course.coachName}</strong></span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-amber-500" />
-                          <span>{course.roomName}</span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          <Repeat className="w-3.5 h-3.5 text-purple-500" />
-                          <span>{t("Repeats:")} <strong className="text-slate-900 dark:text-white font-semibold">{formatSchedulePattern(course.schedulePattern)}</strong></span>
-                        </div>
-                      </div>
-
-                      {/* Schedule Details Drawer */}
-                      {course.upcomingDates && course.upcomingDates.length > 0 && (
-                        <div className="rounded-md bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] overflow-hidden transition-all">
-                          <button
-                            type="button"
-                            onClick={() => toggleSchedule(course.classId)}
-                            className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-white/[0.04] transition-colors cursor-pointer select-none"
-                          >
-                            <span className="flex items-center gap-2">
-                              <Calendar className="w-3.5 h-3.5 text-[var(--primary)]" />
-                              <span>
-                                {isScheduleExpanded ? t("Hide course schedule") : t("View all scheduled sessions")}
-                              </span>
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-bold text-[var(--primary)] px-2 py-0.5 rounded-sm bg-blue-500/10 border border-blue-500/20 font-mono">
-                                {course.upcomingDates.length} {t("sessions")}
-                              </span>
-                              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isScheduleExpanded ? 'rotate-180 text-[var(--primary)]' : ''}`} />
-                            </div>
-                          </button>
-
-                          {isScheduleExpanded && (
-                            <div className="px-4 pb-4 pt-2 border-t border-slate-200 dark:border-white/[0.06] space-y-2.5">
-                              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-                                <span className="font-medium">{t("Complete session timeline:")}</span>
-                                <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                  <span>{t("All")} {course.upcomingDates.length}/{course.totalSessions} {t("sessions loaded")}</span>
-                                </span>
-                              </div>
-
-                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                                {course.upcomingDates.map((d, i) => (
-                                  <div
-                                    key={i}
-                                    className="px-3 py-2 rounded-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.06] shadow-2xs flex flex-col gap-0.5"
-                                  >
-                                    <span className="text-[10px] font-bold tracking-wider text-[var(--primary)] uppercase font-mono">
-                                      {t("Session")} #{i + 1}
-                                    </span>
-                                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 font-mono">
-                                      {d}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                          <span className="w-2 h-2 rounded-full bg-white animate-ping" />
                         </div>
                       )}
 
-                      {/* Enrollment Progress Bar */}
-                      <div className="space-y-1 pt-1">
-                        <div className="flex items-center justify-between text-[11px] font-semibold">
-                          <span className="text-slate-500 dark:text-slate-400">
-                            {displayBooked}/{course.maxSlots} {t("Students Enrolled")}
+                      {/* Cover & Badges */}
+                      <div className="relative h-48 overflow-hidden shrink-0">
+                        <img
+                          src={getCourseCoverUrl(course)}
+                          alt={classDisplayName || course.className}
+                          loading="lazy"
+                          onError={(e) => {
+                            if (!e.currentTarget.dataset.fallback) {
+                              e.currentTarget.dataset.fallback = '1';
+                              e.currentTarget.src = getSubjectFallbackImage(course);
+                            }
+                          }}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 dark:from-[#0a1122] via-black/45 to-black/20" />
+
+                        <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between gap-2">
+                          <span className="px-3 py-1 rounded-full bg-black/65 backdrop-blur-md border border-white/10 text-[11px] font-bold text-blue-300 truncate max-w-[50%]">
+                            {course.subjectName || t(courseSubj) || t("General")}
                           </span>
-                          {spotsLeft <= 3 && spotsLeft > 0 && (
-                            <span className="text-amber-600 dark:text-amber-400 font-bold">
-                              {t("Only {0} spots remaining!", [spotsLeft])}
-                            </span>
-                          )}
-                          {isFull && (
-                            <span className="text-rose-600 dark:text-rose-400 font-bold">
-                              {t("Class is fully booked")}
-                            </span>
-                          )}
-                        </div>
-                        <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              isFull ? 'bg-rose-500' : spotsLeft <= 3 ? 'bg-amber-500' : 'bg-[var(--primary)]'
-                            }`}
-                            style={{ width: `${Math.min(100, (displayBooked / (course.maxSlots || 1)) * 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right Side: Pricing & Action Button */}
-                    <div className="flex lg:flex-col items-center lg:items-end justify-between gap-4 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-200 dark:border-white/10 shrink-0">
-                      <div className="text-left lg:text-right">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-                          {t("Tuition Fee")}
-                        </span>
-                        <span className="text-xl sm:text-2xl font-black font-mono text-slate-900 dark:text-white">
-                          {formatMoney(course.price)}
-                        </span>
-                      </div>
-
-                      <div className="w-full sm:w-auto">
-                        {isBooked ? (
-                          <div className="px-4 py-2 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 font-semibold text-xs flex items-center justify-center gap-1.5">
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span>{t("Enrolled")}</span>
-                          </div>
-                        ) : isPending ? (
-                          <div className="px-4 py-2 rounded-md bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 font-semibold text-xs flex items-center justify-center gap-1.5">
-                            <Clock className="w-4 h-4" />
-                            <span>{t("Pending Checkout")}</span>
-                          </div>
-                        ) : isFull ? (
-                          <button
-                            disabled
-                            className="w-full px-4 py-2 rounded-md bg-slate-100 dark:bg-white/[0.05] text-slate-400 text-xs font-semibold cursor-not-allowed border border-slate-200 dark:border-white/[0.08]"
-                          >
-                            {t("Full")}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleBook(course.classId)}
-                            disabled={isThisBooking}
-                            className="w-full px-5 py-2.5 rounded-md bg-[var(--primary)] hover:opacity-90 text-white font-bold text-xs shadow-xs transition-opacity flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                          >
-                            {isThisBooking ? (
-                              <>
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                <span>{t("Enrolling...")}</span>
-                              </>
-                            ) : (
-                              <>
-                                <span>{t("Enroll Now")}</span>
-                                <ArrowRight className="w-3.5 h-3.5" />
-                              </>
+                          <div className="flex items-center gap-1.5">
+                            {classCode && (
+                              <span className="px-2.5 py-1 rounded-full bg-blue-600/85 backdrop-blur-md text-[11px] font-mono font-bold text-white">
+                                {classCode}
+                              </span>
                             )}
-                          </button>
-                        )}
+                            {levelLabel && (
+                              <span className="px-2.5 py-1 rounded-full bg-amber-500/20 backdrop-blur-md border border-amber-400/30 text-[11px] font-bold text-amber-300">
+                                {levelLabel}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="absolute bottom-3 left-3.5 right-3.5 flex items-center justify-between gap-2">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold backdrop-blur-md border ${
+                              isFull
+                                ? 'bg-rose-500/20 border-rose-400/30 text-rose-300'
+                                : spotsLeft <= 3
+                                ? 'bg-amber-500/20 border-amber-400/30 text-amber-300'
+                                : 'bg-emerald-500/20 border-emerald-400/30 text-emerald-300'
+                            }`}
+                          >
+                            {isFull
+                              ? t("Full")
+                              : tr(`Còn ${spotsLeft}/${maxSlots} chỗ trống`, `${spotsLeft}/${maxSlots} spots left`)}
+                          </span>
+
+                          {isHighlighted && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white border border-amber-200/60 text-[11px] font-bold shadow-lg shadow-amber-500/40 animate-bounce">
+                              <Sparkles className="w-3 h-3" />
+                              <span>{tr('AI Đề xuất', 'AI Recommended')}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Course Body */}
+                      <div className="p-6 flex-1 flex flex-col justify-between gap-4">
+                        <div className="space-y-3">
+                          <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-snug group-hover:text-[var(--primary)] transition-colors line-clamp-2">
+                            {classDisplayName || course.className}
+                          </h3>
+
+                          {courseDescription && (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
+                              {courseDescription}
+                            </p>
+                          )}
+
+                          {/* Coach & Room */}
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600 dark:text-slate-300 pt-1">
+                            <span className="flex items-center gap-1.5">
+                              <User className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
+                              <span>
+                                {t("Coach")} <strong className="text-slate-900 dark:text-white">{course.coachName}</strong>
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <MapPin className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
+                              <span>{course.roomName}</span>
+                            </span>
+                          </div>
+
+                          {/* 4-cell Course Spec Grid */}
+                          <div className="grid grid-cols-2 gap-2.5 pt-2">
+                            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800/90">
+                              <div className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1 mb-0.5">
+                                <Clock className="w-3 h-3 text-blue-500 dark:text-blue-400" />
+                                {tr('Thời lượng khóa', 'Course Length')}
+                              </div>
+                              <div className="text-xs font-bold text-slate-900 dark:text-white">
+                                {course.totalSessions || 0} {t("sessions")}
+                              </div>
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                {course.durationMinutes || 60} {tr('phút/buổi', 'min/session')}
+                              </div>
+                            </div>
+
+                            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800/90">
+                              <div className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1 mb-0.5">
+                                <Repeat className="w-3 h-3 text-purple-500 dark:text-purple-400" />
+                                {tr('Lịch cố định', 'Weekly Pattern')}
+                              </div>
+                              <div className="text-xs font-bold text-slate-900 dark:text-white truncate" title={timing.patternText}>
+                                {timing.patternText}
+                              </div>
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                {tr('Khung giờ:', 'Time:')} {timing.timeStr}
+                              </div>
+                            </div>
+
+                            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800/90">
+                              <div className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1 mb-0.5">
+                                <Calendar className="w-3 h-3 text-emerald-500 dark:text-emerald-400" />
+                                {tr('Ngày khai giảng', 'Start Date')}
+                              </div>
+                              <div className="text-xs font-bold text-slate-900 dark:text-white">
+                                {timing.nextDateStr}
+                              </div>
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                {tr('Đang mở đăng ký', 'Open for enrollment')}
+                              </div>
+                            </div>
+
+                            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800/90">
+                              <div className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1 mb-0.5">
+                                <Users className="w-3 h-3 text-cyan-500 dark:text-cyan-400" />
+                                {tr('Sĩ số lớp', 'Class Capacity')}
+                              </div>
+                              <div className="text-xs font-bold text-slate-900 dark:text-white">
+                                {displayBooked}/{maxSlots} {tr('học viên', 'enrolled')}
+                              </div>
+                              <div className={`text-[11px] font-semibold mt-0.5 ${isFull ? 'text-rose-500 dark:text-rose-400' : spotsLeft <= 3 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                {isFull ? t("Full") : tr(`Còn ${spotsLeft} chỗ trống`, `${spotsLeft} spots left`)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Footer: Tuition & Actions */}
+                        <div className="pt-4 border-t border-slate-200 dark:border-slate-800/90 space-y-3">
+                          <div>
+                            <div className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">
+                              {tr('Học phí trọn khóa', 'Full Course Tuition')}
+                            </div>
+                            <div className="text-xl font-black font-mono text-slate-900 dark:text-white leading-tight">
+                              {formatMoney(course.price)}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCourseDetail(course)}
+                              className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                              <BookOpen className="w-3.5 h-3.5 text-[var(--primary)] shrink-0" />
+                              <span>{tr('Chi tiết lộ trình', 'Course Details')}</span>
+                            </button>
+
+                            {isBooked ? (
+                              <div className="py-2.5 px-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 font-semibold text-xs flex items-center justify-center gap-1.5">
+                                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                                <span className="truncate">{t("Enrolled")}</span>
+                              </div>
+                            ) : isPending ? (
+                              <div className="py-2.5 px-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 font-semibold text-xs flex items-center justify-center gap-1.5">
+                                <Clock className="w-4 h-4 shrink-0" />
+                                <span className="truncate">{t("Pending Checkout")}</span>
+                              </div>
+                            ) : isFull ? (
+                              <button
+                                type="button"
+                                disabled
+                                className="py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 text-xs font-bold cursor-not-allowed"
+                              >
+                                {t("Full")}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleBook(course.classId)}
+                                disabled={isThisBooking}
+                                className={`py-2.5 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 ${
+                                  isHighlighted
+                                    ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white ring-2 ring-cyan-300 shadow-[0_0_25px_rgba(6,182,212,0.7)] animate-pulse'
+                                    : 'bg-[var(--primary)] hover:opacity-90 text-white shadow-sm'
+                                }`}
+                              >
+                                {isThisBooking ? (
+                                  <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                                    <span className="truncate">{t("Enrolling...")}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="truncate">{t("Enroll Now")}</span>
+                                    <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
@@ -1258,6 +1408,235 @@ const BookClass = () => {
             </div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Course Detail & Complete Session Roadmap Modal */}
+      <AnimatePresence>
+        {selectedCourseDetail && (() => {
+          const course = courses.find(c => c.classId === selectedCourseDetail.classId) || selectedCourseDetail;
+          const { code: classCode, name: classDisplayName } = splitCode(course.className);
+          const levelBand = classLevelFromCode(classCode);
+          const levelLabel = levelBand === '1' ? t('Basic') : levelBand === '2' ? t('Advanced') : levelBand === '3' ? t('Intensive') : '';
+          const subjectLabel = course.subjectName || t(detectCourseSubject(course)) || t("General");
+          const rawBooked = Number(course.bookedSlots) || 0;
+          const maxSlots = Number(course.maxSlots) || 0;
+          const displayBooked = Math.min(maxSlots || rawBooked, rawBooked);
+          const spotsLeft = Math.max(0, maxSlots - displayBooked);
+          const isBooked = course.isBookedByMe;
+          const isPending = !!course.isPendingPayment;
+          const isFull = maxSlots > 0 && spotsLeft <= 0;
+          const isThisBooking = Number(booking) === Number(course.classId);
+          const timing = formatCourseTiming(course, isVi);
+          const courseDescription = getCourseDescription(course);
+          const upcoming = Array.isArray(course.upcomingDates) ? course.upcomingDates : [];
+
+          return (
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/75 backdrop-blur-md"
+              onClick={() => setSelectedCourseDetail(null)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-[var(--surface)] dark:bg-[#0a1122] border border-slate-300 dark:border-slate-700 shadow-2xl rounded-3xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden relative"
+              >
+                {/* Banner Header */}
+                <div className="relative h-52 sm:h-60 shrink-0 overflow-hidden">
+                  <img
+                    src={getCourseCoverUrl(course)}
+                    alt={classDisplayName || course.className}
+                    onError={(e) => {
+                      if (!e.currentTarget.dataset.fallback) {
+                        e.currentTarget.dataset.fallback = '1';
+                        e.currentTarget.src = getSubjectFallbackImage(course);
+                      }
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/60 to-black/30" />
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCourseDetail(null)}
+                    aria-label={t("Close")}
+                    className="absolute top-4 right-4 p-2 rounded-full bg-black/60 hover:bg-rose-500/30 text-slate-200 hover:text-white border border-white/10 transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+
+                  <div className="absolute bottom-5 left-6 right-6 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur border border-white/10 text-xs font-bold text-blue-300">
+                        {subjectLabel}
+                      </span>
+                      {classCode && (
+                        <span className="px-2.5 py-1 rounded-full bg-blue-600/90 text-xs font-mono font-bold text-white">
+                          {classCode}
+                        </span>
+                      )}
+                      {levelLabel && (
+                        <span className="px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 text-xs font-bold text-amber-300">
+                          {levelLabel}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                      {classDisplayName || course.className}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-slate-200">
+                      <span className="flex items-center gap-1.5">
+                        <User className="w-4 h-4 text-blue-400" />
+                        <span>{t("Coach")} <strong className="text-white">{course.coachName}</strong></span>
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4 text-amber-400" />
+                        <span>{course.roomName}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Scrollable Body */}
+                <div className="overflow-y-auto p-6 space-y-6 flex-1">
+                  {courseDescription && (
+                    <div className="space-y-1.5">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--primary)]">
+                        {tr('Mô tả môn học', 'Subject Description')}
+                      </h4>
+                      <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {courseDescription}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 4 Key Metrics */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mb-1">{tr('Số buổi & Thời lượng', 'Sessions & Duration')}</div>
+                      <div className="text-sm font-bold text-slate-900 dark:text-white">{course.totalSessions || 0} {t("sessions")}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{course.durationMinutes || 60} {tr('phút/buổi', 'min/session')}</div>
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mb-1">{tr('Lịch học hàng tuần', 'Weekly Schedule')}</div>
+                      <div className="text-sm font-bold text-slate-900 dark:text-white">{timing.patternText}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{timing.timeStr}</div>
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mb-1">{tr('Ngày khai giảng', 'Start Date')}</div>
+                      <div className="text-sm font-bold text-slate-900 dark:text-white">{timing.nextDateStr}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{tr('Đang mở đăng ký', 'Open for enrollment')}</div>
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mb-1">{tr('Tình trạng chỗ', 'Availability')}</div>
+                      <div className="text-sm font-bold text-slate-900 dark:text-white">{displayBooked}/{maxSlots} {tr('đã đăng ký', 'enrolled')}</div>
+                      <div className={`text-xs font-semibold ${isFull ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                        {isFull ? t("Full") : tr(`Còn ${spotsLeft} chỗ trống`, `${spotsLeft} spots left`)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Complete Session Schedule */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-bold uppercase tracking-wider text-[var(--primary)] flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        <span>{tr('Lộ trình chi tiết các buổi học', 'Complete Session Roadmap')}</span>
+                      </h4>
+                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        {upcoming.length}/{course.totalSessions || upcoming.length} {tr('buổi sắp tới', 'upcoming sessions')}
+                      </span>
+                    </div>
+
+                    {upcoming.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                        {upcoming.map((dateText, i) => (
+                          <div
+                            key={i}
+                            className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex flex-col gap-0.5"
+                          >
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--primary)] font-mono">
+                              {t("Session")} #{i + 1}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 font-mono">
+                              {dateText}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
+                        {tr('Lịch chi tiết từng buổi sẽ được cập nhật khi mở lớp.', 'Detailed session dates will appear upon class scheduling.')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sticky Footer */}
+                <div className="p-5 sm:p-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#080e1d] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+                  <div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      {tr('Học phí trọn khóa', 'Full Course Tuition')} ({course.totalSessions || upcoming.length} {t("sessions")})
+                    </div>
+                    <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+                      {formatMoney(course.price)}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCourseDetail(null)}
+                      className="px-4 py-3 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      {t("Close")}
+                    </button>
+
+                    {isBooked ? (
+                      <div className="px-5 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 font-semibold text-xs flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>{t("Enrolled")}</span>
+                      </div>
+                    ) : isPending ? (
+                      <div className="px-5 py-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 font-semibold text-xs flex items-center gap-1.5">
+                        <Clock className="w-4 h-4" />
+                        <span>{t("Pending Checkout")}</span>
+                      </div>
+                    ) : isFull ? (
+                      <button
+                        type="button"
+                        disabled
+                        className="px-6 py-3 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-bold cursor-not-allowed"
+                      >
+                        {t("Full")}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleBook(course.classId)}
+                        disabled={isThisBooking}
+                        className="px-6 py-3 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white text-xs font-bold flex items-center gap-2 transition-all shadow-lg cursor-pointer disabled:opacity-50"
+                      >
+                        {isThisBooking ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>{t("Enrolling...")}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>{t("Enroll Now")}</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
     </div>
   );

@@ -5663,3 +5663,8 @@ for (const [en, vi] of Object.entries(classCodeLabels)) {
   translations[vi] = [en, vi];
 }
 
+Object.assign(translations, {
+  '{0} added to your vault': ['{0} added to your vault', 'Đã thêm {0} vào giỏ hàng'],
+  'Error adding to cart': ['Error adding to cart', 'Lỗi khi thêm vào giỏ hàng'],
+});
+

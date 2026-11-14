@@ -135,7 +135,7 @@ export default function MemberTierAvatar({
     <div
       onClick={onClick}
       title={t(config.title)}
-      className={`relative inline-flex items-center justify-center shrink-0 select-none ${sizeConfig.container} ${
+      className={`relative isolate inline-flex items-center justify-center shrink-0 select-none ${sizeConfig.container} ${
         onClick ? 'cursor-pointer hover:scale-105 active:scale-95 transition-transform' : ''
       } ${className}`}
     >

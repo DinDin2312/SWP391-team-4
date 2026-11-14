@@ -15,6 +15,8 @@ public class AvailableClassResponse {
     private Integer classId;
     private Integer subjectId;
     private String subjectName;
+    private String subjectDescription;
+    private String imagePath;
     private Integer roomId;
     private LocalDateTime lastSessionTime;
     private String className;

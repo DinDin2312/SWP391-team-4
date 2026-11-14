@@ -1,19 +1,20 @@
-import { locale } from '../../../i18n/languageStore.js';
 import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Dumbbell, Activity, Shield, Sparkles, ChevronRight, Play, Star, MapPin, 
   CheckCircle2, User, X, Menu, Clock, Phone, Mail, ChevronDown, Waves, 
-  Flame, Compass, HelpCircle, Search, Calendar
+  Flame, Compass, HelpCircle, Search, Calendar, Repeat, Users, BookOpen, ArrowLeft, ArrowRight,
+  Sunrise, Sun, Sunset, RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axiosClient from '../../../services/axiosClient';
 import { AuroraBackground } from '../../../components/ui/aurora-background';
 import { TypewriterEffectSmooth } from '../../../components/ui/typewriter-effect';
 import ShinyText from '../../../components/ui/ShinyText';
-import { CardBody, CardContainer, CardItem } from '../../../components/ui/3d-card';
 import { InfiniteMovingCards } from '../../../components/ui/infinite-moving-cards';
+import { splitCode, classLevelFromCode } from '../../manager/components/classSearch';
+import { resourceImageUrl } from '../../../components/resource-images/resourceImages';
 
 const LandingPage = () => {
   const language = useLanguage();
@@ -26,8 +27,54 @@ const LandingPage = () => {
   const [packageCategory, setPackageCategory] = useState('ALL');
   
   const [packages, setPackages] = useState([]);
-  const [schedules, setSchedules] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
+  const [loadingClasses, setLoadingClasses] = useState(true);
+  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [classSearch, setClassSearch] = useState('');
+  const [selectedDays, setSelectedDays] = useState([]);
+  const [dayMatchMode, setDayMatchMode] = useState('ANY');
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState([]);
+  const [selectedDate, setSelectedDate] = useState('ALL');
+  const [selectedCourseDetail, setSelectedCourseDetail] = useState(null);
+
+  const toggleDay = (dayId) => {
+    if (dayId === 'ALL') {
+      setSelectedDays([]);
+      return;
+    }
+    setSelectedDays((prev) =>
+      prev.includes(dayId) ? prev.filter((d) => d !== dayId) : [...prev, dayId]
+    );
+  };
+
+  const toggleTimeSlot = (slotId) => {
+    if (slotId === 'ALL') {
+      setSelectedTimeSlots([]);
+      return;
+    }
+    setSelectedTimeSlots((prev) =>
+      prev.includes(slotId) ? prev.filter((s) => s !== slotId) : [...prev, slotId]
+    );
+  };
+
+  const resetClassFilters = () => {
+    setClassSearch('');
+    setSelectedDays([]);
+    setDayMatchMode('ANY');
+    setSelectedTimeSlots([]);
+    setSelectedDate('ALL');
+  };
+
+  const isClassFiltered = Boolean(
+    classSearch.trim() ||
+    selectedDays.length > 0 ||
+    selectedTimeSlots.length > 0 ||
+    selectedDate !== 'ALL'
+  );
+
+  const isVi = language === 'vi';
+  const tr = (vi, en) => (isVi ? vi : en);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,7 +86,6 @@ const LandingPage = () => {
 
   useEffect(() => {
     let isMounted = true;
-    setLoadingPackages(true);
 
     // Fetch real data from backend via standardized axiosClient
     axiosClient.get('/guest/packages')
@@ -58,20 +104,131 @@ const LandingPage = () => {
         }
       });
 
-    axiosClient.get('/guest/schedules')
+    axiosClient.get('/guest/classes')
       .then((data) => {
-        if (isMounted && Array.isArray(data)) {
-          setSchedules(data);
+        if (isMounted) {
+          const list = Array.isArray(data) ? data : [];
+          setClasses(list.length > 0 ? list : getDefaultClasses());
+          setLoadingClasses(false);
         }
       })
       .catch((err) => {
-        console.warn('Could not load guest schedules', err);
+        console.warn('Could not load classes from backend, using curated showcase classes', err);
+        if (isMounted) {
+          setClasses(getDefaultClasses());
+          setLoadingClasses(false);
+        }
       });
 
     return () => {
       isMounted = false;
     };
   }, []);
+
+  const subjectSummaries = useMemo(() => {
+    const map = new Map();
+    classes.forEach((c) => {
+      const name = getCourseSubject(c);
+      const desc = getCourseDescription(c);
+      const price = Number(c.price) || 0;
+      const uploadedImg = Boolean(resourceImageUrl(c.imagePath));
+
+      if (!map.has(name)) {
+        map.set(name, {
+          name,
+          description: desc,
+          count: 0,
+          courses: [],
+          coachesSet: new Set(),
+          roomsSet: new Set(),
+          minPrice: price,
+          coverUrl: getCourseCoverUrl(c),
+          hasCustomCover: uploadedImg,
+        });
+      }
+
+      const entry = map.get(name);
+      entry.count += 1;
+      entry.courses.push(c);
+      if (!entry.description && desc) entry.description = desc;
+      if (!entry.hasCustomCover && uploadedImg) {
+        entry.coverUrl = getCourseCoverUrl(c);
+        entry.hasCustomCover = true;
+      }
+      if (c.coachName) entry.coachesSet.add(c.coachName);
+      if (c.roomName) entry.roomsSet.add(c.roomName);
+      if (price > 0 && (entry.minPrice === 0 || price < entry.minPrice)) {
+        entry.minPrice = price;
+      }
+    });
+
+    return [...map.values()]
+      .map((entry) => ({
+        name: entry.name,
+        description: entry.description,
+        count: entry.count,
+        courses: entry.courses,
+        coaches: [...entry.coachesSet],
+        rooms: [...entry.roomsSet],
+        minPrice: entry.minPrice,
+        coverUrl: entry.coverUrl,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [classes]);
+
+  const filteredSubjectSummaries = useMemo(() => {
+    const q = classSearch.trim().toLowerCase();
+    if (!q) return subjectSummaries;
+    return subjectSummaries.filter((subj) => {
+      return (
+        subj.name.toLowerCase().includes(q) ||
+        (subj.description && subj.description.toLowerCase().includes(q)) ||
+        subj.coaches.some((coach) => coach.toLowerCase().includes(q)) ||
+        subj.rooms.some((room) => room.toLowerCase().includes(q)) ||
+        subj.courses.some((c) => (c.className || '').toLowerCase().includes(q))
+      );
+    });
+  }, [subjectSummaries, classSearch]);
+
+  const availableDates = useMemo(() => {
+    const relevantCourses = classes.filter((c) => {
+      const matchesSubject = selectedSubject === 'ALL' || !selectedSubject || getCourseSubject(c) === selectedSubject;
+      const matchesDay = checkCourseMatchesDays(c, selectedDays, dayMatchMode);
+      const matchesTime = selectedTimeSlots.length === 0 || selectedTimeSlots.some((slotId) => checkMatchesTimeSlot(c, slotId));
+      return matchesSubject && matchesDay && matchesTime;
+    });
+
+    return [...new Set(
+      relevantCourses
+        .filter((s) => Boolean(s.nextSessionTime) && !isNaN(new Date(s.nextSessionTime).getTime()))
+        .map((s) => new Date(s.nextSessionTime).toDateString())
+    )].sort((a, b) => new Date(a) - new Date(b));
+  }, [classes, selectedSubject, selectedDays, dayMatchMode, selectedTimeSlots]);
+
+  const filteredClasses = useMemo(() => {
+    const q = classSearch.trim().toLowerCase();
+    return classes.filter((c) => {
+      if (selectedSubject && selectedSubject !== 'ALL' && getCourseSubject(c) !== selectedSubject) {
+        return false;
+      }
+      if (!checkCourseMatchesDays(c, selectedDays, dayMatchMode)) {
+        return false;
+      }
+      if (selectedTimeSlots.length > 0 && !selectedTimeSlots.some((slotId) => checkMatchesTimeSlot(c, slotId))) {
+        return false;
+      }
+      if (selectedDate !== 'ALL') {
+        const nextDateStr = c.nextSessionTime ? new Date(c.nextSessionTime).toDateString() : '';
+        if (nextDateStr !== selectedDate) return false;
+      }
+      if (!q) return true;
+      const haystack = [c.className, c.subjectName, c.coachName, c.roomName, c.subjectDescription]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [classes, selectedSubject, selectedDays, dayMatchMode, selectedTimeSlots, selectedDate, classSearch]);
 
   // Filtered packages by tab category
   const filteredPackages = useMemo(() => {
@@ -91,18 +248,19 @@ const LandingPage = () => {
     return valid.slice(0, 6);
   }, [packages, packageCategory]);
 
-  // Filter schedules in modal
+  // Filter weekly class schedules in modal
   const filteredSchedules = useMemo(() => {
-    const source = schedules.slice(0, 45); // Limit initial view to 45 upcoming for peak performance
-    if (!scheduleSearch.trim()) return source;
-    const query = scheduleSearch.toLowerCase();
-    return schedules.filter(
-      (s) =>
-        (s.className && s.className.toLowerCase().includes(query)) ||
-        (s.coachName && s.coachName.toLowerCase().includes(query)) ||
-        (s.roomName && s.roomName.toLowerCase().includes(query))
-    ).slice(0, 50);
-  }, [schedules, scheduleSearch]);
+    const q = scheduleSearch.trim().toLowerCase();
+    if (!q) return classes;
+    return classes.filter((c) => {
+      const patternLabel = formatPatternText(c.schedulePattern, isVi);
+      const haystack = [c.className, c.subjectName, c.coachName, c.roomName, patternLabel]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [classes, scheduleSearch, isVi]);
 
   const toggleFaq = (index) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
@@ -433,13 +591,6 @@ const LandingPage = () => {
 
                     <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold text-slate-400">
                       <span>{t("Capacity")}: <strong className="text-white">{item.capacity}</strong></span>
-                      <button 
-                        onClick={() => setShowSchedule(true)} 
-                        className="text-blue-400 hover:text-blue-300 flex items-center gap-1 group/link"
-                      >
-                        {t("View Schedule")}
-                        <ChevronRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 transition-transform" />
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -449,7 +600,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Featured Classes Section */}
+      {/* Featured / Public Courses Catalog Section */}
       <motion.section 
         id="classes" 
         className="py-24 bg-[#060b17] scroll-mt-20"
@@ -459,18 +610,25 @@ const LandingPage = () => {
         transition={{ duration: 1.0, ease: "easeOut" }}
       >
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-12">
+          <div className="flex flex-col md:flex-row justify-between md:items-end gap-6 mb-10">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider mb-3">
                 <Flame className="w-3.5 h-3.5" />
-                {t("Curated Programs")}
+                {tr('Danh mục khóa học chuẩn quốc tế', 'Curated Training Courses')}
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">{t("Premium Training Programs")}</h2>
-              <p className="text-slate-400">{t("Discover our signature classes designed for maximum results.")}</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
+                {tr('Khóa Học & Lộ Trình Đào Tạo Chi Tiết', 'Detailed Courses & Training Programs')}
+              </h2>
+              <p className="text-slate-400 max-w-2xl">
+                {tr(
+                  'Thông tin minh bạch về bộ môn, huấn luyện viên, số buổi học, khung giờ cố định, sĩ số thực tế và học phí trọn khóa.',
+                  'Explore complete course details: curriculum, coach, room, total sessions, weekly schedule, real-time spots, and full tuition.'
+                )}
+              </p>
             </div>
             <button 
               onClick={() => setShowSchedule(true)} 
-              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-2 border border-slate-700 transition-colors shadow-lg"
+              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-2 border border-slate-700 transition-colors shadow-lg shrink-0 self-start md:self-auto"
             >
               <Calendar className="w-4 h-4" />
               <span>{t("View all schedule")}</span>
@@ -478,101 +636,691 @@ const LandingPage = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Class Card 1 */}
-            <CardContainer className="inter-var w-full">
-              <CardBody className="bg-[#0a1122] relative group/card hover:shadow-2xl hover:shadow-blue-500/[0.1] border-slate-800 border w-full h-auto rounded-3xl p-6 transition-colors">
-                <CardItem translateZ="50" className="w-full h-48 relative rounded-2xl overflow-hidden mb-6">
-                  <img
-                    src="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80"
-                    alt="HIIT Endurance"
-                    loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-110"
+          {loadingClasses ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="bg-[#0a1122] border border-slate-800 rounded-3xl p-6 h-[420px] animate-pulse" />
+              ))}
+            </div>
+          ) : selectedSubject === null ? (
+            /* ======================================================== */
+            /* MODE 1: MASTER VIEW - SUBJECT CATALOG                    */
+            /* ======================================================== */
+            <div className="space-y-8">
+              {/* Subject Search & "View all classes" Bar */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800/80">
+                <div className="relative w-full md:max-w-md">
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder={tr('Tìm theo bộ môn (Gym, Yoga, Bơi...), HLV hoặc phòng tập...', 'Search by sport (Yoga, Gym, Swim...), coach or room...')}
+                    value={classSearch}
+                    onChange={(e) => setClassSearch(e.target.value)}
+                    className="w-full pl-10 pr-9 py-2.5 text-xs sm:text-sm bg-[#0a1122] border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                  <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-black/50 backdrop-blur border border-white/10 text-xs font-bold text-emerald-400">{t("Popular")}</div>
-                  <Activity className="absolute bottom-4 left-4 w-10 h-10 text-white/70 group-hover/card:text-blue-400 transition-colors" />
-                </CardItem>
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <CardItem translateZ="60" className="text-xl font-bold text-white mb-1">{t("HIIT Endurance")}</CardItem>
-                    <CardItem translateZ="40" className="flex items-center gap-2 text-sm text-slate-400">
-                      <User className="w-4 h-4 text-blue-400" />{t("Coach Nguyen Van Tuan")}</CardItem>
-                  </div>
+                  {classSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setClassSearch('')}
+                      aria-label={tr('Xóa tìm kiếm', 'Clear search')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
-                <CardItem translateZ="30" as="p" className="text-sm text-slate-400 mb-6 line-clamp-2">
-                  {t("High-intensity interval training designed to push your cardiovascular limits and build explosive power.")}
-                </CardItem>
-                <CardItem translateZ="20" className="w-full">
-                  <button onClick={() => navigate('/login')} className="w-full py-3 rounded-xl bg-blue-600/10 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/20 font-semibold transition-all">
-                    {t("Book Session")}
-                  </button>
-                </CardItem>
-              </CardBody>
-            </CardContainer>
 
-            {/* Class Card 2 */}
-            <CardContainer className="inter-var w-full">
-              <CardBody className="bg-[#0a1122] relative group/card hover:shadow-2xl hover:shadow-blue-500/[0.1] border-slate-800 border w-full h-auto rounded-3xl p-6 transition-colors">
-                <CardItem translateZ="50" className="w-full h-48 relative rounded-2xl overflow-hidden mb-6">
-                  <img
-                    src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80"
-                    alt="Elite Powerlifting"
-                    loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                  <Dumbbell className="absolute bottom-4 left-4 w-10 h-10 text-white/70 group-hover/card:text-blue-400 transition-colors" />
-                </CardItem>
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <CardItem translateZ="60" className="text-xl font-bold text-white mb-1">{t("Elite Powerlifting")}</CardItem>
-                    <CardItem translateZ="40" className="flex items-center gap-2 text-sm text-slate-400">
-                      <User className="w-4 h-4 text-blue-400" />{t("Coach Tran Mai Anh")}</CardItem>
-                  </div>
-                </div>
-                <CardItem translateZ="30" as="p" className="text-sm text-slate-400 mb-6 line-clamp-2">
-                  {t("Master the big three lifts with expert form correction and progressive overload programming.")}
-                </CardItem>
-                <CardItem translateZ="20" className="w-full">
-                  <button onClick={() => navigate('/login')} className="w-full py-3 rounded-xl bg-blue-600/10 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/20 font-semibold transition-all">
-                    {t("Book Session")}
+                <div className="flex flex-wrap items-center justify-between md:justify-end gap-3">
+                  <span className="text-xs text-slate-400 font-medium">
+                    {subjectSummaries.length} {tr('bộ môn đang mở', 'active sports')} · {classes.length} {tr('lớp học', 'classes available')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSubject('ALL');
+                      resetClassFilters();
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-500/25 flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
+                  >
+                    <span>{tr(`Xem tất cả lớp (${classes.length})`, `View all classes (${classes.length})`)}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
-                </CardItem>
-              </CardBody>
-            </CardContainer>
+                </div>
+              </div>
 
-            {/* Class Card 3 */}
-            <CardContainer className="inter-var w-full">
-              <CardBody className="bg-[#0a1122] relative group/card hover:shadow-2xl hover:shadow-blue-500/[0.1] border-slate-800 border w-full h-auto rounded-3xl p-6 transition-colors">
-                <CardItem translateZ="50" className="w-full h-48 relative rounded-2xl overflow-hidden mb-6">
-                  <img
-                    src="https://images.unsplash.com/photo-1555597673-b21d5c935865?w=800&q=80"
-                    alt="Combat & Defense"
-                    loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                  <Shield className="absolute bottom-4 left-4 w-10 h-10 text-white/70 group-hover/card:text-blue-400 transition-colors" />
-                </CardItem>
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <CardItem translateZ="60" className="text-xl font-bold text-white mb-1">{t("Combat & Defense")}</CardItem>
-                    <CardItem translateZ="40" className="flex items-center gap-2 text-sm text-slate-400">
-                      <User className="w-4 h-4 text-blue-400" />{t("Coach Pham Minh Hoang")}</CardItem>
+              {filteredSubjectSummaries.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredSubjectSummaries.map((subj) => (
+                    <div
+                      key={subj.name}
+                      onClick={() => {
+                        setSelectedSubject(subj.name);
+                        resetClassFilters();
+                      }}
+                      className="bg-[#0a1122] border border-slate-800 hover:border-blue-500/50 rounded-3xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10 cursor-pointer group"
+                    >
+                      <div>
+                        {/* Subject Cover Image */}
+                        <div className="relative h-44 overflow-hidden">
+                          <img
+                            src={subj.coverUrl}
+                            alt={subj.name}
+                            loading="lazy"
+                            onError={(e) => {
+                              if (!e.currentTarget.dataset.fallback) {
+                                e.currentTarget.dataset.fallback = '1';
+                                e.currentTarget.src = getSubjectFallbackImage({ subjectName: subj.name });
+                              }
+                            }}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#0a1122] via-black/45 to-black/20" />
+                          <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between gap-2">
+                            <span className="px-3 py-1 rounded-full bg-black/65 backdrop-blur-md border border-white/10 text-[11px] font-bold text-blue-300">
+                              {tr('Bộ môn đào tạo', 'Sport Discipline')}
+                            </span>
+                            <span className="px-3 py-1 rounded-full bg-blue-600/90 backdrop-blur-md text-[11px] font-bold text-white">
+                              {subj.count} {tr('lớp đang mở', 'classes open')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Subject Body */}
+                        <div className="p-6 pb-4 space-y-3">
+                          <h3 className="text-xl font-bold text-white group-hover:text-blue-300 transition-colors">
+                            {subj.name}
+                          </h3>
+
+                          {subj.description && (
+                            <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
+                              {subj.description}
+                            </p>
+                          )}
+
+                          <div className="space-y-1.5 pt-1 text-xs text-slate-300">
+                            {subj.rooms.length > 0 && (
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                <span className="truncate">{subj.rooms.join(' · ')}</span>
+                              </div>
+                            )}
+                            {subj.coaches.length > 0 && (
+                              <div className="flex items-center gap-2">
+                                <User className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                                <span className="truncate">
+                                  {t("Coach")}: <strong className="text-white font-semibold">{subj.coaches.join(', ')}</strong>
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Subject Footer */}
+                      <div className="px-6 py-4 border-t border-slate-800/90 flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                            {tr('Học phí từ', 'Tuition from')}
+                          </div>
+                          <div className="text-base font-black text-white">
+                            {subj.minPrice.toLocaleString('vi-VN')} <span className="text-blue-400 text-sm font-bold">₫</span>
+                          </div>
+                        </div>
+
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-400 group-hover:text-blue-300 group-hover:translate-x-0.5 transition-all">
+                          <span>{tr('Xem các lớp đang mở', 'View open classes')}</span>
+                          <ArrowRight className="w-4 h-4 shrink-0" />
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-[#0a1122] border border-slate-800 rounded-3xl p-12 text-center space-y-3">
+                  <Dumbbell className="w-10 h-10 mx-auto text-slate-600" />
+                  <h3 className="text-lg font-bold text-white">
+                    {tr('Không tìm thấy bộ môn phù hợp', 'No matching sports found')}
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    {tr('Thử xóa từ khóa tìm kiếm để xem toàn bộ các bộ môn đang mở.', 'Try clearing your search keyword to view all open sports disciplines.')}
+                  </p>
+                  {classSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setClassSearch('')}
+                      className="mt-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors"
+                    >
+                      {tr('Xóa tìm kiếm', 'Clear search')}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ======================================================== */
+            /* MODE 2: DRILL-DOWN VIEW - CLASSES OF SELECTED SUBJECT    */
+            /* ======================================================== */
+            <div className="space-y-8">
+              {/* Navigation Header + Subject Switcher + Multi-Criteria Bento Schedule Filter Dock */}
+              <div className="p-5 sm:p-6 rounded-3xl bg-[#0a1122] border border-slate-800 space-y-5 shadow-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedSubject(null);
+                        resetClassFilters();
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
+                      <span>{tr('Quay lại tất cả bộ môn', 'Back to all sports')}</span>
+                    </button>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-blue-400 font-bold">
+                        {tr('Bộ môn đang chọn', 'Selected Sport')}
+                      </div>
+                      <h3 className="text-lg sm:text-xl font-black text-white">
+                        {selectedSubject === 'ALL' ? tr('Tất cả các lớp đang mở', 'All Active Classes') : selectedSubject}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 self-start sm:self-auto">
+                    <div className="text-xs font-semibold text-slate-400">
+                      <span className="text-blue-400 font-bold text-sm">{filteredClasses.length}</span>{' '}
+                      {tr('lớp phù hợp', 'matching classes')}
+                    </div>
+
+                    {isClassFiltered && (
+                      <button
+                        type="button"
+                        onClick={resetClassFilters}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-bold text-slate-200 border border-slate-700 transition-colors cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-blue-400" />
+                        <span>{tr('Đặt lại bộ lọc', 'Reset Filters')}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
-                <CardItem translateZ="30" as="p" className="text-sm text-slate-400 mb-6 line-clamp-2">
-                  {t("Learn practical self-defense mixed with intense conditioning and striking techniques.")}
-                </CardItem>
-                <CardItem translateZ="20" className="w-full">
-                  <button onClick={() => navigate('/login')} className="w-full py-3 rounded-xl bg-blue-600/10 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/20 font-semibold transition-all">
-                    {t("Book Session")}
-                  </button>
-                </CardItem>
-              </CardBody>
-            </CardContainer>
-          </div>
+
+                {/* Quick Subject Tabs + Class Search */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-4 border-t border-slate-800/80">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedSubject('ALL');
+                        setSelectedDate('ALL');
+                      }}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        selectedSubject === 'ALL'
+                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                          : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800 hover:bg-slate-800'
+                      }`}
+                    >
+                      {tr(`Tất cả (${classes.length})`, `All (${classes.length})`)}
+                    </button>
+                    {subjectSummaries.map((subj) => (
+                      <button
+                        key={subj.name}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSubject(subj.name);
+                          setSelectedDate('ALL');
+                        }}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          selectedSubject === subj.name
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                            : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800 hover:bg-slate-800'
+                        }`}
+                      >
+                        {subj.name} ({subj.count})
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative w-full lg:w-72 shrink-0">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder={tr('Tìm khóa học, mã lớp, HLV, phòng...', 'Search course, code, coach, room...')}
+                      value={classSearch}
+                      onChange={(e) => setClassSearch(e.target.value)}
+                      className="w-full pl-10 pr-8 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+                    />
+                    {classSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setClassSearch('')}
+                        aria-label={tr('Xóa tìm kiếm', 'Clear search')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2-Column Bento Schedule Filter Grid (Day of Week & Time Slot) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pt-4 border-t border-slate-800/80">
+                  {/* Left: Day of Week Multi-Select */}
+                  <div className="lg:col-span-7 space-y-2.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-1.5 text-slate-200 font-bold">
+                        <Calendar className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                        <span>{tr('Thứ học trong tuần:', 'Filter by Day of Week:')}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-start sm:self-auto">
+                        <div className="flex items-center bg-slate-900 border border-slate-800 p-0.5 rounded-lg text-[11px] font-semibold">
+                          <button
+                            type="button"
+                            onClick={() => setDayMatchMode('ANY')}
+                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                              dayMatchMode === 'ANY'
+                                ? 'bg-slate-800 text-white font-bold shadow-xs'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            {tr('Bất kỳ thứ nào đã chọn', 'Any Selected Day')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDayMatchMode('EXACT')}
+                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                              dayMatchMode === 'EXACT'
+                                ? 'bg-blue-600 text-white font-bold shadow-xs'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                            title={tr('Chỉ hiển thị lớp mà toàn bộ lịch học nằm trong các thứ đã chọn', 'Only show classes whose sessions fall strictly within selected days')}
+                          >
+                            {tr('Chỉ các thứ này', 'Only These Days')}
+                          </button>
+                        </div>
+
+                        {selectedDays.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDays([])}
+                            className="text-blue-400 hover:underline font-semibold cursor-pointer text-xs shrink-0"
+                          >
+                            {tr('Tất cả các thứ', 'All Days')}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+                      {GUEST_DAYS_OF_WEEK.map((day) => {
+                        const isActive = day.id === 'ALL' ? selectedDays.length === 0 : selectedDays.includes(day.id);
+                        return (
+                          <button
+                            key={day.id}
+                            type="button"
+                            onClick={() => toggleDay(day.id)}
+                            className={`px-2 py-2 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                              isActive
+                                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 border border-blue-500'
+                                : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-800'
+                            }`}
+                          >
+                            {isVi ? day.vi : day.en}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Right: Time Slot Multi-Select */}
+                  <div className="lg:col-span-5 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5 text-slate-200 font-bold">
+                        <Clock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                        <span>{tr('Khung giờ học:', 'Filter by Time Slot:')}</span>
+                      </span>
+                      {selectedTimeSlots.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTimeSlots([])}
+                          className="text-blue-400 hover:underline font-semibold cursor-pointer text-xs"
+                        >
+                          {tr('Mọi khung giờ', 'All Times')}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {GUEST_TIME_SLOTS.map((slot) => {
+                        const isActive = selectedTimeSlots.includes(slot.id);
+                        const Icon = slot.icon;
+                        return (
+                          <button
+                            key={slot.id}
+                            type="button"
+                            onClick={() => toggleTimeSlot(slot.id)}
+                            className={`px-3 py-2 rounded-xl text-xs transition-all flex flex-col items-start gap-0.5 cursor-pointer border ${
+                              isActive
+                                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 border-blue-500'
+                                : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 border-slate-800'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5 font-bold">
+                              <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-blue-400'}`} />
+                              <span>{isVi ? slot.vi : slot.en}</span>
+                            </div>
+                            <span className={`text-[10px] font-mono ${isActive ? 'text-blue-100' : 'text-slate-400'}`}>
+                              {slot.timeRange}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Start Date Horizontal Strip */}
+                <div className="space-y-2 pt-4 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-1.5 text-slate-200 font-bold">
+                      <Calendar className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                      <span>{tr('Ngày khai giảng dự kiến:', 'Select Start Date:')}</span>
+                    </span>
+                    {selectedDate !== 'ALL' && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDate('ALL')}
+                        className="text-blue-400 hover:underline font-semibold cursor-pointer text-xs"
+                      >
+                        {tr('Tất cả ngày', 'All dates')}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDate('ALL')}
+                      className={`flex flex-col items-center justify-center px-3.5 py-2 rounded-xl min-w-[74px] transition-all cursor-pointer border shrink-0 ${
+                        selectedDate === 'ALL'
+                          ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/25 border-blue-500'
+                          : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 border-slate-800'
+                      }`}
+                    >
+                      <span className={`text-[10px] uppercase font-bold tracking-wider ${selectedDate === 'ALL' ? 'text-blue-100' : 'text-slate-400'}`}>
+                        {tr('Tất cả', 'ALL')}
+                      </span>
+                      <span className={`text-sm font-black my-0.5 ${selectedDate === 'ALL' ? 'text-white' : 'text-white'}`}>
+                        ∞
+                      </span>
+                      <span className={`text-[10px] font-medium ${selectedDate === 'ALL' ? 'text-blue-100' : 'text-slate-400'}`}>
+                        {tr('Ngày', 'Dates')}
+                      </span>
+                    </button>
+
+                    {availableDates.map((dateStr) => {
+                      const isActive = selectedDate === dateStr;
+                      const { dayOfWeek, day, month } = parseGuestDateDetails(dateStr, isVi);
+
+                      return (
+                        <button
+                          key={dateStr}
+                          type="button"
+                          onClick={() => setSelectedDate(dateStr)}
+                          className={`flex flex-col items-center justify-center px-3.5 py-2 rounded-xl min-w-[74px] transition-all cursor-pointer border shrink-0 ${
+                            isActive
+                              ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/25 border-blue-500'
+                              : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 border-slate-800'
+                          }`}
+                        >
+                          <span className={`text-[10px] font-semibold ${isActive ? 'text-blue-100' : 'text-slate-400'}`}>
+                            {dayOfWeek}
+                          </span>
+                          <span className="text-base font-black leading-none my-0.5 text-white">
+                            {day}
+                          </span>
+                          <span className={`text-[10px] font-medium ${isActive ? 'text-blue-100' : 'text-slate-400'}`}>
+                            {month}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {filteredClasses.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredClasses.map((course, idx) => {
+                const { code: classCode, name: classDisplayName } = splitCode(course.className);
+                const levelBand = classLevelFromCode(classCode);
+                const levelLabel = levelText(levelBand, isVi);
+                const subjectLabel = getCourseSubject(course);
+                const maxSlots = Number(course.maxSlots) || 0;
+                const displayBooked = Math.min(maxSlots || Number(course.bookedSlots || 0), Number(course.bookedSlots || 0));
+                const spotsLeft = Math.max(0, maxSlots - displayBooked);
+                const isFull = maxSlots > 0 && spotsLeft <= 0;
+
+                const timing = formatCourseTiming(course, isVi);
+                const price = Number(course.price) || 0;
+                const courseDescription = getCourseDescription(course);
+
+                return (
+                  <div
+                    key={course.classId || idx}
+                    className="bg-[#0a1122] border border-slate-800 hover:border-blue-500/40 rounded-3xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10 group"
+                  >
+                    {/* Cover & Badges */}
+                    <div className="relative h-48 overflow-hidden shrink-0">
+                      <img
+                        src={getCourseCoverUrl(course)}
+                        alt={classDisplayName || course.className}
+                        loading="lazy"
+                        onError={(e) => {
+                          if (!e.currentTarget.dataset.fallback) {
+                            e.currentTarget.dataset.fallback = '1';
+                            e.currentTarget.src = getSubjectFallbackImage(course);
+                          }
+                        }}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0a1122] via-black/45 to-black/20" />
+
+                      <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between gap-2">
+                        <span className="px-3 py-1 rounded-full bg-black/65 backdrop-blur-md border border-white/10 text-[11px] font-bold text-blue-300 truncate max-w-[55%]">
+                          {subjectLabel}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {classCode && (
+                            <span className="px-2.5 py-1 rounded-full bg-blue-600/85 backdrop-blur-md text-[11px] font-mono font-bold text-white">
+                              {classCode}
+                            </span>
+                          )}
+                          {levelLabel && (
+                            <span className="px-2.5 py-1 rounded-full bg-amber-500/20 backdrop-blur-md border border-amber-400/30 text-[11px] font-bold text-amber-300">
+                              {levelLabel}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="absolute bottom-3 left-3.5 right-3.5 flex items-center justify-between">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold backdrop-blur-md border ${
+                            isFull
+                              ? 'bg-rose-500/20 border-rose-400/30 text-rose-300'
+                              : spotsLeft <= 3
+                              ? 'bg-amber-500/20 border-amber-400/30 text-amber-300'
+                              : 'bg-emerald-500/20 border-emerald-400/30 text-emerald-300'
+                          }`}
+                        >
+                          {isFull
+                            ? tr('Đã đủ sĩ số', 'Class Full')
+                            : tr(`Còn ${spotsLeft}/${maxSlots} chỗ trống`, `${spotsLeft}/${maxSlots} spots left`)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Course Body */}
+                    <div className="p-6 flex-1 flex flex-col justify-between gap-4">
+                      <div className="space-y-3">
+                        <h3 className="text-xl font-bold text-white leading-snug group-hover:text-blue-300 transition-colors line-clamp-2">
+                          {classDisplayName || course.className}
+                        </h3>
+
+                        {courseDescription && (
+                          <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
+                            {courseDescription}
+                          </p>
+                        )}
+
+                        {/* Coach & Room */}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-300 pt-1">
+                          <span className="flex items-center gap-1.5">
+                            <User className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                            <span>
+                              {t("Coach")} <strong className="text-white">{course.coachName}</strong>
+                            </span>
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <span>{course.roomName}</span>
+                          </span>
+                        </div>
+
+                        {/* 4-cell Course Spec Grid */}
+                        <div className="grid grid-cols-2 gap-2.5 pt-2">
+                          <div className="p-2.5 rounded-xl bg-slate-900/70 border border-slate-800/90">
+                            <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1 mb-0.5">
+                              <Clock className="w-3 h-3 text-blue-400" />
+                              {tr('Thời lượng khóa', 'Course Length')}
+                            </div>
+                            <div className="text-xs font-bold text-white">
+                              {course.totalSessions || 0} {tr('buổi', 'sessions')}
+                            </div>
+                            <div className="text-[11px] text-slate-400">
+                              {course.durationMinutes || 60} {tr('phút/buổi', 'min/session')}
+                            </div>
+                          </div>
+
+                          <div className="p-2.5 rounded-xl bg-slate-900/70 border border-slate-800/90">
+                            <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1 mb-0.5">
+                              <Repeat className="w-3 h-3 text-purple-400" />
+                              {tr('Lịch cố định', 'Weekly Pattern')}
+                            </div>
+                            <div className="text-xs font-bold text-white truncate" title={timing.patternText}>
+                              {timing.patternText}
+                            </div>
+                            <div className="text-[11px] text-slate-400">
+                              {tr('Khung giờ:', 'Time:')} {timing.timeStr}
+                            </div>
+                          </div>
+
+                          <div className="p-2.5 rounded-xl bg-slate-900/70 border border-slate-800/90">
+                            <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1 mb-0.5">
+                              <Calendar className="w-3 h-3 text-emerald-400" />
+                              {tr('Ngày khai giảng', 'Start Date')}
+                            </div>
+                            <div className="text-xs font-bold text-white">
+                              {timing.nextDateStr}
+                            </div>
+                            <div className="text-[11px] text-slate-400 truncate">
+                              {tr('Đang mở đăng ký', 'Open for enrollment')}
+                            </div>
+                          </div>
+
+                          <div className="p-2.5 rounded-xl bg-slate-900/70 border border-slate-800/90">
+                            <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1 mb-0.5">
+                              <Users className="w-3 h-3 text-cyan-400" />
+                              {tr('Sĩ số lớp', 'Class Capacity')}
+                            </div>
+                            <div className="text-xs font-bold text-white">
+                              {displayBooked}/{maxSlots} {tr('học viên', 'enrolled')}
+                            </div>
+                            <div className={`text-[11px] font-semibold mt-0.5 ${isFull ? 'text-rose-400' : spotsLeft <= 3 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                              {isFull ? tr('Đã đủ chỗ', 'Full') : tr(`Còn ${spotsLeft} chỗ trống`, `${spotsLeft} spots left`)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Footer: Tuition & Actions */}
+                      <div className="pt-4 border-t border-slate-800/90 space-y-3">
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                            {tr('Học phí trọn khóa', 'Full Course Tuition')}
+                          </div>
+                          <div className="text-xl font-black text-white leading-tight">
+                            {price.toLocaleString('vi-VN')} <span className="text-blue-400 text-base font-bold">₫</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCourseDetail(course)}
+                            className="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                          >
+                            <BookOpen className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                            <span>{tr('Chi tiết lộ trình', 'Course Details')}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => navigate('/login')}
+                            disabled={isFull}
+                            className={`py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                              isFull
+                                ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25'
+                            }`}
+                          >
+                            <span>{isFull ? tr('Đã đủ chỗ', 'Class Full') : tr('Đăng ký khóa', 'Enroll Course')}</span>
+                            {!isFull && <ArrowRight className="w-3.5 h-3.5 shrink-0" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+                </div>
+              ) : (
+                <div className="bg-[#0a1122] border border-slate-800 rounded-3xl p-12 text-center space-y-3">
+                  <Dumbbell className="w-10 h-10 mx-auto text-slate-600" />
+                  <h3 className="text-lg font-bold text-white">
+                    {tr('Không tìm thấy khóa học phù hợp', 'No matching courses found')}
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    {tr('Không có khóa học nào khớp bộ lọc hiện tại (thứ học, khung giờ hoặc ngày khai giảng). Hãy thử đặt lại bộ lọc.', 'No courses match your current filters (days, time slots, or start date). Try resetting filters.')}
+                  </p>
+                  <div className="flex items-center justify-center gap-2 pt-2">
+                    {isClassFiltered && (
+                      <button
+                        type="button"
+                        onClick={resetClassFilters}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>{tr('Đặt lại bộ lọc', 'Reset Filters')}</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedSubject(null);
+                        resetClassFilters();
+                      }}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      {tr('Quay lại tất cả bộ môn', 'Back to all sports')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </motion.section>
 
@@ -781,7 +1529,7 @@ const LandingPage = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-[#0a1122] border border-slate-700 shadow-2xl shadow-blue-900/30 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden relative"
+              className="bg-[#0a1122] border border-slate-700 shadow-2xl shadow-blue-900/30 rounded-3xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden relative"
             >
               {/* Modal Header */}
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 p-6 border-b border-slate-800 bg-[#0a1122] z-10 shrink-0">
@@ -797,7 +1545,7 @@ const LandingPage = () => {
                 
                 <div className="flex items-center gap-3">
                   {/* Search box */}
-                  <div className="relative w-full sm:w-64">
+                  <div className="relative w-full sm:w-80">
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
@@ -823,35 +1571,65 @@ const LandingPage = () => {
                 <table className="w-full text-left border-collapse text-slate-300">
                   <thead className="sticky top-0 bg-[#0a1122] z-20 shadow-md">
                     <tr className="border-b border-slate-700 text-blue-400 text-xs uppercase tracking-wider">
-                      <th className="p-4 pt-6 font-bold">{t("Time & Day")}</th>
-                      <th className="p-4 pt-6 font-bold">{t("Class & Coach")}</th>
-                      <th className="p-4 pt-6 font-bold">{t("Room")}</th>
-                      <th className="p-4 pt-6 font-bold">{t("Price")}</th>
+                      <th className="p-4 pt-6 font-bold min-w-[240px]">{tr('Thứ học & Khung giờ', 'Days & Time Slot')}</th>
+                      <th className="p-4 pt-6 font-bold min-w-[280px]">{t("Class & Coach")}</th>
+                      <th className="p-4 pt-6 font-bold min-w-[240px]">{t("Room")}</th>
+                      <th className="p-4 pt-6 font-bold min-w-[140px]">{t("Price")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredSchedules.length > 0 ? (
-                      filteredSchedules.map((schedule) => {
-                        const dateObj = new Date(schedule.startTime);
-                        const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        const dayStr = dateObj.toLocaleDateString(locale(), { weekday: 'long', month: 'numeric', day: 'numeric' });
+                      filteredSchedules.map((course, idx) => {
+                        const timing = formatCourseTiming(course, isVi);
+                        const maxSlots = Number(course.maxSlots) || 0;
+                        const displayBooked = Math.min(maxSlots || Number(course.bookedSlots || 0), Number(course.bookedSlots || 0));
+                        const spotsLeft = Math.max(0, maxSlots - displayBooked);
+                        const isFull = maxSlots > 0 && spotsLeft <= 0;
                         return (
-                          <tr key={schedule.scheduleId} className="border-b border-slate-800/50 hover:bg-blue-900/10 transition-colors group">
-                            <td className="p-4 font-semibold text-white group-hover:text-blue-300">
-                              {timeStr} <br/>
-                              <span className="text-xs text-slate-500 font-normal">{dayStr}</span>
+                          <tr key={course.classId || idx} className="border-b border-slate-800/50 hover:bg-blue-900/10 transition-colors group">
+                            <td className="p-4 align-top whitespace-nowrap">
+                              <div className="font-bold text-white group-hover:text-blue-300">
+                                {timing.patternText}
+                              </div>
+                              <div className="text-xs font-semibold text-blue-400 mt-0.5">
+                                {timing.timeStr} ({course.durationMinutes || 60} {tr('phút', 'min')})
+                              </div>
+                              <div className="text-[11px] text-slate-400 mt-1">
+                                {tr('Khai giảng:', 'Starts:')} {timing.nextDateStr} • {course.totalSessions || 0} {tr('buổi', 'sessions')}
+                              </div>
                             </td>
-                            <td className="p-4 font-medium">
-                              <span className="text-white font-bold">{schedule.className}</span><br/>
-                              <span className="text-xs text-slate-400 font-normal">
-                                {t("Coach")} {schedule.coachName}
-                              </span>
+                            <td className="p-4 align-top font-medium">
+                              <div className="text-white font-bold">{course.className}</div>
+                              <div className="text-xs text-slate-400 font-normal mt-0.5">
+                                {t("Coach")} {course.coachName}
+                              </div>
                             </td>
-                            <td className="p-4 text-slate-400 text-sm">
-                              {schedule.roomName}
+                            <td className="p-4 align-top text-slate-300 text-sm">
+                              <div>{course.roomName}</div>
+                              {maxSlots > 0 && (
+                                <div className="text-[11px] text-slate-400 mt-0.5">
+                                  {displayBooked}/{maxSlots} {tr('học viên', 'enrolled')}{' '}
+                                  <span className={isFull ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>
+                                    ({isFull ? tr('Đã đủ chỗ', 'Full') : tr(`Còn ${spotsLeft} chỗ trống`, `${spotsLeft} spots left`)})
+                                  </span>
+                                </div>
+                              )}
                             </td>
-                            <td className="p-4 text-emerald-400 font-bold">
-                              {(schedule.price || 0).toLocaleString('vi-VN')} {t("₫")}
+                            <td className="p-4 align-top whitespace-nowrap">
+                              <div className="text-emerald-400 font-bold">
+                                {(course.price || 0).toLocaleString('vi-VN')} {t("₫")}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCourseDetail(course);
+                                  setShowSchedule(false);
+                                }}
+                                className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
+                              >
+                                <BookOpen className="w-3 h-3" />
+                                <span>{tr('Xem lộ trình', 'View roadmap')}</span>
+                              </button>
                             </td>
                           </tr>
                         );
@@ -860,7 +1638,7 @@ const LandingPage = () => {
                       <tr>
                         <td colSpan="4" className="p-12 text-center text-slate-500 bg-slate-900/20 rounded-xl">
                           <Dumbbell className="w-8 h-8 mx-auto mb-3 opacity-20" />
-                          {schedules.length === 0 
+                          {classes.length === 0 
                             ? t("No schedules available right now.") 
                             : t("Không tìm thấy lớp học phù hợp với từ khóa.")
                           }
@@ -873,6 +1651,209 @@ const LandingPage = () => {
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
+
+      {/* Course Detail & Full Session Roadmap Modal */}
+      <AnimatePresence>
+        {selectedCourseDetail && (() => {
+          const course = selectedCourseDetail;
+          const { code: classCode, name: classDisplayName } = splitCode(course.className);
+          const levelLabel = levelText(classLevelFromCode(classCode), isVi);
+          const subjectLabel = getCourseSubject(course);
+          const maxSlots = Number(course.maxSlots) || 0;
+          const displayBooked = Math.min(maxSlots || Number(course.bookedSlots || 0), Number(course.bookedSlots || 0));
+          const spotsLeft = Math.max(0, maxSlots - displayBooked);
+          const isFull = maxSlots > 0 && spotsLeft <= 0;
+          const timing = formatCourseTiming(course, isVi);
+          const price = Number(course.price) || 0;
+          const courseDescription = getCourseDescription(course);
+          const upcoming = Array.isArray(course.upcomingDates) ? course.upcomingDates : [];
+
+          return (
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md"
+              onClick={() => setSelectedCourseDetail(null)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-[#0a1122] border border-slate-700 shadow-2xl shadow-blue-900/30 rounded-3xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden relative"
+              >
+                {/* Banner Header */}
+                <div className="relative h-48 sm:h-56 shrink-0 overflow-hidden">
+                  <img
+                    src={getCourseCoverUrl(course)}
+                    alt={classDisplayName || course.className}
+                    onError={(e) => {
+                      if (!e.currentTarget.dataset.fallback) {
+                        e.currentTarget.dataset.fallback = '1';
+                        e.currentTarget.src = getSubjectFallbackImage(course);
+                      }
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a1122] via-[#0a1122]/65 to-black/30" />
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCourseDetail(null)}
+                    aria-label={t("Close")}
+                    className="absolute top-4 right-4 p-2 rounded-full bg-black/60 hover:bg-red-500/30 text-slate-200 hover:text-white border border-white/10 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+
+                  <div className="absolute bottom-5 left-6 right-6 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur border border-white/10 text-xs font-bold text-blue-300">
+                        {subjectLabel}
+                      </span>
+                      {classCode && (
+                        <span className="px-2.5 py-1 rounded-full bg-blue-600/90 text-xs font-mono font-bold text-white">
+                          {classCode}
+                        </span>
+                      )}
+                      {levelLabel && (
+                        <span className="px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 text-xs font-bold text-amber-300">
+                          {levelLabel}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                      {classDisplayName || course.className}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-slate-300">
+                      <span className="flex items-center gap-1.5">
+                        <User className="w-4 h-4 text-blue-400" />
+                        <span>{t("Coach")} <strong className="text-white">{course.coachName}</strong></span>
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4 text-amber-400" />
+                        <span>{course.roomName}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Scrollable Body */}
+                <div className="overflow-y-auto p-6 space-y-6 custom-scrollbar flex-1">
+                  {/* Course Overview */}
+                  {courseDescription && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-bold uppercase tracking-wider text-blue-400">
+                        {tr('Mô tả môn học', 'Subject Description')}
+                      </h4>
+                      <p className="text-sm text-slate-300 leading-relaxed">
+                        {courseDescription}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Key Metrics */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800">
+                      <div className="text-[11px] text-slate-400 font-semibold mb-1">{tr('Số buổi & Thời lượng', 'Sessions & Duration')}</div>
+                      <div className="text-sm font-bold text-white">{course.totalSessions || 0} {tr('buổi', 'sessions')}</div>
+                      <div className="text-xs text-slate-400">{course.durationMinutes || 60} {tr('phút/buổi', 'min/session')}</div>
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800">
+                      <div className="text-[11px] text-slate-400 font-semibold mb-1">{tr('Lịch học hàng tuần', 'Weekly Schedule')}</div>
+                      <div className="text-sm font-bold text-white">{timing.patternText}</div>
+                      <div className="text-xs text-slate-400">{timing.timeStr}</div>
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800">
+                      <div className="text-[11px] text-slate-400 font-semibold mb-1">{tr('Ngày khai giảng', 'Start Date')}</div>
+                      <div className="text-sm font-bold text-white">{timing.nextDateStr}</div>
+                      <div className="text-xs text-slate-400">{tr('Đang mở đăng ký', 'Open for enrollment')}</div>
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800">
+                      <div className="text-[11px] text-slate-400 font-semibold mb-1">{tr('Tình trạng chỗ', 'Availability')}</div>
+                      <div className="text-sm font-bold text-white">{displayBooked}/{maxSlots} {tr('đã đăng ký', 'enrolled')}</div>
+                      <div className={`text-xs font-semibold ${isFull ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        {isFull ? tr('Đã đủ sĩ số', 'Fully booked') : tr(`Còn ${spotsLeft} chỗ trống`, `${spotsLeft} spots left`)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Complete Session Schedule */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        {tr('Lộ trình chi tiết các buổi học', 'Complete Session Roadmap')}
+                      </h4>
+                      <span className="text-xs font-semibold text-slate-400">
+                        {upcoming.length}/{course.totalSessions || upcoming.length} {tr('buổi sắp tới', 'upcoming sessions')}
+                      </span>
+                    </div>
+
+                    {upcoming.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                        {upcoming.map((dateText, i) => (
+                          <div
+                            key={i}
+                            className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-0.5"
+                          >
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 font-mono">
+                              {tr(`Buổi #${i + 1}`, `Session #${i + 1}`)}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-200 font-mono">
+                              {dateText}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800 text-xs text-slate-400">
+                        {tr('Lịch chi tiết từng buổi sẽ được cập nhật khi mở lớp.', 'Detailed session dates will appear upon class scheduling.')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sticky Footer */}
+                <div className="p-5 sm:p-6 border-t border-slate-800 bg-[#080e1d] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+                  <div>
+                    <div className="text-xs text-slate-400">
+                      {tr('Học phí trọn khóa', 'Total Course Tuition')} ({course.totalSessions || upcoming.length} {tr('buổi', 'sessions')})
+                    </div>
+                    <div className="text-2xl font-black text-white">
+                      {price.toLocaleString('vi-VN')} <span className="text-blue-400 text-lg">₫</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCourseDetail(null)}
+                      className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+                    >
+                      {t("Close")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isFull}
+                      onClick={() => {
+                        setSelectedCourseDetail(null);
+                        navigate('/login');
+                      }}
+                      className={`px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                        isFull
+                          ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                      }`}
+                    >
+                      <span>{isFull ? tr('Lớp đã đủ sĩ số', 'Class is Full') : tr('Đăng ký khóa học này', 'Enroll in This Course')}</span>
+                      {!isFull && <ArrowRight className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* Footer & Comprehensive Contact Information */}
@@ -1138,3 +2119,234 @@ const testimonials = [
     title: 'Marathon Runner',
   },
 ];
+
+function getCourseSubject(course) {
+  if (course?.subjectName && course.subjectName.trim()) {
+    return course.subjectName.trim();
+  }
+  const name = (course?.className || '').toLowerCase();
+  if (name.includes('spin') || name.includes('đạp xe') || name.includes('cycling')) return 'Đạp Xe Spinning';
+  if (name.includes('yoga')) return 'Yoga';
+  if (name.includes('zumba')) return 'Zumba Dance';
+  if (name.includes('swim') || name.includes('bơi')) return 'Bơi Lội';
+  if (name.includes('box') || name.includes('kickfit') || name.includes('combat')) return 'Boxing & Kickfit';
+  if (name.includes('pilates')) return 'Pilates';
+  return 'Thể Hình / Gym';
+}
+
+function levelText(band, isVi) {
+  if (band === '1') return isVi ? 'Cơ bản' : 'Basic';
+  if (band === '2') return isVi ? 'Nâng cao' : 'Advanced';
+  if (band === '3') return isVi ? 'Chuyên sâu' : 'Intensive';
+  return '';
+}
+
+function formatPatternText(pattern, isVi) {
+  if (!pattern) return isVi ? 'Theo lịch lớp' : 'Scheduled';
+  const dayMap = isVi
+    ? { Mon: 'Thứ 2', Tue: 'Thứ 3', Wed: 'Thứ 4', Thu: 'Thứ 5', Fri: 'Thứ 6', Sat: 'Thứ 7', Sun: 'Chủ nhật' }
+    : { Mon: 'Mon', Tue: 'Tue', Wed: 'Wed', Thu: 'Thu', Fri: 'Fri', Sat: 'Sat', Sun: 'Sun' };
+  return pattern.split(',').map((d) => dayMap[d.trim()] || d.trim()).join(', ');
+}
+
+function formatCourseTiming(course, isVi) {
+  const dateFmtLocale = isVi ? 'vi-VN' : 'en-GB';
+  const nextObj = course?.nextSessionTime ? new Date(course.nextSessionTime) : null;
+  const hasValidNext = nextObj && !isNaN(nextObj.getTime());
+  const durationMin = Number(course?.durationMinutes) > 0 ? Number(course.durationMinutes) : 60;
+  const endObj = hasValidNext ? new Date(nextObj.getTime() + durationMin * 60000) : null;
+  const startClock = hasValidNext
+    ? nextObj.toLocaleTimeString(dateFmtLocale, { hour: '2-digit', minute: '2-digit', hour12: false })
+    : '--:--';
+  const endClock = endObj
+    ? endObj.toLocaleTimeString(dateFmtLocale, { hour: '2-digit', minute: '2-digit', hour12: false })
+    : '--:--';
+
+  return {
+    timeStr: hasValidNext ? `${startClock} - ${endClock}` : '--:--',
+    nextDateStr: hasValidNext
+      ? nextObj.toLocaleDateString(dateFmtLocale, { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : (isVi ? 'Sắp khai giảng' : 'Upcoming'),
+    patternText: formatPatternText(course?.schedulePattern, isVi),
+  };
+}
+
+const GUEST_DAYS_OF_WEEK = [
+  { id: 'ALL', vi: 'Tất cả', en: 'All' },
+  { id: 'Mon', vi: 'Thứ 2', en: 'Mon' },
+  { id: 'Tue', vi: 'Thứ 3', en: 'Tue' },
+  { id: 'Wed', vi: 'Thứ 4', en: 'Wed' },
+  { id: 'Thu', vi: 'Thứ 5', en: 'Thu' },
+  { id: 'Fri', vi: 'Thứ 6', en: 'Fri' },
+  { id: 'Sat', vi: 'Thứ 7', en: 'Sat' },
+  { id: 'Sun', vi: 'Chủ nhật', en: 'Sun' },
+];
+
+const GUEST_TIME_SLOTS = [
+  { id: 'MORNING', vi: 'Buổi sáng', en: 'Morning', timeRange: '06:00 - 12:00', icon: Sunrise },
+  { id: 'AFTERNOON', vi: 'Buổi chiều', en: 'Afternoon', timeRange: '12:00 - 17:30', icon: Sun },
+  { id: 'EVENING', vi: 'Buổi tối', en: 'Evening', timeRange: '17:30 - 22:00', icon: Sunset },
+];
+
+function checkMatchesDay(course, dayId) {
+  if (!dayId || dayId === 'ALL') return true;
+  const pattern = (course?.schedulePattern || '').toLowerCase();
+  if (pattern.includes(dayId.toLowerCase())) return true;
+  if (course?.nextSessionTime) {
+    const d = new Date(course.nextSessionTime);
+    if (!isNaN(d.getTime())) {
+      const dayEn = d.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+      if (dayEn.startsWith(dayId.toLowerCase().slice(0, 3))) return true;
+    }
+  }
+  return false;
+}
+
+function getCourseDays(course) {
+  const pattern = (course?.schedulePattern || '').toLowerCase();
+  const dayTokens = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const days = [];
+  for (const token of dayTokens) {
+    if (pattern.includes(token.toLowerCase())) {
+      days.push(token);
+    }
+  }
+  if (days.length === 0 && course?.nextSessionTime) {
+    const d = new Date(course.nextSessionTime);
+    if (!isNaN(d.getTime())) {
+      const en = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const matched = dayTokens.find((token) => en.toLowerCase().startsWith(token.toLowerCase()));
+      if (matched) days.push(matched);
+    }
+  }
+  return days;
+}
+
+function checkCourseMatchesDays(course, days, mode) {
+  if (!days || days.length === 0) return true;
+  if (mode === 'EXACT') {
+    const courseDays = getCourseDays(course);
+    if (courseDays.length === 0) {
+      return days.some((d) => checkMatchesDay(course, d));
+    }
+    return courseDays.every((d) => days.includes(d));
+  }
+  return days.some((d) => checkMatchesDay(course, d));
+}
+
+function checkMatchesTimeSlot(course, slotId) {
+  if (!slotId || slotId === 'ALL') return true;
+  if (!course?.nextSessionTime) return false;
+  const d = new Date(course.nextSessionTime);
+  if (!isNaN(d.getTime())) {
+    const hour = d.getHours() + d.getMinutes() / 60;
+    if (slotId === 'MORNING') return hour >= 5 && hour < 12;
+    if (slotId === 'AFTERNOON') return hour >= 12 && hour < 17.5;
+    if (slotId === 'EVENING') return hour >= 17.5;
+  }
+  return false;
+}
+
+function parseGuestDateDetails(dateString, isVi) {
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) {
+    return { dayOfWeek: '--', day: '--', month: '--' };
+  }
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const dateFmtLocale = isVi ? 'vi-VN' : 'en-GB';
+
+  const isToday = d.toDateString() === today.toDateString();
+  const isTomorrow = d.toDateString() === tomorrow.toDateString();
+
+  const dayOfWeek = isToday
+    ? (isVi ? 'Hôm nay' : 'Today')
+    : isTomorrow
+    ? (isVi ? 'Ngày mai' : 'Tomorrow')
+    : d.toLocaleDateString(dateFmtLocale, { weekday: 'short' });
+  const day = d.getDate();
+  const month = d.toLocaleDateString(dateFmtLocale, { month: 'short' });
+  return { dayOfWeek, day, month };
+}
+
+function getSubjectFallbackImage(course) {
+  const text = `${course?.subjectName || ''} ${course?.className || ''}`.toLowerCase();
+  if (text.includes('bơi') || text.includes('swim')) return '/images/swimming-poster.jpg';
+  if (text.includes('box') || text.includes('combat') || text.includes('kick')) return '/images/boxing-poster.jpg';
+  if (text.includes('yoga') || text.includes('zumba') || text.includes('pilates')) return '/images/studio-poster.jpg';
+  if (text.includes('spin') || text.includes('đạp xe') || text.includes('hiit')) return '/images/crossfit-poster.jpg';
+  return '/images/gym-poster.jpg';
+}
+
+function getCourseCoverUrl(course) {
+  const uploaded = resourceImageUrl(course?.imagePath);
+  if (uploaded) return uploaded;
+  return getSubjectFallbackImage(course);
+}
+
+function getCourseDescription(course) {
+  return course?.subjectDescription?.trim() || '';
+}
+
+function getDefaultClasses() {
+  const mkDate = (daysAhead, hour, minute = 0) => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysAhead);
+    d.setHours(hour, minute, 0, 0);
+    return d.toISOString();
+  };
+  return [
+    {
+      classId: 901,
+      subjectName: 'Thể Hình (Gym)',
+      subjectDescription: 'Tập tạ tự do và máy móc hiện đại',
+      className: '[GYM-101] Thể Hình & Sức Mạnh Nền Tảng',
+      coachName: 'Nguyễn Văn Tuấn',
+      roomName: 'Phòng Gym Tầng 1',
+      price: 2400000,
+      maxSlots: 20,
+      bookedSlots: 14,
+      totalSessions: 12,
+      durationMinutes: 60,
+      nextSessionTime: mkDate(3, 18, 0),
+      lastSessionTime: mkDate(28, 19, 0),
+      schedulePattern: 'Mon, Wed, Fri',
+      upcomingDates: ['Buổi khai giảng — 18:00', 'Buổi 2 — 18:00', 'Buổi 3 — 18:00', 'Buổi 4 — 18:00'],
+    },
+    {
+      classId: 902,
+      subjectName: 'Yoga Căn Bản',
+      subjectDescription: 'Yoga thư giãn và giãn cơ buổi sáng',
+      className: '[YOGA-101] Yoga Phục Hồi & Cân Bằng Cột Sống',
+      coachName: 'Trần Mai Anh',
+      roomName: 'Phòng Yoga Tầng 2',
+      price: 1800000,
+      maxSlots: 25,
+      bookedSlots: 19,
+      totalSessions: 12,
+      durationMinutes: 60,
+      nextSessionTime: mkDate(2, 19, 0),
+      lastSessionTime: mkDate(27, 20, 0),
+      schedulePattern: 'Tue, Thu, Sat',
+      upcomingDates: ['Buổi khai giảng — 19:00', 'Buổi 2 — 19:00', 'Buổi 3 — 19:00', 'Buổi 4 — 19:00'],
+    },
+    {
+      classId: 903,
+      subjectName: 'Bơi Lội',
+      subjectDescription: 'Kỹ thuật bơi ếch, bơi sải chuyên nghiệp',
+      className: '[SWIM-201] Bơi Lội Kỹ Thuật & Sức Bền Bốn Mùa',
+      coachName: 'Phạm Minh Hoàng',
+      roomName: 'Bể Bơi Bốn Mùa',
+      price: 2800000,
+      maxSlots: 15,
+      bookedSlots: 13,
+      totalSessions: 10,
+      durationMinutes: 60,
+      nextSessionTime: mkDate(4, 17, 30),
+      lastSessionTime: mkDate(32, 18, 30),
+      schedulePattern: 'Tue, Thu',
+      upcomingDates: ['Buổi khai giảng — 17:30', 'Buổi 2 — 17:30', 'Buổi 3 — 17:30', 'Buổi 4 — 17:30'],
+    },
+  ];
+}

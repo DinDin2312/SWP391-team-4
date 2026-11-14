@@ -24,6 +24,22 @@ const PaymentResult = () => {
     }
 
     hasProcessedRef.current = true;
+    const directStatus = searchParams.get('directStatus');
+    if (directStatus) {
+      const isPaid = directStatus === 'PAID';
+      setStatus(isPaid ? 'success' : 'error');
+      setMessage(
+        isPaid
+          ? 'Payment Successful! Your courses are now confirmed.'
+          : directStatus === 'REVIEW'
+            ? 'Payment received and awaiting reconciliation. Contact reception.'
+            : 'Payment failed or cancelled.'
+      );
+      window.dispatchEvent(new Event('notificationUpdated'));
+      window.dispatchEvent(new Event('cartUpdated'));
+      return;
+    }
+
     const processPayment = async () => {
       try {
         const token = localStorage.getItem('token');
