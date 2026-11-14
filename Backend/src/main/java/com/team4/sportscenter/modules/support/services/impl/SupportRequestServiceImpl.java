@@ -54,6 +54,21 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         return category == SupportCategory.CLASS_CANCELLATION || category == SupportCategory.REFUND_REQUEST;
     }
 
+    private List<SupportRequest> findPendingCancellationTickets(Integer userId, Integer classId) {
+        return supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(userId).stream()
+                .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), classId))
+                .filter(r -> isCancellationCategory(r.getCategory()))
+                .filter(r -> r.getStatus() == SupportStatus.PENDING
+                        || r.getStatus() == SupportStatus.IN_PROGRESS
+                        || r.getStatus() == SupportStatus.ESCALATED)
+                .toList();
+    }
+
+    private String buildPendingCancellationBlocksTransferMessage(Integer requestId) {
+        return "Lớp học này đang có đơn xin hủy / bảo lưu #" + requestId
+                + " đang chờ Admin xét duyệt nên tạm thời không thể chuyển lớp. Vui lòng chờ kết quả duyệt hoặc rút đơn trước.";
+    }
+
     private boolean isManagerRoutedCategory(SupportCategory category) {
         return category == SupportCategory.COACH_FEEDBACK
                 || category == SupportCategory.FACILITY_ISSUE
@@ -326,15 +341,13 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         }
 
         // Auto-close any pending duplicate support requests for this member & class
-        List<SupportRequest> pendingDuplicateTickets = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
+        List<SupportRequest> pendingDuplicateTickets = findPendingCancellationTickets(user.getUserId(), classId).stream()
                 .filter(r -> !Objects.equals(r.getRequestId(), savedTicket.getRequestId()))
-                .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), classId))
-                .filter(r -> isCancellationCategory(r.getCategory()))
-                .filter(r -> r.getStatus() == SupportStatus.PENDING || r.getStatus() == SupportStatus.IN_PROGRESS || r.getStatus() == SupportStatus.ESCALATED)
                 .toList();
 
         for (SupportRequest pt : pendingDuplicateTickets) {
             pt.setStatus(SupportStatus.RESOLVED);
+            pt.setPreferredResolution("SUPERSEDED");
             pt.setResponseNote(forfeitMode
                     ? "Hệ thống tự động đóng đơn do hội viên đã hủy lớp trực tiếp (chấp nhận mất 100% học phí) qua đơn #" + savedTicket.getRequestId() + "."
                     : "Hệ thống tự động đóng đơn do hội viên đã hủy trực tiếp và nhận voucher 50% qua đơn #" + savedTicket.getRequestId() + ".");
@@ -433,7 +446,11 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         boolean anyStartedOrPresent = currentBookings.stream().anyMatch(b -> "PRESENT".equalsIgnoreCase(b.getAttendanceStatus())
                 || (b.getSchedule() != null && b.getSchedule().getStartTime().isBefore(now)));
         boolean hasStarted = firstSessionTime.isBefore(now) || anyStartedOrPresent;
-        String transferWindowError = validateClassTransferWindow(firstSessionTime, anyStartedOrPresent, now, false);
+        List<SupportRequest> pendingCancelTickets = findPendingCancellationTickets(user.getUserId(), classId);
+        boolean blockedByPendingRequest = !pendingCancelTickets.isEmpty();
+        String transferWindowError = blockedByPendingRequest
+                ? buildPendingCancellationBlocksTransferMessage(pendingCancelTickets.get(0).getRequestId())
+                : validateClassTransferWindow(firstSessionTime, anyStartedOrPresent, now, false);
 
         DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("MMM dd, HH:mm");
         DateTimeFormatter conflictFmt = DateTimeFormatter.ofPattern("dd/MM HH:mm");
@@ -465,6 +482,7 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                     .schedulePattern(currentPattern)
                     .upcomingDates(currentDates)
                     .hasStarted(hasStarted)
+                    .blockedByPendingRequest(blockedByPendingRequest)
                     .canTransfer(false)
                     .message(transferWindowError)
                     .equivalentClasses(Collections.emptyList())
@@ -572,8 +590,9 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                     .build());
         }
 
-        // Sort: selectable first, then by nextSessionTime
+        // Sort: selectable first, then related subject, then earliest start time
         options.sort(Comparator.comparing(TransferClassOptionResponse::isCanSelect).reversed()
+                .thenComparing((TransferClassOptionResponse opt) -> !Objects.equals(currentSubjectId, opt.getSubjectId()))
                 .thenComparing(TransferClassOptionResponse::getNextSessionTime));
 
         long selectableCount = options.stream().filter(TransferClassOptionResponse::isCanSelect).count();
@@ -628,6 +647,12 @@ public class SupportRequestServiceImpl implements SupportRequestService {
 
         if (fromBookings.isEmpty()) {
             throw new IllegalStateException("Bạn chưa đăng ký lớp học này.");
+        }
+
+        List<SupportRequest> pendingCancelTickets = findPendingCancellationTickets(user.getUserId(), fromClassId);
+        if (!pendingCancelTickets.isEmpty()) {
+            throw new IllegalStateException(
+                    buildPendingCancellationBlocksTransferMessage(pendingCancelTickets.get(0).getRequestId()));
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -746,14 +771,15 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                 .build();
         SupportRequest savedTicket = supportRequestRepository.save(transferTicket);
 
-        // Auto-close any pending tickets for the old class
+        // Auto-close any remaining non-cancellation pending tickets for the old class
         List<SupportRequest> oldTickets = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
                 .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), fromClassId))
-                .filter(r -> r.getCategory() == SupportCategory.CLASS_CANCELLATION || r.getCategory() == SupportCategory.REFUND_REQUEST || r.getCategory() == SupportCategory.SCHEDULE_SUPPORT)
+                .filter(r -> r.getCategory() == SupportCategory.SCHEDULE_SUPPORT)
                 .filter(r -> r.getStatus() == SupportStatus.PENDING || r.getStatus() == SupportStatus.IN_PROGRESS || r.getStatus() == SupportStatus.ESCALATED)
                 .toList();
         for (SupportRequest pt : oldTickets) {
             pt.setStatus(SupportStatus.RESOLVED);
+            pt.setPreferredResolution("SUPERSEDED");
             pt.setResponseNote("Hệ thống tự động đóng đơn do học viên đã chuyển sang lớp: " + toClass.getClassName() + " (Đơn #" + savedTicket.getRequestId() + ").");
             pt.setRespondedAt(LocalDateTime.now());
             supportRequestRepository.save(pt);
@@ -817,11 +843,7 @@ public class SupportRequestServiceImpl implements SupportRequestService {
             }
 
             // 2. Check if user already has an active pending/in_progress/escalated ticket for this class
-            List<SupportRequest> existingActive = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
-                    .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), request.getClassId()))
-                    .filter(r -> isCancellationCategory(r.getCategory()))
-                    .filter(r -> r.getStatus() == SupportStatus.PENDING || r.getStatus() == SupportStatus.IN_PROGRESS || r.getStatus() == SupportStatus.ESCALATED)
-                    .toList();
+            List<SupportRequest> existingActive = findPendingCancellationTickets(user.getUserId(), request.getClassId());
             if (!existingActive.isEmpty()) {
                 throw new IllegalStateException("Bạn đang có đơn yêu cầu #" + existingActive.get(0).getRequestId() 
                         + " cho lớp học này đang chờ xử lý. Vui lòng không gửi lặp lại yêu cầu để tránh làm chậm tiến độ hỗ trợ.");
@@ -1178,15 +1200,13 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         if (isCompensating && request.getGymClass() != null) {
             Integer classId = request.getGymClass().getClassId();
             Integer memberUserId = request.getUser().getUserId();
-            List<SupportRequest> otherPending = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(memberUserId).stream()
+            List<SupportRequest> otherPending = findPendingCancellationTickets(memberUserId, classId).stream()
                     .filter(r -> !Objects.equals(r.getRequestId(), request.getRequestId()))
-                    .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), classId))
-                    .filter(r -> r.getCategory() == SupportCategory.CLASS_CANCELLATION || r.getCategory() == SupportCategory.REFUND_REQUEST)
-                    .filter(r -> r.getStatus() == SupportStatus.PENDING || r.getStatus() == SupportStatus.IN_PROGRESS || r.getStatus() == SupportStatus.ESCALATED)
                     .toList();
 
             for (SupportRequest op : otherPending) {
                 op.setStatus(SupportStatus.RESOLVED);
+                op.setPreferredResolution("SUPERSEDED");
                 op.setResponseNote("Hệ thống tự động đóng đơn do yêu cầu hủy lớp này đã được giải quyết qua đơn #" + request.getRequestId() + ".");
                 op.setRespondedBy(staff);
                 op.setRespondedAt(LocalDateTime.now());
@@ -1221,68 +1241,10 @@ public class SupportRequestServiceImpl implements SupportRequestService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public List<UserCreditResponse> getMemberCredits(String memberEmail) {
         User user = userRepository.findByEmail(memberEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + memberEmail));
-
-        // Auto-heal: Ensure approved requests that intended to grant credit have their UserCredit generated
-        List<SupportRequest> approvedRequests = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
-                .filter(r -> r.getStatus() == SupportStatus.APPROVED || r.getStatus() == SupportStatus.RESOLVED)
-                .filter(r -> r.getGymClass() != null)
-                .filter(r -> r.getCategory() == SupportCategory.CLASS_CANCELLATION || r.getCategory() == SupportCategory.REFUND_REQUEST || "ISSUE_CREDIT".equalsIgnoreCase(r.getPreferredResolution()))
-                .filter(r -> !"CASH_REFUND".equalsIgnoreCase(r.getPreferredResolution()) && !"MANAGER_REFUND".equalsIgnoreCase(r.getPreferredResolution()))
-                .filter(r -> userCreditRepository.findBySupportRequestRequestId(r.getRequestId()).isEmpty())
-                .toList();
-
-        for (SupportRequest req : approvedRequests) {
-            BigDecimal creditAmount = null;
-            try {
-                CancelClassPreviewResponse preview = getCancelClassPreview(req.getGymClass().getClassId(), memberEmail);
-                creditAmount = preview.getEstimatedCreditAmount();
-            } catch (Exception e) {
-                creditAmount = req.getGymClass().getPrice();
-            }
-
-            if (creditAmount != null && creditAmount.compareTo(BigDecimal.ZERO) > 0) {
-                Integer classId = req.getGymClass().getClassId();
-                String creditCode = generateCreditCodeWithPrefix("CRED-", classId, user.getUserId());
-                LocalDate expiryDate = LocalDate.now().plusDays(60);
-
-                String reason = "Bảo lưu theo yêu cầu #" + req.getRequestId() + ": " + req.getTitle();
-
-                UserCredit credit = UserCredit.builder()
-                        .user(user)
-                        .supportRequest(req)
-                        .gymClass(req.getGymClass())
-                        .creditCode(creditCode)
-                        .amount(creditAmount)
-                        .remainingAmount(creditAmount)
-                        .reason(reason)
-                        .expiryDate(expiryDate)
-                        .status(CreditStatus.ACTIVE)
-                        .build();
-                userCreditRepository.save(credit);
-
-                // Cancel future bookings of this class
-                List<Booking> bookings = bookingRepository.findAllBookingsByEmail(memberEmail).stream()
-                        .filter(b -> b.getSchedule() != null && b.getSchedule().getGymClass() != null
-                                && Objects.equals(b.getSchedule().getGymClass().getClassId(), classId)
-                                && !"CANCELLED".equals(b.getStatus())
-                                && !"PRESENT".equalsIgnoreCase(b.getAttendanceStatus()))
-                        .toList();
-                for (Booking b : bookings) {
-                    b.setStatus("CANCELLED");
-                    bookingRepository.save(b);
-                }
-
-                if (req.getResponseNote() == null || req.getResponseNote().contains("tiếp nhận và xử lý")) {
-                    req.setResponseNote("Lễ tân đã phê duyệt yêu cầu bảo lưu lớp " + req.getGymClass().getClassName()
-                            + ". Mã tín dụng 60 ngày " + creditCode + " trị giá " + creditAmount.longValue() + "đ đã được cấp vào tài khoản học viên.");
-                    supportRequestRepository.save(req);
-                }
-            }
-        }
 
         LocalDate today = LocalDate.now();
         return userCreditRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
@@ -1333,11 +1295,7 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                 throw new IllegalStateException("Hội viên không còn lịch học khả dụng nào trong lớp này để yêu cầu hủy/bảo lưu.");
             }
 
-            List<SupportRequest> existingActive = supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(member.getUserId()).stream()
-                    .filter(r -> r.getGymClass() != null && Objects.equals(r.getGymClass().getClassId(), request.getClassId()))
-                    .filter(r -> r.getCategory() == SupportCategory.CLASS_CANCELLATION || r.getCategory() == SupportCategory.REFUND_REQUEST)
-                    .filter(r -> r.getStatus() == SupportStatus.PENDING || r.getStatus() == SupportStatus.IN_PROGRESS || r.getStatus() == SupportStatus.ESCALATED)
-                    .toList();
+            List<SupportRequest> existingActive = findPendingCancellationTickets(member.getUserId(), request.getClassId());
             if (!existingActive.isEmpty()) {
                 throw new IllegalStateException("Hội viên đang có đơn yêu cầu #" + existingActive.get(0).getRequestId() 
                         + " cho lớp học này đang chờ xử lý. Vui lòng không tạo thêm.");

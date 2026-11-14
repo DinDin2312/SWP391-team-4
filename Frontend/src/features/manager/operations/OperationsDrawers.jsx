@@ -122,9 +122,9 @@ export function Drawer({ title, subtitle, onClose, busy = false, children, class
   );
 }
 
-export function ClassDrawer({ row, upcomingInRange, onClose, edit, recurring, supplementary }) {
+export function ClassDrawer({ row, upcomingInRange, onClose, edit, recurring, supplementary, deactivate }) {
   useLanguage();
-  return <Drawer title={row.className} subtitle={row.subjectName} onClose={onClose}><div className="ops-drawer-body"><ResourcePhoto imagePath={row.imagePath} name={row.className} variant="hero"/><div className="ops-session-facts"><div className="ops-coach-identity"><StaffAvatar user={{fullName:row.coachName,avatarPath:row.coachAvatarPath}} className="ops-coach-avatar"/>{t('Coach')}: {row.coachName}</div><p>{t('Room')}: {row.roomName}</p><p>{t('Capacity')}: {row.maxSlots}</p><p>{t('Tuition / class registration')}: {formatMoney(row.price)}</p><OperationStatus status={row.status}/></div>{upcomingInRange > 0 && <p className="ops-warning">{t('{0} upcoming sessions in the loaded range. Cancel these before deactivating.',[upcomingInRange])}</p>}<p className="ops-note">{t('Classes with future sessions cannot be deactivated; cancel those sessions first.')}</p><div className="ops-detail-actions"><button className="manager-secondary" onClick={edit}>{t('Edit')}</button><button className="manager-secondary" disabled={row.status!=='ACTIVE'} onClick={recurring}>{t('Schedule course')}</button><button className="manager-secondary" disabled={row.status!=='ACTIVE'} onClick={supplementary}>{t('Add supplementary session')}</button></div></div><footer><button className="manager-secondary" onClick={onClose}>{t('Close')}</button></footer></Drawer>;
+  return <Drawer title={row.className} subtitle={row.subjectName} onClose={onClose}><div className="ops-drawer-body"><ResourcePhoto imagePath={row.imagePath} name={row.className} variant="hero"/><div className="ops-session-facts"><div className="ops-coach-identity"><StaffAvatar user={{fullName:row.coachName,avatarPath:row.coachAvatarPath}} className="ops-coach-avatar"/>{t('Coach')}: {row.coachName}</div><p>{t('Room')}: {row.roomName}</p><p>{t('Capacity')}: {row.maxSlots}</p><p>{t('Tuition / class registration')}: {formatMoney(row.price)}</p><OperationStatus status={row.status}/></div>{upcomingInRange > 0 && <p className="ops-note">{t('{0} upcoming sessions in the loaded range.',[upcomingInRange])}</p>}<div className="ops-detail-actions"><button className="manager-secondary" onClick={edit}>{t('Edit')}</button><button className="manager-secondary" disabled={row.status!=='ACTIVE'} onClick={recurring}>{t('Schedule course')}</button><button className="manager-secondary" disabled={row.status!=='ACTIVE'} onClick={supplementary}>{t('Add supplementary session')}</button>{deactivate && <button className="ops-text-danger" disabled={row.status!=='ACTIVE'} onClick={deactivate}>{t('Cancel course')}</button>}</div></div><footer><button className="manager-secondary" onClick={onClose}>{t('Close')}</button></footer></Drawer>;
 }
 
 export function RoomDrawer({ row, onClose, edit }) {
@@ -738,6 +738,11 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
             disabled={!scheduled}
             onClick={() => confirm("cancel", schedule)}
           >{t("Cancel session")}</button>
+          <button
+            className="ops-text-danger"
+            disabled={!scheduled}
+            onClick={() => confirm("deactivate", schedule)}
+          >{t("Cancel course")}</button>
         </div>
         {!scheduled && (
           <p className="ops-note">{t("Completed and cancelled sessions cannot be edited or reopened.")}</p>
@@ -797,6 +802,7 @@ export function OperationConfirmation({ config, onClose, onSaved }) {
   useLanguage();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [reason, setReason] = useState(() => t("Insufficient registrations to open the course"));
   const dialog = useOperationDialog(onClose, saving);
   const id = useId();
   const cancel = config.type === "cancel";
@@ -804,17 +810,24 @@ export function OperationConfirmation({ config, onClose, onSaved }) {
   const action = cancel
     ? "Cancel session"
     : deactivate
-      ? "Deactivate class"
+      ? "Cancel course"
       : "Complete session";
   const save = async () => {
     if (saving) return;
+    if (deactivate && !reason.trim()) {
+      setError(t("Please enter a cancellation reason to notify enrolled members."));
+      return;
+    }
     setSaving(true);
     setError("");
     try {
       let cancelled = 0;
-      if (deactivate)
-        cancelled = (await managerService.deactivateClass(config.item.classId))?.cancelledSessions || 0;
-      else
+      let refunded = 0;
+      if (deactivate) {
+        const res = await managerService.deactivateClass(config.item.classId, reason.trim());
+        cancelled = res?.cancelledSessions || 0;
+        refunded = res?.refundedMembers || 0;
+      } else
         await managerService.saveSchedule({
           scheduleId: config.item.scheduleId,
           classId: config.item.classId,
@@ -826,7 +839,11 @@ export function OperationConfirmation({ config, onClose, onSaved }) {
         cancel
           ? "Session cancelled. Its bookings were cancelled and members notified."
           : deactivate
-            ? (cancelled ? t('Class deactivated. {0} upcoming sessions were cancelled and their members notified.', [cancelled]) : "Class deactivated.")
+            ? refunded
+              ? t("Course cancelled. {0} upcoming sessions cancelled and 100% credit voucher issued to {1} members.", [cancelled, refunded])
+              : cancelled
+                ? t("Class deactivated. {0} upcoming sessions were cancelled and their members notified.", [cancelled])
+                : "Class deactivated."
             : "Session completed.",
       );
     } catch (err) {
@@ -858,9 +875,22 @@ export function OperationConfirmation({ config, onClose, onSaved }) {
           {t(cancel
             ? t("All bookings for this session will be cancelled and members will receive a notification. The session cannot be reopened. This action does not issue a refund; contact reception about tuition.")
             : deactivate
-              ? t("Every upcoming session of this class will be cancelled, its bookings released and members notified. No refund is issued automatically. Room and coach assignments are kept.")
+              ? t("Every upcoming session of this course will be cancelled, members will be notified with the reason below, and a 100% credit voucher will be issued to confirmed members.")
               : t("This ended session will be marked completed and can no longer be edited."))}
         </p>
+        {deactivate && (
+          <label className="ops-field" style={{ width: "100%", textAlign: "left" }}>
+            {t("Cancellation reason (sent to members)")}
+            <textarea
+              rows={3}
+              required
+              value={reason}
+              disabled={saving}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder={t("Enter the reason for cancelling the entire course…")}
+            />
+          </label>
+        )}
         {error && (
           <div className="manager-alert" role="alert">
             {t(error)}

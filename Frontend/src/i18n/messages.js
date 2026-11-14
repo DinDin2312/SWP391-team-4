@@ -5935,5 +5935,75 @@ Object.assign(translations, {
     'QR verified for {0} (#{1}) — session #{2} is no longer valid for today check-in.',
     'Đã quét QR của hội viên {0} (#{1}) — mã buổi học #{2} không hợp lệ để check-in hôm nay.',
   ],
+  'Feedback Submitted to Management': [
+    'Feedback Submitted to Management',
+    'Đã gửi phản ánh tới Quản lý',
+  ],
+  'Facility Report Submitted': [
+    'Facility Report Submitted',
+    'Đã gửi báo cáo sự cố CSVC',
+  ],
+  'Complaint Submitted to Reception': [
+    'Complaint Submitted to Reception',
+    'Đã gửi khiếu nại tới Lễ tân',
+  ],
+  'Support Ticket Submitted': [
+    'Support Ticket Submitted',
+    'Đã gửi phiếu yêu cầu hỗ trợ',
+  ],
+  'Your complaint has been logged with Reception. Our team will review the details and follow up with you promptly.': [
+    'Your complaint has been logged with Reception. Our team will review the details and follow up with you promptly.',
+    'Khiếu nại của bạn đã được ghi nhận tới Lễ tân. Đội ngũ sẽ xem xét thông tin và phản hồi bạn trong thời gian sớm nhất.',
+  ],
+  'Your support ticket has been submitted to Reception. Our staff will review your request and respond shortly.': [
+    'Your support ticket has been submitted to Reception. Our staff will review your request and respond shortly.',
+    'Phiếu hỗ trợ của bạn đã được gửi tới Lễ tân. Nhân viên sẽ kiểm tra yêu cầu và phản hồi bạn sớm nhất.',
+  ],
+  'Routed to Center Management • Pending Review': [
+    'Routed to Center Management • Pending Review',
+    'Đã chuyển thẳng Quản lý trung tâm • Đang chờ xử lý',
+  ],
+  'Sent to Reception • Pending Review': [
+    'Sent to Reception • Pending Review',
+    'Đã gửi tới Lễ tân • Đang chờ xử lý',
+  ],
+  'Pending Support Request': [
+    'Pending Support Request',
+    'Đang chờ duyệt đơn hỗ trợ',
+  ],
+  'This class has a pending cancellation/refund request (#{0}) awaiting Admin approval and cannot be transferred. Please wait for review or withdraw that request first.': [
+    'This class has a pending cancellation/refund request (#{0}) awaiting Admin approval and cannot be transferred. Please wait for review or withdraw that request first.',
+    'Lớp học này đang có đơn xin hủy / bảo lưu (#{0}) chờ Admin xét duyệt nên tạm thời không thể chuyển lớp. Vui lòng đợi kết quả duyệt hoặc rút đơn trước.',
+  ],
+  'Cancel course': ['Cancel course', 'Hủy toàn bộ khóa học'],
+  '{0} upcoming sessions in the loaded range.': [
+    '{0} upcoming sessions in the loaded range.',
+    'Có {0} buổi học sắp tới trong khoảng đang xem.',
+  ],
+  'Insufficient registrations to open the course': [
+    'Insufficient registrations to open the course',
+    'Không đủ số lượng học viên đăng ký tối thiểu để mở khóa học',
+  ],
+  'Cancellation reason (sent to members)': [
+    'Cancellation reason (sent to members)',
+    'Lý do hủy khóa học (gửi thông báo tới học viên)',
+  ],
+  'Enter the reason for cancelling the entire course…': [
+    'Enter the reason for cancelling the entire course…',
+    'Nhập lý do hủy toàn bộ khóa học để thông báo cho học viên…',
+  ],
+  'Please enter a cancellation reason to notify enrolled members.': [
+    'Please enter a cancellation reason to notify enrolled members.',
+    'Vui lòng nhập lý do hủy khóa học để thông báo cho học viên.',
+  ],
+  'Every upcoming session of this course will be cancelled, members will be notified with the reason below, and a 100% credit voucher will be issued to confirmed members.': [
+    'Every upcoming session of this course will be cancelled, members will be notified with the reason below, and a 100% credit voucher will be issued to confirmed members.',
+    'Toàn bộ các buổi học sắp tới của khóa sẽ bị hủy, gửi thông báo lý do bên dưới tới học viên và tự động hoàn 100% học phí bằng Voucher tín dụng cho học viên đã đăng ký.',
+  ],
+  'Course cancelled. {0} upcoming sessions cancelled and 100% credit voucher issued to {1} members.': [
+    'Course cancelled. {0} upcoming sessions cancelled and 100% credit voucher issued to {1} members.',
+    'Đã hủy toàn bộ khóa học ({0} buổi sắp tới) và tự động hoàn 100% Voucher tín dụng cho {1} học viên.',
+  ],
+  '100% Cash Refund': ['100% Cash Refund', 'Hoàn 100% tiền mặt'],
 });
 

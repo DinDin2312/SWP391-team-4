@@ -148,14 +148,14 @@ export const ClassCancellationSuccessCard = ({
       ) : (
         <>
           <h3 className="text-lg font-bold text-[var(--text)]">
-            {t('Voucher Request Submitted')}
+            {result.title || t('Voucher Request Submitted')}
           </h3>
           <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto">
             {result.message}
           </p>
           <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-medium max-w-md mx-auto">
             {t('Ticket ID')}: #{result.requestId} &bull;{' '}
-            {t('Your current class schedule remains active on My Schedule until Admin approves your request.')}
+            {result.footerNote || t('Your current class schedule remains active on My Schedule until Admin approves your request.')}
           </div>
         </>
       )}

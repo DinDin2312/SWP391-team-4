@@ -519,19 +519,45 @@ public class ManagerService {
         return result;
     }
 
-    // Cancels every upcoming session (members are notified, seats released), then deactivates the class.
+    // Cancels every upcoming session (members are notified, seats released, 100% voucher credit issued), then deactivates the class.
     public int deactivateClass(Integer id, String actor) {
+        return ((Number) deactivateClass(id, null, actor).get("cancelledSessions")).intValue();
+    }
+
+    public Map<String, Object> deactivateClass(Integer id, String reason, String actor) {
         managerRepository.lockOperations();
         var assignment = managerRepository.classAssignment(id);
+        String className = String.valueOf(assignment.get("className"));
+        java.math.BigDecimal price = assignment.get("price") instanceof java.math.BigDecimal bd ? bd : java.math.BigDecimal.ZERO;
+        String formattedPrice = String.format(Locale.US, "%,d đ", price.longValue()).replace(',', '.');
+        String effectiveReason = (reason == null || reason.isBlank())
+                ? "Không đủ số lượng học viên đăng ký tối thiểu để mở khóa học"
+                : reason.trim();
+        Integer managerUserId = userRepository.findByEmail(actor).map(User::getUserId).orElse(null);
+
+        List<Integer> confirmedMembers = managerRepository.upcomingConfirmedMemberIds(id);
+        List<Integer> pendingMembers = managerRepository.upcomingPendingOnlyMemberIds(id);
         List<Integer> upcoming = managerRepository.upcomingScheduleIds(id);
+
+        managerRepository.cancelClassUpcomingRescheduleRequests(id, "[HỦY KHÓA HỌC] " + effectiveReason);
         for (Integer scheduleId : upcoming) {
-            var s = managerRepository.schedule(scheduleId);
-            saveSchedule(scheduleId, new ManagerRequests.ScheduleRequest(id, LocalDateTime.parse(String.valueOf(s.get("startTime"))),
-                    LocalDateTime.parse(String.valueOf(s.get("endTime"))), "CANCELLED"), actor, false);
+            managerRepository.cancelScheduleBookings(scheduleId);
+            managerRepository.setScheduleStatus(scheduleId, "CANCELLED");
         }
+
+        for (Integer userId : confirmedMembers) {
+            managerRepository.recordCourseCancellationVoucherRefund(userId, id, className, price, formattedPrice, effectiveReason, managerUserId);
+        }
+        for (Integer userId : pendingMembers) {
+            managerRepository.notifyCourseCancelledPendingMember(userId, className, effectiveReason);
+        }
+
         managerRepository.setClassStatus(id, "INACTIVE");
-        audit(actor, "DEACTIVATE", "CLASS", id, upcoming.isEmpty() ? "Ngừng lớp" : "Ngừng lớp, hủy " + upcoming.size() + " buổi sắp tới");
-        return upcoming.size();
+        String auditMsg = upcoming.isEmpty()
+                ? "Ngừng lớp (Lý do: " + effectiveReason + ")"
+                : "Ngừng lớp, hủy " + upcoming.size() + " buổi sắp tới, hoàn 100% Voucher cho " + confirmedMembers.size() + " HV. Lý do: " + effectiveReason;
+        audit(actor, "DEACTIVATE", "CLASS", id, auditMsg);
+        return Map.of("cancelledSessions", upcoming.size(), "refundedMembers", confirmedMembers.size());
     }
 
     private Map<String,Object> planningAssignment(Integer classId) {

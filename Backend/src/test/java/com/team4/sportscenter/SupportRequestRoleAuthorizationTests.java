@@ -708,4 +708,59 @@ class SupportRequestRoleAuthorizationTests {
         assertEquals(SupportCategory.GENERAL_INQUIRY, SupportCategory.fromString("schedule_request"));
         assertEquals(SupportCategory.CLASS_CANCELLATION, SupportCategory.fromString("CLASS_CANCELLATION"));
     }
+
+    @Test
+    void transferIsBlockedWhileCancellationRequestAwaitsAdminApproval() {
+        User member = User.builder().userId(10).email("member@gym.vn").fullName("Member").build();
+        GymClass fromClass = GymClass.builder().classId(12).className("Yoga K2").price(new BigDecimal("1000000")).status("ACTIVE").build();
+        GymClass toClass = GymClass.builder().classId(13).className("Yoga K3").price(new BigDecimal("1000000")).status("ACTIVE").build();
+        LocalDateTime now = LocalDateTime.now();
+
+        Schedule sched = Schedule.builder().scheduleId(502).gymClass(fromClass)
+                .startTime(now.plusDays(3)).endTime(now.plusDays(3).plusHours(1)).build();
+        List<Booking> bookings = List.of(Booking.builder().bookingId(602).user(member).schedule(sched)
+                .status("CONFIRMED").attendanceStatus("NOT_YET").build());
+
+        SupportRequest pendingCancel = SupportRequest.builder()
+                .requestId(401)
+                .user(member)
+                .gymClass(fromClass)
+                .category(SupportCategory.CLASS_CANCELLATION)
+                .preferredResolution("ISSUE_CREDIT")
+                .status(SupportStatus.ESCALATED)
+                .title("Xin hủy lớp muộn")
+                .build();
+
+        when(userRepository.findByEmail("member@gym.vn")).thenReturn(Optional.of(member));
+        when(coachClassRepository.findById(12)).thenReturn(Optional.of(fromClass));
+        when(bookingRepository.findAllBookingsByEmail("member@gym.vn")).thenReturn(bookings);
+        when(supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(10)).thenReturn(List.of(pendingCancel));
+
+        var preview = supportRequestService.getTransferClassPreview(12, "member@gym.vn");
+        assertFalse(preview.isCanTransfer());
+        assertTrue(preview.isBlockedByPendingRequest());
+        assertTrue(preview.getMessage().contains("#401"));
+        assertTrue(preview.getEquivalentClasses().isEmpty());
+
+        when(coachClassRepository.findById(13)).thenReturn(Optional.of(toClass));
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> supportRequestService.transferClassDirectly(12, 13, "member@gym.vn"));
+        assertTrue(ex.getMessage().contains("#401"));
+        verify(bookingRepository, never()).save(any());
+        verify(bookingRepository, never()).saveAllAndFlush(any());
+        verify(userCreditRepository, never()).save(any());
+    }
+
+    @Test
+    void getMemberCreditsIsReadOnlyAndNeverAutoMintsVouchers() {
+        User member = User.builder().userId(10).email("member@gym.vn").fullName("Member").build();
+        when(userRepository.findByEmail("member@gym.vn")).thenReturn(Optional.of(member));
+        when(userCreditRepository.findByUserUserIdOrderByCreatedAtDesc(10)).thenReturn(List.of());
+
+        var credits = supportRequestService.getMemberCredits("member@gym.vn");
+        assertTrue(credits.isEmpty());
+        verify(userCreditRepository, never()).save(any());
+        verify(supportRequestRepository, never()).save(any());
+        verify(bookingRepository, never()).save(any());
+    }
 }

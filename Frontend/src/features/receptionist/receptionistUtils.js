@@ -135,3 +135,62 @@ export function parseMemberQrPayload(rawText) {
 
   return null;
 }
+
+/**
+ * Computes padded canvas dimensions for cropped or small QR images so jsQR always
+ * receives a sufficient white quiet-zone border and readable pixel density.
+ */
+export function computeQrScanLayout(srcWidth, srcHeight, maxSide = 1024) {
+  const safeW = Math.max(1, Math.round(Number(srcWidth) || 1));
+  const safeH = Math.max(1, Math.round(Number(srcHeight) || 1));
+  const longest = Math.max(safeW, safeH);
+
+  let scale = 1;
+  if (longest > maxSide) {
+    scale = maxSide / longest;
+  } else if (longest < 360) {
+    scale = Math.min(3, 480 / longest);
+  }
+
+  const drawWidth = Math.max(1, Math.round(safeW * scale));
+  const drawHeight = Math.max(1, Math.round(safeH * scale));
+  const padding = Math.max(28, Math.round(Math.max(drawWidth, drawHeight) * 0.12));
+
+  return {
+    drawWidth,
+    drawHeight,
+    padding,
+    canvasWidth: drawWidth + padding * 2,
+    canvasHeight: drawHeight + padding * 2,
+    upscaled: scale > 1,
+  };
+}
+
+/**
+ * Produces a high-contrast black/white RGBA buffer to help jsQR decode phone-screen
+ * glare, shadows, or washed-out webcam captures.
+ */
+export function binarizeQrRgba(rgbaData) {
+  if (!rgbaData || !rgbaData.length) return new Uint8ClampedArray(0);
+  const out = new Uint8ClampedArray(rgbaData.length);
+  let minLum = 255;
+  let maxLum = 0;
+
+  for (let i = 0; i < rgbaData.length; i += 4) {
+    const lum = Math.round(rgbaData[i] * 0.299 + rgbaData[i + 1] * 0.587 + rgbaData[i + 2] * 0.114);
+    if (lum < minLum) minLum = lum;
+    if (lum > maxLum) maxLum = lum;
+    out[i] = lum;
+  }
+
+  const threshold = Math.round((minLum + maxLum) * 0.5);
+  for (let i = 0; i < rgbaData.length; i += 4) {
+    const val = out[i] <= threshold ? 0 : 255;
+    out[i] = val;
+    out[i + 1] = val;
+    out[i + 2] = val;
+    out[i + 3] = 255;
+  }
+
+  return out;
+}

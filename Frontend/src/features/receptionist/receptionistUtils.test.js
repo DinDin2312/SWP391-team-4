@@ -7,6 +7,8 @@ import {
   formatCheckInPackage,
   formatFacilityName,
   parseMemberQrPayload,
+  computeQrScanLayout,
+  binarizeQrRgba,
 } from './receptionistUtils.js';
 
 test('receptionistUtils: formatCheckInNote translates coach override check-in across EN and VI', () => {
@@ -200,4 +202,27 @@ test('receptionistUtils: parseMemberQrPayload handles all supported QR formats a
   assert.equal(parseMemberQrPayload('{broken json}'), null);
   assert.equal(parseMemberQrPayload('{"foo":1}'), null);
   assert.equal(parseMemberQrPayload('0'), null);
+});
+
+test('receptionistUtils: computeQrScanLayout and binarizeQrRgba handle tight crops and contrast stretching', () => {
+  const smallCrop = computeQrScanLayout(160, 160);
+  assert.equal(smallCrop.upscaled, true);
+  assert.equal(smallCrop.drawWidth, 480);
+  assert.equal(smallCrop.drawHeight, 480);
+  assert.ok(smallCrop.padding >= 28);
+  assert.equal(smallCrop.canvasWidth, smallCrop.drawWidth + smallCrop.padding * 2);
+
+  const largeImg = computeQrScanLayout(2048, 1024, 1024);
+  assert.equal(largeImg.upscaled, false);
+  assert.equal(largeImg.drawWidth, 1024);
+  assert.equal(largeImg.drawHeight, 512);
+
+  // Low-contrast washed-out pixels: dark gray (90) vs light gray (200) -> binarized to 0 vs 255
+  const washedOut = new Uint8ClampedArray([
+    90, 90, 90, 255,
+    200, 200, 200, 255,
+  ]);
+  const crisp = binarizeQrRgba(washedOut);
+  assert.deepEqual([...crisp], [0, 0, 0, 255, 255, 255, 255, 255]);
+  assert.equal(binarizeQrRgba(new Uint8ClampedArray(0)).length, 0);
 });

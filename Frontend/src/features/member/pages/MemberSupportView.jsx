@@ -22,6 +22,7 @@ import {
   getCategoryLabel,
   getStatusBadge,
   getPriorityBadge,
+  formatSupportDate,
   processEvidenceFile,
   EvidencePreviewBox
 } from '../../../utils/supportDisplayUtils';
@@ -390,17 +391,42 @@ const MemberSupportView = () => {
 
       const prefLabel = finalPreferredResolution === 'ISSUE_CREDIT' ? t('Course Credit Voucher') : '';
 
+      const submissionCopyMap = {
+        CLASS_CANCELLATION: {
+          title: t('Voucher Request Submitted'),
+          message: t('Your cancellation request and evidence have been sent to Admin / Center Management for review. Your current schedule remains unchanged until approved.'),
+          footerNote: t('Your current class schedule remains active on My Schedule until Admin approves your request.')
+        },
+        COACH_FEEDBACK: {
+          title: t('Feedback Submitted to Management'),
+          message: t('Coach feedback and complaints are sent directly to Center Management for objective assessment and confidential handling.'),
+          footerNote: t('Routed to Center Management • Pending Review')
+        },
+        FACILITY_ISSUE: {
+          title: t('Facility Report Submitted'),
+          message: t('Facility and equipment reports are routed directly to Center Management for technical inspection and resolution.'),
+          footerNote: t('Routed to Center Management • Pending Review')
+        },
+        COMPLAINT: {
+          title: t('Complaint Submitted to Reception'),
+          message: t('Your complaint has been logged with Reception. Our team will review the details and follow up with you promptly.'),
+          footerNote: t('Sent to Reception • Pending Review')
+        },
+        GENERAL_INQUIRY: {
+          title: t('Support Ticket Submitted'),
+          message: t('Your support ticket has been submitted to Reception. Our staff will review your request and respond shortly.'),
+          footerNote: t('Sent to Reception • Pending Review')
+        }
+      };
+      const submissionCopy = submissionCopyMap[ticketForm.category] || submissionCopyMap.GENERAL_INQUIRY;
+
       setModalSuccess({
         type: 'SUPPORT_REQUEST_SUBMITTED',
         requestId: res.requestId,
         preferredLabel: prefLabel,
-        message: ticketForm.category === 'CLASS_CANCELLATION'
-          ? t('Your cancellation request and evidence have been sent to Admin / Center Management for review. Your current schedule remains unchanged until approved.')
-          : ticketForm.category === 'COACH_FEEDBACK'
-            ? t('Coach feedback and complaints are sent directly to Center Management for objective assessment and confidential handling.')
-            : ticketForm.category === 'FACILITY_ISSUE'
-              ? t('Facility and equipment reports are routed directly to Center Management for technical inspection and resolution.')
-              : t('Your support ticket has been submitted to Reception. Our staff will review your request and issue a credit or alternative resolution.')
+        title: submissionCopy.title,
+        message: submissionCopy.message,
+        footerNote: submissionCopy.footerNote
       });
       await fetchData();
     } catch (err) {
@@ -732,7 +758,7 @@ const MemberSupportView = () => {
                           {tkt.title}
                         </h4>
                         <p className="text-xs text-slate-400">
-                          {t('Submitted on')} {tkt.createdAt}
+                          {t('Submitted on')} {formatSupportDate(tkt.createdAt)}
                         </p>
                       </div>
 
@@ -782,11 +808,11 @@ const MemberSupportView = () => {
                           </div>
                         )}
 
-                        {tkt.preferredResolution && tkt.preferredResolution === 'ISSUE_CREDIT' && (
+                        {tkt.preferredResolution && (tkt.preferredResolution === 'ISSUE_CREDIT' || tkt.preferredResolution === 'CASH_REFUND') && (
                           <div className="flex items-center gap-2 text-xs text-slate-500">
                             <span className="font-semibold">{t('Preferred Compensation')}:</span>
-                            <span className="font-bold text-[#0071E3]">
-                              {t('Credit Voucher')}
+                            <span className={`font-bold ${tkt.preferredResolution === 'CASH_REFUND' ? 'text-purple-600 dark:text-purple-400' : 'text-[#0071E3]'}`}>
+                              {tkt.preferredResolution === 'CASH_REFUND' ? t('100% Cash Refund') : t('Credit Voucher')}
                             </span>
                           </div>
                         )}
@@ -798,12 +824,12 @@ const MemberSupportView = () => {
                               <span className="flex items-center gap-1.5">
                                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                                 {t(
-                                  (tkt.category === 'COACH_FEEDBACK' || tkt.category === 'FACILITY_ISSUE' || tkt.status === 'ESCALATED')
+                                  (tkt.category === 'COACH_FEEDBACK' || tkt.category === 'FACILITY_ISSUE' || tkt.status === 'ESCALATED' || tkt.preferredResolution === 'CASH_REFUND')
                                     ? 'Center Management Response'
                                     : 'Reception Response'
                                 )} {tkt.respondedByName ? `(${tkt.respondedByName})` : ''}
                               </span>
-                              <span>{tkt.respondedAt}</span>
+                              {tkt.respondedAt && <span>{formatSupportDate(tkt.respondedAt)}</span>}
                             </div>
                             <p className="text-xs sm:text-sm whitespace-pre-line leading-relaxed opacity-95">
                               {tkt.responseNote}

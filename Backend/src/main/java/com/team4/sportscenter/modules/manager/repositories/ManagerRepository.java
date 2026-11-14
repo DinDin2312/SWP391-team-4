@@ -509,6 +509,105 @@ public class ManagerRepository {
         return jdbc.queryForList("SELECT schedule_id FROM SCHEDULES WHERE class_id=? AND status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND end_time>NOW() ORDER BY start_time", Integer.class, classId);
     }
 
+    public List<Integer> upcomingConfirmedMemberIds(Integer classId) {
+        return jdbc.queryForList("""
+                SELECT DISTINCT b.user_id FROM BOOKINGS b
+                JOIN SCHEDULES s ON s.schedule_id=b.schedule_id
+                WHERE s.class_id=? AND s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND s.end_time>NOW()
+                  AND b.status='CONFIRMED'
+                ORDER BY b.user_id
+                """, Integer.class, classId);
+    }
+
+    public List<Integer> upcomingPendingOnlyMemberIds(Integer classId) {
+        return jdbc.queryForList("""
+                SELECT DISTINCT b.user_id FROM BOOKINGS b
+                JOIN SCHEDULES s ON s.schedule_id=b.schedule_id
+                WHERE s.class_id=? AND s.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND s.end_time>NOW()
+                  AND b.status='PENDING'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM BOOKINGS b2 JOIN SCHEDULES s2 ON s2.schedule_id=b2.schedule_id
+                      WHERE s2.class_id=? AND s2.status IN ('SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED') AND s2.end_time>NOW()
+                        AND b2.user_id=b.user_id AND b2.status='CONFIRMED'
+                  )
+                ORDER BY b.user_id
+                """, Integer.class, classId, classId);
+    }
+
+    public void cancelClassUpcomingRescheduleRequests(Integer classId, String note) {
+        jdbc.update("""
+                UPDATE SCHEDULE_RESCHEDULE_REQUESTS rr
+                JOIN SCHEDULES s ON s.schedule_id=rr.schedule_id
+                SET rr.status='CANCELLED', rr.admin_response_note=?, rr.updated_at=NOW()
+                WHERE s.class_id=? AND s.end_time>NOW() AND rr.status IN ('PENDING','APPROVED')
+                """, note, classId);
+    }
+
+    public void recordCourseCancellationVoucherRefund(Integer userId, Integer classId, String className, java.math.BigDecimal price, String formattedPrice, String reason, Integer managerUserId) {
+        int rand = 1000 + java.util.concurrent.ThreadLocalRandom.current().nextInt(9000);
+        String creditCode = "CRED-CANCEL-" + classId + "-" + userId + "-" + rand;
+        String responseNote = "Quản lý trung tâm đã hủy toàn bộ khóa học " + className + ". Lý do: \"" + reason
+                + "\". Hệ thống đã tự động hoàn 100% học phí dưới dạng Voucher tín dụng (" + formattedPrice
+                + "). Mã Voucher: " + creditCode + " (Hạn dùng 60 ngày).";
+        List<Integer> openIds = jdbc.queryForList("""
+                SELECT request_id FROM SUPPORT_REQUESTS
+                WHERE user_id=? AND class_id=? AND category IN ('CLASS_CANCELLATION','REFUND_REQUEST')
+                  AND status IN ('PENDING','IN_PROGRESS','ESCALATED')
+                ORDER BY request_id DESC
+                """, Integer.class, userId, classId);
+        Integer requestId;
+        if (!openIds.isEmpty()) {
+            requestId = openIds.get(0);
+            jdbc.update("""
+                    UPDATE SUPPORT_REQUESTS
+                    SET status='APPROVED', preferred_resolution='ISSUE_CREDIT', response_note=?, responded_by=?, responded_at=NOW(), updated_at=NOW()
+                    WHERE user_id=? AND class_id=? AND category IN ('CLASS_CANCELLATION','REFUND_REQUEST')
+                      AND status IN ('PENDING','IN_PROGRESS','ESCALATED')
+                    """, responseNote, managerUserId, userId, classId);
+        } else {
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+            jdbc.update(con -> {
+                PreparedStatement ps = con.prepareStatement("""
+                        INSERT INTO SUPPORT_REQUESTS(user_id,class_id,category,preferred_resolution,title,content,status,priority,response_note,responded_by,responded_at,created_at,updated_at)
+                        VALUES (?,?,'CLASS_CANCELLATION','ISSUE_CREDIT',?,?,'APPROVED','HIGH',?,?,NOW(),NOW(),NOW())
+                        """, Statement.RETURN_GENERATED_KEYS);
+                ps.setInt(1, userId);
+                ps.setInt(2, classId);
+                ps.setString(3, "Hoàn 100% Voucher do hủy khóa học: " + className);
+                ps.setString(4, "Quản lý trung tâm hủy toàn bộ khóa học " + className + ". Lý do: " + reason);
+                ps.setString(5, responseNote);
+                if (managerUserId != null) ps.setInt(6, managerUserId);
+                else ps.setNull(6, java.sql.Types.INTEGER);
+                return ps;
+            }, keyHolder);
+            Number key = keyHolder.getKey();
+            requestId = key != null ? key.intValue() : null;
+        }
+        jdbc.update("""
+                INSERT INTO USER_CREDITS(user_id,request_id,class_id,credit_code,amount,remaining_amount,reason,expiry_date,status,created_at)
+                VALUES (?,?,?,?,?,?,?,DATE_ADD(CURDATE(),INTERVAL 60 DAY),'ACTIVE',NOW())
+                """,
+                userId, requestId, classId, creditCode, price, price,
+                "Hoàn 100% học phí do trung tâm hủy khóa học " + className + ": " + reason);
+        jdbc.update("""
+                INSERT INTO NOTIFICATIONS(user_id,title,message,type,is_read,created_at)
+                VALUES (?,?,?,'REFUND',false,NOW())
+                """,
+                userId,
+                "Hủy khóa học & Hoàn 100% Voucher: " + className,
+                "Khóa học " + className + " đã bị hủy toàn bộ. Lý do: \"" + reason + "\". Hệ thống đã hoàn 100% học phí bằng Voucher tín dụng (Mã: " + creditCode + " trị giá " + formattedPrice + ", hạn 60 ngày) vào ví của bạn.");
+    }
+
+    public void notifyCourseCancelledPendingMember(Integer userId, String className, String reason) {
+        jdbc.update("""
+                INSERT INTO NOTIFICATIONS(user_id,title,message,type,is_read,created_at)
+                VALUES (?,?,?,'BOOKING',false,NOW())
+                """,
+                userId,
+                "Thông báo hủy khóa học " + className,
+                "Khóa học " + className + " đã bị hủy toàn bộ. Lý do: \"" + reason + "\". Giữ chỗ chưa thanh toán của bạn đã được giải phóng.");
+    }
+
     // First session that would clash if the class moved to this coach/room, for a precise error message.
     public Map<String, Object> assignmentConflict(Integer classId, Integer coachId, Integer roomId) {
         List<Map<String, Object>> rows = jdbc.queryForList("""
@@ -554,7 +653,7 @@ public class ManagerRepository {
     }
 
     public Map<String, Object> classAssignment(Integer classId) {
-        return jdbc.queryForMap("SELECT subject_id subjectId,coach_id coachId,room_id roomId,status,class_name className FROM CLASSES WHERE class_id=?", classId);
+        return jdbc.queryForMap("SELECT subject_id subjectId,coach_id coachId,room_id roomId,status,class_name className,price FROM CLASSES WHERE class_id=?", classId);
     }
 
     public com.team4.sportscenter.modules.manager.services.TeachingSlots.Policy slotPolicy() {

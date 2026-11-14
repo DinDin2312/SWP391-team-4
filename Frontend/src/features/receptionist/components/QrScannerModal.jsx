@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import jsQR from 'jsqr';
 import { Camera, ImagePlus, Keyboard, QrCode, RefreshCw, X, AlertCircle } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
-import { parseMemberQrPayload } from '../receptionistUtils';
+import { parseMemberQrPayload, computeQrScanLayout, binarizeQrRgba } from '../receptionistUtils';
 
 /**
  * QR check-in modal for receptionists supporting live webcam scanning,
@@ -21,6 +21,97 @@ const QrScannerModal = ({ isOpen, onClose, onDetected }) => {
   const streamRef = useRef(null);
   const rafRef = useRef(null);
   const fileInputRef = useRef(null);
+  const detectorRef = useRef(null);
+
+  const getBarcodeDetector = useCallback(() => {
+    if (detectorRef.current !== null) return detectorRef.current || null;
+    if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+      try {
+        detectorRef.current = new window.BarcodeDetector({ formats: ['qr_code'] });
+        return detectorRef.current;
+      } catch {
+        detectorRef.current = false;
+      }
+    } else {
+      detectorRef.current = false;
+    }
+    return null;
+  }, []);
+
+  /**
+   * Decodes QR text from a video element or uploaded image using native BarcodeDetector
+   * when available, then padded multi-pass jsQR (full + crisp contrast binarization).
+   */
+  const decodeQrFromSource = useCallback(async (source, srcWidth, srcHeight, options = {}) => {
+    const { padQuietZone = false, tryContrastPass = true, tryCenterRoi = false } = options;
+    const detector = getBarcodeDetector();
+    if (detector) {
+      try {
+        const hits = await detector.detect(source);
+        const match = hits?.find((item) => item?.rawValue);
+        if (match?.rawValue) return match.rawValue;
+      } catch {
+        // Fall through to jsQR canvas decoding
+      }
+    }
+
+    const canvas = canvasRef.current || document.createElement('canvas');
+    canvasRef.current = canvas;
+
+    const tryDecodeRegion = (sx, sy, sw, sh, usePadding) => {
+      const layout = usePadding
+        ? computeQrScanLayout(sw, sh)
+        : { drawWidth: sw, drawHeight: sh, padding: 0, canvasWidth: sw, canvasHeight: sh, upscaled: false };
+
+      canvas.width = layout.canvasWidth;
+      canvas.height = layout.canvasHeight;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return null;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, layout.canvasWidth, layout.canvasHeight);
+      ctx.imageSmoothingEnabled = !layout.upscaled;
+      ctx.drawImage(
+        source,
+        sx,
+        sy,
+        sw,
+        sh,
+        layout.padding,
+        layout.padding,
+        layout.drawWidth,
+        layout.drawHeight
+      );
+
+      const imgData = ctx.getImageData(0, 0, layout.canvasWidth, layout.canvasHeight);
+      const direct = jsQR(imgData.data, layout.canvasWidth, layout.canvasHeight, {
+        inversionAttempts: 'attemptBoth',
+      });
+      if (direct?.data) return direct.data;
+
+      if (tryContrastPass) {
+        const binarized = binarizeQrRgba(imgData.data);
+        const contrastHit = jsQR(binarized, layout.canvasWidth, layout.canvasHeight, {
+          inversionAttempts: 'attemptBoth',
+        });
+        if (contrastHit?.data) return contrastHit.data;
+      }
+      return null;
+    };
+
+    const fullHit = tryDecodeRegion(0, 0, srcWidth, srcHeight, padQuietZone);
+    if (fullHit) return fullHit;
+
+    if (tryCenterRoi && srcWidth > 80 && srcHeight > 80) {
+      const roiW = Math.round(srcWidth * 0.68);
+      const roiH = Math.round(srcHeight * 0.72);
+      const roiX = Math.round((srcWidth - roiW) / 2);
+      const roiY = Math.round((srcHeight - roiH) / 2);
+      return tryDecodeRegion(roiX, roiY, roiW, roiH, true);
+    }
+
+    return null;
+  }, [getBarcodeDetector]);
 
   const stopCamera = useCallback(() => {
     if (rafRef.current) {
@@ -70,6 +161,7 @@ const QrScannerModal = ({ isOpen, onClose, onDetected }) => {
 
     let cancelled = false;
     let lastDecodeTs = 0;
+    let frameBusy = false;
 
     const startScanner = async () => {
       setCameraState('starting');
@@ -83,7 +175,11 @@ const QrScannerModal = ({ isOpen, onClose, onDetected }) => {
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' } },
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
           audio: false,
         });
 
@@ -103,24 +199,31 @@ const QrScannerModal = ({ isOpen, onClose, onDetected }) => {
 
         const scanFrame = (timestamp) => {
           if (cancelled) return;
-          if (timestamp - lastDecodeTs >= 150 && videoEl.readyState >= videoEl.HAVE_ENOUGH_DATA) {
+          if (!frameBusy && timestamp - lastDecodeTs >= 140 && videoEl.readyState >= videoEl.HAVE_ENOUGH_DATA) {
             lastDecodeTs = timestamp;
             const width = videoEl.videoWidth;
             const height = videoEl.videoHeight;
             if (width > 0 && height > 0) {
-              const canvas = canvasRef.current || document.createElement('canvas');
-              canvasRef.current = canvas;
-              canvas.width = width;
-              canvas.height = height;
-              const ctx = canvas.getContext('2d', { willReadFrequently: true });
-              if (ctx) {
-                ctx.drawImage(videoEl, 0, 0, width, height);
-                const imgData = ctx.getImageData(0, 0, width, height);
-                const code = jsQR(imgData.data, width, height, { inversionAttempts: 'attemptBoth' });
-                if (code?.data && handleCandidateText(code.data)) {
-                  return;
-                }
-              }
+              frameBusy = true;
+              decodeQrFromSource(videoEl, width, height, {
+                padQuietZone: false,
+                tryContrastPass: true,
+                tryCenterRoi: true,
+              })
+                .then((decoded) => {
+                  if (!cancelled && decoded && handleCandidateText(decoded)) {
+                    return true;
+                  }
+                  return false;
+                })
+                .catch(() => false)
+                .then((matched) => {
+                  frameBusy = false;
+                  if (!cancelled && !matched) {
+                    rafRef.current = requestAnimationFrame(scanFrame);
+                  }
+                });
+              return;
             }
           }
           rafRef.current = requestAnimationFrame(scanFrame);
@@ -145,7 +248,7 @@ const QrScannerModal = ({ isOpen, onClose, onDetected }) => {
       cancelled = true;
       stopCamera();
     };
-  }, [isOpen, mode, retrySeed, handleCandidateText, stopCamera]);
+  }, [isOpen, mode, retrySeed, handleCandidateText, stopCamera, decodeQrFromSource]);
 
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
@@ -154,24 +257,17 @@ const QrScannerModal = ({ isOpen, onClose, onDetected }) => {
 
     const objectUrl = URL.createObjectURL(file);
     const img = new Image();
-    img.onload = () => {
+    img.onload = async () => {
       try {
-        const maxSide = 1024;
-        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
-        const width = Math.max(1, Math.round(img.width * scale));
-        const height = Math.max(1, Math.round(img.height * scale));
-        const canvas = canvasRef.current || document.createElement('canvas');
-        canvasRef.current = canvas;
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        ctx.drawImage(img, 0, 0, width, height);
-        const imgData = ctx.getImageData(0, 0, width, height);
-        const code = jsQR(imgData.data, width, height, { inversionAttempts: 'attemptBoth' });
-        if (!code?.data) {
+        const decoded = await decodeQrFromSource(img, img.naturalWidth || img.width, img.naturalHeight || img.height, {
+          padQuietZone: true,
+          tryContrastPass: true,
+          tryCenterRoi: false,
+        });
+        if (!decoded) {
           setScanError(t('No QR code was detected in the selected image. Please try a clearer photo.'));
         } else {
-          handleCandidateText(code.data);
+          handleCandidateText(decoded);
         }
       } catch {
         setScanError(t('Unable to read the selected image file.'));
