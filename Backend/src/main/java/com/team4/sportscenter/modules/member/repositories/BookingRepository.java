@@ -27,9 +27,6 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.schedule.scheduleId = :scheduleId AND b.status = 'CONFIRMED'")
     Integer countBookedSlots(@Param("scheduleId") Integer scheduleId);
 
-    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.email = :email AND b.schedule.gymClass.classId = :classId AND b.status != 'CANCELLED'")
-    boolean existsByEmailAndClassId(@Param("email") String email, @Param("classId") Integer classId);
-
     @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.user.email = :email AND b.schedule.gymClass.classId = :classId AND b.status = 'CONFIRMED'")
     boolean existsConfirmedByEmailAndClassId(@Param("email") String email, @Param("classId") Integer classId);
 
@@ -61,8 +58,6 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
     List<Booking> findUnmarkedBookingsForCompletedSchedules(@Param("cutoffTime") LocalDateTime cutoffTime);
 
     List<Booking> findBySchedule_ScheduleId(Integer scheduleId);
-
-    List<Booking> findBySchedule_ScheduleIdAndStatus(Integer scheduleId, String status);
 
     @Query("SELECT b.schedule.scheduleId, COUNT(b) FROM Booking b WHERE b.schedule.scheduleId IN :scheduleIds GROUP BY b.schedule.scheduleId")
     List<Object[]> countBookingsByScheduleIds(@Param("scheduleIds") List<Integer> scheduleIds);

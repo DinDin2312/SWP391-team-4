@@ -107,21 +107,9 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getVietQRInfo(invoiceId, email));
     }
 
-    @PostMapping("/vietqr-confirm/{invoiceId}")
-    public ResponseEntity<?> confirmVietQR(Authentication authentication, @PathVariable Integer invoiceId) {
-        String email = authentication != null ? authentication.getName() : null;
-        return ResponseEntity.ok(paymentService.confirmVietQRPayment(invoiceId, email));
-    }
-
     @PostMapping("/vietqr-submit-transfer/{invoiceId}")
     public ResponseEntity<?> submitVietQRTransfer(Authentication authentication, @PathVariable Integer invoiceId) {
         String email = authentication != null ? authentication.getName() : null;
         return ResponseEntity.ok(paymentService.submitVietQRTransfer(invoiceId, email));
-    }
-
-    @PostMapping("/vietqr-reject/{invoiceId}")
-    public ResponseEntity<?> rejectVietQR(Authentication authentication, @PathVariable Integer invoiceId) {
-        String email = authentication != null ? authentication.getName() : null;
-        return ResponseEntity.ok(paymentService.rejectVietQRPayment(invoiceId, email));
     }
 }

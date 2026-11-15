@@ -22,8 +22,7 @@ import {
   ChevronDown,
   ChevronUp,
   Tag,
-  Layers,
-  Printer
+  Layers
 } from 'lucide-react';
 import InvoiceReceiptModal from '../../receptionist/components/InvoiceReceiptModal';
 import { API_ORIGIN } from '../../../config/apiBase.js';

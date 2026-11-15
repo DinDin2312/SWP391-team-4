@@ -7,21 +7,11 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface CoachWorkoutSubmissionRepository extends JpaRepository<CoachWorkoutSubmission, Integer> {
 
     List<CoachWorkoutSubmission> findByWorkoutPlanPlanIdAndUserUserIdOrderBySubmittedAtDesc(Integer planId, Integer userId);
-
-    List<CoachWorkoutSubmission> findByCoachUserIdOrderBySubmittedAtDesc(Integer coachId);
-
-    List<CoachWorkoutSubmission> findByCoachUserIdAndStatusOrderBySubmittedAtDesc(Integer coachId, String status);
-
-    long countByCoachUserIdAndStatus(Integer coachId, String status);
-
-    Optional<CoachWorkoutSubmission> findFirstByWorkoutPlanPlanIdAndPlanDetailDetailIdAndUserUserIdOrderBySubmittedAtDesc(
-            Integer planId, Integer detailId, Integer userId);
 
     @Query("SELECT s FROM CoachWorkoutSubmission s " +
            "WHERE s.coach.userId = :coachId " +

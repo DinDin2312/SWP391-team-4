@@ -41,6 +41,4 @@ public interface ScheduleRescheduleService {
 
     // === BACKGROUND TASK ===
     void processExpiredRescheduleDeadlines();
-
-    RescheduleRequestResponseDto simulateDeadlineExpiration(Integer requestId);
 }

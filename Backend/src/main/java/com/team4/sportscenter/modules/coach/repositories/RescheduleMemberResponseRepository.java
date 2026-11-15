@@ -14,13 +14,9 @@ public interface RescheduleMemberResponseRepository extends JpaRepository<Resche
 
     Optional<RescheduleMemberResponse> findByRequest_RequestIdAndUser_UserId(Integer requestId, Integer userId);
 
-    Optional<RescheduleMemberResponse> findByRequest_RequestIdAndUser_Email(Integer requestId, String email);
-
     long countByRequest_RequestIdAndResponseStatus(Integer requestId, String responseStatus);
 
     List<RescheduleMemberResponse> findByRequest_RequestIdAndResponseStatus(Integer requestId, String responseStatus);
 
     List<RescheduleMemberResponse> findByUser_EmailOrderByCreatedAtDesc(String email);
-
-    List<RescheduleMemberResponse> findByUser_UserIdAndResponseStatus(Integer userId, String responseStatus);
 }

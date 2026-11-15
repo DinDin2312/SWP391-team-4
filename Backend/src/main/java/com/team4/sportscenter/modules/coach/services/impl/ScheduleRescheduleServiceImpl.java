@@ -922,20 +922,6 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
         }
     }
 
-    @Override
-    public RescheduleRequestResponseDto simulateDeadlineExpiration(Integer requestId) {
-        ScheduleRescheduleRequest req = requestRepository.findById(requestId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy yêu cầu: " + requestId));
-
-        req.setConfirmationDeadline(LocalDateTime.now().minusMinutes(1));
-        requestRepository.save(req);
-
-        processExpiredRescheduleDeadlines();
-
-        ScheduleRescheduleRequest updated = requestRepository.findById(requestId).orElse(req);
-        return mapToDto(updated);
-    }
-
     private RescheduleRequestResponseDto mapToDto(ScheduleRescheduleRequest r) {
         GymClass gc = r.getGymClass();
         Schedule s = r.getSchedule();

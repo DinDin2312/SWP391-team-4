@@ -103,10 +103,7 @@ public class PaymentServiceImpl implements PaymentService {
                 "SELECT i.invoice_id, i.status, p.payment_method FROM INVOICES i " +
                 "JOIN USERS u ON u.user_id = i.user_id " +
                 "LEFT JOIN PAYMENTS p ON p.invoice_id = i.invoice_id " +
-                "WHERE u.email = ? AND (" +
-                "  (i.status = 'PENDING' AND i.created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)) " +
-                "  OR (i.status = 'AWAITING_CONFIRMATION' AND i.created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR))" +
-                ") " +
+                "WHERE u.email = ? AND i.status = 'PENDING' AND i.created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE) " +
                 "ORDER BY i.invoice_id DESC LIMIT 1",
                 email
             );
@@ -142,12 +139,12 @@ public class PaymentServiceImpl implements PaymentService {
     private void cancelPendingInvoicesForUser(Integer userId) {
         if (userId == null || userId == 0) return;
         List<Integer> pendingInvoiceIds = jdbc.queryForList(
-            "SELECT invoice_id FROM INVOICES WHERE user_id=? AND status IN ('PENDING', 'AWAITING_CONFIRMATION')",
+            "SELECT invoice_id FROM INVOICES WHERE user_id=? AND status = 'PENDING'",
             Integer.class, userId
         );
         for (Integer invId : pendingInvoiceIds) {
             jdbc.update("UPDATE INVOICES SET status='CANCELLED' WHERE invoice_id=?", invId);
-            jdbc.update("UPDATE PAYMENTS SET status='CANCELLED' WHERE invoice_id=? AND status IN ('PENDING', 'AWAITING_CONFIRMATION')", invId);
+            jdbc.update("UPDATE PAYMENTS SET status='CANCELLED' WHERE invoice_id=? AND status = 'PENDING'", invId);
             userCreditRepository.findByUsedInvoiceId(invId).ifPresent(credit -> {
                 credit.setUsedInvoiceId(null);
                 userCreditRepository.save(credit);
@@ -508,32 +505,6 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
 
     @Override
     @Transactional
-    public Map<String, Object> confirmVietQRPayment(Integer invoiceId, String userEmail) {
-        Invoice invoice = invoiceRepository.findById(invoiceId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hóa đơn / Invoice not found: " + invoiceId));
-
-        if ("PAID".equals(invoice.getStatus())) {
-            return Map.of("success", true, "status", "PAID", "message", "Hóa đơn đã được thanh toán thành công.");
-        }
-
-        if (userEmail != null) {
-            var currentUser = userRepository.findByEmail(userEmail).orElse(null);
-            if (currentUser != null && currentUser.getRole() != null && "MEMBER".equalsIgnoreCase(currentUser.getRole().getRoleName())) {
-                throw new org.springframework.security.access.AccessDeniedException("Thành viên không được phép tự xác nhận thanh toán thủ công. Vui lòng chuyển khoản và chờ hệ thống tự động xác nhận qua ngân hàng.");
-            }
-        }
-
-        finishPayment(invoice, true, "VIETQR-MANUAL-HD" + invoiceId);
-
-        return Map.of(
-                "success", true,
-                "status", "PAID",
-                "message", "Thanh toán thành công! Khóa học/gói tập của bạn đã được kích hoạt."
-        );
-    }
-
-    @Override
-    @Transactional
     public Map<String, Object> submitVietQRTransfer(Integer invoiceId, String userEmail) {
         bookingRepository.lockOperations();
         Invoice invoice = invoiceRepository.findById(invoiceId)
@@ -556,49 +527,6 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
             "status", invoice.getStatus(),
             "message", "Thanh toán thành công! Khóa học/gói tập của bạn đã được kích hoạt."
         );
-    }
-
-    @Override
-    @Transactional
-    public Map<String, Object> rejectVietQRPayment(Integer invoiceId, String cashierEmail) {
-        Invoice invoice = invoiceRepository.findById(invoiceId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hóa đơn / Invoice not found: " + invoiceId));
-
-        if ("PAID".equals(invoice.getStatus())) {
-            throw new IllegalStateException("Hóa đơn đã được thanh toán, không thể hủy.");
-        }
-
-        invoice.setStatus("CANCELLED");
-        invoiceRepository.save(invoice);
-
-        paymentRepository.findByInvoice_InvoiceId(invoice.getInvoiceId()).ifPresent(p -> {
-            p.setStatus("CANCELLED");
-            paymentRepository.save(p);
-        });
-
-        userCreditRepository.findByUsedInvoiceId(invoice.getInvoiceId()).ifPresent(credit -> {
-            credit.setUsedInvoiceId(null);
-            userCreditRepository.save(credit);
-        });
-
-        List<UserMembership> memberships = userMembershipRepository.findByCheckoutInvoiceId(invoice.getInvoiceId());
-        for (UserMembership m : memberships) {
-            m.setCheckoutInvoiceId(null);
-            userMembershipRepository.save(m);
-        }
-
-        if (invoice.getUser() != null && invoice.getUser().getEmail() != null) {
-            try {
-                notificationService.createNotification(
-                    invoice.getUser().getEmail(),
-                    "Đơn hàng #" + invoiceId + " đã bị hủy",
-                    "Đơn hàng #INV-" + invoiceId + " đã bị Lễ tân từ chối/hủy vì chưa nhận được tiền. Vui lòng kiểm tra lại giao dịch hoặc liên hệ quầy.",
-                    "PAYMENT"
-                );
-            } catch (Exception ignored) {}
-        }
-
-        return Map.of("success", true, "message", "Đã từ chối/hủy đơn hàng thành công.");
     }
 
     private String createVNPayUrl(Integer invoiceId, BigDecimal amount, String ipAddress) {
@@ -729,13 +657,12 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         } else {
             List<Invoice> pendingList = invoiceRepository.findByUser_EmailOrderByCreatedAtDesc(email)
                     .stream()
-                    .filter(i -> ("PENDING".equals(i.getStatus()) && i.getCreatedAt() != null && i.getCreatedAt().isAfter(LocalDateTime.now().minusMinutes(15)))
-                            || ("AWAITING_CONFIRMATION".equals(i.getStatus()) && i.getCreatedAt() != null && i.getCreatedAt().isAfter(LocalDateTime.now().minusHours(24))))
+                    .filter(i -> "PENDING".equals(i.getStatus()) && i.getCreatedAt() != null && i.getCreatedAt().isAfter(LocalDateTime.now().minusMinutes(15)))
                     .toList();
             invoice = pendingList.isEmpty() ? null : pendingList.get(0);
         }
 
-        if (invoice == null || (!"PENDING".equals(invoice.getStatus()) && !"AWAITING_CONFIRMATION".equals(invoice.getStatus()))) {
+        if (invoice == null || !"PENDING".equals(invoice.getStatus())) {
             return;
         }
 
@@ -897,12 +824,7 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         List<Integer> bookingIds=jdbc.queryForList("SELECT booking_id FROM INVOICE_BOOKINGS WHERE invoice_id=?",Integer.class,invoice.getInvoiceId());
         var booked=bookingRepository.findAllById(bookingIds);
         try{
-            boolean isExpired;
-            if ("AWAITING_CONFIRMATION".equals(invoice.getStatus())) {
-                isExpired = invoice.getCreatedAt() != null && invoice.getCreatedAt().isBefore(LocalDateTime.now().minusHours(24));
-            } else {
-                isExpired = !"PENDING".equals(invoice.getStatus()) || (invoice.getCreatedAt() != null && invoice.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(15)));
-            }
+            boolean isExpired = !"PENDING".equals(invoice.getStatus()) || (invoice.getCreatedAt() != null && invoice.getCreatedAt().isBefore(LocalDateTime.now().minusMinutes(15)));
             if (isExpired) throw new IllegalArgumentException("Checkout expired or previously failed");
             Integer expected=jdbc.queryForObject("SELECT COUNT(*) FROM INVOICE_DETAILS WHERE invoice_id=? AND package_id IS NOT NULL",Integer.class,invoice.getInvoiceId());
             if(expected != null && expected != purchased.size())throw new IllegalArgumentException("Invoice membership association missing");

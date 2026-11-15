@@ -14,8 +14,6 @@ import java.util.Optional;
 @Repository
 public interface ScheduleRescheduleRequestRepository extends JpaRepository<ScheduleRescheduleRequest, Integer> {
 
-    List<ScheduleRescheduleRequest> findByCoach_UserIdOrderByCreatedAtDesc(Integer coachId);
-
     List<ScheduleRescheduleRequest> findByCoach_EmailOrderByCreatedAtDesc(String email);
 
     List<ScheduleRescheduleRequest> findByStatusOrderByCreatedAtDesc(String status);
