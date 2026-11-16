@@ -107,14 +107,6 @@ public class MemberController {
         }
     }
 
-    @PostMapping("/book-class/{classId}/with-package/{membershipId}")
-    public ResponseEntity<String> bookClassUsingPackage(Authentication auth,@PathVariable Integer classId,@PathVariable Integer membershipId) {
-        try {
-            memberService.bookClassUsingPackage(auth.getName(),classId,membershipId);
-            return ResponseEntity.ok("Course booked using package benefits.");
-        } catch(RuntimeException error) { return ResponseEntity.badRequest().body(error.getMessage()); }
-    }
-
     @org.springframework.beans.factory.annotation.Autowired private com.team4.sportscenter.modules.member.services.PackageCommerceService commerce;
     @org.springframework.beans.factory.annotation.Autowired private com.team4.sportscenter.modules.auth.repositories.UserRepository users;
     @GetMapping("/packages/{id}") public ResponseEntity<?> packageDetail(@PathVariable int id,Authentication auth){return ResponseEntity.ok(commerce.publicDetail(id,users.findByEmail(auth.getName()).orElseThrow().getUserId()));}

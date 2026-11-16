@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import axios from 'axios';
 import {
   Receipt,
   Search,
@@ -9,15 +8,11 @@ import {
   Calendar,
   CreditCard,
   Banknote,
-  User,
   ArrowUpDown,
   RotateCw,
   ChevronLeft,
   ChevronRight,
-  CheckCircle2,
-  XCircle,
   Phone,
-  Clock,
   Eye,
   Layers,
   Globe,
@@ -27,7 +22,6 @@ import { receptionistService } from '../services/receptionistService';
 import InvoiceReceiptModal from './InvoiceReceiptModal';
 import { formatMoney, formatDateTime } from '../../../utils/displayFormat';
 import { t } from '../../../i18n/useLanguage';
-import { API_ORIGIN } from '../../../config/apiBase.js';
 
 const getPaginationRange = (current, total) => {
   if (total <= 7) {
@@ -63,7 +57,6 @@ export default function InvoiceManagementView(props) {
   const [sortOrder, setSortOrder] = useState('DESC');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
-  const [processingId, setProcessingId] = useState(null);
 
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
@@ -121,7 +114,6 @@ export default function InvoiceManagementView(props) {
     // Status filter
     if (statusFilter !== 'ALL') {
       result = result.filter((inv) => {
-        if (statusFilter === 'AWAITING_CONFIRMATION') return inv.status === 'AWAITING_CONFIRMATION';
         if (statusFilter === 'PAID') return inv.status === 'PAID';
         if (statusFilter === 'CANCELLED') return inv.status === 'CANCELLED' || inv.status === 'FAILED';
         return true;
@@ -186,38 +178,6 @@ export default function InvoiceManagementView(props) {
     setIsReceiptModalOpen(true);
   };
 
-  const handleApprove = async (invoiceId) => {
-    if (!window.confirm(t('Are you sure you want to approve this invoice? The member packages/classes will be activated immediately.'))) return;
-    try {
-      setProcessingId(invoiceId);
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_ORIGIN}/api/v1/payment/vietqr-confirm/${invoiceId}`, {}, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-      await fetchInvoices();
-    } catch (err) {
-      alert(err.response?.data?.message || err.response?.data || t('Failed to approve invoice.'));
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
-  const handleReject = async (invoiceId) => {
-    if (!window.confirm(t('Are you sure you want to cancel/reject this invoice? The held spots will be released.'))) return;
-    try {
-      setProcessingId(invoiceId);
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_ORIGIN}/api/v1/payment/vietqr-reject/${invoiceId}`, {}, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-      await fetchInvoices();
-    } catch (err) {
-      alert(err.response?.data?.message || err.response?.data || t('Failed to cancel invoice.'));
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-4 max-w-7xl mx-auto w-full">
       
@@ -278,7 +238,6 @@ export default function InvoiceManagementView(props) {
               className="bg-transparent border-none text-[var(--text)] text-xs font-semibold focus:outline-none cursor-pointer"
             >
               <option value="ALL">{t('All')}</option>
-              <option value="AWAITING_CONFIRMATION">{t('Awaiting Confirmation')}</option>
               <option value="PAID">{t('Paid')}</option>
               <option value="CANCELLED">{t('Cancelled')}</option>
             </select>
@@ -510,12 +469,7 @@ export default function InvoiceManagementView(props) {
 
                         {/* 9. Status Badge - Square */}
                         <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                          {inv.status === 'AWAITING_CONFIRMATION' ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                              <Clock className="w-3 h-3" />
-                              {t('Awaiting Confirmation')}
-                            </span>
-                          ) : inv.status === 'PAID' ? (
+                          {inv.status === 'PAID' ? (
                             <span className="inline-block px-2 py-0.5 rounded-sm text-[11px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                               {t('PAID')}
                             </span>
@@ -528,53 +482,28 @@ export default function InvoiceManagementView(props) {
 
                         {/* 10. Action Buttons - Progressive Disclosure */}
                         <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                          {inv.status === 'AWAITING_CONFIRMATION' ? (
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleApprove(inv.invoiceId)}
-                                disabled={processingId === inv.invoiceId}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md bg-emerald-600 hover:bg-emerald-700 text-white transition-colors disabled:opacity-50 cursor-pointer"
-                                title={t('Approve Payment')}
-                              >
-                                {processingId === inv.invoiceId ? <RotateCw className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
-                                <span>{t('Approve')}</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleReject(inv.invoiceId)}
-                                disabled={processingId === inv.invoiceId}
-                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/20 transition-colors disabled:opacity-50 cursor-pointer"
-                                title={t('Reject / Cancel Order')}
-                              >
-                                <XCircle className="w-3 h-3" />
-                                <span>{t('Reject')}</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center gap-1.5">
-                              {/* Primary: View Details (Modal) */}
-                              <button
-                                onClick={() => handleOpenReceipt(inv)}
-                                type="button"
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md bg-[var(--surface-hover)] hover:bg-[var(--border)] text-[var(--text)] border border-[var(--border)] transition-colors cursor-pointer"
-                                title={t('View Details')}
-                              >
-                                <Eye className="w-3.5 h-3.5 text-[var(--primary)]" />
-                                <span>{t('View Details')}</span>
-                              </button>
+                          <div className="flex items-center justify-center gap-1.5">
+                            {/* Primary: View Details (Modal) */}
+                            <button
+                              onClick={() => handleOpenReceipt(inv)}
+                              type="button"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md bg-[var(--surface-hover)] hover:bg-[var(--border)] text-[var(--text)] border border-[var(--border)] transition-colors cursor-pointer"
+                              title={t('View Details')}
+                            >
+                              <Eye className="w-3.5 h-3.5 text-[var(--primary)]" />
+                              <span>{t('View Details')}</span>
+                            </button>
 
-                              {/* Secondary: Print Receipt */}
-                              <button
-                                onClick={() => handleOpenReceipt(inv)}
-                                type="button"
-                                className="p-1 text-xs font-medium rounded-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-transparent hover:border-[var(--border)] transition-colors cursor-pointer"
-                                title={t('Print Receipt')}
-                              >
-                                <Printer className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          )}
+                            {/* Secondary: Print Receipt */}
+                            <button
+                              onClick={() => handleOpenReceipt(inv)}
+                              type="button"
+                              className="p-1 text-xs font-medium rounded-md text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-transparent hover:border-[var(--border)] transition-colors cursor-pointer"
+                              title={t('Print Receipt')}
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

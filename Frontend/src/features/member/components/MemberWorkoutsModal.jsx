@@ -21,7 +21,6 @@ import {
   UploadCloud,
   CheckCircle2,
   AlertTriangle,
-  Star,
   MessageSquare
 } from 'lucide-react';
 import SubmitWorkoutModal from './SubmitWorkoutModal';

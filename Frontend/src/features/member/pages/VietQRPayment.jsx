@@ -48,14 +48,10 @@ const VietQRPayment = () => {
     try {
       setSubmitting(true);
       const token = localStorage.getItem('token');
-      const response = await axios.post(`${API_ORIGIN}/api/v1/payment/vietqr-submit-transfer/${invoiceId}`, {}, {
+      await axios.post(`${API_ORIGIN}/api/v1/payment/vietqr-submit-transfer/${invoiceId}`, {}, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
-      window.dispatchEvent(new Event('cartUpdated'));
-
-      window.dispatchEvent(new Event('cartUpdated'));
-      window.dispatchEvent(new Event('notificationUpdated'));
       handlePaymentSuccess();
     } catch (err) {
       alert(err.response?.data?.message || t('An error occurred while submitting payment confirmation.'));
@@ -67,7 +63,6 @@ const VietQRPayment = () => {
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     setIsSuccess(true);
-    sessionStorage.removeItem('awaitingInvoiceId');
     window.dispatchEvent(new Event('cartUpdated'));
     window.dispatchEvent(new Event('notificationUpdated'));
 

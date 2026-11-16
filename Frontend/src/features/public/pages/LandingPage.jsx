@@ -2,7 +2,7 @@ import { t, codeLabel, useLanguage } from '../../../i18n/useLanguage';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Dumbbell, Activity, Shield, Sparkles, ChevronRight, Play, Star, MapPin, 
+  Dumbbell, Activity, Shield, Sparkles, ChevronLeft, ChevronRight, Play, Star, MapPin, 
   CheckCircle2, User, X, Menu, Clock, Phone, Mail, ChevronDown, Waves, 
   Flame, Compass, HelpCircle, Search, Calendar, Repeat, Users, BookOpen, ArrowLeft, ArrowRight,
   Sunrise, Sun, Sunset, RotateCcw
@@ -16,7 +16,14 @@ import { InfiniteMovingCards } from '../../../components/ui/infinite-moving-card
 import { splitCode, classLevelFromCode } from '../../manager/components/classSearch';
 import { resourceImageUrl } from '../../../components/resource-images/resourceImages';
 
+const GUEST_SUBJECTS_PER_PAGE = 6;
 const GUEST_COURSES_PER_PAGE = 6;
+
+const subjectPageVariants = {
+  enter: (dir) => ({ opacity: 0, x: dir > 0 ? 48 : -48 }),
+  center: { opacity: 1, x: 0 },
+  exit: (dir) => ({ opacity: 0, x: dir > 0 ? -48 : 48 }),
+};
 
 const LandingPage = () => {
   const language = useLanguage();
@@ -37,6 +44,8 @@ const LandingPage = () => {
   const [selectedTimeSlots, setSelectedTimeSlots] = useState([]);
   const [selectedDate, setSelectedDate] = useState('ALL');
   const [selectedCourseDetail, setSelectedCourseDetail] = useState(null);
+  const [subjectPage, setSubjectPage] = useState(1);
+  const [subjectSlideDir, setSubjectSlideDir] = useState(1);
   const [classPage, setClassPage] = useState(1);
 
   const toggleDay = (dayId) => {
@@ -61,13 +70,17 @@ const LandingPage = () => {
     );
   };
 
-  const resetClassFilters = () => {
+  const resetClassFilters = (resetSubjectPage = true) => {
     setClassSearch('');
     setSelectedDays([]);
     setDayMatchMode('ANY');
     setSelectedTimeSlots([]);
     setSelectedDate('ALL');
     setClassPage(1);
+    if (resetSubjectPage === true) {
+      setSubjectPage(1);
+      setSubjectSlideDir(-1);
+    }
   };
 
   const isClassFiltered = Boolean(
@@ -193,6 +206,27 @@ const LandingPage = () => {
       );
     });
   }, [subjectSummaries, classSearch]);
+
+  const totalSubjectPages = Math.max(1, Math.ceil(filteredSubjectSummaries.length / GUEST_SUBJECTS_PER_PAGE));
+  const safeSubjectPage = Math.min(subjectPage, totalSubjectPages);
+  const paginatedSubjectSummaries = useMemo(() => {
+    const start = (safeSubjectPage - 1) * GUEST_SUBJECTS_PER_PAGE;
+    return filteredSubjectSummaries.slice(start, start + GUEST_SUBJECTS_PER_PAGE);
+  }, [filteredSubjectSummaries, safeSubjectPage]);
+
+  const handleSubjectPageChange = (nextPage, { scrollToSection = false } = {}) => {
+    const clamped = Math.max(1, Math.min(totalSubjectPages, nextPage));
+    if (clamped === safeSubjectPage) return;
+    setSubjectSlideDir(clamped > safeSubjectPage ? 1 : -1);
+    setSubjectPage(clamped);
+    const sectionEl = document.getElementById('classes');
+    if (sectionEl) {
+      const rect = sectionEl.getBoundingClientRect();
+      if (scrollToSection || rect.top < 0 || rect.top > 220) {
+        sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
 
   const availableDates = useMemo(() => {
     const relevantCourses = classes.filter((c) => {
@@ -647,7 +681,7 @@ const LandingPage = () => {
             /* MODE 1: MASTER VIEW - SUBJECT CATALOG                    */
             /* ======================================================== */
             <div className="space-y-8">
-              {/* Subject Search & "View all classes" Bar */}
+              {/* Subject Search, Quick Page Switcher & "View all classes" Bar */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800/80">
                 <div className="relative w-full md:max-w-md">
                   <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -655,15 +689,23 @@ const LandingPage = () => {
                     type="text"
                     placeholder={tr('Tìm theo bộ môn (Gym, Yoga, Bơi...), HLV hoặc phòng tập...', 'Search by sport (Yoga, Gym, Swim...), coach or room...')}
                     value={classSearch}
-                    onChange={(e) => setClassSearch(e.target.value)}
+                    onChange={(e) => {
+                      setClassSearch(e.target.value);
+                      setSubjectPage(1);
+                      setSubjectSlideDir(-1);
+                    }}
                     className="w-full pl-10 pr-9 py-2.5 text-xs sm:text-sm bg-[#0a1122] border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                   />
                   {classSearch && (
                     <button
                       type="button"
-                      onClick={() => setClassSearch('')}
+                      onClick={() => {
+                        setClassSearch('');
+                        setSubjectPage(1);
+                        setSubjectSlideDir(-1);
+                      }}
                       aria-label={tr('Xóa tìm kiếm', 'Clear search')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -672,8 +714,38 @@ const LandingPage = () => {
 
                 <div className="flex flex-wrap items-center justify-between md:justify-end gap-3">
                   <span className="text-xs text-slate-400 font-medium">
-                    {subjectSummaries.length} {tr('bộ môn đang mở', 'active sports')} · {classes.length} {tr('lớp học', 'classes available')}
+                    {filteredSubjectSummaries.length} {tr('bộ môn đang mở', 'active sports')} · {classes.length} {tr('lớp học', 'classes available')}
                   </span>
+
+                  {totalSubjectPages > 1 && (
+                    <div
+                      className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#0a1122] border border-slate-800"
+                      aria-label={tr('Điều hướng nhanh trang bộ môn', 'Quick sports page switcher')}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleSubjectPageChange(safeSubjectPage - 1)}
+                        disabled={safeSubjectPage <= 1}
+                        aria-label={tr('Trang bộ môn trước', 'Previous sports page')}
+                        className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-35 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <span className="px-2 text-[11px] font-bold text-slate-200 tabular-nums">
+                        {tr('Trang', 'Page')} {safeSubjectPage}/{totalSubjectPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleSubjectPageChange(safeSubjectPage + 1)}
+                        disabled={safeSubjectPage >= totalSubjectPages}
+                        aria-label={tr('Lướt sang trang bộ môn tiếp theo', 'Next sports page')}
+                        className="p-1.5 rounded-lg text-blue-400 hover:text-white hover:bg-blue-600 disabled:text-slate-500 disabled:hover:bg-transparent disabled:opacity-35 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => {
@@ -689,91 +761,185 @@ const LandingPage = () => {
               </div>
 
               {filteredSubjectSummaries.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredSubjectSummaries.map((subj) => (
-                    <div
-                      key={subj.name}
-                      onClick={() => {
-                        setSelectedSubject(subj.name);
-                        resetClassFilters();
-                      }}
-                      className="bg-[#0a1122] border border-slate-800 hover:border-blue-500/50 rounded-3xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10 cursor-pointer group"
-                    >
-                      <div>
-                        {/* Subject Cover Image */}
-                        <div className="relative h-44 overflow-hidden">
-                          <img
-                            src={subj.coverUrl}
-                            alt={subj.name}
-                            loading="lazy"
-                            onError={(e) => {
-                              if (!e.currentTarget.dataset.fallback) {
-                                e.currentTarget.dataset.fallback = '1';
-                                e.currentTarget.src = getSubjectFallbackImage({ subjectName: subj.name });
-                              }
-                            }}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#0a1122] via-black/45 to-black/20" />
-                          <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between gap-2">
-                            <span className="px-3 py-1 rounded-full bg-black/65 backdrop-blur-md border border-white/10 text-[11px] font-bold text-blue-300">
-                              {tr('Bộ môn đào tạo', 'Sport Discipline')}
-                            </span>
-                            <span className="px-3 py-1 rounded-full bg-blue-600/90 backdrop-blur-md text-[11px] font-bold text-white">
-                              {subj.count} {tr('lớp đang mở', 'classes open')}
-                            </span>
-                          </div>
-                        </div>
+                <div className="space-y-6">
+                  <div className={`relative ${totalSubjectPages > 1 ? 'lg:px-16 2xl:px-0' : ''}`}>
+                    {totalSubjectPages > 1 && safeSubjectPage > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleSubjectPageChange(safeSubjectPage - 1)}
+                        aria-label={tr('Quay lại trang bộ môn trước', 'Back to previous sports page')}
+                        title={tr('Quay lại trang bộ môn trước', 'Back to previous sports page')}
+                        className="hidden lg:flex items-center justify-center w-11 h-11 rounded-full bg-[#0a1122]/95 hover:bg-blue-600 text-white border border-slate-700 hover:border-blue-400 shadow-2xl shadow-black/60 backdrop-blur-md absolute left-0 2xl:-left-16 top-1/2 -translate-y-1/2 z-20 transition-all hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 cursor-pointer"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                    )}
 
-                        {/* Subject Body */}
-                        <div className="p-6 pb-4 space-y-3">
-                          <h3 className="text-xl font-bold text-white group-hover:text-blue-300 transition-colors">
-                            {subj.name}
-                          </h3>
+                    {totalSubjectPages > 1 && safeSubjectPage < totalSubjectPages && (
+                      <button
+                        type="button"
+                        onClick={() => handleSubjectPageChange(safeSubjectPage + 1)}
+                        aria-label={tr('Lướt sang trang bộ môn tiếp theo', 'Glide to next sports page')}
+                        title={tr('Lướt sang trang bộ môn tiếp theo', 'Glide to next sports page')}
+                        className="hidden lg:flex items-center justify-center w-11 h-11 rounded-full bg-blue-600/95 hover:bg-blue-500 text-white border border-blue-400/60 shadow-2xl shadow-blue-500/40 backdrop-blur-md absolute right-0 2xl:-right-16 top-1/2 -translate-y-1/2 z-20 transition-all hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 cursor-pointer"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    )}
 
-                          {subj.description && (
-                            <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
-                              {subj.description}
-                            </p>
-                          )}
+                    <div className="overflow-x-clip">
+                      <AnimatePresence mode="wait" initial={false} custom={subjectSlideDir}>
+                        <motion.div
+                          key={safeSubjectPage}
+                          custom={subjectSlideDir}
+                          variants={subjectPageVariants}
+                          initial="enter"
+                          animate="center"
+                          exit="exit"
+                          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                        >
+                          {paginatedSubjectSummaries.map((subj) => (
+                            <div
+                              key={subj.name}
+                              onClick={() => {
+                                setSelectedSubject(subj.name);
+                                resetClassFilters(false);
+                              }}
+                              className="bg-[#0a1122] border border-slate-800 hover:border-blue-500/50 rounded-3xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10 cursor-pointer group"
+                            >
+                              <div>
+                                {/* Subject Cover Image */}
+                                <div className="relative h-44 overflow-hidden">
+                                  <img
+                                    src={subj.coverUrl}
+                                    alt={subj.name}
+                                    loading="lazy"
+                                    onError={(e) => {
+                                      if (!e.currentTarget.dataset.fallback) {
+                                        e.currentTarget.dataset.fallback = '1';
+                                        e.currentTarget.src = getSubjectFallbackImage({ subjectName: subj.name });
+                                      }
+                                    }}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a1122] via-black/45 to-black/20" />
+                                  <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between gap-2">
+                                    <span className="px-3 py-1 rounded-full bg-black/65 backdrop-blur-md border border-white/10 text-[11px] font-bold text-blue-300">
+                                      {tr('Bộ môn đào tạo', 'Sport Discipline')}
+                                    </span>
+                                    <span className="px-3 py-1 rounded-full bg-blue-600/90 backdrop-blur-md text-[11px] font-bold text-white">
+                                      {subj.count} {tr('lớp đang mở', 'classes open')}
+                                    </span>
+                                  </div>
+                                </div>
 
-                          <div className="space-y-1.5 pt-1 text-xs text-slate-300">
-                            {subj.rooms.length > 0 && (
-                              <div className="flex items-center gap-2">
-                                <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                <span className="truncate">{subj.rooms.join(' · ')}</span>
+                                {/* Subject Body */}
+                                <div className="p-6 pb-4 space-y-3">
+                                  <h3 className="text-xl font-bold text-white group-hover:text-blue-300 transition-colors">
+                                    {subj.name}
+                                  </h3>
+
+                                  {subj.description && (
+                                    <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
+                                      {subj.description}
+                                    </p>
+                                  )}
+
+                                  <div className="space-y-1.5 pt-1 text-xs text-slate-300">
+                                    {subj.rooms.length > 0 && (
+                                      <div className="flex items-center gap-2">
+                                        <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                        <span className="truncate">{subj.rooms.join(' · ')}</span>
+                                      </div>
+                                    )}
+                                    {subj.coaches.length > 0 && (
+                                      <div className="flex items-center gap-2">
+                                        <User className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                                        <span className="truncate">
+                                          {t("Coach")}: <strong className="text-white font-semibold">{subj.coaches.join(', ')}</strong>
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                            )}
-                            {subj.coaches.length > 0 && (
-                              <div className="flex items-center gap-2">
-                                <User className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                                <span className="truncate">
-                                  {t("Coach")}: <strong className="text-white font-semibold">{subj.coaches.join(', ')}</strong>
+
+                              {/* Subject Footer */}
+                              <div className="px-6 py-4 border-t border-slate-800/90 flex items-center justify-between gap-3">
+                                <div>
+                                  <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                                    {tr('Học phí từ', 'Tuition from')}
+                                  </div>
+                                  <div className="text-base font-black text-white">
+                                    {subj.minPrice.toLocaleString('vi-VN')} <span className="text-blue-400 text-sm font-bold">₫</span>
+                                  </div>
+                                </div>
+
+                                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-400 group-hover:text-blue-300 group-hover:translate-x-0.5 transition-all">
+                                  <span>{tr('Xem các lớp đang mở', 'View open classes')}</span>
+                                  <ArrowRight className="w-4 h-4 shrink-0" />
                                 </span>
                               </div>
-                            )}
-                          </div>
-                        </div>
+                            </div>
+                          ))}
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
+                  </div>
+
+                  {totalSubjectPages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-[#0a1122] border border-slate-800 shadow-lg">
+                      <div className="text-xs font-medium text-slate-400">
+                        {tr(
+                          `Hiển thị ${(safeSubjectPage - 1) * GUEST_SUBJECTS_PER_PAGE + 1}–${Math.min(safeSubjectPage * GUEST_SUBJECTS_PER_PAGE, filteredSubjectSummaries.length)} trong tổng số ${filteredSubjectSummaries.length} bộ môn`,
+                          `Showing ${(safeSubjectPage - 1) * GUEST_SUBJECTS_PER_PAGE + 1}–${Math.min(safeSubjectPage * GUEST_SUBJECTS_PER_PAGE, filteredSubjectSummaries.length)} of ${filteredSubjectSummaries.length} sports`
+                        )}
                       </div>
 
-                      {/* Subject Footer */}
-                      <div className="px-6 py-4 border-t border-slate-800/90 flex items-center justify-between gap-3">
-                        <div>
-                          <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                            {tr('Học phí từ', 'Tuition from')}
-                          </div>
-                          <div className="text-base font-black text-white">
-                            {subj.minPrice.toLocaleString('vi-VN')} <span className="text-blue-400 text-sm font-bold">₫</span>
-                          </div>
-                        </div>
+                      <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                        <button
+                          type="button"
+                          onClick={() => handleSubjectPageChange(safeSubjectPage - 1, { scrollToSection: true })}
+                          disabled={safeSubjectPage <= 1}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
+                          <span>{tr('Trang trước', 'Prev')}</span>
+                        </button>
 
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-400 group-hover:text-blue-300 group-hover:translate-x-0.5 transition-all">
-                          <span>{tr('Xem các lớp đang mở', 'View open classes')}</span>
-                          <ArrowRight className="w-4 h-4 shrink-0" />
-                        </span>
+                        {Array.from({ length: totalSubjectPages }, (_, i) => i + 1).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            onClick={() => handleSubjectPageChange(pageNum, { scrollToSection: true })}
+                            aria-current={safeSubjectPage === pageNum ? 'page' : undefined}
+                            className={`min-w-[36px] h-[36px] px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                              safeSubjectPage === pageNum
+                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 border border-blue-500'
+                                : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+
+                        <button
+                          type="button"
+                          onClick={() => handleSubjectPageChange(safeSubjectPage + 1, { scrollToSection: true })}
+                          disabled={safeSubjectPage >= totalSubjectPages}
+                          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            safeSubjectPage < totalSubjectPages
+                              ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25 border border-blue-500'
+                              : 'border border-slate-700 bg-slate-900 text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed'
+                          }`}
+                        >
+                          <span>{tr('Lướt trang tiếp', 'Next page')}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               ) : (
                 <div className="bg-[#0a1122] border border-slate-800 rounded-3xl p-12 text-center space-y-3">
@@ -787,8 +953,12 @@ const LandingPage = () => {
                   {classSearch && (
                     <button
                       type="button"
-                      onClick={() => setClassSearch('')}
-                      className="mt-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors"
+                      onClick={() => {
+                        setClassSearch('');
+                        setSubjectPage(1);
+                        setSubjectSlideDir(-1);
+                      }}
+                      className="mt-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors cursor-pointer"
                     >
                       {tr('Xóa tìm kiếm', 'Clear search')}
                     </button>
@@ -809,7 +979,7 @@ const LandingPage = () => {
                       type="button"
                       onClick={() => {
                         setSelectedSubject(null);
-                        resetClassFilters();
+                        resetClassFilters(false);
                       }}
                       className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold transition-colors cursor-pointer"
                     >
@@ -1386,7 +1556,7 @@ const LandingPage = () => {
                       type="button"
                       onClick={() => {
                         setSelectedSubject(null);
-                        resetClassFilters();
+                        resetClassFilters(false);
                       }}
                       className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-colors cursor-pointer"
                     >

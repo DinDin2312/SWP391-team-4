@@ -1,11 +1,10 @@
-import React, { useRef, useState } from 'react';
-import { Printer, X, CheckCircle2, Receipt, Building2, Phone, Mail, MapPin, Copy, Check, Tag } from 'lucide-react';
+import React, { useState } from 'react';
+import { Printer, X, CheckCircle2, Receipt, Copy, Check, Tag } from 'lucide-react';
 import { formatMoney, formatDateTime } from '../../../utils/displayFormat';
 import { t } from '../../../i18n/useLanguage';
 
 export default function InvoiceReceiptModal({ isOpen, onClose, receipt }) {
   const [copied, setCopied] = useState(false);
-  const printContainerRef = useRef(null);
 
   if (!isOpen || !receipt) return null;
 
@@ -58,7 +57,6 @@ export default function InvoiceReceiptModal({ isOpen, onClose, receipt }) {
     const totalFormatted = formatMoney(receipt.totalAmount);
     const subtotalFormatted = formatMoney(subtotalAmount);
     const discountFormatted = formatMoney(discountVal);
-    const cashier = receipt.cashierName || t('Front Desk');
 
     const itemsList = (receipt.items && receipt.items.length > 0) ? receipt.items : (receipt.details || []);
     const itemsRows = itemsList.length > 0

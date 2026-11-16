@@ -180,10 +180,6 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         return new AttendanceSnapshot(totalSessions, attendedSessions, remainingSessions, hasStarted, exceedsEightyPercent, credit);
     }
 
-    private void autoRejectOverLimitCancellationTickets() {
-        // Legacy 80% auto-rejection disabled per finalized 1-week + Admin evidence review rules
-    }
-
     private String formatVndAmount(BigDecimal amount) {
         if (amount == null) return "0đ";
         return String.format("%,d", amount.longValue()).replace(',', '.') + "đ";
@@ -997,7 +993,6 @@ public class SupportRequestServiceImpl implements SupportRequestService {
         User user = userRepository.findByEmail(memberEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + memberEmail));
 
-        autoRejectOverLimitCancellationTickets();
         return supportRequestRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -1006,7 +1001,6 @@ public class SupportRequestServiceImpl implements SupportRequestService {
     @Override
     @Transactional
     public Page<SupportRequestResponse> searchRequestsForStaff(SupportStatus status, SupportCategory category, String keyword, Pageable pageable) {
-        autoRejectOverLimitCancellationTickets();
         String kw = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
         return supportRequestRepository.searchSupportRequests(status, category, kw, pageable)
                 .map(this::mapToResponse);
@@ -1015,7 +1009,6 @@ public class SupportRequestServiceImpl implements SupportRequestService {
     @Override
     @Transactional
     public Map<String, Object> getStaffSupportStats() {
-        autoRejectOverLimitCancellationTickets();
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("total", supportRequestRepository.count());
         stats.put("pending", supportRequestRepository.countByStatus(SupportStatus.PENDING));

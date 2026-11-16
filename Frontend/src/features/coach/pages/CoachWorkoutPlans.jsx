@@ -8,7 +8,7 @@ import {
   Dumbbell, Users, Plus, Trash2, Send, CheckCircle2, AlertCircle, AlertTriangle,
   Clock, Play, ShieldAlert, Sparkles, Filter, RefreshCw, X, ChevronRight,
   BookOpen, Layers, Calendar, Copy, Target, Award, ChevronLeft, Eye, List,
-  Video, Star, MessageSquare, ExternalLink, Search
+  Video, MessageSquare, ExternalLink, Search
 } from 'lucide-react';
 import CoachReviewSubmissionModal from '../components/CoachReviewSubmissionModal';
 import { coachService } from '../services/coachService';

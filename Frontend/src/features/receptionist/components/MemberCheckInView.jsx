@@ -22,7 +22,6 @@ import {
   Dumbbell,
   GraduationCap,
   Zap,
-  Key,
   QrCode,
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
@@ -36,6 +35,9 @@ import {
   formatCheckInAnomaly,
   formatCheckInPackage,
   formatFacilityName,
+  formatCompactCheckInPackage,
+  formatCompactFacility,
+  formatCompactCheckInTime,
 } from '../receptionistUtils';
 import { locale } from '../../../i18n/languageStore';
 import VnDateInput from '../../../components/VnDateInput';
@@ -99,8 +101,27 @@ const MemberCheckInView = ({
 
   // Feedback banner & Detail modal
   const [feedback, setFeedback] = useState(null);
-  const [detailModalUserId, setDetailModalUserId] = useState(null);
+  const [detailModalMember, setDetailModalMember] = useState(null);
+  const [loadingProfileId, setLoadingProfileId] = useState(null);
+  const [focusedCheckInId, setFocusedCheckInId] = useState(null);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
+
+  const handleOpenMemberProfile = async (userId, fallbackMember = null) => {
+    if (!userId) return;
+    setLoadingProfileId(userId);
+    try {
+      const detail = await receptionistService.getMemberDetail(userId);
+      setDetailModalMember(detail || fallbackMember || { userId });
+    } catch {
+      if (fallbackMember) {
+        setDetailModalMember(fallbackMember);
+      } else {
+        setFeedback({ type: 'error', message: t('Unable to load member details.') });
+      }
+    } finally {
+      setLoadingProfileId(null);
+    }
+  };
 
   const showFeedback = (type, message) => {
     setFeedback({ type, message });
@@ -151,7 +172,10 @@ const MemberCheckInView = ({
     }
   }, []);
 
-  const handleSelectMember = useCallback(async (member, preferredMembershipId = null, preferredBookingId = null) => {
+  const handleSelectMember = useCallback(async (member, preferredMembershipId = null, preferredBookingId = null, options = {}) => {
+    if (!options?.preserveFocusedLog) {
+      setFocusedCheckInId(null);
+    }
     setSelectedMember(member);
     setSelectedMemberDetail(null);
     setSelectedMembershipId('');
@@ -168,6 +192,20 @@ const MemberCheckInView = ({
     try {
       const detail = await receptionistService.getMemberDetail(member.userId);
       setSelectedMemberDetail(detail);
+      if (detail) {
+        setSelectedMember((prev) =>
+          prev && Number(prev.userId) === Number(member.userId)
+            ? {
+                ...prev,
+                fullName: detail.fullName || prev.fullName,
+                status: detail.status || prev.status,
+                phone: detail.phone ?? prev.phone,
+                email: detail.email ?? prev.email,
+                avatarPath: detail.avatarPath ?? prev.avatarPath,
+              }
+            : prev
+        );
+      }
       const pkgList = Array.isArray(detail?.memberships) ? detail.memberships : [];
       const bksList = Array.isArray(detail?.bookings) ? detail.bookings : [];
       setMemberMemberships(pkgList);
@@ -216,6 +254,23 @@ const MemberCheckInView = ({
       setLoadingMemberships(false);
     }
   }, []);
+
+  const handleSelectMemberFromLogRow = useCallback((rec) => {
+    if (!rec?.userId) return;
+    const matchedMember = members.find((m) => Number(m.userId) === Number(rec.userId));
+    const memberCandidate = matchedMember || {
+      userId: rec.userId,
+      fullName: rec.memberName,
+      phone: rec.memberPhone,
+      email: rec.memberEmail,
+      avatarPath: rec.memberAvatar || rec.avatarPath || rec.avatarUrl,
+      status: 'ACTIVE',
+    };
+    setFocusedCheckInId(rec.checkInId ?? null);
+    setMemberKeyword(rec.memberName || '');
+    fetchMembersList(rec.memberName || '');
+    handleSelectMember(memberCandidate, null, null, { preserveFocusedLog: true });
+  }, [members, fetchMembersList, handleSelectMember]);
 
   useEffect(() => {
     fetchRooms();
@@ -336,6 +391,22 @@ const MemberCheckInView = ({
         r.status === 'CHECKED_IN'
     );
   }, [selectedMember, allDayRecords]);
+
+  // Resolve the visit record to display inside the member detail modal (from clicked row or active/today log)
+  const checkInRecordForSelectedMember = useMemo(() => {
+    if (!selectedMember) return null;
+    if (focusedCheckInId != null) {
+      const focused = allDayRecords.find(
+        (r) => Number(r.checkInId) === Number(focusedCheckInId) && Number(r.userId) === Number(selectedMember.userId)
+      );
+      if (focused) return focused;
+    }
+    if (activeCheckInForSelectedMember) return activeCheckInForSelectedMember;
+    if (historyDate === getTodayDateString()) {
+      return allDayRecords.find((r) => Number(r.userId) === Number(selectedMember.userId)) || null;
+    }
+    return null;
+  }, [selectedMember, focusedCheckInId, allDayRecords, activeCheckInForSelectedMember, historyDate]);
 
   // Active memberships for the selected member (truly active today: startDate <= today <= endDate)
   const activeMemberships = useMemo(() => {
@@ -875,7 +946,7 @@ const MemberCheckInView = ({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(360px, 430px) minmax(0, 1fr)',
+          gridTemplateColumns: 'minmax(335px, 395px) minmax(0, 1fr)',
           gap: '1.5rem',
           alignItems: 'start',
         }}
@@ -1202,7 +1273,8 @@ const MemberCheckInView = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setDetailModalUserId(selectedMember.userId)}
+                      disabled={loadingProfileId === selectedMember.userId}
+                      onClick={() => handleOpenMemberProfile(selectedMember.userId, selectedMember)}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -1266,7 +1338,7 @@ const MemberCheckInView = ({
                   </div>
                   <div style={{ fontSize: '0.82rem', color: 'var(--text)' }}>
                     <div>
-                      <strong>{t('Facility / Zone:')}</strong> {activeCheckInForSelectedMember.facilityName}
+                      <strong>{t('Facility / Zone:')}</strong> {formatFacilityName(activeCheckInForSelectedMember.facilityName, t)}
                     </div>
                     <div>
                       <strong>{t('Package:')}</strong> {formatCheckInPackage(activeCheckInForSelectedMember.packageName, t)}
@@ -1789,19 +1861,19 @@ const MemberCheckInView = ({
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
               <thead style={{ position: 'sticky', top: 0, zIndex: 30, backgroundColor: 'var(--bg)' }}>
                 <tr style={{ backgroundColor: 'var(--bg)', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '130px', backgroundColor: 'var(--bg)' }}>
+                  <th style={{ padding: '0.68rem 0.65rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', backgroundColor: 'var(--bg)' }}>
                     {t('Member')}
                   </th>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '180px', backgroundColor: 'var(--bg)' }}>
+                  <th style={{ padding: '0.68rem 0.65rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', backgroundColor: 'var(--bg)' }}>
                     {t('Package & Facility')}
                   </th>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '140px', whiteSpace: 'nowrap', backgroundColor: 'var(--bg)' }}>
+                  <th style={{ padding: '0.68rem 0.65rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', whiteSpace: 'nowrap', backgroundColor: 'var(--bg)' }}>
                     {t('Check-in / Out Time')}
                   </th>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', minWidth: '120px', whiteSpace: 'nowrap', backgroundColor: 'var(--bg)' }}>
+                  <th style={{ padding: '0.68rem 0.65rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', whiteSpace: 'nowrap', backgroundColor: 'var(--bg)' }}>
                     {t('Status')}
                   </th>
-                  <th style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', textAlign: 'right', minWidth: '135px', whiteSpace: 'nowrap', backgroundColor: 'var(--bg)' }}>
+                  <th style={{ padding: '0.68rem 0.65rem', fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.72rem', textTransform: 'uppercase', textAlign: 'right', whiteSpace: 'nowrap', backgroundColor: 'var(--bg)' }}>
                     {t('Action')}
                   </th>
                 </tr>
@@ -1822,16 +1894,45 @@ const MemberCheckInView = ({
                 ) : (
                   filteredRecords.map((rec) => {
                     const isCurrentlyIn = rec.status === 'CHECKED_IN';
+                    const isClassOnly = rec.checkInType === 'CLASS_SESSION' || rec.packageType === 'CLASS';
+                    const isCombo = rec.checkInType === 'COMBO_ALL';
+                    const typeLabel = isClassOnly ? t('Class') : isCombo ? 'Combo' : 'Gym';
+                    const compactPkg = formatCompactCheckInPackage(rec.packageName, rec.checkInType, t);
+                    const compactFacility = formatCompactFacility(rec.facilityName, t);
+                    const fullPkg = formatCheckInPackage(rec.packageName, t);
+                    const fullFacility = formatFacilityName(rec.facilityName, t);
+                    const currentLoc = locale();
+                    const isSelectedRow =
+                      Boolean(selectedMember) &&
+                      Number(selectedMember.userId) === Number(rec.userId) &&
+                      (focusedCheckInId == null || Number(focusedCheckInId) === Number(rec.checkInId));
+                    const isCoachOverrideAnomaly = rec.checkInType === 'COACH_OVERRIDE' ||
+                      rec.anomalyReason?.includes('Chưa qua') ||
+                      rec.anomalyReason?.includes('lễ tân') ||
+                      rec.anomalyReason?.includes('Bypassed') ||
+                      rec.anomalyReason?.includes('front desk');
+
                     return (
                       <tr
                         key={rec.checkInId}
+                        onClick={() => handleSelectMemberFromLogRow(rec)}
+                        title={t('Click row to view member on check-in desk')}
                         style={{
                           borderBottom: '1px solid var(--border)',
-                          backgroundColor: rec.hasAnomaly ? 'rgba(239, 68, 68, 0.04)' : isCurrentlyIn ? 'var(--surface)' : 'transparent',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.15s ease',
+                          backgroundColor: isSelectedRow
+                            ? 'var(--primary-soft)'
+                            : rec.hasAnomaly
+                              ? 'rgba(239, 68, 68, 0.04)'
+                              : isCurrentlyIn
+                                ? 'var(--surface)'
+                                : 'transparent',
+                          boxShadow: isSelectedRow ? 'inset 3px 0 0 var(--primary)' : 'none',
                         }}
                       >
-                        <td style={{ padding: '0.85rem 1rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <td style={{ padding: '0.68rem 0.65rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
                             <MemberTierAvatar
                               avatarUrl={rec.memberAvatar || rec.avatarPath || rec.avatarUrl}
                               fullName={rec.memberName}
@@ -1839,140 +1940,133 @@ const MemberCheckInView = ({
                               showBadge={false}
                             />
                             <div style={{ minWidth: 0 }}>
-                              <div style={{ fontWeight: 700, color: 'var(--text)' }}>
-                                {rec.memberName}{' '}
-                                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                                  #{rec.userId}
-                                </span>
+                              <div
+                                title={rec.memberName}
+                                style={{
+                                  fontWeight: 700,
+                                  color: 'var(--text)',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  maxWidth: '150px',
+                                }}
+                              >
+                                {rec.memberName}
                               </div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                                {rec.memberPhone || '—'} • {rec.memberEmail}
+                              <div
+                                style={{
+                                  fontSize: '0.73rem',
+                                  color: 'var(--text-muted)',
+                                  marginTop: '0.12rem',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                #{rec.userId}{rec.memberPhone ? ` · ${rec.memberPhone}` : ''}
                               </div>
                             </div>
                           </div>
                         </td>
 
-                        <td style={{ padding: '0.85rem 1rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 600, color: 'var(--text)' }}>{formatCheckInPackage(rec.packageName, t)}</span>
-                            {rec.checkInType === 'CLASS_SESSION' || rec.packageType === 'CLASS' ? (
-                              <span
-                                style={{
-                                  fontSize: '0.68rem',
-                                  fontWeight: 700,
-                                  padding: '0.12rem 0.45rem',
-                                  borderRadius: '0.35rem',
-                                  backgroundColor: 'var(--primary-soft)',
-                                  color: 'var(--primary)',
-                                  border: '1px solid var(--border)',
-                                }}
-                              >
-                                {t('Class Session')}
-                              </span>
-                            ) : rec.checkInType === 'COMBO_ALL' ? (
-                              <span
-                                style={{
-                                  fontSize: '0.68rem',
-                                  fontWeight: 700,
-                                  padding: '0.12rem 0.45rem',
-                                  borderRadius: '0.35rem',
-                                  backgroundColor: '#EEF2FF',
-                                  color: '#4F46E5',
-                                  border: '1px solid #C7D2FE',
-                                }}
-                              >
-                                {t('Combo Gym + Lớp')}
-                              </span>
-                            ) : (
-                              <span
-                                style={{
-                                  fontSize: '0.68rem',
-                                  fontWeight: 700,
-                                  padding: '0.12rem 0.45rem',
-                                  borderRadius: '0.35rem',
-                                  backgroundColor: 'var(--bg)',
-                                  color: 'var(--text-muted)',
-                                  border: '1px solid var(--border)',
-                                }}
-                              >
-                                {t('Gym Workout')}
-                              </span>
-                            )}
+                        <td style={{ padding: '0.68rem 0.65rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0, maxWidth: '215px' }}>
+                            <span
+                              style={{
+                                fontSize: '0.66rem',
+                                fontWeight: 700,
+                                padding: '0.1rem 0.4rem',
+                                borderRadius: '0.35rem',
+                                backgroundColor: isClassOnly
+                                  ? 'var(--primary-soft)'
+                                  : isCombo
+                                    ? 'rgba(99, 102, 241, 0.12)'
+                                    : 'var(--bg)',
+                                color: isClassOnly
+                                  ? 'var(--primary)'
+                                  : isCombo
+                                    ? '#6366F1'
+                                    : 'var(--text-muted)',
+                                border: isCombo ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid var(--border)',
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {typeLabel}
+                            </span>
+                            <span
+                              title={fullPkg}
+                              style={{
+                                fontWeight: 600,
+                                color: 'var(--text)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                minWidth: 0,
+                              }}
+                            >
+                              {compactPkg || '—'}
+                            </span>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.76rem', color: 'var(--primary)', marginTop: '0.2rem', fontWeight: 600 }}>
-                            <MapPin style={{ width: '13px', height: '13px' }} />
-                            <span>{formatFacilityName(rec.facilityName, t)}</span>
-                          </div>
-
-                          {/* Access Code Pill / Class Direct Entry Pill */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
-                            {rec.accessCode ? (
-                              <div
-                                title={t('Mã quét mở khóa cửa phân khu gym công cộng')}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.3rem',
-                                  fontSize: '0.72rem',
-                                  padding: '0.15rem 0.5rem',
-                                  borderRadius: '0.35rem',
-                                  backgroundColor: 'var(--surface-hover)',
-                                  color: 'var(--text)',
-                                  border: '1px solid var(--border)',
-                                  fontWeight: 600,
-                                }}
-                              >
-                                <Key style={{ width: '12px', height: '12px', color: 'var(--text-muted)' }} />
-                                <span>{t('Door Code:')} <strong style={{ fontFamily: 'monospace', letterSpacing: '0.5px' }}>{rec.accessCode}</strong></span>
-                              </div>
-                            ) : rec.checkInType === 'CLASS_SESSION' ? (
-                              <div
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.3rem',
-                                  fontSize: '0.72rem',
-                                  padding: '0.15rem 0.5rem',
-                                  borderRadius: '0.35rem',
-                                  backgroundColor: '#EFF6FF',
-                                  color: '#2563EB',
-                                  border: '1px solid #BFDBFE',
-                                  fontWeight: 600,
-                                }}
-                              >
-                                <GraduationCap style={{ width: '12px', height: '12px' }} />
-                                <span>{t('Class Session')}</span>
-                              </div>
-                            ) : null}
-
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              fontSize: '0.75rem',
+                              color: 'var(--primary)',
+                              marginTop: '0.22rem',
+                              fontWeight: 600,
+                              minWidth: 0,
+                              maxWidth: '215px',
+                            }}
+                          >
+                            <MapPin style={{ width: '12px', height: '12px', flexShrink: 0 }} />
+                            <span
+                              title={fullFacility}
+                              style={{
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                minWidth: 0,
+                              }}
+                            >
+                              {compactFacility || '—'}
+                            </span>
                             {rec.note && (
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.72rem', padding: '0.12rem 0.45rem', borderRadius: '0.35rem', backgroundColor: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                              <span
+                                title={`${t('Note:')} ${formatCheckInNote(rec.note, t)}`}
+                                style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--text-muted)', flexShrink: 0 }}
+                              >
                                 <FileText style={{ width: '11px', height: '11px' }} />
-                                <span>{formatCheckInNote(rec.note, t)}</span>
-                              </div>
+                              </span>
                             )}
                           </div>
                         </td>
 
-                        <td style={{ padding: '0.85rem 1rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                          <div style={{ color: 'var(--text)', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                            {t('In:')} {formatDateTime(rec.checkInTime)}
+                        <td style={{ padding: '0.68rem 0.65rem', fontSize: '0.8rem', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                          <div
+                            title={formatDateTime(rec.checkInTime)}
+                            style={{ color: 'var(--text)', fontWeight: 600, whiteSpace: 'nowrap' }}
+                          >
+                            {t('In:')} {formatCompactCheckInTime(rec.checkInTime, historyDate, currentLoc)}
                           </div>
-                          <div style={{ color: 'var(--text-muted)', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>
-                            {t('Out:')} {rec.checkOutTime ? formatDateTime(rec.checkOutTime) : '—'}
+                          <div
+                            title={rec.checkOutTime ? formatDateTime(rec.checkOutTime) : ''}
+                            style={{ color: 'var(--text-muted)', marginTop: '0.15rem', whiteSpace: 'nowrap' }}
+                          >
+                            {t('Out:')} {rec.checkOutTime ? formatCompactCheckInTime(rec.checkOutTime, historyDate, currentLoc) : '—'}
                           </div>
                         </td>
 
-                        <td style={{ padding: '0.85rem 1rem', whiteSpace: 'nowrap' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.35rem' }}>
+                        <td style={{ padding: '0.68rem 0.65rem', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.3rem' }}>
                             <span
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '0.35rem',
-                                padding: '0.22rem 0.6rem',
+                                gap: '0.32rem',
+                                padding: '0.2rem 0.55rem',
                                 borderRadius: '999px',
-                                fontSize: '0.72rem',
+                                fontSize: '0.71rem',
                                 fontWeight: 700,
                                 backgroundColor: isCurrentlyIn ? 'var(--success-soft)' : 'var(--bg)',
                                 color: isCurrentlyIn ? 'var(--success-text)' : 'var(--text-muted)',
@@ -1982,8 +2076,8 @@ const MemberCheckInView = ({
                             >
                               <span
                                 style={{
-                                  width: '7px',
-                                  height: '7px',
+                                  width: '6px',
+                                  height: '6px',
                                   borderRadius: '50%',
                                   backgroundColor: isCurrentlyIn ? 'var(--success-text)' : 'var(--text-muted)',
                                   flexShrink: 0,
@@ -1992,84 +2086,60 @@ const MemberCheckInView = ({
                               <span style={{ whiteSpace: 'nowrap' }}>{isCurrentlyIn ? t('In Center') : t('Checked Out')}</span>
                             </span>
 
-                            {rec.hasAnomaly && (() => {
-                              const isCoachOverrideAnomaly = rec.checkInType === 'COACH_OVERRIDE' ||
-                                rec.anomalyReason?.includes('Chưa qua') ||
-                                rec.anomalyReason?.includes('lễ tân') ||
-                                rec.anomalyReason?.includes('Bypassed') ||
-                                rec.anomalyReason?.includes('front desk');
-                              return (
-                                <div
-                                  title={formatCheckInAnomaly(rec.anomalyReason, t) || t('Check-in vào trung tâm học lớp nhưng HLV ghi nhận VẮNG MẶT trong lớp')}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.3rem',
-                                    padding: '0.2rem 0.5rem',
-                                    borderRadius: '0.4rem',
-                                    fontSize: '0.72rem',
-                                    fontWeight: 700,
-                                    backgroundColor: isCoachOverrideAnomaly ? '#FFFBEB' : '#FEF2F2',
-                                    color: isCoachOverrideAnomaly ? '#D97706' : '#EF4444',
-                                    border: isCoachOverrideAnomaly ? '1px solid #FDE68A' : '1px solid #FCA5A5',
-                                    whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  <ShieldAlert style={{ width: '12px', height: '12px', flexShrink: 0 }} />
-                                  <span>{t(isCoachOverrideAnomaly ? 'Chưa qua lễ tân' : 'Coach flagged absent')}</span>
-                                </div>
-                              );
-                            })()}
+                            {rec.hasAnomaly && (
+                              <div
+                                title={formatCheckInAnomaly(rec.anomalyReason, t) || t('Check-in vào trung tâm học lớp nhưng HLV ghi nhận VẮNG MẶT trong lớp')}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  padding: '0.18rem 0.5rem',
+                                  borderRadius: '0.4rem',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  backgroundColor: isCoachOverrideAnomaly ? 'rgba(245, 158, 11, 0.14)' : 'rgba(239, 68, 68, 0.12)',
+                                  color: isCoachOverrideAnomaly ? '#D97706' : '#EF4444',
+                                  border: isCoachOverrideAnomaly ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid rgba(239, 68, 68, 0.35)',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                <ShieldAlert style={{ width: '12px', height: '12px', flexShrink: 0 }} />
+                                <span>{t(isCoachOverrideAnomaly ? 'Chưa qua lễ tân' : 'Coach flagged absent')}</span>
+                              </div>
+                            )}
                           </div>
                         </td>
 
-                        <td style={{ padding: '0.85rem 1rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                          <div style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '0.68rem 0.65rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          {isCurrentlyIn ? (
                             <button
                               type="button"
-                              onClick={() => setDetailModalUserId(rec.userId)}
-                              title={t('View Member Profile')}
+                              disabled={checkingOutId === rec.checkInId}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCheckOut(rec.checkInId, rec.memberName);
+                              }}
                               style={{
-                                padding: '0.4rem 0.6rem',
+                                padding: '0.38rem 0.68rem',
                                 borderRadius: '0.5rem',
                                 border: '1px solid var(--border)',
-                                backgroundColor: 'var(--bg)',
-                                color: 'var(--text)',
-                                fontSize: '0.75rem',
-                                fontWeight: 600,
+                                backgroundColor: 'var(--primary-soft)',
+                                color: 'var(--primary)',
+                                fontSize: '0.74rem',
+                                fontWeight: 700,
                                 cursor: 'pointer',
-                                flexShrink: 0,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                whiteSpace: 'nowrap',
                               }}
                             >
-                              <Eye style={{ width: '14px', height: '14px' }} />
+                              <LogOut style={{ width: '13px', height: '13px', flexShrink: 0 }} />
+                              <span style={{ whiteSpace: 'nowrap' }}>{t('Check-out')}</span>
                             </button>
-
-                            {isCurrentlyIn && (
-                              <button
-                                type="button"
-                                disabled={checkingOutId === rec.checkInId}
-                                onClick={() => handleCheckOut(rec.checkInId, rec.memberName)}
-                                style={{
-                                  padding: '0.42rem 0.75rem',
-                                  borderRadius: '0.5rem',
-                                  border: '1px solid var(--border)',
-                                  backgroundColor: 'var(--primary-soft)',
-                                  color: 'var(--primary)',
-                                  fontSize: '0.76rem',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.35rem',
-                                  whiteSpace: 'nowrap',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <LogOut style={{ width: '13px', height: '13px', flexShrink: 0 }} />
-                                <span style={{ whiteSpace: 'nowrap' }}>{t('Check-out')}</span>
-                              </button>
-                            )}
-                          </div>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>—</span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -2084,11 +2154,17 @@ const MemberCheckInView = ({
         </>
       )}
 
-      {/* Member Detail Modal (with blurred backdrop & history state support) */}
-      {detailModalUserId && (
+      {/* Member Detail Modal (with blurred backdrop & check-in/door code details) */}
+      {detailModalMember && (
         <MemberDetailModal
-          userId={detailModalUserId}
-          onClose={() => setDetailModalUserId(null)}
+          member={detailModalMember}
+          checkInRecord={
+            checkInRecordForSelectedMember &&
+            Number(checkInRecordForSelectedMember.userId) === Number(detailModalMember.userId)
+              ? checkInRecordForSelectedMember
+              : null
+          }
+          onClose={() => setDetailModalMember(null)}
         />
       )}
 

@@ -21,18 +21,30 @@ import {
     ChevronUp,
     Ban,
     Receipt,
-    Printer
+    Printer,
+    Key,
+    Copy,
+    MapPin,
+    GraduationCap,
+    ShieldAlert
 } from 'lucide-react';
 import receptionistService from '../services/receptionistService';
+import {
+    formatCheckInNote,
+    formatCheckInAnomaly,
+    formatCheckInPackage,
+    formatFacilityName,
+} from '../receptionistUtils';
 import InvoiceReceiptModal from './InvoiceReceiptModal';
 import ClassRenewalModal from './ClassRenewalModal';
 import RenewalNoticeModal from './RenewalNoticeModal';
 
-const MemberDetailModal = ({ member: initialMember, onClose }) => {
+const MemberDetailModal = ({ member: initialMember, checkInRecord = null, onClose }) => {
   useLanguage();
     const [member, setMemberData] = useState(initialMember);
     const [activeTab, setActiveTab] = useState('packages'); // 'packages' | 'bookings' | 'invoices' | 'profile'
     const [copiedPhone, setCopiedPhone] = useState(false);
+    const [copiedAccessCode, setCopiedAccessCode] = useState('');
 
     // Invoices Tab States
     const [invoices, setInvoices] = useState([]);
@@ -287,6 +299,13 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
             setCopiedPhone(true);
             setTimeout(() => setCopiedPhone(false), 2000);
         }
+    };
+
+    const handleCopyAccessCode = (code) => {
+        if (!code) return;
+        void navigator.clipboard?.writeText(code);
+        setCopiedAccessCode(code);
+        setTimeout(() => setCopiedAccessCode((prev) => (prev === code ? '' : prev)), 2000);
     };
 
     const getInitials = (name) => {
@@ -661,6 +680,194 @@ const MemberDetailModal = ({ member: initialMember, onClose }) => {
                     {/* TAB 1: GÓI TẬP */}
                     {activeTab === 'packages' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            {checkInRecord && (() => {
+                                const isCurrentlyIn = checkInRecord.status === 'CHECKED_IN';
+                                const isClassOnly = checkInRecord.checkInType === 'CLASS_SESSION' || checkInRecord.packageType === 'CLASS';
+                                const isCombo = checkInRecord.checkInType === 'COMBO_ALL';
+                                const typeLabel = isClassOnly
+                                    ? t('Class Session')
+                                    : isCombo
+                                        ? t('Combo Gym + Class')
+                                        : t('Gym Workout');
+                                const isCoachOverrideAnomaly = checkInRecord.checkInType === 'COACH_OVERRIDE' ||
+                                    checkInRecord.anomalyReason?.includes('Chưa qua') ||
+                                    checkInRecord.anomalyReason?.includes('lễ tân') ||
+                                    checkInRecord.anomalyReason?.includes('Bypassed') ||
+                                    checkInRecord.anomalyReason?.includes('front desk');
+
+                                return (
+                                    <div
+                                        style={{
+                                            backgroundColor: 'var(--bg)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '1rem',
+                                            padding: '1.15rem 1.35rem',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '0.85rem',
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                <Key style={{ width: '17px', height: '17px', color: 'var(--primary)' }} />
+                                                <span style={{ fontSize: '0.86rem', fontWeight: 800, color: 'var(--text)' }}>
+                                                    {t('Check-in Visit Details')}
+                                                </span>
+                                                <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.14rem 0.5rem', borderRadius: '0.4rem', backgroundColor: 'var(--primary-soft)', color: 'var(--primary)', border: '1px solid var(--border)' }}>
+                                                    {typeLabel}
+                                                </span>
+                                            </div>
+                                            <span
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.35rem',
+                                                    padding: '0.24rem 0.65rem',
+                                                    borderRadius: '999px',
+                                                    fontSize: '0.73rem',
+                                                    fontWeight: 700,
+                                                    backgroundColor: isCurrentlyIn ? 'var(--success-soft)' : 'var(--surface)',
+                                                    color: isCurrentlyIn ? 'var(--success-text)' : 'var(--text-muted)',
+                                                    border: '1px solid var(--border)',
+                                                }}
+                                            >
+                                                <span
+                                                    style={{
+                                                        width: '7px',
+                                                        height: '7px',
+                                                        borderRadius: '50%',
+                                                        backgroundColor: isCurrentlyIn ? 'var(--success-text)' : 'var(--text-muted)',
+                                                    }}
+                                                />
+                                                {isCurrentlyIn ? t('In Center') : t('Checked Out')}
+                                            </span>
+                                        </div>
+
+                                        {/* Door Access Code Bar */}
+                                        <div
+                                            style={{
+                                                padding: '0.75rem 0.95rem',
+                                                borderRadius: '0.75rem',
+                                                backgroundColor: 'var(--surface)',
+                                                border: '1px solid var(--border)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                gap: '0.75rem',
+                                                flexWrap: 'wrap',
+                                            }}
+                                        >
+                                            <div>
+                                                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                                                    {t('Door Code:')}
+                                                </div>
+                                                {checkInRecord.accessCode ? (
+                                                    <div style={{ fontFamily: 'monospace', fontSize: '1.05rem', fontWeight: 800, letterSpacing: '0.8px', color: 'var(--text)', marginTop: '0.1rem' }}>
+                                                        {checkInRecord.accessCode}
+                                                    </div>
+                                                ) : isClassOnly ? (
+                                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--primary)', marginTop: '0.15rem' }}>
+                                                        <GraduationCap style={{ width: '14px', height: '14px' }} />
+                                                        <span>{t('Direct class check-in (no gym door code required)')}</span>
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>—</div>
+                                                )}
+                                            </div>
+
+                                            {checkInRecord.accessCode && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleCopyAccessCode(checkInRecord.accessCode)}
+                                                    style={{
+                                                        padding: '0.4rem 0.78rem',
+                                                        borderRadius: '0.5rem',
+                                                        border: '1px solid var(--border)',
+                                                        backgroundColor: copiedAccessCode === checkInRecord.accessCode ? 'var(--success-soft)' : 'var(--bg)',
+                                                        color: copiedAccessCode === checkInRecord.accessCode ? 'var(--success-text)' : 'var(--text)',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 700,
+                                                        cursor: 'pointer',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '0.35rem',
+                                                    }}
+                                                >
+                                                    {copiedAccessCode === checkInRecord.accessCode ? (
+                                                        <Check style={{ width: '13px', height: '13px' }} />
+                                                    ) : (
+                                                        <Copy style={{ width: '13px', height: '13px' }} />
+                                                    )}
+                                                    <span>{copiedAccessCode === checkInRecord.accessCode ? t('Copied') : t('Copy Door Code')}</span>
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Full Package, Facility, Check-in / Check-out Times */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', fontSize: '0.84rem' }}>
+                                            <div>
+                                                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>{t('Package:')}</div>
+                                                <div style={{ fontWeight: 700, color: 'var(--text)', marginTop: '0.15rem' }}>
+                                                    {formatCheckInPackage(checkInRecord.packageName, t) || '—'}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>{t('Facility / Zone:')}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600, color: 'var(--primary)', marginTop: '0.15rem' }}>
+                                                    <MapPin style={{ width: '14px', height: '14px', flexShrink: 0 }} />
+                                                    <span>{formatFacilityName(checkInRecord.facilityName, t) || '—'}</span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>{t('Check-in Time:')}</div>
+                                                <div style={{ fontWeight: 600, color: 'var(--text)', marginTop: '0.15rem' }}>
+                                                    {formatDateTime(checkInRecord.checkInTime)}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>{t('Check-out Time:')}</div>
+                                                <div style={{ fontWeight: 600, color: checkInRecord.checkOutTime ? 'var(--text)' : 'var(--text-muted)', marginTop: '0.15rem' }}>
+                                                    {checkInRecord.checkOutTime ? formatDateTime(checkInRecord.checkOutTime) : '—'}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {checkInRecord.note && (
+                                            <div style={{ padding: '0.6rem 0.8rem', borderRadius: '0.6rem', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', gap: '0.45rem', fontSize: '0.82rem', color: 'var(--text)' }}>
+                                                <FileText style={{ width: '14px', height: '14px', color: 'var(--text-muted)', flexShrink: 0, marginTop: '0.15rem' }} />
+                                                <div>
+                                                    <strong style={{ color: 'var(--text-muted)' }}>{t('Note:')}</strong>{' '}
+                                                    <span>{formatCheckInNote(checkInRecord.note, t)}</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {checkInRecord.hasAnomaly && (
+                                            <div
+                                                style={{
+                                                    padding: '0.65rem 0.85rem',
+                                                    borderRadius: '0.6rem',
+                                                    backgroundColor: isCoachOverrideAnomaly ? 'rgba(245, 158, 11, 0.12)' : 'rgba(239, 68, 68, 0.1)',
+                                                    border: isCoachOverrideAnomaly ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid rgba(239, 68, 68, 0.35)',
+                                                    color: isCoachOverrideAnomaly ? '#D97706' : '#EF4444',
+                                                    display: 'flex',
+                                                    alignItems: 'flex-start',
+                                                    gap: '0.45rem',
+                                                    fontSize: '0.81rem',
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                <ShieldAlert style={{ width: '15px', height: '15px', flexShrink: 0, marginTop: '0.1rem' }} />
+                                                <div>
+                                                    <strong>{t('Anomaly Notice:')}</strong>{' '}
+                                                    <span>{formatCheckInAnomaly(checkInRecord.anomalyReason, t) || t('Coach flagged absent')}</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
                             {member.currentMembershipStatus === 'ACTIVE' && (() => {
                                 const activePkgs = (member.memberships || []).filter((m) => m.active);
                                 const activePkg = activePkgs[0] || (member.memberships || [])[0];

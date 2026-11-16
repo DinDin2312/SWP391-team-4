@@ -56,7 +56,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/resource-images/**").permitAll()
                         .requestMatchers("/api/v1/payment/payos-webhook", "/api/v1/payment/payos-callback", "/api/v1/payment/vietqr-info/**").permitAll()
                         .requestMatchers("/api/v1/payment/vietqr-submit-transfer/**").authenticated()
-                        .requestMatchers("/api/v1/payment/vietqr-confirm/**", "/api/v1/payment/vietqr-reject/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
 
                         // Cho phép truy cập các API của Receptionist
                         .requestMatchers("/api/receptionist/**", "/receptionist/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
