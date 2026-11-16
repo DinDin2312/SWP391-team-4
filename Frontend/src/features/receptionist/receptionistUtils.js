@@ -53,6 +53,68 @@ export function formatFacilityName(facilityName, translate = t) {
 }
 
 /**
+ * Produces a concise 1-line package/class label for the dense check-in table
+ * while full details remain visible in the check-in detail modal.
+ */
+export function formatCompactCheckInPackage(packageName, checkInType, translate = t) {
+  if (!packageName || typeof packageName !== 'string') return '—';
+  const trimmed = packageName.trim();
+  if (!trimmed) return '—';
+
+  if (checkInType === 'COMBO_ALL') {
+    const comboSplit = trimmed.split(/\s+\+\s+(?:Lớp|Class):?\s+/i);
+    if (comboSplit.length > 1 && comboSplit[0].trim()) {
+      return translate(comboSplit[0].trim());
+    }
+  }
+
+  if (checkInType === 'CLASS_SESSION' || /^Lớp:\s*/i.test(trimmed)) {
+    return trimmed.replace(/^(?:Lớp|Class):\s*/i, '').trim() || '—';
+  }
+
+  return translate(trimmed);
+}
+
+/**
+ * Produces a short facility zone label for the check-in table (condensing
+ * duplicated "+ Lớp: <full class name>" suffixes into "+ [CODE]" or "+ Lớp").
+ */
+export function formatCompactFacility(facilityName, translate = t) {
+  if (!facilityName || typeof facilityName !== 'string') return '—';
+  const trimmed = facilityName.trim();
+  if (!trimmed) return '—';
+
+  const parts = trimmed.split(/\s+\+\s+(?:Lớp|Class):?\s+/i);
+  if (parts.length > 1) {
+    const zone = translate(parts[0].trim());
+    const classDetail = parts.slice(1).join(' + ').trim();
+    const codeMatch = /^(\[[^\]]+\])/.exec(classDetail);
+    return codeMatch ? `${zone} + ${codeMatch[1]}` : `${zone} + ${translate('Class')}`;
+  }
+
+  return translate(trimmed);
+}
+
+/**
+ * Formats check-in / check-out timestamps concisely (`HH:mm`, appending `dd/MM`
+ * only if the timestamp is on a different calendar date than `referenceDateStr`).
+ */
+export function formatCompactCheckInTime(dtStr, referenceDateStr = '', loc = 'vi-VN') {
+  if (!dtStr) return '—';
+  const d = new Date(dtStr);
+  if (Number.isNaN(d.getTime())) return String(dtStr);
+
+  const timePart = d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
+  const localYmd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  if (referenceDateStr && localYmd === referenceDateStr) {
+    return timePart;
+  }
+
+  const datePart = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return `${timePart} · ${datePart}`;
+}
+
+/**
  * Parses member pass / package / session check-in QR payloads emitted by member pages or manual input.
  * Supports:
  * - NEXUS-PASS-<userId>-PKG-<membershipId>

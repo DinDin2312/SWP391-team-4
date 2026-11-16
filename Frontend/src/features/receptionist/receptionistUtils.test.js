@@ -6,6 +6,9 @@ import {
   formatCheckInAnomaly,
   formatCheckInPackage,
   formatFacilityName,
+  formatCompactCheckInPackage,
+  formatCompactFacility,
+  formatCompactCheckInTime,
   parseMemberQrPayload,
   computeQrScanLayout,
   binarizeQrRgba,
@@ -92,6 +95,39 @@ test('receptionistUtils: formatCheckInPackage and formatFacilityName handle bili
   assert.equal(formatCheckInPackage(''), '—');
   assert.equal(formatFacilityName(null), '—');
   assert.equal(formatFacilityName(''), '—');
+});
+
+test('receptionistUtils: compact check-in table helpers shorten combo labels, facility suffixes, and same-day times', () => {
+  const { t } = { t: (s) => (s === 'Class' ? 'Lớp học' : s) };
+
+  assert.equal(
+    formatCompactCheckInPackage('Gói Bể Bơi Bốn Mùa 1 Tháng + Lớp [GYM-101] Gym Căn Bản', 'COMBO_ALL', t),
+    'Gói Bể Bơi Bốn Mùa 1 Tháng'
+  );
+  assert.equal(
+    formatCompactCheckInPackage('Lớp: [YOGA-101] Yoga Sáng', 'CLASS_SESSION', t),
+    '[YOGA-101] Yoga Sáng'
+  );
+  assert.equal(formatCompactCheckInPackage('Gói Gym 1 Năm', 'GYM_FACILITY', t), 'Gói Gym 1 Năm');
+  assert.equal(formatCompactCheckInPackage(null, 'GYM_FACILITY', t), '—');
+  assert.equal(formatCompactCheckInPackage('   ', 'GYM_FACILITY', t), '—');
+
+  assert.equal(
+    formatCompactFacility('Khu Gym & CSVC + Lớp: [GYM-101] Gym Căn Bản & Tăng Cơ Cho Nam', t),
+    'Khu Gym & CSVC + [GYM-101]'
+  );
+  assert.equal(
+    formatCompactFacility('Khu Gym & CSVC + Lớp: Yoga Căn Bản', t),
+    'Khu Gym & CSVC + Lớp học'
+  );
+  assert.equal(formatCompactFacility('Phòng Yoga Tầng 2', t), 'Phòng Yoga Tầng 2');
+  assert.equal(formatCompactFacility(null, t), '—');
+  assert.equal(formatCompactFacility('   ', t), '—');
+
+  assert.equal(formatCompactCheckInTime(null, '2026-11-15'), '—');
+  assert.equal(formatCompactCheckInTime('invalid-date', '2026-11-15'), 'invalid-date');
+  assert.match(formatCompactCheckInTime('2026-11-15T18:18:00', '2026-11-15', 'vi-VN'), /^18:18$/);
+  assert.match(formatCompactCheckInTime('2026-11-14T08:05:00', '2026-11-15', 'vi-VN'), /^08:05 · 14\/11$/);
 });
 
 test('receptionistUtils: Lost & Found bilingual i18n translates tabs, badges, actions, and metrics across EN and VI', async () => {
