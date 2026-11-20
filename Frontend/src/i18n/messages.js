@@ -330,6 +330,8 @@ Cancel session?|Hủy buổi tập?
 Change time|Đổi giờ
 Reschedule this session|Đổi lịch buổi này
 Past|Đã qua
+Sessions that have started cannot be moved.|Buổi đã bắt đầu thì không thể đổi lịch.
+This session has already started, so it can no longer be moved or cancelled. Mark it completed after it ends.|Buổi này đã bắt đầu nên không thể đổi lịch hay hủy nữa. Hãy đánh dấu hoàn thành sau khi buổi kết thúc.
 Coach busy|HLV bận
 Member has another session|Học viên trùng lịch
 No suitable room free|Hết phòng phù hợp

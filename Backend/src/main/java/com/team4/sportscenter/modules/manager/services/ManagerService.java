@@ -422,6 +422,9 @@ public class ManagerService {
             if (!ACTIVE_SESSION_STATUSES.contains(String.valueOf(previous.get("status")))) {
                 throw new IllegalArgumentException("Completed or cancelled sessions cannot be edited; create a new session instead");
             }
+            if (!completed && !((LocalDateTime) previous.get("startTime")).isAfter(LocalDateTime.now())) {
+                throw new IllegalArgumentException("Sessions that have started can only be marked completed");
+            }
             if (!request.classId().equals(((Number) previous.get("classId")).intValue())
                     && !managerRepository.scheduleBookings(id).isEmpty()) {
                 throw new IllegalArgumentException("A session with bookings cannot be moved to another class");
