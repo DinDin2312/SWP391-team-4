@@ -17,15 +17,15 @@ test('reports hide stale totals during loading or failed refresh and preserve AP
       const render = extra => renderToStaticMarkup(React.createElement(LanguageContext.Provider, { value: language }, React.createElement(Page, { ...props, ...extra })));
       const normal = render({});
       assert.ok(normal.includes('12.345.678'));
-      assert.ok(normal.includes('Class name from API'));
+      assert.ok(!normal.includes('Class name from API'));
+      assert.ok(!normal.includes(language==='vi'?'Lớp cần chú ý':'Classes needing attention'));
       assert.ok(normal.includes('Package name from API'));
       assert.ok(normal.includes(language==='vi'?'Hội viên mới':'New members'));
       assert.ok(normal.includes(language==='vi'?'9 tài khoản hội viên':'9 existing member accounts'));
       assert.ok(normal.includes(language==='vi'?'Doanh thu khóa học theo môn':'Course revenue by subject'));
       assert.ok(normal.includes('Yoga from API'));
       assert.ok(normal.includes('>17</strong>'));
-      assert.ok(normal.includes('Popular class from API'));
-      assert.ok(normal.includes(language==='vi'?'Lớp được đăng ký nhiều nhất':'Most registered classes'));
+      assert.ok(!normal.includes(language==='vi'?'Lớp được đăng ký nhiều nhất':'Most registered classes'));
       assert.ok(normal.includes('+23%'));
       assert.ok(normal.includes('is-bad'));
       assert.ok(normal.includes(language==='vi'?'Mới trong kỳ':'New this period'));

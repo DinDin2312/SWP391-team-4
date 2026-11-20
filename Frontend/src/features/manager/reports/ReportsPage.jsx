@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ArrowDownRight, ArrowDownToLine, ArrowUpRight, BarChart3, CalendarDays, CheckCircle2, ChevronDown, ClipboardList, Dumbbell, FileClock, Info, Minus, Package, Trophy, UserPlus, Users, Wallet } from 'lucide-react';
+import { ArrowDownRight, ArrowDownToLine, ArrowUpRight, BarChart3, CalendarDays, CheckCircle2, ChevronDown, Dumbbell, FileClock, Info, Minus, Package, UserPlus, Users, Wallet } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { locale } from '../../../i18n/languageStore';
 import { formatDate, formatMoney } from '../../../utils/displayFormat';
@@ -12,7 +12,6 @@ import { packageItems, subjectItems } from './classRevenue';
 import './reports.css';
 import VnDateInput from '../../../components/VnDateInput';
 
-const LOW_OCCUPANCY = 25;
 
 function Empty({ icon: Icon = BarChart3, text }) {
   return <div className="reports-empty"><Icon size={28} strokeWidth={1.5} aria-hidden="true" /><p>{t(text)}</p></div>;
@@ -153,15 +152,6 @@ function RevenueStats({ days }) {
   return <dl className="reports-revenue-stats">{stats.map(stat => <div key={stat.label}><dt>{t(stat.label)}</dt><dd>{stat.value}</dd>{stat.note && <span>{stat.note}</span>}</div>)}</dl>;
 }
 
-function OccupancyMeter({ rate }) {
-  if (rate == null) return <span className="reports-occupancy-none">—</span>;
-  const low = rate < LOW_OCCUPANCY;
-  return <div className={`reports-occupancy${low ? ' is-low' : rate >= 85 ? ' is-high' : ''}`}>
-    <span>{low && <AlertTriangle size={12} aria-label={t('Low occupancy')} />}{percent(Math.round(rate))}</span>
-    <i aria-hidden="true"><b style={{ width: `${Math.max(0, Math.min(rate, 100))}%` }} /></i>
-  </div>;
-}
-
 // Delta vs. the previous period of equal length. `goodWhenUp` decides the colour, the arrow shows direction.
 function Delta({ current, previous, goodWhenUp = true }) {
   if (previous == null || current == null) return null;
@@ -177,24 +167,6 @@ function Delta({ current, previous, goodWhenUp = true }) {
   </span>;
 }
 
-function ClassPopularity({ rows }) {
-  const max = Math.max(...rows.map(row => Number(row.students)), 1);
-  return <ol className="reports-popularity">{rows.map((row, index) => {
-    const students = Number(row.students), fresh = Number(row.newStudents || 0);
-    const meta = [row.subject, row.coach].filter(Boolean).join(' · ');
-    return <li key={row.classId} title={`${row.label}: ${t('{0} students', [count(students)])}${fresh ? `, ${t('{0} new this period', [count(fresh)])}` : ''}`}>
-      <span className={`reports-popularity-rank${index === 0 ? ' is-top' : ''}`}>{index === 0 ? <Trophy size={13} aria-label="1" /> : index + 1}</span>
-      <div className="reports-popularity-body">
-        <div className="reports-popularity-head">
-          <div><strong>{row.label}</strong>{meta && <span>{meta}</span>}</div>
-          <div className="reports-popularity-value"><b>{count(students)}</b><span>{t('students')}</span>{fresh > 0 && <em>{t('+{0} new', [count(fresh)])}</em>}</div>
-        </div>
-        <div className="reports-popularity-bar"><i aria-hidden="true"><b style={{ width: `${students / max * 100}%` }} /></i></div>
-      </div>
-    </li>;
-  })}</ol>;
-}
-
 export default function ReportsPage({ data, filters, appliedFilters, setFilters, reload, page, loading = false, loadError = '', openTransactions }) {
   useLanguage();
   const [activeTab, setActiveTab] = useState('overview');
@@ -207,7 +179,6 @@ export default function ReportsPage({ data, filters, appliedFilters, setFilters,
   const previousRange = report?.previousPeriod;
   const previousDays = useMemo(() => rawPreviousDaily && previousRange ? fillDays(rawPreviousDaily, previousRange.from, previousRange.to) : null, [rawPreviousDaily, previousRange]);
   const hasRevenue = days.some(day => day.value > 0);
-  const classes = report?.classOccupancy || [];
   const valid = Boolean(filters.from && filters.to && filters.from <= filters.to);
   const pendingRange = filters.from !== appliedFilters.from || filters.to !== appliedFilters.to;
   const presets = ['This month', 'Last 7 days', 'Last 30 days'];
@@ -234,7 +205,6 @@ export default function ReportsPage({ data, filters, appliedFilters, setFilters,
     { key: 'confirmedBookings', label: 'Class bookings', icon: Users, value: summary ? count(summary.confirmedBookings) : '—', current: summary?.confirmedBookings, before: previous?.confirmedBookings, note: t('Confirmed session seats by session date'), tone: 'bookings' },
     { key: 'pendingInvoices', label: 'Pending invoices', icon: FileClock, value: summary ? count(summary.pendingInvoices) : '—', current: summary?.pendingInvoices, before: previous?.pendingInvoices, goodWhenUp: false, note: t('Invoices created in this period'), tone: 'pending' },
   ];
-  const popularity = report?.classPopularity || [];
   const loadingBlock = <div className="reports-chart-loading" role="status">{t('Loading...')}</div>;
 
   return <div className="reports-page" aria-busy={loading}>
@@ -299,27 +269,15 @@ export default function ReportsPage({ data, filters, appliedFilters, setFilters,
             {showDaily && <div className="reports-daily-table"><table><thead><tr><th scope="col">{t('Date')}</th><th scope="col">{t('Revenue (VND)')}</th></tr></thead><tbody>{days.filter(day => day.value > 0).map(day => <tr key={day.date}><td>{formatDate(day.date)}</td><td>{formatMoney(day.value)}</td></tr>)}</tbody></table></div>}</>}
         </section>
 
-        <div className="reports-bottom-grid reports-demand-grid">
-          <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Most registered classes')}</h2><p>{t('Members studying each class in this period, each member counted once.')}</p></div><span className="reports-section-icon"><Trophy size={19} aria-hidden="true" /></span></div>
-            {loading ? loadingBlock : popularity.length ? <ClassPopularity rows={popularity} /> : <Empty icon={Trophy} text={loadError ? 'Report data is unavailable.' : 'No class registrations in this period.'} />}
-            {popularity.length > 0 && <p className="reports-card-note">{t('"New" = members whose registration was created in this period.')}</p>}
-          </section>
-          <div className="reports-stack">
+        <div className="reports-bottom-grid">
             <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Course revenue by subject')}</h2><p>{t('Share of course revenue collected in this period. Select a subject to see its classes.')}</p></div><span className="reports-section-icon"><Wallet size={19} aria-hidden="true" /></span></div>
               {loading ? loadingBlock : report ? <RevenueDonut items={subjectItems(report.classRevenue?.subjects)} totalRevenue={summary?.revenue} ariaLabel="Course revenue share by subject" centerLabel="Course revenue" otherLabel="Other subjects" emptyText="No course revenue in this period." shareNote="Courses make up {0} of total revenue ({1}). The rest comes from packages and other payments." /> : <Empty icon={Wallet} text="Report data is unavailable." />}
             </section>
             <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Package revenue')}</h2><p>{t('Share of package revenue collected in this period, with the number of purchases.')}</p></div><span className="reports-section-icon"><Package size={19} aria-hidden="true" /></span></div>
               {loading ? loadingBlock : report ? <RevenueDonut items={packageItems(report.packageRevenue?.packages)} totalRevenue={summary?.revenue} ariaLabel="Package revenue share" centerLabel="Package revenue" otherLabel="Other packages" emptyText="No package revenue in this period." shareNote="Packages make up {0} of total revenue ({1})." /> : <Empty icon={Package} text="Report data is unavailable." />}
             </section>
-          </div>
         </div>
 
-        <div className="reports-attention">
-          <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Classes needing attention')}</h2><p>{t('10 classes with the lowest occupancy in this period.')}</p></div><span className="reports-section-icon is-warning"><AlertTriangle size={19} aria-hidden="true" /></span></div>
-            {loading ? loadingBlock : classes.length ? <div className="reports-class-table"><table><thead><tr><th scope="col">{t('Class')}</th><th scope="col">{t('Students')}</th><th scope="col">{t('Seats booked')}</th><th scope="col">{t('Occupancy')}</th></tr></thead><tbody>{classes.map(item => { const rate = Number(item.capacity) > 0 ? Number(item.value) / Number(item.capacity) * 100 : null; const meta = [item.subject, item.coach].filter(Boolean).join(' · '); return <tr key={item.classId}><td><strong>{item.label}</strong>{meta && <span className="reports-class-meta">{meta}</span>}</td><td>{item.students == null ? '—' : count(item.students)}</td><td>{count(item.value)}/{count(item.capacity)}{item.sessions != null && <span className="reports-class-meta">{t('{0} sessions', [count(item.sessions)])}</span>}</td><td><OccupancyMeter rate={rate} /></td></tr>; })}</tbody></table></div> : <Empty icon={ClipboardList} text={loadError ? 'Report data is unavailable.' : 'No class sessions in this period.'} />}
-            {classes.length > 0 && <div className="reports-card-note reports-occupancy-legend"><span><i className="is-low" aria-hidden="true" />{t('Below {0}%: low occupancy', [LOW_OCCUPANCY])}</span><span><i aria-hidden="true" />{t('Normal')}</span><span><i className="is-high" aria-hidden="true" />{t('85% or more: nearly full')}</span><span>{t('Seats booked = confirmed seats across all sessions / total seats of those sessions.')}</span></div>}
-          </section>
-        </div>
       </>
     )}
   </div>;
