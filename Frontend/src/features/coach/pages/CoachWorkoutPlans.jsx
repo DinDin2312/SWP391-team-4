@@ -1579,7 +1579,7 @@ const CoachWorkoutPlans = () => {
 
                         {/* Day Label / Muscle */}
                         <div className="text-[11px] font-medium truncate text-[var(--text-muted)]">
-                          {isActive ? (dayData.label || t("Buổi tập")) : t("Nghỉ ngơi")}
+                          {isActive ? (dayData.label || t("Buổi tập")) : t("Resting")}
                         </div>
 
                         {/* Ex Count & Duration */}
@@ -1711,14 +1711,14 @@ const CoachWorkoutPlans = () => {
                         {/* Exercise Rows Header on Desktop */}
                         <div className="space-y-3">
                           <div className="hidden md:grid grid-cols-12 gap-3 px-3 py-2 bg-[var(--surface-hover)]/70 rounded-xl text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                            <div className="col-span-1 text-center">STT</div>
-                            <div className="col-span-4">ĐỘNG TÁC LUYỆN TẬP</div>
-                            <div className="col-span-1 text-center">SETS</div>
-                            <div className="col-span-1 text-center">REPS</div>
-                            <div className="col-span-1 text-center">TẠ (KG)</div>
-                            <div className="col-span-1 text-center">NGHỈ (S)</div>
-                            <div className="col-span-2">GHI CHÚ HƯỚNG DẪN</div>
-                            <div className="col-span-1 text-center">XÓA</div>
+                            <div className="col-span-1 text-center">{t("No.")}</div>
+                            <div className="col-span-4">{t("Exercise")}</div>
+                            <div className="col-span-1 text-center">{t("Sets")}</div>
+                            <div className="col-span-1 text-center">{t("Reps")}</div>
+                            <div className="col-span-1 text-center">{t("Load (kg)")}</div>
+                            <div className="col-span-1 text-center">{t("Rest (s)")}</div>
+                            <div className="col-span-2">{t("Coaching notes")}</div>
+                            <div className="col-span-1 text-center">{t("Remove")}</div>
                           </div>
 
                           {/* Exercise List */}
@@ -1900,7 +1900,7 @@ const CoachWorkoutPlans = () => {
 
                                   <div className="grid grid-cols-4 gap-2">
                                     <div>
-                                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1">Sets</label>
+                                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1">{t("Sets")}</label>
                                       <input
                                         type="number"
                                         min="1"
@@ -1911,7 +1911,7 @@ const CoachWorkoutPlans = () => {
                                       />
                                     </div>
                                     <div>
-                                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1">Reps</label>
+                                      <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase block mb-1">{t("Reps")}</label>
                                       <input
                                         type="number"
                                         min="1"
@@ -2019,7 +2019,7 @@ const CoachWorkoutPlans = () => {
                             <span className="px-2 py-0.5 rounded-lg bg-[var(--surface-hover)] text-[var(--text-muted)] font-bold text-xs">
                               {t(day.name)}
                             </span>
-                            <span className="text-xs text-[var(--text-muted)] italic">{t("Ngày nghỉ ngơi (Rest Day)")}</span>
+                            <span className="text-xs text-[var(--text-muted)] italic">{t("Rest Day")}</span>
                           </div>
                           <button
                             type="button"
@@ -2063,7 +2063,7 @@ const CoachWorkoutPlans = () => {
                                 onChange={(e) => handleDayDurationChange(tpCurrentWeek, day.key, e.target.value)}
                                 className="w-14 bg-[var(--surface-hover)] border border-[var(--border)] rounded-lg px-2 py-1 text-center font-bold text-[var(--text)] text-xs"
                               />
-                              <span>phút</span>
+                              <span>{t("min")}</span>
                             </div>
 
                             <button
@@ -2106,7 +2106,7 @@ const CoachWorkoutPlans = () => {
                                   )}
                                 </div>
                                 <div className="w-20 space-y-1">
-                                  <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Sets</label>
+                                  <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t("Sets")}</label>
                                   <input
                                     type="number"
                                     min="1"
@@ -2117,7 +2117,7 @@ const CoachWorkoutPlans = () => {
                                   />
                                 </div>
                                 <div className="w-24 space-y-1">
-                                  <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Reps</label>
+                                  <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase">{t("Reps")}</label>
                                   <input
                                     type="number"
                                     min="1"
@@ -2574,7 +2574,7 @@ const CoachWorkoutPlans = () => {
                 onChange={(e) => setHistoryFilterType(e.target.value)}
                 className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] font-medium"
               >
-                <option value="ALL">{t("Tất cả ({0})", [assignedPlans.length])}</option>
+                <option value="ALL">{t("All ({0})", [assignedPlans.length])}</option>
                 <option value="TRAINING_PLAN">⭐ {t("Kế hoạch tập luyện theo mốc ({0})", [trainingPlanCount])}</option>
                 <option value="SINGLE">⚡ {t("Bài tập giao 1 lần ({0})", [singlePlanCount])}</option>
               </select>

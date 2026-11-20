@@ -264,7 +264,7 @@ const CoachReviewSubmissionModal = ({
                 onClick={onClose}
                 className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] text-xs font-bold transition-all cursor-pointer"
               >
-                {t('Hủy bỏ')}
+                {t('Cancel')}
               </button>
               <button
                 type="submit"

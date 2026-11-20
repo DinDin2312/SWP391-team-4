@@ -588,7 +588,7 @@ const TraineeAssessmentModal = ({
                         max="300"
                         value={weight}
                         onChange={e => setWeight(e.target.value)}
-                        placeholder="VD: 68.5"
+                        placeholder={t("e.g. {0}",["68.5"])}
                         className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] text-center font-bold focus:outline-none focus:border-[var(--primary)]"
                       />
                     </div>
@@ -602,7 +602,7 @@ const TraineeAssessmentModal = ({
                         max="250"
                         value={height}
                         onChange={e => setHeight(e.target.value)}
-                        placeholder="VD: 172"
+                        placeholder={t("e.g. {0}",["172"])}
                         className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] text-center font-bold focus:outline-none focus:border-[var(--primary)]"
                       />
                     </div>
@@ -616,7 +616,7 @@ const TraineeAssessmentModal = ({
                         max="60"
                         value={bodyFatPercentage}
                         onChange={e => setBodyFatPercentage(e.target.value)}
-                        placeholder="VD: 18.5"
+                        placeholder={t("e.g. {0}",["18.5"])}
                         className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] text-center font-bold focus:outline-none focus:border-[var(--primary)]"
                       />
                     </div>
@@ -630,7 +630,7 @@ const TraineeAssessmentModal = ({
                         max="120"
                         value={muscleMass}
                         onChange={e => setMuscleMass(e.target.value)}
-                        placeholder="VD: 32.0"
+                        placeholder={t("e.g. {0}",["32.0"])}
                         className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--text)] text-center font-bold focus:outline-none focus:border-[var(--primary)]"
                       />
                     </div>

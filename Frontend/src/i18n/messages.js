@@ -1,5 +1,100 @@
 // Source labels are explicit keys; API data, identifiers and user input are never translated.
 const pairs = `
+No.|STT
+Coaching notes|Ghi chú hướng dẫn
+Load (kg)|Tạ (kg)
+e.g. {0}|VD: {0}
+Upcoming Sessions|Buổi sắp tới
+Next Teaching Sessions|Buổi dạy sắp tới
+Open Full Roster|Xem toàn bộ lịch dạy
+No upcoming sessions scheduled.|Chưa có buổi dạy nào sắp tới.
+Notification|Thông báo
+Success|Thành công
+Failed to cancel request.|Không thể hủy yêu cầu.
+Make-up class|Dạy bù
+Reset to Not marked|Đặt lại trạng thái Chưa điểm danh
+Error|Lỗi
+Failed to load coach profile.|Không tải được hồ sơ huấn luyện viên.
+Notice|Lưu ý
+Failed to update coach profile.|Không cập nhật được hồ sơ huấn luyện viên.
+Failed to send verification OTP code.|Không gửi được mã OTP xác minh.
+Please fill in all password fields.|Vui lòng điền đầy đủ các ô mật khẩu.
+New password must be at least 6 characters long.|Mật khẩu mới phải có ít nhất 6 ký tự.
+Failed to update password. Please check your credentials.|Không đổi được mật khẩu. Vui lòng kiểm tra lại thông tin.
+Full name, contact info, and coach bio|Họ tên, liên hệ và giới thiệu
+Teaching specialty and class constraints|Chuyên môn giảng dạy và quy định lớp
+Email verification and password access|Xác minh email và mật khẩu
+Schedule and attendance alert toggles|Bật/tắt thông báo lịch dạy và điểm danh
+Loading coach settings...|Đang tải cài đặt huấn luyện viên...
+Update your legal name, contact phone, and professional bio displayed to trainees.|Cập nhật họ tên, số điện thoại và phần giới thiệu hiển thị cho học viên.
+Display name on class rosters|Tên hiển thị trên danh sách lớp
+Member support hotline|Số điện thoại liên hệ
+Certifications and style|Chứng chỉ và phong cách huấn luyện
+characters|ký tự
+Not assigned|Chưa gán
+Authorization|Phân quyền
+Select your primary coaching subject and inspect teaching capacity rules.|Chọn bộ môn giảng dạy chính và xem các quy định về sĩ số lớp.
+System Constraint Rules|Quy định của hệ thống
+Current Assigned|Đang được phân công
+Standard training curriculum at Sports Center.|Giáo trình huấn luyện chuẩn của trung tâm.
+Manage your sign-in email address and update your account password.|Quản lý email đăng nhập và đổi mật khẩu tài khoản.
+Verify New Login Email|Xác minh email đăng nhập mới
+Enter new email address...|Nhập email mới...
+Enter 6-digit verification OTP sent to|Nhập mã OTP 6 số đã gửi tới
+Ensure your account uses a strong, unique password.|Hãy dùng mật khẩu mạnh và không trùng với tài khoản khác.
+All changes are encrypted and safely stored in the NEXUS system.|Mọi thay đổi đều được mã hóa và lưu an toàn trên hệ thống NEXUS.
+Students of the selected class|Học viên lớp đang chọn
+Room / Capacity|Phòng học / Sức chứa
+Registrations for this class|Lượt đăng ký lớp này
+Filter by assigned class|Lọc theo lớp học được phân công
+Select a class below to see only the members registered for it.|Chọn một lớp học bên dưới để xem riêng danh sách học viên đã đăng ký học lớp đó.
+Quick select class:|Chọn nhanh lớp:
+No assigned class information yet.|Chưa có thông tin lớp học được phân công.
+Registered headcount|Sĩ số đã đăng ký
+Clear class filter|Bỏ lọc lớp
+Search students in class|Tìm học viên trong lớp
+Class|Lớp
+has no registered students|chưa có học viên đăng ký
+No members have registered for this class yet. Choose another class or go back to view all.|Hiện tại chưa có học viên nào đăng ký tham gia lớp học này. Bạn có thể chọn lớp khác hoặc quay lại xem tất cả.
+You have no assigned students yet.|Bạn hiện chưa có học viên nào được phân công giảng dạy.
+View all classes|Xem tất cả các lớp
+No students match the keyword|Không tìm thấy học viên nào phù hợp với từ khóa
+Clear search filter|Xóa bộ lọc tìm kiếm
+Enrolled classes|Lớp đang theo học
+Click to view all registered classes|Bấm để xem tất cả lớp học đã đăng ký
+View full profile|Xem hồ sơ chi tiết
+Body fat|Tỉ lệ mỡ
+NEXUS Coach AI filled the exercise into the form. Please review it and press Assign exercise!|NEXUS Coach AI đã điền bài tập vào Form. Coach hãy kiểm tra và nhấn Giao bài tập!
+NEXUS Coach AI filled the training plan into the form. Please review it and press Assign plan!|NEXUS Coach AI đã điền kế hoạch tập luyện vào Form. Coach hãy kiểm tra và nhấn Giao kế hoạch!
+-- Select a class you teach ({0} classes) --|-- Chọn lớp học bạn đang dạy ({0} lớp) --
+week|tuần
+scheduled workouts|buổi tập được lên lịch
+Click to make this a rest day|Nhấn để chuyển thành ngày nghỉ
+Click to enable this training day|Nhấn để bật ngày tập
+Resting|Nghỉ ngơi
+e.g. Chest & Triceps|VD: Ngực & Tay sau (Chest + Triceps)
+Watch demo video|Xem video mẫu
+Rest Day|Ngày nghỉ ngơi (Rest Day)
+e.g. Chest & Triceps (short)|VD: Ngực & Tay sau
+Creating plan...|Đang khởi tạo kế hoạch...
+All ({0})|Tất cả ({0})
+page|trang
+Hello Coach! I'm NEXUS COACH AI, your training assistant. Tell me what exercise to assign, to which student, or ask for a training plan that fits their condition! 💪|Xin chào Coach! Mình là NEXUS COACH AI - trợ lý chuyên môn của bạn. Hãy nói cho mình biết bạn muốn giao bài tập gì, cho học viên nào, hoặc cần tư vấn kế hoạch huấn luyện theo thể trạng nhé! 💪
+Your browser does not support text-to-speech.|Trình duyệt của bạn không hỗ trợ đọc văn bản.
+Sorry Coach, the AI is busy or overloaded. Please try again in a moment!|Xin lỗi Coach, hệ thống AI hiện đang bận hoặc quá tải. Vui lòng thử lại sau giây lát!
+Training Co-Pilot & Exercise Specialist|Trợ lý huấn luyện & chuyên gia bài tập
+Stop reading|Dừng đọc
+Listen to the AI read the answer|Nghe AI đọc câu trả lời
+Listen|Nghe AI đọc
+Training plan drafted into the form|Đã tự động soạn kế hoạch tập luyện vào Form
+Exercise filled into the form|Đã tự động điền bài tập vào Form
+View drafted plan|Xem giáo án vừa soạn
+View filled exercise|Xem bài tập vừa điền
+Go to form|Đi tới Form
+Ask AI: create exercises, weekly plans, analyse students...|Hỏi AI: lên bài tập, kế hoạch tuần, phân tích học viên...
+Send message|Gửi tin nhắn
+Coach AI suggests and fills the form; you review everything before assigning.|Coach AI tự động gợi ý & điền form, Coach toàn quyền kiểm tra trước khi giao.
+Cancel|Hủy bỏ
 Operations feed|Hoạt động vận hành
 Sessions in the next 7 days|Buổi tập trong 7 ngày tới
 Revenue this month|Doanh thu tháng này
