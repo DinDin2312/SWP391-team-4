@@ -26,4 +26,5 @@ public class UserCreditResponse {
     private CreditStatus status;
     private LocalDateTime createdAt;
     private boolean isExpired;
+    private Integer reservedInvoiceId;
 }

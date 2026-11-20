@@ -36,7 +36,7 @@ public class SystemNotificationScheduler {
         for (UserMembership um : expiringMemberships) {
             Notification notification = Notification.builder()
                 .user(um.getUser())
-                .title("Membership Expiring Soon")
+                .title("Gói hội viên sắp hết hạn / Membership Expiring Soon")
                 .message("Your membership package '" + um.getAPackage().getPackageName() + "' will expire in 3 days (" + threeDaysFromNow + "). Please renew it to avoid interruption.")
                 .type("SYSTEM")
                 .isRead(false)
@@ -63,7 +63,7 @@ public class SystemNotificationScheduler {
             
             Notification notification = Notification.builder()
                 .user(b.getUser())
-                .title("Upcoming Class Reminder")
+                .title("Nhắc nhở lịch học sắp tới / Upcoming Class Reminder")
                 .message("Reminder: You have a '" + className + "' class scheduled for tomorrow at " + startTime + ".")
                 .type("SYSTEM")
                 .isRead(false)

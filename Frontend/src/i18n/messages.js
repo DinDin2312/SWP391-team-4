@@ -6012,5 +6012,55 @@ Object.assign(translations, {
     'Đã hủy toàn bộ khóa học ({0} buổi sắp tới) và tự động hoàn 100% Voucher tín dụng cho {1} học viên.',
   ],
   '100% Cash Refund': ['100% Cash Refund', 'Hoàn 100% tiền mặt'],
+  'Hide Details': ['Hide Details', 'Ẩn chi tiết'],
+  'View Order Details': ['View Order Details', 'Xem chi tiết đơn'],
+  'Applied voucher:': ['Applied voucher:', 'Voucher áp dụng:'],
+  'Locked Services in Session': ['Locked Services in Session', 'Dịch vụ trong phiên'],
+  'Order Breakdown & Vouchers': ['Order Breakdown & Vouchers', 'Chi tiết đơn & Voucher'],
+  'Member Tier Discount': ['Member Tier Discount', 'Giảm giá hạng thành viên'],
+  'Voucher / Promo': ['Voucher / Promo', 'Voucher / Ưu đãi'],
+  'Cancelling this order will return all locked services and applied vouchers to your cart immediately.': [
+    'Cancelling this order will return all locked services and applied vouchers to your cart immediately.',
+    'Hủy đơn hàng này sẽ trả lại toàn bộ dịch vụ và voucher đã áp dụng về giỏ hàng để bạn chỉnh sửa hoặc thanh toán mới.',
+  ],
+  'Complete or cancel this session before starting a new checkout.': [
+    'Complete or cancel this session before starting a new checkout.',
+    'Vui lòng hoàn tất hoặc hủy phiên này trước khi tạo thanh toán mới.',
+  ],
+  'This checkout session is locked with': [
+    'This checkout session is locked with',
+    'Phiên này đang giữ',
+  ],
+  'No additional items in your new cart': [
+    'No additional items in your new cart',
+    'Chưa có dịch vụ mới nào trong giỏ',
+  ],
+  'Please complete or cancel your active pending order above.': [
+    'Please complete or cancel your active pending order above.',
+    'Vui lòng hoàn tất hoặc hủy đơn hàng đang chờ xử lý ở trên.',
+  ],
+  'New Cart Items': ['New Cart Items', 'Mục mới trong giỏ'],
+  'Please complete or cancel the active pending session before creating a new checkout.': [
+    'Please complete or cancel the active pending session before creating a new checkout.',
+    'Vui lòng hoàn tất hoặc hủy phiên thanh toán đang chờ trước khi tạo đơn mới.',
+  ],
+  'Finish Pending Order First': ['Finish Pending Order First', 'Vui lòng xử lý đơn chờ trước'],
+  'Pending checkout session has been cancelled. Items and vouchers have been returned to your cart.': [
+    'Pending checkout session has been cancelled. Items and vouchers have been returned to your cart.',
+    'Đã hủy phiên thanh toán đang chờ. Các dịch vụ và voucher đã được trả về giỏ hàng.',
+  ],
+  'Pending Order': ['Pending Order', 'Đơn chờ TT'],
+  'Handle Pending Order': ['Handle Pending Order', 'Xử lý đơn chờ'],
+  'Payment Awaiting Reconciliation': ['Payment Awaiting Reconciliation', 'Thanh toán chờ đối soát'],
+  'This payment session is no longer active. Please return to your cart to review your items.': [
+    'This payment session is no longer active. Please return to your cart to review your items.',
+    'Phiên thanh toán này không còn hiệu lực. Vui lòng quay lại giỏ hàng để kiểm tra dịch vụ.',
+  ],
+  'View Invoices': ['View Invoices', 'Xem hóa đơn'],
+  'Expired': ['Expired', 'Đã hết hạn'],
+  'Payment for this order was already received and activated.': [
+    'Payment for this order was already received and activated.',
+    'Đơn hàng này đã được thanh toán và kích hoạt trước đó.',
+  ],
 });
 

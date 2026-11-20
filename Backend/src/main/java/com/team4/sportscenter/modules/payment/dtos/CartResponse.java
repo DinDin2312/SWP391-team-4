@@ -20,4 +20,13 @@ public class CartResponse {
     private String pendingPaymentUrl;
     private String pendingPaymentMethod;
     private String pendingInvoiceStatus;
+    private List<CartItemDto> pendingItems;
+    private BigDecimal pendingSubtotal;
+    private BigDecimal pendingDiscountAmount;
+    private BigDecimal pendingTotalAmount;
+    private String pendingVoucherCode;
+    private String pendingCreditCode;
+    private BigDecimal pendingCreditDiscount;
+    private Long pendingRemainingSeconds;
+    private java.time.LocalDateTime pendingCreatedAt;
 }

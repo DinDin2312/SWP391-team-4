@@ -223,6 +223,13 @@ export function formatMemberNotificationTitle(title, lang = 'vi') {
     return lang === 'vi' ? viPart : enPart;
   }
 
+  if (/^(?:Upcoming Class Reminder|Nhắc nhở lịch học sắp tới)$/i.test(clean)) {
+    return lang === 'vi' ? 'Nhắc nhở lịch học sắp tới' : 'Upcoming Class Reminder';
+  }
+  if (/^(?:Membership Expiring Soon|Gói hội viên sắp hết hạn)$/i.test(clean)) {
+    return lang === 'vi' ? 'Gói hội viên sắp hết hạn' : 'Membership Expiring Soon';
+  }
+
   return clean;
 }
 
@@ -242,6 +249,36 @@ export function parseMemberNotificationBody(message, lang = 'vi') {
       lead: lang === 'vi'
         ? `Hóa đơn ${code} đã thanh toán thành công. Bấm "Xem hóa đơn" bên dưới để xem chi tiết giao dịch.`
         : `Invoice ${code} has been paid successfully. Click "View Invoices" below to inspect transaction details.`,
+      details: [],
+      bullets: [],
+      outro: ''
+    };
+  }
+
+  const classReminderMatch =
+    text.match(/^Reminder:\s*You have a ['"](.+?)['"] class scheduled for tomorrow at (\d{1,2}:\d{2})\.?$/i) ||
+    text.match(/^Nhắc nhở:\s*Bạn có buổi học lớp ['"](.+?)['"] vào ngày mai lúc (\d{1,2}:\d{2})\.?$/i);
+  if (classReminderMatch) {
+    const [, className, startTime] = classReminderMatch;
+    return {
+      lead: lang === 'vi'
+        ? `Nhắc nhở: Bạn có buổi học lớp '${className}' vào ngày mai lúc ${startTime}.`
+        : `Reminder: You have a '${className}' class scheduled for tomorrow at ${startTime}.`,
+      details: [],
+      bullets: [],
+      outro: ''
+    };
+  }
+
+  const expiryMatch =
+    text.match(/^Your membership package ['"](.+?)['"] will expire in (\d+) days \(([^)]+)\)\.\s*Please renew it to avoid interruption\.?$/i) ||
+    text.match(/^Gói hội viên ['"](.+?)['"] của bạn sẽ hết hạn sau (\d+) ngày \(([^)]+)\)\.\s*Vui lòng gia hạn để không bị gián đoạn(?: tập luyện)?\.?$/i);
+  if (expiryMatch) {
+    const [, pkgName, days, dateStr] = expiryMatch;
+    return {
+      lead: lang === 'vi'
+        ? `Gói hội viên '${pkgName}' của bạn sẽ hết hạn sau ${days} ngày (${dateStr}). Vui lòng gia hạn để không bị gián đoạn tập luyện.`
+        : `Your membership package '${pkgName}' will expire in ${days} days (${dateStr}). Please renew it to avoid interruption.`,
       details: [],
       bullets: [],
       outro: ''
@@ -381,4 +418,105 @@ export function buildMemberQrPayload({ userId = null, email = null, membershipId
 export function buildMemberQrImageUrl(payload, size = 220) {
   if (!payload) return '';
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(payload)}`;
+}
+
+/**
+ * Returns true if the invoice payment method uses the VietQR / PayOS transfer flow.
+ */
+export function isVietQRPendingMethod(method) {
+  const upper = String(method || '').trim().toUpperCase();
+  return upper === 'PAYOS' || upper === 'VIETQR';
+}
+
+/**
+ * Normalizes /api/v1/payment/cart payload into unlocked cart items and locked pending order state.
+ */
+export function summarizeMemberCartState(cartData) {
+  const safe = cartData && typeof cartData === 'object' ? cartData : {};
+  const items = Array.isArray(safe.items) ? safe.items : [];
+  const totalPrice = Number(safe.totalPrice || 0);
+  const hasPendingCheckout = Boolean(safe.hasPendingCheckout || safe.pendingInvoiceId);
+  const pendingItems = Array.isArray(safe.pendingItems) ? safe.pendingItems : [];
+
+  const pendingSubtotal = Number(
+    safe.pendingSubtotal ??
+      pendingItems.reduce((sum, item) => sum + Number(item?.price || 0), 0)
+  );
+  const pendingTotalAmount = Number(safe.pendingTotalAmount ?? pendingSubtotal);
+  const pendingDiscountAmount = Number(
+    safe.pendingDiscountAmount ?? Math.max(0, pendingSubtotal - pendingTotalAmount)
+  );
+  const pendingCreditDiscount = Number(safe.pendingCreditDiscount || 0);
+  const pendingPaymentMethod = safe.pendingPaymentMethod || 'PAYOS';
+  const pendingRemainingSeconds =
+    safe.pendingRemainingSeconds != null && Number.isFinite(Number(safe.pendingRemainingSeconds))
+      ? Math.max(0, Math.floor(Number(safe.pendingRemainingSeconds)))
+      : 900;
+
+  const pendingOrder = hasPendingCheckout
+    ? {
+        invoiceId: safe.pendingInvoiceId,
+        paymentUrl: safe.pendingPaymentUrl || (isVietQRPendingMethod(pendingPaymentMethod) ? `/member/vietqr-pay?invoiceId=${safe.pendingInvoiceId}` : null),
+        paymentMethod: pendingPaymentMethod,
+        status: safe.pendingInvoiceStatus || 'PENDING',
+        items: pendingItems,
+        subtotal: pendingSubtotal,
+        discountAmount: pendingDiscountAmount,
+        totalAmount: pendingTotalAmount,
+        voucherCode: safe.pendingVoucherCode || null,
+        creditCode: safe.pendingCreditCode || null,
+        creditDiscount: pendingCreditDiscount,
+        remainingSeconds: pendingRemainingSeconds,
+        createdAt: safe.pendingCreatedAt || null,
+        isVietQR: isVietQRPendingMethod(pendingPaymentMethod),
+      }
+    : null;
+
+  const addedPackageMap = {};
+  for (const item of pendingItems) {
+    if (item?.type === 'PACKAGE' && item.packageId != null) {
+      addedPackageMap[item.packageId] = 'PENDING_ORDER';
+    }
+  }
+  for (const item of items) {
+    if (item?.type === 'PACKAGE' && item.packageId != null) {
+      addedPackageMap[item.packageId] = 'CART';
+    }
+  }
+
+  const badgeCount = items.length + (hasPendingCheckout ? Math.max(pendingItems.length, 1) : 0);
+
+  return {
+    items,
+    totalPrice,
+    hasPendingCheckout,
+    pendingOrder,
+    addedPackageMap,
+    badgeCount,
+  };
+}
+
+/**
+ * Filters course credits that are active, non-expired, and not reserved by an active pending invoice.
+ */
+export function filterSelectableCredits(credits) {
+  if (!Array.isArray(credits)) return [];
+  return credits.filter(
+    (c) =>
+      c &&
+      c.status === 'ACTIVE' &&
+      Number(c.remainingAmount) > 0 &&
+      !c.reservedInvoiceId &&
+      !c.isExpired
+  );
+}
+
+/**
+ * Formats seconds into MM:SS countdown string.
+ */
+export function formatPendingCountdown(seconds) {
+  const clamped = Number.isFinite(Number(seconds)) ? Math.max(0, Math.floor(Number(seconds))) : 0;
+  const mins = Math.floor(clamped / 60);
+  const secs = clamped % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }

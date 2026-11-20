@@ -7,12 +7,19 @@ import axios from 'axios';
 import {
   ShoppingCart, Trash2, ArrowRight, CreditCard,
   Wallet, QrCode, AlertCircle, CheckCircle2, Ticket, X,
-  Clock, XCircle, Loader2
+  Clock, XCircle, Loader2, ChevronDown, ChevronUp, FileText, Lock
 } from 'lucide-react';
 import { API_ORIGIN } from '../../../config/apiBase.js';
+import {
+  summarizeMemberCartState,
+  filterSelectableCredits,
+  formatPendingCountdown,
+  formatPaymentMethodLabel
+} from '../memberUtils';
 
 const PaymentCart = () => {
-  useLanguage();
+  const currentLang = useLanguage();
+  const lang = (currentLang === 'vi' || globalThis.localStorage?.getItem('nexusLanguage') === 'vi') ? 'vi' : 'en';
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
@@ -25,6 +32,8 @@ const PaymentCart = () => {
   const [selectedMethod, setSelectedMethod] = useState('payos');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [pendingInvoice, setPendingInvoice] = useState(null);
+  const [pendingTimeLeft, setPendingTimeLeft] = useState(0);
+  const [showPendingDetails, setShowPendingDetails] = useState(false);
   const [cancellingCheckout, setCancellingCheckout] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
@@ -71,16 +80,43 @@ const PaymentCart = () => {
     const handleCartUpdated = () => {
       fetchCartItems(true);
     };
+    const handleFocusSync = () => {
+      if (document.visibilityState === 'visible') {
+        fetchCartItems(true);
+      }
+    };
 
     window.addEventListener('pageshow', handlePageShow);
     window.addEventListener('pagehide', handlePageHide);
     window.addEventListener('cartUpdated', handleCartUpdated);
+    window.addEventListener('focus', handleFocusSync);
+    document.addEventListener('visibilitychange', handleFocusSync);
     return () => {
       window.removeEventListener('pageshow', handlePageShow);
       window.removeEventListener('pagehide', handlePageHide);
       window.removeEventListener('cartUpdated', handleCartUpdated);
+      window.removeEventListener('focus', handleFocusSync);
+      document.removeEventListener('visibilitychange', handleFocusSync);
     };
   }, []);
+
+  const pendingInvoiceId = pendingInvoice?.invoiceId || null;
+
+  useEffect(() => {
+    if (!pendingInvoiceId) return;
+    const timer = setInterval(() => {
+      setPendingTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          fetchCartItems(true);
+          window.dispatchEvent(new Event('cartUpdated'));
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [pendingInvoiceId]);
 
   useEffect(() => {
     if (!checkoutLoading) return;
@@ -102,17 +138,19 @@ const PaymentCart = () => {
       ]);
 
       if (cartRes.status === 'fulfilled' && cartRes.value?.data) {
-        setItems(cartRes.value.data.items || []);
-        setTotalPrice(cartRes.value.data.totalPrice || 0);
-        if (cartRes.value.data.hasPendingCheckout || cartRes.value.data.pendingInvoiceId) {
-          setPendingInvoice({
-            invoiceId: cartRes.value.data.pendingInvoiceId,
-            paymentUrl: cartRes.value.data.pendingPaymentUrl,
-            paymentMethod: cartRes.value.data.pendingPaymentMethod,
-            status: cartRes.value.data.pendingInvoiceStatus || 'PENDING'
-          });
+        const cartState = summarizeMemberCartState(cartRes.value.data);
+        setItems(cartState.items);
+        setTotalPrice(cartState.totalPrice);
+        if (cartState.pendingOrder) {
+          setPendingInvoice(cartState.pendingOrder);
+          setPendingTimeLeft(cartState.pendingOrder.remainingSeconds);
+          if (cartState.items.length === 0) {
+            setShowPendingDetails((prev) => prev || !silent);
+          }
         } else {
           setPendingInvoice(null);
+          setPendingTimeLeft(0);
+          setShowPendingDetails(false);
         }
       }
 
@@ -124,8 +162,9 @@ const PaymentCart = () => {
       }
 
       if (creditsRes.status === 'fulfilled' && Array.isArray(creditsRes.value?.data)) {
-        const active = creditsRes.value.data.filter(c => c.status === 'ACTIVE' && Number(c.remainingAmount) > 0);
+        const active = filterSelectableCredits(creditsRes.value.data);
         setAvailableCredits(active);
+        setSelectedCredit((prev) => (prev && active.some((c) => c.creditCode === prev.creditCode) ? prev : null));
       }
 
       setError('');
@@ -145,20 +184,39 @@ const PaymentCart = () => {
       const invId = targetInvoiceId || pendingInvoice?.invoiceId;
       try {
         await axios.post(`${API_ORIGIN}/api/v1/payment/cancel-pending-checkout`, { invoiceId: invId }, { headers: authHeader });
-      } catch  {
+      } catch (primaryErr) {
+        if (primaryErr?.response?.data?.code === 'PAYMENT_ALREADY_COMPLETED') {
+          throw primaryErr;
+        }
         await axios.post(`${API_ORIGIN}/api/v1/payment/cart/cancel-pending`, {}, { headers: authHeader });
       }
       setToast({
         visible: true,
         type: 'success',
         title: t('Checkout Cancelled'),
-        message: t('Pending checkout session has been cancelled. Your cart is now unlocked.')
+        message: t('Pending checkout session has been cancelled. Items and vouchers have been returned to your cart.')
       });
       setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 4000);
       setPendingInvoice(null);
+      setPendingTimeLeft(0);
+      setShowPendingDetails(false);
       await fetchCartItems();
       window.dispatchEvent(new Event('cartUpdated'));
     } catch (err) {
+      if (err?.response?.data?.code === 'PAYMENT_ALREADY_COMPLETED') {
+        setToast({
+          visible: true,
+          type: 'success',
+          title: t('Payment Successful!'),
+          message: t('Your payment has been confirmed and services have been activated.')
+        });
+        setTimeout(() => setToast({ visible: false, type: 'success', title: '', message: '' }), 4000);
+        setPendingInvoice(null);
+        await fetchCartItems();
+        window.dispatchEvent(new Event('cartUpdated'));
+        window.dispatchEvent(new Event('notificationUpdated'));
+        return;
+      }
       const msg = err.response?.data?.message || err.response?.data || t('Unable to cancel checkout session.');
       setToast({ visible: true, type: 'error', title: t('Error'), message: t(msg) });
       setTimeout(() => setToast({ visible: false, type: 'error', title: '', message: '' }), 4000);
@@ -225,13 +283,23 @@ const PaymentCart = () => {
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
+    if (pendingInvoice) {
+      setToast({
+        visible: true,
+        type: 'error',
+        title: t('Pending Checkout Session'),
+        message: t('Please complete or cancel the active pending session before creating a new checkout.')
+      });
+      setTimeout(() => setToast({ visible: false, type: 'error', title: '', message: '' }), 4500);
+      return;
+    }
     try {
       setCheckoutLoading(true);
       const token = localStorage.getItem('token');
       const response = await axios.post(`${API_ORIGIN}/api/v1/payment/checkout`, {
         paymentMethod: selectedMethod,
         creditCode: selectedCredit ? selectedCredit.creditCode : null,
-        cancelPending: true
+        cancelPending: false
       }, {
         headers: { Authorization: `Bearer ${token}`}
       });
@@ -311,80 +379,217 @@ const PaymentCart = () => {
         <p className="text-sm text-[var(--text-muted)] mt-2">{t("Courses in cart are first-come, first-served. Complete payment to secure your spot.")}</p>
       </section>
 
-      {/* Pending Checkout Alert Banner */}
-      {pendingInvoice && (
-        <div className="mb-8 p-5 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
-              <Clock className="w-5 h-5 animate-pulse" />
+      {/* Pending Checkout Order Card */}
+      {pendingInvoice && (() => {
+        const pendingItems = pendingInvoice.items || [];
+        const totalDiscount = Number(pendingInvoice.discountAmount || 0);
+        const creditDiscount = Number(pendingInvoice.creditDiscount || 0);
+        const loyaltyDiscount = Math.max(0, totalDiscount - creditDiscount);
+        const hasVoucherDisplay = Boolean(pendingInvoice.creditCode || (pendingInvoice.voucherCode && creditDiscount > 0));
+
+        return (
+          <div className="mb-8 rounded-2xl bg-blue-500/10 border border-blue-500/30 shadow-sm overflow-hidden">
+            <div className="p-5 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <Clock className="w-5 h-5 animate-pulse" />
+                </div>
+                <div className="flex flex-col">
+                  <div className="font-bold text-sm text-[var(--text)] flex flex-wrap items-center gap-2">
+                    <span>{t("Pending Checkout Session")}</span>
+                    <span className="font-mono text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold">
+                      #{pendingInvoice.invoiceId}
+                    </span>
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)]">
+                      {formatPaymentMethodLabel(pendingInvoice.paymentMethod, lang)}
+                    </span>
+                    <span className={`font-mono text-[11px] font-bold px-2 py-0.5 rounded ${pendingTimeLeft > 0 ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
+                      {pendingTimeLeft > 0 ? `${t("Expires in:")} ${formatPendingCountdown(pendingTimeLeft)}` : t("Expired")}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--text-muted)] mt-1.5 leading-relaxed">
+                    {t("This checkout session is locked with")} <strong className="text-[var(--text)]">{pendingItems.length}</strong> {t("services")} • <strong className="text-[var(--text)] font-mono">{formatMoney(pendingInvoice.totalAmount)}</strong>
+                    {hasVoucherDisplay && (
+                      <> • {t("Applied voucher:")} <strong className="font-mono text-emerald-600 dark:text-emerald-400">{pendingInvoice.creditCode || pendingInvoice.voucherCode}</strong></>
+                    )}.{' '}
+                    {t("Complete or cancel this session before starting a new checkout.")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto shrink-0 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowPendingDetails((prev) => !prev)}
+                  className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text)] transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5 text-blue-500" />
+                  <span>{showPendingDetails ? t("Hide Details") : t("View Order Details")}</span>
+                  {showPendingDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCancelPendingCheckout(pendingInvoice.invoiceId)}
+                  disabled={cancellingCheckout || confirmingPayment}
+                  className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-[var(--border)] text-[var(--danger-text)] hover:bg-[var(--danger-soft)] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {cancellingCheckout ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                  {t("Cancel Order")}
+                </button>
+                {pendingInvoice.isVietQR && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (pendingInvoice.paymentUrl) {
+                          navigate(pendingInvoice.paymentUrl);
+                        } else {
+                          navigate(`/member/vietqr-pay?invoiceId=${pendingInvoice.invoiceId}`);
+                        }
+                      }}
+                      disabled={cancellingCheckout || confirmingPayment || pendingTimeLeft <= 0}
+                      className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text)] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <QrCode className="w-3.5 h-3.5 text-blue-500" />
+                      {t("View QR Code")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleConfirmPayment(pendingInvoice.invoiceId)}
+                      disabled={cancellingCheckout || confirmingPayment || pendingTimeLeft <= 0}
+                      className="px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white transition-all shadow-md shadow-emerald-500/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {confirmingPayment ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      {confirmingPayment ? t("Confirming...") : t("I Have Paid (Confirm Now)")}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-sm text-[var(--text)] flex items-center gap-2">
-                {t("Pending Checkout Session")}
-                <span className="font-mono text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold">
-                  #{pendingInvoice.invoiceId}
-                </span>
-              </span>
-              <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
-                {t("You have a checkout session awaiting payment. You can confirm your transfer immediately to activate your services, view QR code, or cancel this order to unlock your cart.")}
-              </p>
-            </div>
+
+            {showPendingDetails && (
+              <div className="px-5 pb-5 pt-4 border-t border-blue-500/20 bg-[var(--surface)]/80 space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                  <div className="lg:col-span-7 space-y-2.5">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                      {t("Locked Services in Session")} #{pendingInvoice.invoiceId} ({pendingItems.length})
+                    </h4>
+                    {pendingItems.map((item, idx) => (
+                      <div key={idx} className="p-3.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] flex items-center justify-between gap-3">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-bold text-sm text-[var(--text)]">
+                            {item.type === 'PACKAGE' ? item.packageName : item.className}
+                          </span>
+                          <span className="text-xs text-[var(--text-muted)]">
+                            {item.type === 'PACKAGE'
+                              ? `${t("Duration:")} ${item.durationDays || 30} ${t("Days")}`
+                              : `${t("Coach:")} ${item.coachName || t("Unknown")} • ${item.sessionCount || 1} ${t("Sessions")}`}
+                          </span>
+                        </div>
+                        <span className="font-mono font-bold text-sm text-[var(--text)] shrink-0">
+                          {formatMoney(item.price)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="lg:col-span-5 p-4 rounded-xl bg-[var(--bg)] border border-[var(--border)] space-y-2.5 text-xs">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">
+                      {t("Order Breakdown & Vouchers")}
+                    </h4>
+                    <div className="flex justify-between">
+                      <span className="text-[var(--text-muted)]">{t("Subtotal")}</span>
+                      <span className="font-mono font-semibold text-[var(--text)]">{formatMoney(pendingInvoice.subtotal)}</span>
+                    </div>
+                    {loyaltyDiscount > 0 && (
+                      <div className="flex justify-between text-[var(--success-text)]">
+                        <span>{t("Member Tier Discount")} (LOYALTYVIP)</span>
+                        <span className="font-mono font-semibold">- {formatMoney(loyaltyDiscount)}</span>
+                      </div>
+                    )}
+                    {pendingInvoice.creditCode ? (
+                      <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <span className="flex items-center gap-1.5">
+                          <Ticket className="w-3.5 h-3.5" />
+                          <span>{t("Voucher Credit")}</span>
+                          <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/25">
+                            {pendingInvoice.creditCode}
+                          </span>
+                        </span>
+                        <span className="font-mono">- {formatMoney(creditDiscount)}</span>
+                      </div>
+                    ) : pendingInvoice.voucherCode && loyaltyDiscount === 0 && totalDiscount > 0 ? (
+                      <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <span>{t("Voucher / Promo")} ({pendingInvoice.voucherCode})</span>
+                        <span className="font-mono">- {formatMoney(totalDiscount)}</span>
+                      </div>
+                    ) : null}
+                    <div className="pt-2.5 border-t border-[var(--border)] flex justify-between items-center">
+                      <span className="font-bold text-sm text-[var(--text)]">{t("Total")}</span>
+                      <span className="text-lg font-black font-mono text-[var(--text)]">{formatMoney(pendingInvoice.totalAmount)}</span>
+                    </div>
+                    <p className="text-[11px] text-[var(--text-muted)] pt-1 leading-relaxed">
+                      {t("Cancelling this order will return all locked services and applied vouchers to your cart immediately.")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto shrink-0 justify-end">
-            <button
-              type="button"
-              onClick={() => handleCancelPendingCheckout(pendingInvoice.invoiceId)}
-              disabled={cancellingCheckout || confirmingPayment}
-              className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-[var(--border)] text-[var(--danger-text)] hover:bg-[var(--danger-soft)] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              {cancellingCheckout ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-              {t("Cancel Order")}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (pendingInvoice.paymentUrl) {
-                  navigate(pendingInvoice.paymentUrl);
-                } else {
-                  navigate(`/member/vietqr-pay?invoiceId=${pendingInvoice.invoiceId}`);
-                }
-              }}
-              disabled={cancellingCheckout || confirmingPayment}
-              className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-[var(--text)] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              <QrCode className="w-3.5 h-3.5 text-blue-500" />
-              {t("View QR Code")}
-            </button>
-            <button
-              type="button"
-              onClick={() => handleConfirmPayment(pendingInvoice.invoiceId)}
-              disabled={cancellingCheckout || confirmingPayment}
-              className="px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white transition-all shadow-md shadow-emerald-500/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              {confirmingPayment ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-              {confirmingPayment ? t("Confirming...") : t("I Have Paid (Confirm Now)")}
-            </button>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {error ? (
         <div className="p-4 rounded-xl bg-[var(--danger-soft)] border border-[var(--danger-soft)] text-[var(--danger-text)] text-sm">
           {t(error)}
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-[var(--surface)] rounded-2xl border border-[var(--border)]">
-          <ShoppingCart className="w-16 h-16 text-[var(--text-muted)] mb-4" />
-          <h2 className="text-xl font-bold text-[var(--text)]">{t("Your cart is empty")}</h2>
-          <p className="text-sm text-[var(--text-muted)] mt-2 mb-6">{t("Looks like you haven't enrolled in any courses yet.")}</p>
-          <button onClick={() => navigate('/member/book-class')} className="px-6 py-3 bg-[var(--primary)] hover:bg-[var(--primary)] text-[color:var(--on-primary)] rounded-xl font-bold transition-colors">{t("Browse Courses")}</button>
-        </div>
+        pendingInvoice ? (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 bg-[var(--surface)] rounded-2xl border border-[var(--border)]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[var(--surface-hover)] text-[var(--text-muted)] flex items-center justify-center shrink-0">
+                <ShoppingCart className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-[var(--text)]">{t("No additional items in your new cart")}</h2>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  {t("Please complete or cancel your active pending order above.")}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => navigate('/member/package-store')}
+                className="px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--bg)] hover:bg-[var(--surface-hover)] text-xs font-semibold text-[var(--text)] transition-colors cursor-pointer"
+              >
+                {t("Explore Package Store")}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/member/book-class')}
+                className="px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--bg)] hover:bg-[var(--surface-hover)] text-xs font-semibold text-[var(--text)] transition-colors cursor-pointer"
+              >
+                {t("Browse Courses")}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 bg-[var(--surface)] rounded-2xl border border-[var(--border)]">
+            <ShoppingCart className="w-16 h-16 text-[var(--text-muted)] mb-4" />
+            <h2 className="text-xl font-bold text-[var(--text)]">{t("Your cart is empty")}</h2>
+            <p className="text-sm text-[var(--text-muted)] mt-2 mb-6">{t("Looks like you haven't enrolled in any courses yet.")}</p>
+            <button onClick={() => navigate('/member/book-class')} className="px-6 py-3 bg-[var(--primary)] hover:bg-[var(--primary)] text-[color:var(--on-primary)] rounded-xl font-bold transition-colors">{t("Browse Courses")}</button>
+          </div>
+        )
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
           {/* LEFT: Cart Items */}
           <div className="lg:col-span-7 flex flex-col gap-4">
-            <h2 className="text-lg font-bold text-[var(--text)] mb-2">{t("Cart Items (")}{' '}{items.length})</h2>
+            <h2 className="text-lg font-bold text-[var(--text)] mb-2">
+              {pendingInvoice ? `${t("New Cart Items")} (${items.length})` : `${t("Cart Items (")} ${items.length})`}
+            </h2>
             {items.map((item, idx) => (
               <div key={idx} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
@@ -561,13 +766,22 @@ const PaymentCart = () => {
                 <span className="text-2xl font-black text-[var(--text)]">{formatMoney(Math.max(0, (totalPrice * (100 - discountPercent) / 100) - (selectedCredit ? selectedCredit.remainingAmount : 0)))}</span>
               </div>
 
+              {pendingInvoice && (
+                <div className="mt-2 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
+                  <Lock className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                  <span>
+                    {t("Please complete or cancel the active pending session before creating a new checkout.")}
+                  </span>
+                </div>
+              )}
+
               <button
                 onClick={handleCheckout}
-                disabled={checkoutLoading}
+                disabled={checkoutLoading || Boolean(pendingInvoice)}
                 className="w-full mt-4 px-6 py-4 bg-[var(--success-hover)] hover:bg-[var(--success-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-[color:var(--on-primary)] rounded-xl font-bold transition-all shadow-[var(--shadow)] flex items-center justify-center gap-2 cursor-pointer"
               >
-                {t(checkoutLoading ? t('Processing...') : t('Confirm & Pay Now'))}
-                {!checkoutLoading && <ArrowRight className="w-5 h-5" />}
+                {t(checkoutLoading ? t('Processing...') : pendingInvoice ? t('Finish Pending Order First') : t('Confirm & Pay Now'))}
+                {!checkoutLoading && !pendingInvoice && <ArrowRight className="w-5 h-5" />}
               </button>
 
               <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--text-muted)] text-center">

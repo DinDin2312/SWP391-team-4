@@ -14,7 +14,7 @@ import { Sparkles, X, ArrowRight } from 'lucide-react';
 import NexusAiChat from '../features/member/components/NexusAiChat';
 import CyberFoxMascot, { CyberFoxAvatar } from '../components/CyberFoxMascot';
 import MemberNotificationDropdown from '../features/member/components/MemberNotificationDropdown';
-import { getSavedMemberNotificationPreferences, getMemberUnreadCount } from '../features/member/memberUtils';
+import { getSavedMemberNotificationPreferences, getMemberUnreadCount, summarizeMemberCartState } from '../features/member/memberUtils';
 import {
   LayoutDashboard, CalendarDays, CreditCard, Dumbbell,
   Bell, Settings, LogOut, ShoppingCart, Receipt, ClipboardList, HelpCircle
@@ -28,6 +28,8 @@ const MemberLayout = () => {
   const auth = useContext(AuthContext) || {};
   const { userInfo, logout = () => {}, updateUserInfo } = auth;
   const [cartCount, setCartCount] = useState(0);
+  const [cartHasPending, setCartHasPending] = useState(false);
+  const [cartPendingInvoiceId, setCartPendingInvoiceId] = useState(null);
   const [isCartHighlighted, setIsCartHighlighted] = useState(false);
   // 3-state AI lifecycle: 'minimized' (default Fox at bottom-right) | 'open' | 'docked' (hidden in topbar after [x])
   const [chatMode, setChatMode] = useState('minimized');
@@ -128,7 +130,10 @@ const MemberLayout = () => {
             }).catch(() => ({ data: null }))
           ]);
 
-          setCartCount(cartRes.data.items?.length || 0);
+          const cartState = summarizeMemberCartState(cartRes.data);
+          setCartCount(cartState.badgeCount);
+          setCartHasPending(cartState.hasPendingCheckout);
+          setCartPendingInvoiceId(cartState.pendingOrder?.invoiceId || null);
           const memberNotifPrefs = getSavedMemberNotificationPreferences();
           setUnreadCount(getMemberUnreadCount(notifRes.data, memberNotifPrefs));
 
@@ -398,7 +403,7 @@ const MemberLayout = () => {
                   ? 'bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 text-white border-transparent shadow-[0_0_28px_rgba(59,130,246,0.9),0_10px_25px_rgba(0,0,0,0.35)] ring-4 ring-cyan-400/70 scale-125 z-30'
                   : 'bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)] text-[var(--text)] hover:scale-105'
               }`}
-              title={t("View Cart")}
+              title={cartHasPending && cartPendingInvoiceId ? `${t("Pending Checkout Session")} #${cartPendingInvoiceId}` : t("View Cart")}
             >
               {isCartHighlighted && (
                 <span className="absolute -inset-1 rounded-xl bg-gradient-to-r from-cyan-400 via-indigo-500 to-amber-400 opacity-80 blur-md animate-pulse pointer-events-none" />
@@ -408,7 +413,9 @@ const MemberLayout = () => {
                 <span className={`absolute -top-1.5 -right-1.5 z-20 min-w-[18px] h-[18px] px-0.5 rounded-full text-[10px] font-black flex items-center justify-center border-2 ${
                   isCartHighlighted
                     ? 'bg-amber-400 text-slate-950 border-white shadow-sm'
-                    : 'bg-[var(--success-hover)] text-white border-[var(--surface)]'
+                    : cartHasPending
+                      ? 'bg-amber-500 text-slate-950 border-[var(--surface)]'
+                      : 'bg-[var(--success-hover)] text-white border-[var(--surface)]'
                 }`}>
                   {cartCount}
                 </span>

@@ -776,4 +776,52 @@ class SystemComprehensiveUnitTests {
         verify(avatarStorage).delete("new-uuid.png");
     }
 
+    @Test
+    void submitVietQRTransferRejectsNonQrMethodsAndGetVietQRInfoEnforcesOwner() {
+        BookingRepository bookingRepo = mock(BookingRepository.class);
+        com.team4.sportscenter.modules.member.repositories.UserMembershipRepository membershipRepo = mock(com.team4.sportscenter.modules.member.repositories.UserMembershipRepository.class);
+        UserRepository userRepo = mock(UserRepository.class);
+        InvoiceRepository invoiceRepo = mock(InvoiceRepository.class);
+        InvoiceDetailRepository detailRepo = mock(InvoiceDetailRepository.class);
+        PaymentRepository paymentRepo = mock(PaymentRepository.class);
+        com.team4.sportscenter.config.VNPayConfig vnPay = mock(com.team4.sportscenter.config.VNPayConfig.class);
+        com.team4.sportscenter.config.PayOSConfig payOS = new com.team4.sportscenter.config.PayOSConfig();
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        com.team4.sportscenter.modules.member.services.PackageCommerceService commerce = mock(com.team4.sportscenter.modules.member.services.PackageCommerceService.class);
+        com.team4.sportscenter.modules.notification.services.NotificationService notifService = mock(com.team4.sportscenter.modules.notification.services.NotificationService.class);
+        PackageTypeCatalog pkgTypes = mock(PackageTypeCatalog.class);
+        com.team4.sportscenter.modules.support.repositories.UserCreditRepository creditRepo = mock(com.team4.sportscenter.modules.support.repositories.UserCreditRepository.class);
+
+        com.team4.sportscenter.modules.payment.services.impl.PaymentServiceImpl paymentService = new com.team4.sportscenter.modules.payment.services.impl.PaymentServiceImpl(
+                bookingRepo, membershipRepo, userRepo, invoiceRepo, detailRepo, paymentRepo,
+                vnPay, payOS, jdbc, commerce, notifService, pkgTypes, creditRepo
+        );
+
+        User owner = User.builder().userId(19).email("owner@gym.vn").build();
+        Invoice vnpayInvoice = Invoice.builder()
+                .invoiceId(1299)
+                .user(owner)
+                .totalAmount(new BigDecimal("500000"))
+                .status("PENDING")
+                .createdAt(LocalDateTime.now().minusMinutes(5))
+                .build();
+
+        when(invoiceRepo.findById(1299)).thenReturn(Optional.of(vnpayInvoice));
+        when(paymentRepo.findByInvoice_InvoiceId(1299)).thenReturn(Optional.of(
+                PaymentEntity.builder().paymentMethod("VNPAY").status("PENDING").build()
+        ));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> paymentService.submitVietQRTransfer(1299, "owner@gym.vn"));
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> paymentService.getVietQRInfo(1299, "intruder@gym.vn"));
+
+        Map<String, Object> qrInfo = paymentService.getVietQRInfo(1299, "owner@gym.vn");
+        assertEquals("PENDING", qrInfo.get("status"));
+        assertEquals("VNPAY", qrInfo.get("paymentMethod"));
+        long remaining = ((Number) qrInfo.get("remainingSeconds")).longValue();
+        assertTrue(remaining > 0 && remaining <= 610, "expected ~600s remaining, got " + remaining);
+        assertEquals(false, qrInfo.get("isExpired"));
+    }
+
 }

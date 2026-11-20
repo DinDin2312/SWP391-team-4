@@ -13,7 +13,11 @@ import {
   parseMemberNotificationBody,
   formatPaymentMethodLabel,
   buildMemberQrPayload,
-  buildMemberQrImageUrl
+  buildMemberQrImageUrl,
+  isVietQRPendingMethod,
+  summarizeMemberCartState,
+  filterSelectableCredits,
+  formatPendingCountdown
 } from './memberUtils.js';
 
 test('calculateAttendanceStats: calculates correctly with mixed attendance', () => {
@@ -273,6 +277,35 @@ test('notification formatters and invoice extraction localize cleanly without mi
     'Class Enrolled'
   );
   assert.equal(formatMemberNotificationTitle('Bảo trì hệ thống', 'vi'), 'Bảo trì hệ thống');
+  assert.equal(formatMemberNotificationTitle('Upcoming Class Reminder', 'vi'), 'Nhắc nhở lịch học sắp tới');
+  assert.equal(formatMemberNotificationTitle('Upcoming Class Reminder', 'en'), 'Upcoming Class Reminder');
+  assert.equal(
+    formatMemberNotificationTitle('Nhắc nhở lịch học sắp tới / Upcoming Class Reminder', 'vi'),
+    'Nhắc nhở lịch học sắp tới'
+  );
+  assert.equal(formatMemberNotificationTitle('Membership Expiring Soon', 'vi'), 'Gói hội viên sắp hết hạn');
+  assert.equal(formatMemberNotificationTitle('Membership Expiring Soon', 'en'), 'Membership Expiring Soon');
+  assert.equal(
+    formatMemberNotificationTitle('Gói hội viên sắp hết hạn / Membership Expiring Soon', 'en'),
+    'Membership Expiring Soon'
+  );
+
+  assert.equal(
+    parseMemberNotificationBody("Reminder: You have a '[YOGA-103] Yoga Trị Liệu' class scheduled for tomorrow at 08:45.", 'vi').lead,
+    "Nhắc nhở: Bạn có buổi học lớp '[YOGA-103] Yoga Trị Liệu' vào ngày mai lúc 08:45."
+  );
+  assert.equal(
+    parseMemberNotificationBody("Nhắc nhở: Bạn có buổi học lớp '[YOGA-103] Yoga Trị Liệu' vào ngày mai lúc 08:45.", 'en').lead,
+    "Reminder: You have a '[YOGA-103] Yoga Trị Liệu' class scheduled for tomorrow at 08:45."
+  );
+  assert.equal(
+    parseMemberNotificationBody("Your membership package 'Thẻ Gym 1 Tháng' will expire in 3 days (2026-11-19). Please renew it to avoid interruption.", 'vi').lead,
+    "Gói hội viên 'Thẻ Gym 1 Tháng' của bạn sẽ hết hạn sau 3 ngày (2026-11-19). Vui lòng gia hạn để không bị gián đoạn tập luyện."
+  );
+  assert.equal(
+    parseMemberNotificationBody("Gói hội viên 'Thẻ Gym 1 Tháng' của bạn sẽ hết hạn sau 3 ngày (2026-11-19). Vui lòng gia hạn để không bị gián đoạn tập luyện.", 'en').lead,
+    "Your membership package 'Thẻ Gym 1 Tháng' will expire in 3 days (2026-11-19). Please renew it to avoid interruption."
+  );
 
   const parsedVi = parseMemberNotificationBody(
     'Hóa đơn #715 đã thanh toán thành công.\n• Dịch vụ:\n  - Khóa học: [SWIM-103] Bơi Sải (10 buổi)\n  - Khóa học: [SWIM-104] Bơi Lội (10 buổi)\n• Số tiền: 2,500,000 đ (PAYOS)\nCảm ơn bạn đã lựa chọn Sports Center!',
@@ -324,4 +357,71 @@ test('memberUtils: buildMemberQrPayload and buildMemberQrImageUrl build scannabl
     'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=NEXUS-PASS-19-BK-315'
   );
   assert.equal(buildMemberQrImageUrl(''), '');
+});
+
+test('memberUtils: cart pending checkout helpers isolate locked order items, credits, and countdown', () => {
+  assert.equal(isVietQRPendingMethod('PAYOS'), true);
+  assert.equal(isVietQRPendingMethod('vietqr'), true);
+  assert.equal(isVietQRPendingMethod('VNPAY'), false);
+  assert.equal(isVietQRPendingMethod(''), false);
+
+  const emptyState = summarizeMemberCartState(null);
+  assert.equal(emptyState.items.length, 0);
+  assert.equal(emptyState.hasPendingCheckout, false);
+  assert.equal(emptyState.pendingOrder, null);
+  assert.equal(emptyState.badgeCount, 0);
+
+  const stateWithPending = summarizeMemberCartState({
+    hasPendingCheckout: true,
+    pendingInvoiceId: 1299,
+    pendingPaymentMethod: 'PAYOS',
+    pendingItems: [
+      { type: 'PACKAGE', packageId: 1, packageName: 'Gym 1M', price: 500000 },
+      { type: 'PACKAGE', packageId: 2, packageName: 'Gym 3M', price: 1400000 }
+    ],
+    pendingTotalAmount: 1500000,
+    pendingVoucherCode: 'CR-123',
+    pendingCreditCode: 'CR-123',
+    pendingCreditDiscount: 400000,
+    pendingRemainingSeconds: 615,
+    items: [
+      { type: 'PACKAGE', packageId: 5, packageName: 'Pool 1M', price: 450000 }
+    ],
+    totalPrice: 450000
+  });
+
+  assert.equal(stateWithPending.hasPendingCheckout, true);
+  assert.equal(stateWithPending.items.length, 1);
+  assert.equal(stateWithPending.pendingOrder.invoiceId, 1299);
+  assert.equal(stateWithPending.pendingOrder.paymentUrl, '/member/vietqr-pay?invoiceId=1299');
+  assert.equal(stateWithPending.pendingOrder.subtotal, 1900000);
+  assert.equal(stateWithPending.pendingOrder.discountAmount, 400000);
+  assert.equal(stateWithPending.pendingOrder.totalAmount, 1500000);
+  assert.equal(stateWithPending.pendingOrder.creditCode, 'CR-123');
+  assert.equal(stateWithPending.pendingOrder.isVietQR, true);
+  assert.deepEqual(stateWithPending.addedPackageMap, { 1: 'PENDING_ORDER', 2: 'PENDING_ORDER', 5: 'CART' });
+  assert.equal(stateWithPending.badgeCount, 3);
+
+  const vnpayPending = summarizeMemberCartState({
+    pendingInvoiceId: 1300,
+    pendingPaymentMethod: 'VNPAY',
+    pendingItems: []
+  });
+  assert.equal(vnpayPending.pendingOrder.isVietQR, false);
+  assert.equal(vnpayPending.pendingOrder.paymentUrl, null);
+  assert.equal(vnpayPending.pendingOrder.remainingSeconds, 900);
+  assert.equal(vnpayPending.badgeCount, 1);
+
+  assert.deepEqual(filterSelectableCredits(null), []);
+  const selectable = filterSelectableCredits([
+    { creditId: 1, status: 'ACTIVE', remainingAmount: 200000, reservedInvoiceId: null, isExpired: false },
+    { creditId: 2, status: 'ACTIVE', remainingAmount: 300000, reservedInvoiceId: 1299, isExpired: false },
+    { creditId: 3, status: 'USED', remainingAmount: 0, reservedInvoiceId: null, isExpired: false },
+    { creditId: 4, status: 'ACTIVE', remainingAmount: 100000, reservedInvoiceId: null, isExpired: true }
+  ]);
+  assert.deepEqual(selectable.map((c) => c.creditId), [1]);
+
+  assert.equal(formatPendingCountdown(615), '10:15');
+  assert.equal(formatPendingCountdown(-5), '00:00');
+  assert.equal(formatPendingCountdown('bad'), '00:00');
 });

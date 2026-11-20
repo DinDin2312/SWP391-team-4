@@ -18,6 +18,7 @@ import { resourceImageUrl } from '../../../components/resource-images/resourceIm
 
 const GUEST_SUBJECTS_PER_PAGE = 6;
 const GUEST_COURSES_PER_PAGE = 6;
+const GUEST_PACKAGES_PER_PAGE = 6;
 
 const subjectPageVariants = {
   enter: (dir) => ({ opacity: 0, x: dir > 0 ? 48 : -48 }),
@@ -32,6 +33,8 @@ const LandingPage = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [packageCategory, setPackageCategory] = useState('ALL');
+  const [packagePage, setPackagePage] = useState(1);
+  const [packageSlideDir, setPackageSlideDir] = useState(1);
   
   const [packages, setPackages] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -287,24 +290,46 @@ const LandingPage = () => {
   // Filtered packages by tab category
   const filteredPackages = useMemo(() => {
     if (!packages || packages.length === 0) return defaultPackages;
-    // Hide 0 price trials and retired AI / Gym+AI packages from public showcase grid
+    // Hide retired AI / Gym+AI packages while keeping all active selling packages consistent with PackageStore
     const valid = packages.filter((p) => {
+      const type = (p.packageType || '').toUpperCase();
       const name = (p.packageName || '').toLowerCase();
-      return (p.price || 0) > 0 && p.packageType !== 'AI_ACCESS' && !name.includes('gym + ai') && !name.includes('gym+ai');
+      return type !== 'AI_ACCESS' && !name.includes('gym + ai') && !name.includes('gym+ai');
     });
-    if (packageCategory === 'ALL') return valid.slice(0, 6);
+    if (packageCategory === 'ALL') return valid;
     if (packageCategory === 'GYM') {
-      return valid.filter(p => p.packageType === 'GYM_ACCESS' && !p.packageName.toLowerCase().includes('bơi') && !p.packageName.toLowerCase().includes('combo')).slice(0, 6);
+      return valid.filter(p => p.packageType === 'GYM_ACCESS' && !p.packageName.toLowerCase().includes('bơi') && !p.packageName.toLowerCase().includes('combo'));
     }
     if (packageCategory === 'POOL_COMBO') {
       return valid.filter((p) => {
         const type = (p.packageType || '').toUpperCase();
         const name = (p.packageName || '').toLowerCase();
         return type === 'POOL_ACCESS' || type === 'SAUNA_ACCESS' || name.includes('bơi') || name.includes('xông hơi') || name.includes('sauna') || name.includes('combo');
-      }).slice(0, 6);
+      });
     }
-    return valid.slice(0, 6);
+    return valid;
   }, [packages, packageCategory]);
+
+  const totalPackagePages = Math.max(1, Math.ceil(filteredPackages.length / GUEST_PACKAGES_PER_PAGE));
+  const safePackagePage = Math.min(packagePage, totalPackagePages);
+  const paginatedPackages = useMemo(() => {
+    const start = (safePackagePage - 1) * GUEST_PACKAGES_PER_PAGE;
+    return filteredPackages.slice(start, start + GUEST_PACKAGES_PER_PAGE);
+  }, [filteredPackages, safePackagePage]);
+
+  const handlePackagePageChange = (nextPage, { scrollToSection = false } = {}) => {
+    const clamped = Math.max(1, Math.min(totalPackagePages, nextPage));
+    if (clamped === safePackagePage) return;
+    setPackageSlideDir(clamped > safePackagePage ? 1 : -1);
+    setPackagePage(clamped);
+    const sectionEl = document.getElementById('pricing');
+    if (sectionEl) {
+      const rect = sectionEl.getBoundingClientRect();
+      if (scrollToSection || rect.top < 0 || rect.top > 220) {
+        sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
 
   const toggleFaq = (index) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
@@ -1624,8 +1649,12 @@ const LandingPage = () => {
               ].map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => setPackageCategory(tab.id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  onClick={() => {
+                    setPackageCategory(tab.id);
+                    setPackagePage(1);
+                    setPackageSlideDir(-1);
+                  }}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     packageCategory === tab.id
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
                       : 'bg-slate-900/60 text-slate-400 hover:text-white border border-slate-800 hover:bg-slate-800'
@@ -1636,75 +1665,169 @@ const LandingPage = () => {
               ))}
             </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredPackages.length > 0 ? (
-              filteredPackages.map((pkg, idx) => {
-                const isFeatured = idx === 1;
-                const perks = getPackagePerks(pkg);
 
-                return (
-                  <div 
-                    key={pkg.packageId || idx} 
-                    className={`bg-[#0a1122] border rounded-3xl p-8 flex flex-col transition-all duration-300 relative ${
-                      isFeatured 
-                        ? 'border-blue-500 shadow-2xl shadow-blue-500/20 md:-translate-y-2 bg-gradient-to-b from-[#0e1936] to-[#0a1122]' 
-                        : 'border-slate-800 hover:border-slate-700 hover:-translate-y-1'
-                    }`}
+          {filteredPackages.length > 0 ? (
+            <div className="space-y-8">
+              <div className={`relative ${totalPackagePages > 1 ? 'lg:px-16 2xl:px-0' : ''}`}>
+                {totalPackagePages > 1 && safePackagePage > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => handlePackagePageChange(safePackagePage - 1)}
+                    aria-label={tr('Quay lại trang gói tập trước', 'Back to previous packages page')}
+                    title={tr('Quay lại trang gói tập trước', 'Back to previous packages page')}
+                    className="hidden lg:flex items-center justify-center w-11 h-11 rounded-full bg-[#0a1122]/95 hover:bg-blue-600 text-white border border-slate-700 hover:border-blue-400 shadow-2xl shadow-black/60 backdrop-blur-md absolute left-0 2xl:-left-16 top-1/2 -translate-y-1/2 z-20 transition-all hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 cursor-pointer"
                   >
-                    {isFeatured && (
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-lg shadow-blue-500/40">
-                        {t("MOST POPULAR")}
-                      </div>
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                )}
+
+                {totalPackagePages > 1 && safePackagePage < totalPackagePages && (
+                  <button
+                    type="button"
+                    onClick={() => handlePackagePageChange(safePackagePage + 1)}
+                    aria-label={tr('Lướt sang trang gói tập tiếp theo', 'Glide to next packages page')}
+                    title={tr('Lướt sang trang gói tập tiếp theo', 'Glide to next packages page')}
+                    className="hidden lg:flex items-center justify-center w-11 h-11 rounded-full bg-blue-600/95 hover:bg-blue-500 text-white border border-blue-400/60 shadow-2xl shadow-blue-500/40 backdrop-blur-md absolute right-0 2xl:-right-16 top-1/2 -translate-y-1/2 z-20 transition-all hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 cursor-pointer"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                )}
+
+                <div className="overflow-x-clip pt-4">
+                  <AnimatePresence mode="wait" initial={false} custom={packageSlideDir}>
+                    <motion.div
+                      key={`${packageCategory}-${safePackagePage}`}
+                      custom={packageSlideDir}
+                      variants={subjectPageVariants}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                    >
+                      {paginatedPackages.map((pkg, idx) => {
+                        const isFeatured = safePackagePage === 1 && idx === 1;
+                        const perks = getPackagePerks(pkg);
+
+                        return (
+                          <div 
+                            key={pkg.packageId || idx} 
+                            className={`bg-[#0a1122] border rounded-3xl p-8 flex flex-col transition-all duration-300 relative ${
+                              isFeatured 
+                                ? 'border-blue-500 shadow-2xl shadow-blue-500/20 md:-translate-y-2 bg-gradient-to-b from-[#0e1936] to-[#0a1122]' 
+                                : 'border-slate-800 hover:border-slate-700 hover:-translate-y-1'
+                            }`}
+                          >
+                            {isFeatured && (
+                              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-lg shadow-blue-500/40">
+                                {t("MOST POPULAR")}
+                              </div>
+                            )}
+                            
+                            <div className="mb-4">
+                              <span className="text-xs uppercase font-bold tracking-wider text-blue-400">
+                                {pkg.packageTypeName ? t(pkg.packageTypeName) : codeLabel(pkg.packageType || 'MEMBERSHIP')}
+                              </span>
+                              <h3 className="text-2xl font-bold text-white mt-1 line-clamp-1">{t(pkg.packageName)}</h3>
+                            </div>
+
+                            <div className="mb-6 pb-6 border-b border-slate-800">
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-3xl font-black text-white">
+                                  {(pkg.price || 0).toLocaleString('vi-VN')}
+                                </span>
+                                <span className="text-xl font-bold text-blue-400">₫</span>
+                                <span className="text-xs font-normal text-slate-400 ml-1">
+                                  / {pkg.durationDays} {t("days")}
+                                </span>
+                              </div>
+                            </div>
+
+                            <ul className="space-y-3 mb-8 flex-1">
+                              {perks.slice(0, 4).map((benefit, bIdx) => (
+                                <li key={bIdx} className="flex items-start gap-2.5 text-xs text-slate-300">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                  <span>{typeof benefit === 'string' ? t(benefit) : String(benefit?.subjectName || benefit || '')}</span>
+                                </li>
+                              ))}
+                            </ul>
+
+                            <button 
+                              onClick={() => navigate('/register')} 
+                              className={`w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                                isFeatured 
+                                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/30 hover:scale-[1.02]' 
+                                  : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                              }`}
+                            >
+                              {t("Get Started")}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {totalPackagePages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-[#0a1122] border border-slate-800 shadow-lg">
+                  <div className="text-xs font-medium text-slate-400">
+                    {tr(
+                      `Hiển thị ${(safePackagePage - 1) * GUEST_PACKAGES_PER_PAGE + 1}–${Math.min(safePackagePage * GUEST_PACKAGES_PER_PAGE, filteredPackages.length)} trong tổng số ${filteredPackages.length} gói hội viên`,
+                      `Showing ${(safePackagePage - 1) * GUEST_PACKAGES_PER_PAGE + 1}–${Math.min(safePackagePage * GUEST_PACKAGES_PER_PAGE, filteredPackages.length)} of ${filteredPackages.length} membership packages`
                     )}
-                    
-                    <div className="mb-4">
-                      <span className="text-xs uppercase font-bold tracking-wider text-blue-400">
-                        {codeLabel(pkg.packageType || 'MEMBERSHIP')}
-                      </span>
-                      <h3 className="text-2xl font-bold text-white mt-1 line-clamp-1">{t(pkg.packageName)}</h3>
-                    </div>
+                  </div>
 
-                    <div className="mb-6 pb-6 border-b border-slate-800">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-black text-white">
-                          {(pkg.price || 0).toLocaleString('vi-VN')}
-                        </span>
-                        <span className="text-xl font-bold text-blue-400">₫</span>
-                        <span className="text-xs font-normal text-slate-400 ml-1">
-                          / {pkg.durationDays} {t("days")}
-                        </span>
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                    <button
+                      type="button"
+                      onClick={() => handlePackagePageChange(safePackagePage - 1, { scrollToSection: true })}
+                      disabled={safePackagePage <= 1}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
+                      <span>{tr('Trang trước', 'Prev')}</span>
+                    </button>
 
-                    <ul className="space-y-3 mb-8 flex-1">
-                      {perks.slice(0, 4).map((benefit, bIdx) => (
-                        <li key={bIdx} className="flex items-start gap-2.5 text-xs text-slate-300">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                          <span>{typeof benefit === 'string' ? t(benefit) : String(benefit?.subjectName || benefit || '')}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    {Array.from({ length: totalPackagePages }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => handlePackagePageChange(pageNum, { scrollToSection: true })}
+                        aria-current={safePackagePage === pageNum ? 'page' : undefined}
+                        className={`min-w-[36px] h-[36px] px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          safePackagePage === pageNum
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 border border-blue-500'
+                            : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
 
-                    <button 
-                      onClick={() => navigate('/register')} 
-                      className={`w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 ${
-                        isFeatured 
-                          ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/30 hover:scale-[1.02]' 
-                          : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                    <button
+                      type="button"
+                      onClick={() => handlePackagePageChange(safePackagePage + 1, { scrollToSection: true })}
+                      disabled={safePackagePage >= totalPackagePages}
+                      className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        safePackagePage < totalPackagePages
+                          ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25 border border-blue-500'
+                          : 'border border-slate-700 bg-slate-900 text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed'
                       }`}
                     >
-                      {t("Get Started")}
+                      <span>{tr('Lướt trang tiếp', 'Next page')}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                );
-              })
-            ) : (
-              <div className="col-span-3 text-center text-slate-500 py-12">
-                {loadingPackages ? t("Loading membership packages...") : t("No packages available.")}
-              </div>
-            )}
-          </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center text-slate-500 py-12">
+              {loadingPackages ? t("Loading membership packages...") : t("No packages available.")}
+            </div>
+          )}
         </div>
       </motion.section>
 

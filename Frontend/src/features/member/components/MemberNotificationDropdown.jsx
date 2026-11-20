@@ -10,7 +10,12 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { getReasonLabel, formatDateTime, formatScheduleSlot } from '../../coach/coachRescheduleUtils';
-import { getSavedMemberNotificationPreferences, getMemberUnreadCount } from '../memberUtils';
+import {
+  getSavedMemberNotificationPreferences,
+  getMemberUnreadCount,
+  formatMemberNotificationTitle,
+  parseMemberNotificationBody
+} from '../memberUtils';
 
 export default function MemberNotificationDropdown({ isOpen = true, onClose, onUnreadChange, anchorRef }) {
   const currentLang = useLanguage();
@@ -276,23 +281,30 @@ export default function MemberNotificationDropdown({ isOpen = true, onClose, onU
             <p>{t('No new notifications')}</p>
           </div>
         ) : (
-          notifications.slice(0, 10).map((n) => (
-            <div
-              key={n.id || n.notificationId}
-              className={`p-3 text-xs hover:bg-[var(--surface-hover)] transition-colors flex items-start gap-2.5 ${
-                !n.isRead ? 'bg-[var(--primary-soft)]/20' : ''
-              }`}
-            >
-              <div className="w-2 h-2 rounded-full bg-[var(--primary)] shrink-0 mt-1.5" style={{ opacity: n.isRead ? 0 : 1 }} />
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-[var(--text)] leading-tight">{n.title}</p>
-                <p className="text-[11px] text-[var(--text-muted)] mt-0.5 line-clamp-2">{n.message || n.content}</p>
-                <span className="text-[10px] text-[var(--text-muted)] opacity-70 mt-1 block">
-                  {formatDateTime(n.createdAt)}
-                </span>
+          notifications.slice(0, 10).map((n) => {
+            const displayTitle = formatMemberNotificationTitle(n.title, lang);
+            const rawBody = n.message || n.content || '';
+            const bodyParts = parseMemberNotificationBody(rawBody, lang);
+            const displayBody = bodyParts.lead || rawBody;
+
+            return (
+              <div
+                key={n.id || n.notificationId}
+                className={`p-3 text-xs hover:bg-[var(--surface-hover)] transition-colors flex items-start gap-2.5 ${
+                  !n.isRead ? 'bg-[var(--primary-soft)]/20' : ''
+                }`}
+              >
+                <div className="w-2 h-2 rounded-full bg-[var(--primary)] shrink-0 mt-1.5" style={{ opacity: n.isRead ? 0 : 1 }} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-[var(--text)] leading-tight">{displayTitle}</p>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-0.5 line-clamp-2">{displayBody}</p>
+                  <span className="text-[10px] text-[var(--text-muted)] opacity-70 mt-1 block">
+                    {formatDateTime(n.createdAt)}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
