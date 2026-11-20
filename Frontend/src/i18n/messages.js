@@ -329,6 +329,11 @@ Cancel session|Hủy buổi tập
 Cancel session?|Hủy buổi tập?
 Change time|Đổi giờ
 Reschedule this session|Đổi lịch buổi này
+Past|Đã qua
+Coach busy|HLV bận
+Member has another session|Học viên trùng lịch
+No suitable room free|Hết phòng phù hợp
+Unavailable|Không khả dụng
 {0} seats|{0} chỗ
 Ended · awaiting completion|Đã kết thúc · chờ hoàn thành
 Room for this session|Phòng cho buổi này

@@ -706,16 +706,17 @@ public class ManagerRepository {
     public void setSessionRoom(int scheduleId, Integer roomId) { jdbc.update("UPDATE SCHEDULES SET room_id=? WHERE schedule_id=?", roomId, scheduleId); }
 
     /** Active rooms with the given capacity that are free for [start,end) plus changeover, excluding this session. */
-    public List<Map<String, Object>> freeRooms(Integer scheduleId, LocalDateTime start, LocalDateTime end, int minCapacity) {
+    public List<Map<String, Object>> freeRooms(Integer scheduleId, LocalDateTime start, LocalDateTime end, int minCapacity, int subjectId, int classRoomId) {
         return jdbc.queryForList("""
                 SELECT r.room_id roomId,r.room_name roomName,r.capacity FROM ROOMS r
                 WHERE r.status='ACTIVE' AND r.capacity>=?
+                  AND (r.room_id=? OR EXISTS (SELECT 1 FROM ROOM_SUBJECTS rs WHERE rs.room_id=r.room_id AND rs.subject_id=?))
                   AND NOT EXISTS (SELECT 1 FROM SCHEDULES sc JOIN CLASSES c ON c.class_id=sc.class_id
                     WHERE sc.status NOT IN ('CANCELLED','CANCELLED_INSUFFICIENT_ATTENDEES') AND sc.schedule_id <> COALESCE(?,-1)
                       AND COALESCE(sc.room_id,c.room_id)=r.room_id
                       AND sc.start_time < ? AND TIMESTAMPADD(MINUTE,sc.changeover_minutes,sc.end_time) > ?)
-                ORDER BY r.room_name
-                """, minCapacity, scheduleId, end, start);
+                ORDER BY r.room_id<>?, r.room_name
+                """, minCapacity, classRoomId, subjectId, scheduleId, end, start, classRoomId);
     }
 
     public Map<String, Object> roomStatusCapacity(int roomId) {
@@ -726,6 +727,16 @@ public class ManagerRepository {
     public String roomName(int roomId) {
         var rows = jdbc.queryForList("SELECT room_name FROM ROOMS WHERE room_id=?", String.class, roomId);
         return rows.isEmpty() ? "" : rows.get(0);
+    }
+
+    public int classSubjectId(int classId) {
+        Integer v = jdbc.queryForObject("SELECT subject_id FROM CLASSES WHERE class_id=?", Integer.class, classId);
+        return v == null ? 0 : v;
+    }
+
+    public boolean roomTeachesSubject(int roomId, int subjectId) {
+        Integer v = jdbc.queryForObject("SELECT COUNT(*) FROM ROOM_SUBJECTS WHERE room_id=? AND subject_id=?", Integer.class, roomId, subjectId);
+        return v != null && v > 0;
     }
 
     public int classMaxSlots(int classId) {

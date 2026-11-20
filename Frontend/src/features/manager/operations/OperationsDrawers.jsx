@@ -268,6 +268,19 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
   const [error, setError] = useState("");
   const editing = Boolean(config.item);
   const [photo,setPhoto]=useState({file:null,remove:false});
+  const editDate = editing && type === 'schedule' ? form.startTime?.slice(0,10) : '';
+  const [daySlots,setDaySlots]=useState(null);
+  useEffect(()=>{
+    if(!editDate || !form.scheduleId){setDaySlots(null);return undefined;}
+    let live=true; setDaySlots(null);
+    managerService.scheduleDayOptions(form.scheduleId,editDate).then(rows=>live&&setDaySlots(rows)).catch(()=>live&&setDaySlots([]));
+    return ()=>{live=false;};
+  },[editDate,form.scheduleId]);
+  const slotBlock=time=>{
+    const row=daySlots?.find(slot=>String(slot.start).slice(11,16)===time.slice(0,5));
+    if(!row || row.current || !row.blockedReason) return '';
+    return {PAST:'Past',COACH_BUSY:'Coach busy',MEMBER_BUSY:'Member has another session',NO_ROOM:'No suitable room free'}[row.blockedReason] || 'Unavailable';
+  };
   const [photoError,setPhotoError]=useState('');
   useEffect(()=>{
     if(!policy || editing || !['schedule','series'].includes(type))return;
@@ -591,10 +604,10 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                 <p className="ops-note">{t('{0} minutes per session',[policy?.durationMinutes || '—'])}</p>
                 {policyError && <p role="alert">{t(policyError)}</p>}
                 <label className="ops-field">{t('Date')}<VnDateInput required type="date" value={form.startTime?.slice(0,10) || ''} onInput={e=>set('startTime',e.target.value+'T'+(form.startTime?.slice(11,16)||policy?.starts[0]?.slice(0,5)||'07:00'))} onChange={e=>set('startTime',e.target.value+'T'+(form.startTime?.slice(11,16)||policy?.starts[0]?.slice(0,5)||'07:00'))}/></label>
-                <label className="ops-field">{t('Teaching slot')}<select required disabled={!policy} value={form.startTime?.slice(11,16)||''} onChange={e=>set('startTime',(form.startTime?.slice(0,10)||'')+'T'+e.target.value)}>
+                <label className="ops-field">{t('Teaching slot')}<select required disabled={!policy || (editDate && !daySlots)} value={form.startTime?.slice(11,16)||''} onChange={e=>set('startTime',(form.startTime?.slice(0,10)||'')+'T'+e.target.value)}>
                   <option value="">{t('Select')}</option>
                   {editing && form.startTime===initialForm(type,config.item).startTime && !policy?.starts.some(time=>time.slice(0,5)===form.startTime?.slice(11,16)) && <option value={form.startTime?.slice(11,16)}>{t('Existing session')} · {form.startTime?.slice(11,16)}</option>}
-                  {policy?.starts.map((time,index)=><option key={time} value={time.slice(0,5)}>{slotLabel(time,index,policy.durationMinutes)}</option>)}
+                  {policy?.starts.map((time,index)=>{const blocked=slotBlock(time);return <option key={time} value={time.slice(0,5)} disabled={Boolean(blocked)}>{slotLabel(time,index,policy.durationMinutes)}{blocked?` · ${t(blocked)}`:''}</option>;})}
                 </select></label>
                 {input("endTime", "End time", {
                   type: "datetime-local",

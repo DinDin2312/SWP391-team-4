@@ -470,6 +470,9 @@ public class ManagerService {
         if (overrideRoom != null && (roomChanged || id == null)) {
             Map<String, Object> room = managerRepository.roomStatusCapacity(overrideRoom);
             if (room == null || !"ACTIVE".equals(room.get("status"))) throw new IllegalArgumentException("Choose an active room");
+            if (!managerRepository.roomTeachesSubject(overrideRoom, managerRepository.classSubjectId(request.classId()))) {
+                throw new IllegalArgumentException("This room is not set up for the class's subject");
+            }
             int maxSlots = managerRepository.classMaxSlots(request.classId());
             if (((Number) room.get("capacity")).intValue() < maxSlots) {
                 throw new IllegalArgumentException("The room is too small for this class (" + maxSlots + " slots)");
@@ -536,8 +539,39 @@ public class ManagerService {
         boolean coachBusy = managerRepository.hasCoachConflict(scheduleId, coachId, start, end.plusMinutes(changeover));
         result.put("coachBusy", coachBusy);
         result.put("memberBusy", managerRepository.hasMemberConflict(scheduleId, start, end));
-        result.put("rooms", coachBusy ? List.of() : managerRepository.freeRooms(scheduleId, start, end.plusMinutes(changeover), maxSlots));
+        int classRoomId = ((Number) assignment.get("roomId")).intValue();
+        result.put("rooms", coachBusy ? List.of() : managerRepository.freeRooms(scheduleId, start, end.plusMinutes(changeover),
+                maxSlots, managerRepository.classSubjectId(classId), classRoomId));
         return result;
+    }
+
+    /** Every teaching slot of the day with whether the session could move there (coach, members, a free suitable room). */
+    public List<Map<String, Object>> sessionDayOptions(int scheduleId, java.time.LocalDate date) {
+        Map<String, Object> session = managerRepository.schedule(scheduleId);
+        if (session == null) throw new IllegalArgumentException("Session not found");
+        int classId = ((Number) session.get("classId")).intValue();
+        var policy = managerRepository.classSlotPolicy(classId);
+        LocalDateTime now = LocalDateTime.now();
+        List<Map<String, Object>> slots = new ArrayList<>();
+        for (java.time.LocalTime time : policy.starts()) {
+            LocalDateTime start = date.atTime(time), end = start.plusMinutes(policy.durationMinutes());
+            Map<String, Object> slot = new java.util.LinkedHashMap<>();
+            slot.put("start", start);
+            slot.put("end", end);
+            String reason = null;
+            if (!start.isAfter(now)) reason = "PAST";
+            else {
+                Map<String, Object> o = sessionOptions(scheduleId, start, end);
+                if (Boolean.TRUE.equals(o.get("coachBusy"))) reason = "COACH_BUSY";
+                else if (Boolean.TRUE.equals(o.get("memberBusy"))) reason = "MEMBER_BUSY";
+                else if (((List<?>) o.get("rooms")).isEmpty()) reason = "NO_ROOM";
+                slot.put("freeRooms", ((List<?>) o.get("rooms")).size());
+            }
+            slot.put("current", start.equals(session.get("startTime")));
+            slot.put("blockedReason", reason);
+            slots.add(slot);
+        }
+        return slots;
     }
 
     public Map<String, Object> sessionRefundPreview(int scheduleId) {

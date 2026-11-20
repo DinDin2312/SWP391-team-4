@@ -46,6 +46,7 @@ const managerService = {
   saveClass: (payload,photo) => saveOperationResource('classes',payload.classId,payload,photo),
   schedules: (from, to, extra = {}) => axiosClient.get('/manager/schedules', { params: { from, to, ...extra } }),
   scheduleOptions: (id, start, end) => axiosClient.get(`/manager/schedules/${id}/options`, { params: { start, end } }),
+  scheduleDayOptions: (id, date) => axiosClient.get(`/manager/schedules/${id}/day-options`, { params: { date } }),
   scheduleRefundPreview: (id) => axiosClient.get(`/manager/schedules/${id}/refund-preview`),
   scheduleBookings: (id) => axiosClient.get(`/manager/schedules/${id}/bookings`),
   createScheduleSeries: (payload) => axiosClient.post('/manager/schedules/series', payload),
