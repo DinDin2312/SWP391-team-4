@@ -328,6 +328,23 @@ View or create schedules →|Xem hoặc tạo lịch →
 Cancel session|Hủy buổi tập
 Cancel session?|Hủy buổi tập?
 Change time|Đổi giờ
+Reschedule this session|Đổi lịch buổi này
+{0} seats|{0} chỗ
+Ended · awaiting completion|Đã kết thúc · chờ hoàn thành
+Room for this session|Phòng cho buổi này
+busy at this time|đang bận giờ này
+current room|phòng hiện tại
+Checking free rooms…|Đang kiểm tra phòng trống…
+Unable to check free rooms.|Không kiểm tra được phòng trống.
+The coach is teaching another session at this time. Pick another time.|Huấn luyện viên đang dạy buổi khác giờ này. Hãy chọn giờ khác.
+A booked member has another session at this time. Pick another time.|Có học viên đã đăng ký bị trùng lịch giờ này. Hãy chọn giờ khác.
+No room large enough is free at this time. Pick another time.|Không còn phòng đủ chỗ trống giờ này. Hãy chọn giờ khác.
+The selected room is busy at this time. Choose a free room above.|Phòng đang chọn bị trùng giờ này. Hãy chọn một phòng trống ở trên.
+Prefer moving the session to another time or room. Cancelling refunds one session to every confirmed member.|Nên đổi buổi sang giờ hoặc phòng khác. Hủy buổi sẽ hoàn học phí 1 buổi cho mọi học viên đã xác nhận.
+All bookings for this session will be cancelled and members will receive a notification. The session cannot be reopened.|Mọi đăng ký của buổi này sẽ bị hủy và học viên nhận thông báo. Buổi đã hủy không thể mở lại.
+{0} confirmed members will each get a {1} credit voucher (one session's tuition, valid 60 days).|{0} học viên đã xác nhận, mỗi người nhận Voucher {1} (học phí 1 buổi, hạn 60 ngày).
+No confirmed member needs a refund for this session.|Buổi này không có học viên đã xác nhận cần hoàn tiền.
+Session cancelled. Members were notified and refunded one session as a credit voucher.|Đã hủy buổi. Học viên đã được thông báo và hoàn học phí 1 buổi bằng Voucher.
 Complete|Hoàn thành
 All bookings for this session will be cancelled and members will receive a notification. The session cannot be reopened. This action does not issue a refund; contact reception about tuition.|Mọi đăng ký của buổi tập này sẽ bị hủy và hội viên sẽ nhận thông báo. Buổi tập không thể mở lại. Thao tác này không hoàn tiền; hãy liên hệ lễ tân về học phí.
 Roster · read only|Danh sách học viên · chỉ xem

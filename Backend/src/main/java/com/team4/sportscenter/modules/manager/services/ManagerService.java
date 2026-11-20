@@ -459,36 +459,93 @@ public class ManagerService {
             if (id != null && timingChanged) packageBenefits.validateSessionDates(id,request.startTime(),request.endTime());
         }
         Integer coachId = ((Number) assignment.get("coachId")).intValue();
-        Integer roomId = ((Number) assignment.get("roomId")).intValue();
+        Integer classRoomId = ((Number) assignment.get("roomId")).intValue();
+        Integer currentOverride = id == null ? null : managerRepository.sessionRoom(id);
+        Integer roomId = request.roomId() != null ? request.roomId() : currentOverride != null ? currentOverride : classRoomId;
+        Integer overrideRoom = roomId.equals(classRoomId) ? null : roomId;
+        boolean roomChanged = id != null && !java.util.Objects.equals(overrideRoom, currentOverride);
+        if (roomChanged && (cancelled || completed)) {
+            throw new IllegalArgumentException("Keep the room unchanged when cancelling or completing a session");
+        }
+        if (overrideRoom != null && (roomChanged || id == null)) {
+            Map<String, Object> room = managerRepository.roomStatusCapacity(overrideRoom);
+            if (room == null || !"ACTIVE".equals(room.get("status"))) throw new IllegalArgumentException("Choose an active room");
+            int maxSlots = managerRepository.classMaxSlots(request.classId());
+            if (((Number) room.get("capacity")).intValue() < maxSlots) {
+                throw new IllegalArgumentException("The room is too small for this class (" + maxSlots + " slots)");
+            }
+        }
+        if (roomChanged && !timingChanged && !request.startTime().isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Only upcoming sessions can change room");
+        }
         if (!cancelled && !completed
                 && managerRepository.hasScheduleConflict(id, coachId, roomId, request.startTime(), request.endTime().plusMinutes(changeover))) {
             throw new IllegalArgumentException("The time slot conflicts with the coach or room schedule");
         }
         int savedId = managerRepository.saveSchedule(id, request);
         managerRepository.setChangeover(savedId,changeover);
+        managerRepository.setSessionRoom(savedId, overrideRoom);
         // Editing a session that has a substitute coach or a make-up time keeps that status.
         if (previous != null && !cancelled && !completed && !"SCHEDULED".equals(previous.get("status"))
                 && ACTIVE_SESSION_STATUSES.contains(String.valueOf(previous.get("status"))))
             managerRepository.setScheduleStatus(savedId, String.valueOf(previous.get("status")));
+        int refunded = 0;
         if (id != null && cancelled) {
-            managerRepository.notifyScheduleBookings(id, "Buổi học đã hủy",
-                    assignment.get("className") + " lúc " + request.startTime()
-                            + " đã hủy. Liên hệ lễ tân để được hỗ trợ về học phí.");
+            String className = String.valueOf(assignment.get("className"));
+            java.math.BigDecimal refund = managerRepository.sessionRefundAmount(request.classId(), id);
+            List<Integer> confirmed = managerRepository.confirmedMemberIds(id);
+            String when = request.startTime().format(AUDIT_TIME);
+            if (refund.signum() > 0) {
+                String formatted = String.format(Locale.US, "%,d đ", refund.longValue()).replace(',', '.');
+                for (Integer userId : confirmed) managerRepository.recordSessionCancellationVoucher(userId, request.classId(), id, className, refund, formatted, when);
+                refunded = confirmed.size();
+            }
+            managerRepository.notifyScheduleBookings(id, "Buổi học đã hủy", className + " lúc " + when + " đã hủy."
+                    + (refunded > 0 ? " Học phí 1 buổi đã được hoàn bằng Voucher." : ""));
             managerRepository.cancelScheduleBookings(id);
-        } else if (id != null && timingChanged) {
+        } else if (id != null && (timingChanged || roomChanged)) {
+            String roomName = managerRepository.roomName(roomId);
             managerRepository.notifyScheduleBookings(id, "Thay đổi lịch học",
-                    assignment.get("className") + " chuyển sang " + request.startTime() + " - " + request.endTime());
+                    assignment.get("className") + " chuyển sang " + request.startTime() + " - " + request.endTime()
+                            + (roomChanged ? " tại " + roomName : ""));
         }
         if (record) {
             String change;
             if (id == null) change = request.startTime().format(AUDIT_TIME) + "–" + request.endTime().toLocalTime();
-            else if (cancelled) change = "Hủy buổi " + request.startTime().format(AUDIT_TIME);
+            else if (cancelled) change = "Hủy buổi " + request.startTime().format(AUDIT_TIME) + (refunded > 0 ? ", hoàn Voucher 1 buổi cho " + refunded + " HV" : "");
             else if (completed) change = "Hoàn thành buổi " + request.startTime().format(AUDIT_TIME);
-            else if (timingChanged) change = ((LocalDateTime) previous.get("startTime")).format(AUDIT_TIME) + " → " + request.startTime().format(AUDIT_TIME);
+            else if (timingChanged) change = ((LocalDateTime) previous.get("startTime")).format(AUDIT_TIME) + " → " + request.startTime().format(AUDIT_TIME)
+                    + (roomChanged ? ", " + managerRepository.roomName(roomId) : "");
+            else if (roomChanged) change = "Đổi phòng buổi " + request.startTime().format(AUDIT_TIME) + " → " + managerRepository.roomName(roomId);
             else change = "Cập nhật buổi " + request.startTime().format(AUDIT_TIME);
             audit(actor, id == null ? "CREATE" : cancelled ? "CANCEL" : "UPDATE", "SCHEDULE", savedId, change);
         }
         return savedId;
+    }
+
+    /** Free rooms for a session's time and, if its own room is busy, nearby free times in the same room. */
+    public Map<String, Object> sessionOptions(int scheduleId, LocalDateTime start, LocalDateTime end) {
+        Map<String, Object> session = managerRepository.schedule(scheduleId);
+        if (session == null) throw new IllegalArgumentException("Session not found");
+        int classId = ((Number) session.get("classId")).intValue();
+        int changeover = ((Number) session.get("changeoverMinutes")).intValue();
+        Map<String, Object> assignment = managerRepository.classAssignment(classId);
+        int coachId = ((Number) assignment.get("coachId")).intValue();
+        int maxSlots = managerRepository.classMaxSlots(classId);
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        boolean coachBusy = managerRepository.hasCoachConflict(scheduleId, coachId, start, end.plusMinutes(changeover));
+        result.put("coachBusy", coachBusy);
+        result.put("memberBusy", managerRepository.hasMemberConflict(scheduleId, start, end));
+        result.put("rooms", coachBusy ? List.of() : managerRepository.freeRooms(scheduleId, start, end.plusMinutes(changeover), maxSlots));
+        return result;
+    }
+
+    public Map<String, Object> sessionRefundPreview(int scheduleId) {
+        Map<String, Object> session = managerRepository.schedule(scheduleId);
+        if (session == null) throw new IllegalArgumentException("Session not found");
+        int classId = ((Number) session.get("classId")).intValue();
+        return Map.of("amountPerMember", managerRepository.sessionRefundAmount(classId, scheduleId),
+                "members", managerRepository.confirmedMemberIds(scheduleId).size());
     }
 
     public List<Integer> createScheduleSeries(ManagerRequests.ScheduleSeriesRequest request, String actor) {

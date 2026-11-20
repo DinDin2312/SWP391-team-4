@@ -119,9 +119,9 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
             }
 
             if (dto.getProposedRoomId() != null) {
-                proposedRoom = roomRepository.findById(dto.getProposedRoomId()).orElse(gymClass.getRoom());
+                proposedRoom = roomRepository.findById(dto.getProposedRoomId()).orElse(schedule.getEffectiveRoom());
             } else {
-                proposedRoom = gymClass.getRoom();
+                proposedRoom = schedule.getEffectiveRoom();
             }
 
             // Backend Conflict Guard: Chặn tạo đơn nếu bị xung đột lịch cá nhân hoặc phòng
@@ -245,8 +245,8 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
                     .scheduleId(s.getScheduleId())
                     .classId(gc != null ? gc.getClassId() : null)
                     .className(gc != null ? gc.getClassName() : "Lớp học")
-                    .roomId(gc != null && gc.getRoom() != null ? gc.getRoom().getRoomId() : null)
-                    .roomName(gc != null && gc.getRoom() != null ? gc.getRoom().getRoomName() : "Phòng tập")
+                    .roomId(s.getEffectiveRoom() != null ? s.getEffectiveRoom().getRoomId() : null)
+                    .roomName(s.getEffectiveRoom() != null ? s.getEffectiveRoom().getRoomName() : "Phòng tập")
                     .startTime(s.getStartTime())
                     .endTime(s.getEndTime())
                     .enrolledCount(enrolledCounts.getOrDefault(s.getScheduleId(), 0))
@@ -276,9 +276,9 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
         GymClass gymClass = schedule.getGymClass();
         Room room = null;
         if (proposedRoomId != null) {
-            room = roomRepository.findById(proposedRoomId).orElse(gymClass != null ? gymClass.getRoom() : null);
-        } else if (gymClass != null) {
-            room = gymClass.getRoom();
+            room = roomRepository.findById(proposedRoomId).orElse(schedule.getEffectiveRoom());
+        } else {
+            room = schedule.getEffectiveRoom();
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -445,7 +445,7 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
         GymClass gymClass = request.getGymClass();
 
         if ("MAKEUP_SESSION".equalsIgnoreCase(request.getAction_type())) {
-            Integer roomId = request.getProposedRoom() != null ? request.getProposedRoom().getRoomId() : (gymClass.getRoom() != null ? gymClass.getRoom().getRoomId() : null);
+            Integer roomId = request.getProposedRoom() != null ? request.getProposedRoom().getRoomId() : (schedule.getEffectiveRoom() != null ? schedule.getEffectiveRoom().getRoomId() : null);
             if (roomId != null) {
                 long roomCollisions = requestRepository.countRoomCollisions(
                         roomId, schedule.getScheduleId(), request.getProposedStartTime(), request.getProposedEndTime());
@@ -456,6 +456,11 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
 
             schedule.setStartTime(request.getProposedStartTime());
             schedule.setEndTime(request.getProposedEndTime());
+            // The make-up session runs in the proposed room; keep the class room when none was proposed.
+            if (request.getProposedRoom() != null) {
+                boolean classRoom = gymClass.getRoom() != null && gymClass.getRoom().getRoomId().equals(request.getProposedRoom().getRoomId());
+                schedule.setRoom(classRoom ? null : request.getProposedRoom());
+            }
             schedule.setStatus("RESCHEDULED");
             scheduleRepository.save(schedule);
 
@@ -925,7 +930,7 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
     private RescheduleRequestResponseDto mapToDto(ScheduleRescheduleRequest r) {
         GymClass gc = r.getGymClass();
         Schedule s = r.getSchedule();
-        Room origRoom = gc != null ? gc.getRoom() : null;
+        Room origRoom = s != null ? s.getEffectiveRoom() : (gc != null ? gc.getRoom() : null);
         Room propRoom = r.getProposedRoom();
 
         Integer totalEnrolled = 0;

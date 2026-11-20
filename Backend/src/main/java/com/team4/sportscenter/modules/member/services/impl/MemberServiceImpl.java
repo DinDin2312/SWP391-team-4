@@ -131,7 +131,7 @@ public class MemberServiceImpl implements MemberService {
                     .bookingId(b.getBookingId()).classId(b.getSchedule().getGymClass().getClassId())
                     .className(b.getSchedule().getGymClass().getClassName())
                     .coachName(b.getSchedule().getSubstituteCoach() != null ? b.getSchedule().getSubstituteCoach().getFullName() : b.getSchedule().getGymClass().getCoach().getFullName())
-                    .roomName(b.getSchedule().getGymClass().getRoom().getRoomName())
+                    .roomName(b.getSchedule().getEffectiveRoom().getRoomName())
                     .startTime(b.getSchedule().getStartTime())
                     .endTime(b.getSchedule().getEndTime())
                     .durationMinutes(duration)
@@ -171,7 +171,7 @@ public class MemberServiceImpl implements MemberService {
                     .bookingId(b.getBookingId()).classId(b.getSchedule().getGymClass().getClassId())
                     .className(b.getSchedule().getGymClass().getClassName())
                     .coachName(b.getSchedule().getSubstituteCoach() != null ? b.getSchedule().getSubstituteCoach().getFullName() : b.getSchedule().getGymClass().getCoach().getFullName())
-                    .roomName(b.getSchedule().getGymClass().getRoom().getRoomName())
+                    .roomName(b.getSchedule().getEffectiveRoom().getRoomName())
                     .startTime(b.getSchedule().getStartTime())
                     .durationMinutes(duration)
                     .status(b.getStatus())
@@ -190,7 +190,7 @@ public class MemberServiceImpl implements MemberService {
                         .bookingId(b.getBookingId()).classId(b.getSchedule().getGymClass().getClassId())
                         .className(b.getSchedule().getGymClass().getClassName())
                         .coachName(b.getSchedule().getSubstituteCoach() != null ? b.getSchedule().getSubstituteCoach().getFullName() : b.getSchedule().getGymClass().getCoach().getFullName())
-                        .roomName(b.getSchedule().getGymClass().getRoom().getRoomName())
+                        .roomName(b.getSchedule().getEffectiveRoom().getRoomName())
                         .startTime(b.getSchedule().getStartTime())
                         .endTime(b.getSchedule().getEndTime())
                         .status(b.getStatus())
@@ -359,7 +359,7 @@ public class MemberServiceImpl implements MemberService {
         Integer benefitId = membershipId == null ? null
                 : packageBenefits.reserve(email, membershipId,
                         schedules.get(0).getGymClass().getSubjectId(),
-                        schedules.get(0).getGymClass().getRoom().getRoomId(),
+                        schedules.get(0).getEffectiveRoom().getRoomId(),
                         schedules.stream().map(Schedule::getStartTime).toList());
 
         List<Booking> newBookings = new ArrayList<>();

@@ -189,7 +189,7 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
                     .scheduleId(schedule.getScheduleId())
                     .classId(schedule.getGymClass().getClassId())
                     .className(schedule.getGymClass().getClassName())
-                    .roomName(schedule.getGymClass().getRoom().getRoomName())
+                    .roomName(schedule.getEffectiveRoom().getRoomName())
                     .startTime(schedule.getStartTime())
                     .endTime(schedule.getEndTime())
                     .status(schedule.getStatus())
@@ -445,10 +445,10 @@ public class CoachScheduleServiceImpl implements CoachScheduleService {
             String displayCoachName = "HLV " + cleanCoachName;
             String className = schedule.getGymClass() != null && schedule.getGymClass().getClassName() != null
                     ? schedule.getGymClass().getClassName() : "lớp học";
-            String roomName = (schedule.getGymClass() != null && schedule.getGymClass().getRoom() != null)
-                    ? schedule.getGymClass().getRoom().getRoomName() : "Phòng tập";
-            Integer roomId = (schedule.getGymClass() != null && schedule.getGymClass().getRoom() != null)
-                    ? schedule.getGymClass().getRoom().getRoomId() : null;
+            String roomName = (schedule.getGymClass() != null && schedule.getEffectiveRoom() != null)
+                    ? schedule.getEffectiveRoom().getRoomName() : "Phòng tập";
+            Integer roomId = (schedule.getGymClass() != null && schedule.getEffectiveRoom() != null)
+                    ? schedule.getEffectiveRoom().getRoomId() : null;
 
             LocalDateTime now = LocalDateTime.now().withNano(0);
             Map<String, Object> payload = new LinkedHashMap<>();

@@ -67,11 +67,16 @@ public final class ManagerRequests {
         }
     }
 
+    /** roomId: room of this session only; null keeps the session's current room (the class room for a new session). */
     public record ScheduleRequest(
             @NotNull Integer classId,
             @NotNull LocalDateTime startTime,
             @NotNull LocalDateTime endTime,
-            @NotBlank String status) {
+            @NotBlank String status,
+            Integer roomId) {
+        public ScheduleRequest(Integer classId, LocalDateTime startTime, LocalDateTime endTime, String status) {
+            this(classId, startTime, endTime, status, null);
+        }
     }
 
     public record PackageRequest(

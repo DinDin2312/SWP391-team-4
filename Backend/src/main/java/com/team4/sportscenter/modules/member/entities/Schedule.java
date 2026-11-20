@@ -34,4 +34,16 @@ public class Schedule {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "substitute_coach_id")
     private User substituteCoach;
+
+    /** Room of this session only; null means the class room. */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "room_id")
+    private Room room;
+
+    /** The room this session really uses: its own room when set, otherwise the class room. */
+    @Transient
+    public Room getEffectiveRoom() {
+        if (room != null) return room;
+        return gymClass != null ? gymClass.getRoom() : null;
+    }
 }
