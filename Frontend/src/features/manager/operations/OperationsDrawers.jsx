@@ -747,7 +747,6 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
   }, [schedule.scheduleId, retry]);
   const scheduled = ["SCHEDULED", "SUBSTITUTE_ASSIGNED", "RESCHEDULED"].includes(schedule.status);
   const started = new Date(schedule.startTime) <= new Date();
-  const canComplete = scheduled && new Date(schedule.endTime) <= new Date();
   const editable = scheduled && !started;
   const attendance = {
     PRESENT: "Present",
@@ -785,16 +784,6 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
             title={scheduled && started ? t("Sessions that have started cannot be moved.") : undefined}
             onClick={() => edit(schedule)}
           >{t("Reschedule this session")}</button>
-          <button
-            className="manager-secondary"
-            disabled={!canComplete}
-            title={
-              t(canComplete
-                ? "Mark this ended session completed"
-                : "Only scheduled sessions that have ended can be completed.")
-            }
-            onClick={() => confirm("complete", schedule)}
-          >{t("Complete")}</button>
         </div>
         {editable && (
           <div className="ops-detail-actions ops-detail-danger">
@@ -813,7 +802,7 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
           <p className="ops-note">{t("Completed and cancelled sessions cannot be edited or reopened.")}</p>
         )}
         {scheduled && started && (
-          <p className="ops-note">{t("This session has already started, so it can no longer be moved or cancelled. Mark it completed after it ends.")}</p>
+          <p className="ops-note">{t("This session has already started, so it can no longer be moved or cancelled.")}</p>
         )}
         <h3>{t("Roster · read only")}</h3>
         <p className="ops-note">{t("Only the assigned coach can record attendance. Enrolled members are confirmed upon payment.")}</p>
