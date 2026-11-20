@@ -268,6 +268,19 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
   const [error, setError] = useState("");
   const editing = Boolean(config.item);
   const [photo,setPhoto]=useState({file:null,remove:false});
+  const editDate = editing && type === 'schedule' ? form.startTime?.slice(0,10) : '';
+  const [daySlots,setDaySlots]=useState(null);
+  useEffect(()=>{
+    if(!editDate || !form.scheduleId){setDaySlots(null);return undefined;}
+    let live=true; setDaySlots(null);
+    managerService.scheduleDayOptions(form.scheduleId,editDate).then(rows=>live&&setDaySlots(rows)).catch(()=>live&&setDaySlots([]));
+    return ()=>{live=false;};
+  },[editDate,form.scheduleId]);
+  const slotBlock=time=>{
+    const row=daySlots?.find(slot=>String(slot.start).slice(11,16)===time.slice(0,5));
+    if(!row || row.current || !row.blockedReason) return '';
+    return {PAST:'Past',COACH_BUSY:'Coach busy',MEMBER_BUSY:'Member has another session',NO_ROOM:'No suitable room free'}[row.blockedReason] || 'Unavailable';
+  };
   const [photoError,setPhotoError]=useState('');
   useEffect(()=>{
     if(!policy || editing || !['schedule','series'].includes(type))return;
@@ -591,16 +604,21 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
                 <p className="ops-note">{t('{0} minutes per session',[policy?.durationMinutes || '—'])}</p>
                 {policyError && <p role="alert">{t(policyError)}</p>}
                 <label className="ops-field">{t('Date')}<VnDateInput required type="date" value={form.startTime?.slice(0,10) || ''} onInput={e=>set('startTime',e.target.value+'T'+(form.startTime?.slice(11,16)||policy?.starts[0]?.slice(0,5)||'07:00'))} onChange={e=>set('startTime',e.target.value+'T'+(form.startTime?.slice(11,16)||policy?.starts[0]?.slice(0,5)||'07:00'))}/></label>
-                <label className="ops-field">{t('Teaching slot')}<select required disabled={!policy} value={form.startTime?.slice(11,16)||''} onChange={e=>set('startTime',(form.startTime?.slice(0,10)||'')+'T'+e.target.value)}>
+                <label className="ops-field">{t('Teaching slot')}<select required disabled={!policy || (editDate && !daySlots)} value={form.startTime?.slice(11,16)||''} onChange={e=>set('startTime',(form.startTime?.slice(0,10)||'')+'T'+e.target.value)}>
                   <option value="">{t('Select')}</option>
                   {editing && form.startTime===initialForm(type,config.item).startTime && !policy?.starts.some(time=>time.slice(0,5)===form.startTime?.slice(11,16)) && <option value={form.startTime?.slice(11,16)}>{t('Existing session')} · {form.startTime?.slice(11,16)}</option>}
-                  {policy?.starts.map((time,index)=><option key={time} value={time.slice(0,5)}>{slotLabel(time,index,policy.durationMinutes)}</option>)}
+                  {policy?.starts.map((time,index)=>{const blocked=slotBlock(time);return <option key={time} value={time.slice(0,5)} disabled={Boolean(blocked)}>{slotLabel(time,index,policy.durationMinutes)}{blocked?` · ${t(blocked)}`:''}</option>;})}
                 </select></label>
                 {input("endTime", "End time", {
                   type: "datetime-local",
                   readOnly: true,
                 })}
                 {config.supplementary && <label className="ops-check-row"><input type="checkbox" checked={form.enrollMembers !== false} onChange={e=>set('enrollMembers',e.target.checked)}/>{t('Book the class’s current members into this session and notify them')}</label>}
+                {editing && type === "schedule" && (
+                  <SessionRoomPicker scheduleId={form.scheduleId} start={form.startTime} end={form.endTime}
+                    value={form.roomId} currentRoomId={config.item.roomId} currentRoomName={config.item.roomName}
+                    onChange={value => set('roomId', value)} />
+                )}
                 {editing && (
                   <p className="ops-note">{t("Moving the session sends a notification to its booked members. The backend also checks their timetable.")}</p>
                 )}
@@ -666,6 +684,47 @@ export function OperationEditor({ config, data, onClose, onSaved }) {
   );
 }
 
+// Lists rooms that are free for the chosen time (capacity and changeover included) so a manager can move
+// one session instead of cancelling it. The server re-checks every conflict when the form is saved.
+function SessionRoomPicker({ scheduleId, start, end, value, currentRoomId, currentRoomName, onChange }) {
+  useLanguage();
+  const [state, setState] = useState({ loading: false, rooms: [], coachBusy: false, memberBusy: false, error: "" });
+  useEffect(() => {
+    if (!scheduleId || !start || !end) return undefined;
+    let live = true;
+    setState(current => ({ ...current, loading: true, error: "" }));
+    const timer = setTimeout(() => {
+      managerService.scheduleOptions(scheduleId, start, end)
+        .then(result => live && setState({ loading: false, rooms: result.rooms || [], coachBusy: result.coachBusy, memberBusy: result.memberBusy, error: "" }))
+        .catch(err => live && setState({ loading: false, rooms: [], coachBusy: false, memberBusy: false, error: err.response?.data?.message || "Unable to check free rooms." }));
+    }, 250);
+    return () => { live = false; clearTimeout(timer); };
+  }, [scheduleId, start, end]);
+  const freeIds = new Set(state.rooms.map(room => String(room.roomId)));
+  const currentFree = freeIds.has(String(currentRoomId));
+  const selectedFree = value && freeIds.has(String(value));
+  return (
+    <div className="ops-room-picker">
+      <label className="ops-field">{t("Room for this session")}
+        <select name="roomId" value={value || ""} disabled={state.loading || state.coachBusy} onChange={e => onChange(e.target.value)}>
+          {!currentFree && <option value={currentRoomId}>{currentRoomName} · {t("busy at this time")}</option>}
+          {state.rooms.map(room => (
+            <option key={room.roomId} value={room.roomId}>
+              {room.roomName} · {t("{0} seats", [room.capacity])}{String(room.roomId) === String(currentRoomId) ? ` · ${t("current room")}` : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      {state.loading && <p className="ops-note" role="status">{t("Checking free rooms…")}</p>}
+      {state.error && <p className="ops-warning" role="alert">{t(state.error)}</p>}
+      {!state.loading && state.coachBusy && <p className="ops-warning" role="alert"><AlertTriangle size={18} />{t("The coach is teaching another session at this time. Pick another time.")}</p>}
+      {!state.loading && !state.coachBusy && state.memberBusy && <p className="ops-warning" role="alert"><AlertTriangle size={18} />{t("A booked member has another session at this time. Pick another time.")}</p>}
+      {!state.loading && !state.coachBusy && !state.error && !state.rooms.length && <p className="ops-warning" role="alert"><AlertTriangle size={18} />{t("No room large enough is free at this time. Pick another time.")}</p>}
+      {!state.loading && !state.coachBusy && value && !selectedFree && state.rooms.length > 0 && <p className="ops-warning" role="alert">{t("The selected room is busy at this time. Choose a free room above.")}</p>}
+    </div>
+  );
+}
+
 export function SessionDrawer({ schedule, onClose, edit, confirm }) {
   useLanguage();
   const [rows, setRows] = useState(null);
@@ -687,7 +746,8 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
     };
   }, [schedule.scheduleId, retry]);
   const scheduled = ["SCHEDULED", "SUBSTITUTE_ASSIGNED", "RESCHEDULED"].includes(schedule.status);
-  const canComplete = scheduled && new Date(schedule.endTime) <= new Date();
+  const started = new Date(schedule.startTime) <= new Date();
+  const editable = scheduled && !started;
   const attendance = {
     PRESENT: "Present",
     ABSENT: "Absent",
@@ -720,32 +780,29 @@ export function SessionDrawer({ schedule, onClose, edit, confirm }) {
         <div className="ops-detail-actions">
           <button
             className="manager-secondary"
-            disabled={!scheduled}
+            disabled={!editable}
+            title={scheduled && started ? t("Sessions that have started cannot be moved.") : undefined}
             onClick={() => edit(schedule)}
-          >{t("Change time")}</button>
-          <button
-            className="manager-secondary"
-            disabled={!canComplete}
-            title={
-              t(canComplete
-                ? "Mark this ended session completed"
-                : "Only scheduled sessions that have ended can be completed.")
-            }
-            onClick={() => confirm("complete", schedule)}
-          >{t("Complete")}</button>
-          <button
-            className="ops-text-danger"
-            disabled={!scheduled}
-            onClick={() => confirm("cancel", schedule)}
-          >{t("Cancel session")}</button>
-          <button
-            className="ops-text-danger"
-            disabled={!scheduled}
-            onClick={() => confirm("deactivate", schedule)}
-          >{t("Cancel course")}</button>
+          >{t("Reschedule this session")}</button>
         </div>
+        {editable && (
+          <div className="ops-detail-actions ops-detail-danger">
+            <p className="ops-note">{t("Prefer moving the session to another time or room. Cancelling refunds one session to every confirmed member.")}</p>
+            <button
+              className="ops-text-danger"
+              onClick={() => confirm("cancel", schedule)}
+            >{t("Cancel session")}</button>
+            <button
+              className="ops-text-danger"
+              onClick={() => confirm("deactivate", schedule)}
+            >{t("Cancel course")}</button>
+          </div>
+        )}
         {!scheduled && (
           <p className="ops-note">{t("Completed and cancelled sessions cannot be edited or reopened.")}</p>
+        )}
+        {scheduled && started && (
+          <p className="ops-note">{t("This session has already started, so it can no longer be moved or cancelled.")}</p>
         )}
         <h3>{t("Roster · read only")}</h3>
         <p className="ops-note">{t("Only the assigned coach can record attendance. Enrolled members are confirmed upon payment.")}</p>
@@ -803,6 +860,13 @@ export function OperationConfirmation({ config, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [reason, setReason] = useState(() => t("Insufficient registrations to open the course"));
+  const [refund, setRefund] = useState(null);
+  useEffect(() => {
+    if (config.type !== "cancel" || !config.item?.scheduleId) return undefined;
+    let live = true;
+    managerService.scheduleRefundPreview(config.item.scheduleId).then(result => live && setRefund(result)).catch(() => {});
+    return () => { live = false; };
+  }, [config.type, config.item?.scheduleId]);
   const dialog = useOperationDialog(onClose, saving);
   const id = useId();
   const cancel = config.type === "cancel";
@@ -837,7 +901,7 @@ export function OperationConfirmation({ config, onClose, onSaved }) {
         });
       await onSaved(
         cancel
-          ? "Session cancelled. Its bookings were cancelled and members notified."
+          ? "Session cancelled. Members were notified and refunded one session as a credit voucher."
           : deactivate
             ? refunded
               ? t("Course cancelled. {0} upcoming sessions cancelled and 100% credit voucher issued to {1} members.", [cancelled, refunded])
@@ -873,11 +937,16 @@ export function OperationConfirmation({ config, onClose, onSaved }) {
         {deactivate && config.upcomingInRange > 0 && <p className="ops-warning">{t('At least {0} upcoming sessions will be cancelled.',[config.upcomingInRange])}</p>}
         <p>
           {t(cancel
-            ? t("All bookings for this session will be cancelled and members will receive a notification. The session cannot be reopened. This action does not issue a refund; contact reception about tuition.")
+            ? t("All bookings for this session will be cancelled and members will receive a notification. The session cannot be reopened.")
             : deactivate
               ? t("Every upcoming session of this course will be cancelled, members will be notified with the reason below, and a 100% credit voucher will be issued to confirmed members.")
               : t("This ended session will be marked completed and can no longer be edited."))}
         </p>
+        {cancel && refund && (
+          <p className="ops-warning">{refund.members > 0 && Number(refund.amountPerMember) > 0
+            ? t("{0} confirmed members will each get a {1} credit voucher (one session's tuition, valid 60 days).", [refund.members, formatMoney(refund.amountPerMember)])
+            : t("No confirmed member needs a refund for this session.")}</p>
+        )}
         {deactivate && (
           <label className="ops-field" style={{ width: "100%", textAlign: "left" }}>
             {t("Cancellation reason (sent to members)")}

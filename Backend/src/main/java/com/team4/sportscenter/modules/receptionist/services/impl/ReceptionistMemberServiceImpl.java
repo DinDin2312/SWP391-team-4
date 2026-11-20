@@ -234,10 +234,10 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                     ? s.getGymClass().getCoach().getFullName() : "N/A";
             String coachEmail = (s != null && s.getGymClass() != null && s.getGymClass().getCoach() != null)
                     ? s.getGymClass().getCoach().getEmail() : null;
-            String roomName = (s != null && s.getGymClass() != null && s.getGymClass().getRoom() != null)
-                    ? s.getGymClass().getRoom().getRoomName() : "N/A";
-            Integer roomId = (s != null && s.getGymClass() != null && s.getGymClass().getRoom() != null)
-                    ? s.getGymClass().getRoom().getRoomId() : null;
+            String roomName = (s != null && s.getGymClass() != null && s.getEffectiveRoom() != null)
+                    ? s.getEffectiveRoom().getRoomName() : "N/A";
+            Integer roomId = (s != null && s.getGymClass() != null && s.getEffectiveRoom() != null)
+                    ? s.getEffectiveRoom().getRoomId() : null;
 
             if ("PRESENT".equalsIgnoreCase(b.getAttendanceStatus())) {
                 attendedCount++;
@@ -972,7 +972,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         // Cộng dồn số học viên của các lớp học đang diễn ra trong phòng tại thời điểm hiện tại (nếu chưa check-in quầy)
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         List<java.util.Map<String, Object>> classOccupancyRows = jdbcTemplate.queryForList(
-                "SELECT c.room_id, COUNT(b.booking_id) AS student_count " +
+                "SELECT COALESCE(s.room_id, c.room_id) AS room_id, COUNT(b.booking_id) AS student_count " +
                 "FROM SCHEDULES s " +
                 "JOIN CLASSES c ON s.class_id = c.class_id " +
                 "JOIN BOOKINGS b ON s.schedule_id = b.schedule_id " +
@@ -980,8 +980,8 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 "  AND b.status = 'CONFIRMED' " +
                 "  AND (b.attendance_status IS NULL OR b.attendance_status != 'ABSENT') " +
                 "  AND ? BETWEEN s.start_time AND s.end_time " +
-                "  AND c.room_id IS NOT NULL " + notInClause +
-                " GROUP BY c.room_id",
+                "  AND COALESCE(s.room_id, c.room_id) IS NOT NULL " + notInClause +
+                " GROUP BY COALESCE(s.room_id, c.room_id)",
                 now
         );
         java.util.Map<Integer, Long> classOccupancyByRoom = new java.util.HashMap<>();
@@ -1119,8 +1119,8 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                     ? todayClassBooking.getSchedule().getGymClass().getClassName() : "Lớp học";
             packageName = activeGymMembership.purchasedName() + " + Lớp " + cName;
             packageType = "COMBO";
-            if (todayClassBooking.getSchedule().getGymClass() != null && todayClassBooking.getSchedule().getGymClass().getRoom() != null) {
-                selectedRoomId = todayClassBooking.getSchedule().getGymClass().getRoom().getRoomId();
+            if (todayClassBooking.getSchedule().getGymClass() != null && todayClassBooking.getSchedule().getEffectiveRoom() != null) {
+                selectedRoomId = todayClassBooking.getSchedule().getEffectiveRoom().getRoomId();
             }
             facilityName = "Khu Gym & CSVC + Lớp: " + cName;
         } else if (hasGymAccess) {
@@ -1146,9 +1146,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             packageName = "Lớp: " + cName;
             packageType = "CLASS";
             String rName = "Phòng tập";
-            if (todayClassBooking.getSchedule().getGymClass() != null && todayClassBooking.getSchedule().getGymClass().getRoom() != null) {
-                selectedRoomId = todayClassBooking.getSchedule().getGymClass().getRoom().getRoomId();
-                rName = todayClassBooking.getSchedule().getGymClass().getRoom().getRoomName();
+            if (todayClassBooking.getSchedule().getGymClass() != null && todayClassBooking.getSchedule().getEffectiveRoom() != null) {
+                selectedRoomId = todayClassBooking.getSchedule().getEffectiveRoom().getRoomId();
+                rName = todayClassBooking.getSchedule().getEffectiveRoom().getRoomName();
             }
             facilityName = "Lớp: " + cName + " (" + rName + ")";
         }
@@ -2077,7 +2077,7 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             if (coach == null) continue;
 
             // Deduplicate guard: same coach, same start time and room only appears once
-            Integer rId = (gymClass.getRoom() != null) ? gymClass.getRoom().getRoomId() : 0;
+            Integer rId = (s.getEffectiveRoom() != null) ? s.getEffectiveRoom().getRoomId() : 0;
             String dedupKey = coach.getUserId() + "_" + s.getStartTime() + "_" + rId;
             if (!seenScheduleSlots.add(dedupKey)) {
                 continue;
@@ -2087,9 +2087,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
             String coachEmail = coach.getEmail() != null ? coach.getEmail() : "";
             String coachPhone = coach.getPhone() != null ? coach.getPhone() : "";
             String className = gymClass.getClassName() != null ? gymClass.getClassName() : "Lớp học";
-            String roomName = (gymClass.getRoom() != null && gymClass.getRoom().getRoomName() != null)
-                    ? gymClass.getRoom().getRoomName() : "Phòng tập";
-            Integer roomId = (gymClass.getRoom() != null) ? gymClass.getRoom().getRoomId() : null;
+            String roomName = (s.getEffectiveRoom() != null && s.getEffectiveRoom().getRoomName() != null)
+                    ? s.getEffectiveRoom().getRoomName() : "Phòng tập";
+            Integer roomId = (s.getEffectiveRoom() != null) ? s.getEffectiveRoom().getRoomId() : null;
 
             // Filter keyword
             if (cleanKeyword != null) {
@@ -2218,9 +2218,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
                 ? request.getReceptionistEmail().trim()
                 : "receptionist@sport.com";
 
-        String roomName = (gymClass.getRoom() != null && gymClass.getRoom().getRoomName() != null)
-                ? gymClass.getRoom().getRoomName() : "Phòng tập";
-        Integer roomId = (gymClass.getRoom() != null) ? gymClass.getRoom().getRoomId() : null;
+        String roomName = (schedule.getEffectiveRoom() != null && schedule.getEffectiveRoom().getRoomName() != null)
+                ? schedule.getEffectiveRoom().getRoomName() : "Phòng tập";
+        Integer roomId = (schedule.getEffectiveRoom() != null) ? schedule.getEffectiveRoom().getRoomId() : null;
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("coachId", coach.getUserId());
@@ -2482,9 +2482,9 @@ public class ReceptionistMemberServiceImpl implements ReceptionistMemberService 
         LocalDateTime checkInTime = (nextSchedule.getStartTime() != null && !nextSchedule.getStartTime().isAfter(now))
                 ? nextSchedule.getStartTime() : now;
 
-        String roomName = (gymClass.getRoom() != null && gymClass.getRoom().getRoomName() != null)
-                ? gymClass.getRoom().getRoomName() : "Phòng tập";
-        Integer roomId = (gymClass.getRoom() != null) ? gymClass.getRoom().getRoomId() : null;
+        String roomName = (nextSchedule.getEffectiveRoom() != null && nextSchedule.getEffectiveRoom().getRoomName() != null)
+                ? nextSchedule.getEffectiveRoom().getRoomName() : "Phòng tập";
+        Integer roomId = (nextSchedule.getEffectiveRoom() != null) ? nextSchedule.getEffectiveRoom().getRoomId() : null;
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("coachId", coach.getUserId());

@@ -194,6 +194,9 @@ public class ManagerController {
     public Map<String,List<Integer>> commitSchedulePlan(@Valid @RequestBody ManagerRequests.SchedulePlanCommitRequest request, Authentication auth) {
         return Map.of("ids",managerService.commitSchedulePlan(request,auth.getName()));
     }
+    @GetMapping("/schedules/{id}/options") public Map<String, Object> scheduleOptions(@PathVariable Integer id, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime start, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime end) { return managerService.sessionOptions(id, start, end); }
+    @GetMapping("/schedules/{id}/day-options") public List<Map<String, Object>> scheduleDayOptions(@PathVariable Integer id, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) { return managerService.sessionDayOptions(id, date); }
+    @GetMapping("/schedules/{id}/refund-preview") public Map<String, Object> scheduleRefundPreview(@PathVariable Integer id) { return managerService.sessionRefundPreview(id); }
     @PutMapping("/schedules/{id}") public Map<String, Integer> updateSchedule(@PathVariable Integer id, @Valid @RequestBody ManagerRequests.ScheduleRequest request, Authentication auth) { return Map.of("id", managerService.saveSchedule(id, request, auth.getName())); }
 
     @org.springframework.beans.factory.annotation.Autowired private com.team4.sportscenter.modules.member.services.PackageCommerceService commerce;

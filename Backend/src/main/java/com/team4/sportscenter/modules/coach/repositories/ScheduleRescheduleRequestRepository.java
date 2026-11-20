@@ -35,8 +35,8 @@ public interface ScheduleRescheduleRequestRepository extends JpaRepository<Sched
     List<ScheduleRescheduleRequest> findRequestsPassedDeadline(@Param("now") LocalDateTime now);
 
     // Kiểm tra xem phòng có bị lớp khác chiếm trong khoảng start -> end không
-    @Query("SELECT COUNT(s) FROM Schedule s " +
-           "WHERE s.gymClass.room.roomId = :roomId " +
+    @Query("SELECT COUNT(s) FROM Schedule s JOIN s.gymClass c LEFT JOIN s.room sr " +
+           "WHERE COALESCE(sr.roomId, c.room.roomId) = :roomId " +
            "AND s.scheduleId != :excludeScheduleId " +
            "AND s.status != 'CANCELLED' " +
            "AND s.startTime < :endTime AND s.endTime > :startTime")
@@ -69,8 +69,8 @@ public interface ScheduleRescheduleRequestRepository extends JpaRepository<Sched
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime);
 
-    @Query("SELECT s FROM Schedule s " +
-           "WHERE s.gymClass.room.roomId = :roomId " +
+    @Query("SELECT s FROM Schedule s JOIN s.gymClass c LEFT JOIN s.room sr " +
+           "WHERE COALESCE(sr.roomId, c.room.roomId) = :roomId " +
            "AND s.scheduleId != :excludeScheduleId " +
            "AND s.status != 'CANCELLED' " +
            "AND s.startTime < :endTime AND s.endTime > :startTime")

@@ -77,7 +77,7 @@ public class GuestController {
                         .scheduleId(schedule.getScheduleId())
                         .className(schedule.getGymClass().getClassName())
                         .coachName(schedule.getGymClass().getCoach().getFullName())
-                        .roomName(schedule.getGymClass().getRoom().getRoomName())
+                        .roomName(schedule.getEffectiveRoom().getRoomName())
                         .startTime(schedule.getStartTime())
                         .endTime(schedule.getEndTime())
                         .maxSlots(schedule.getGymClass().getMaxSlots())

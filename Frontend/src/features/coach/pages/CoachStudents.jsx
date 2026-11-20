@@ -357,7 +357,7 @@ const CoachStudents = () => {
                       : 'bg-[var(--surface-hover)] text-[var(--text-muted)]'
                   }`}
                 >
-                  {studentCount} {cls.maxSlots ? `/${cls.maxSlots}` : t('HV')}
+                  {studentCount} {cls.maxSlots ? `/${cls.maxSlots}` : ` ${t('students')}`}
                 </span>
 
                 {isSelected && <Check className="w-3.5 h-3.5 shrink-0 ml-0.5" />}
@@ -469,7 +469,7 @@ const CoachStudents = () => {
             <Users className="w-12 h-12 text-[var(--text-muted)] mb-3 opacity-60" />
             <h4 className="text-base font-bold text-[var(--text)]">
               {selectedClass
-                ? `${t("Lớp")} "${selectedClass.className}" ${t("chưa có học viên đăng ký")}`
+                ? `${t("Class")} "${selectedClass.className}" ${t("chưa có học viên đăng ký")}`
                 : t("No Trainee Records Found")}
             </h4>
             <p className="text-xs text-[var(--text-muted)] mt-1 max-w-md">
@@ -483,7 +483,7 @@ const CoachStudents = () => {
                 onClick={() => setSelectedClassId('ALL')}
                 className="mt-4 px-4 py-2 rounded-xl bg-[var(--primary)] text-white font-bold text-xs shadow-md transition-all cursor-pointer"
               >
-                {t("Xem tất cả các lớp")}
+                {t("View all classes")}
               </button>
             )}
           </div>

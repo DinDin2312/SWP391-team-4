@@ -1,5 +1,100 @@
 // Source labels are explicit keys; API data, identifiers and user input are never translated.
 const pairs = `
+No.|STT
+Coaching notes|Ghi chú hướng dẫn
+Load (kg)|Tạ (kg)
+e.g. {0}|VD: {0}
+Upcoming Sessions|Buổi sắp tới
+Next Teaching Sessions|Buổi dạy sắp tới
+Open Full Roster|Xem toàn bộ lịch dạy
+No upcoming sessions scheduled.|Chưa có buổi dạy nào sắp tới.
+Notification|Thông báo
+Success|Thành công
+Failed to cancel request.|Không thể hủy yêu cầu.
+Make-up class|Dạy bù
+Reset to Not marked|Đặt lại trạng thái Chưa điểm danh
+Error|Lỗi
+Failed to load coach profile.|Không tải được hồ sơ huấn luyện viên.
+Notice|Lưu ý
+Failed to update coach profile.|Không cập nhật được hồ sơ huấn luyện viên.
+Failed to send verification OTP code.|Không gửi được mã OTP xác minh.
+Please fill in all password fields.|Vui lòng điền đầy đủ các ô mật khẩu.
+New password must be at least 6 characters long.|Mật khẩu mới phải có ít nhất 6 ký tự.
+Failed to update password. Please check your credentials.|Không đổi được mật khẩu. Vui lòng kiểm tra lại thông tin.
+Full name, contact info, and coach bio|Họ tên, liên hệ và giới thiệu
+Teaching specialty and class constraints|Chuyên môn giảng dạy và quy định lớp
+Email verification and password access|Xác minh email và mật khẩu
+Schedule and attendance alert toggles|Bật/tắt thông báo lịch dạy và điểm danh
+Loading coach settings...|Đang tải cài đặt huấn luyện viên...
+Update your legal name, contact phone, and professional bio displayed to trainees.|Cập nhật họ tên, số điện thoại và phần giới thiệu hiển thị cho học viên.
+Display name on class rosters|Tên hiển thị trên danh sách lớp
+Member support hotline|Số điện thoại liên hệ
+Certifications and style|Chứng chỉ và phong cách huấn luyện
+characters|ký tự
+Not assigned|Chưa gán
+Authorization|Phân quyền
+Select your primary coaching subject and inspect teaching capacity rules.|Chọn bộ môn giảng dạy chính và xem các quy định về sĩ số lớp.
+System Constraint Rules|Quy định của hệ thống
+Current Assigned|Đang được phân công
+Standard training curriculum at Sports Center.|Giáo trình huấn luyện chuẩn của trung tâm.
+Manage your sign-in email address and update your account password.|Quản lý email đăng nhập và đổi mật khẩu tài khoản.
+Verify New Login Email|Xác minh email đăng nhập mới
+Enter new email address...|Nhập email mới...
+Enter 6-digit verification OTP sent to|Nhập mã OTP 6 số đã gửi tới
+Ensure your account uses a strong, unique password.|Hãy dùng mật khẩu mạnh và không trùng với tài khoản khác.
+All changes are encrypted and safely stored in the NEXUS system.|Mọi thay đổi đều được mã hóa và lưu an toàn trên hệ thống NEXUS.
+Students of the selected class|Học viên lớp đang chọn
+Room / Capacity|Phòng học / Sức chứa
+Registrations for this class|Lượt đăng ký lớp này
+Filter by assigned class|Lọc theo lớp học được phân công
+Select a class below to see only the members registered for it.|Chọn một lớp học bên dưới để xem riêng danh sách học viên đã đăng ký học lớp đó.
+Quick select class:|Chọn nhanh lớp:
+No assigned class information yet.|Chưa có thông tin lớp học được phân công.
+Registered headcount|Sĩ số đã đăng ký
+Clear class filter|Bỏ lọc lớp
+Search students in class|Tìm học viên trong lớp
+Class|Lớp
+has no registered students|chưa có học viên đăng ký
+No members have registered for this class yet. Choose another class or go back to view all.|Hiện tại chưa có học viên nào đăng ký tham gia lớp học này. Bạn có thể chọn lớp khác hoặc quay lại xem tất cả.
+You have no assigned students yet.|Bạn hiện chưa có học viên nào được phân công giảng dạy.
+View all classes|Xem tất cả các lớp
+No students match the keyword|Không tìm thấy học viên nào phù hợp với từ khóa
+Clear search filter|Xóa bộ lọc tìm kiếm
+Enrolled classes|Lớp đang theo học
+Click to view all registered classes|Bấm để xem tất cả lớp học đã đăng ký
+View full profile|Xem hồ sơ chi tiết
+Body fat|Tỉ lệ mỡ
+NEXUS Coach AI filled the exercise into the form. Please review it and press Assign exercise!|NEXUS Coach AI đã điền bài tập vào Form. Coach hãy kiểm tra và nhấn Giao bài tập!
+NEXUS Coach AI filled the training plan into the form. Please review it and press Assign plan!|NEXUS Coach AI đã điền kế hoạch tập luyện vào Form. Coach hãy kiểm tra và nhấn Giao kế hoạch!
+-- Select a class you teach ({0} classes) --|-- Chọn lớp học bạn đang dạy ({0} lớp) --
+week|tuần
+scheduled workouts|buổi tập được lên lịch
+Click to make this a rest day|Nhấn để chuyển thành ngày nghỉ
+Click to enable this training day|Nhấn để bật ngày tập
+Resting|Nghỉ ngơi
+e.g. Chest & Triceps|VD: Ngực & Tay sau (Chest + Triceps)
+Watch demo video|Xem video mẫu
+Rest Day|Ngày nghỉ ngơi (Rest Day)
+e.g. Chest & Triceps (short)|VD: Ngực & Tay sau
+Creating plan...|Đang khởi tạo kế hoạch...
+All ({0})|Tất cả ({0})
+page|trang
+Hello Coach! I'm NEXUS COACH AI, your training assistant. Tell me what exercise to assign, to which student, or ask for a training plan that fits their condition! 💪|Xin chào Coach! Mình là NEXUS COACH AI - trợ lý chuyên môn của bạn. Hãy nói cho mình biết bạn muốn giao bài tập gì, cho học viên nào, hoặc cần tư vấn kế hoạch huấn luyện theo thể trạng nhé! 💪
+Your browser does not support text-to-speech.|Trình duyệt của bạn không hỗ trợ đọc văn bản.
+Sorry Coach, the AI is busy or overloaded. Please try again in a moment!|Xin lỗi Coach, hệ thống AI hiện đang bận hoặc quá tải. Vui lòng thử lại sau giây lát!
+Training Co-Pilot & Exercise Specialist|Trợ lý huấn luyện & chuyên gia bài tập
+Stop reading|Dừng đọc
+Listen to the AI read the answer|Nghe AI đọc câu trả lời
+Listen|Nghe AI đọc
+Training plan drafted into the form|Đã tự động soạn kế hoạch tập luyện vào Form
+Exercise filled into the form|Đã tự động điền bài tập vào Form
+View drafted plan|Xem giáo án vừa soạn
+View filled exercise|Xem bài tập vừa điền
+Go to form|Đi tới Form
+Ask AI: create exercises, weekly plans, analyse students...|Hỏi AI: lên bài tập, kế hoạch tuần, phân tích học viên...
+Send message|Gửi tin nhắn
+Coach AI suggests and fills the form; you review everything before assigning.|Coach AI tự động gợi ý & điền form, Coach toàn quyền kiểm tra trước khi giao.
+Cancel|Hủy bỏ
 Operations feed|Hoạt động vận hành
 Sessions in the next 7 days|Buổi tập trong 7 ngày tới
 Revenue this month|Doanh thu tháng này
@@ -328,6 +423,30 @@ View or create schedules →|Xem hoặc tạo lịch →
 Cancel session|Hủy buổi tập
 Cancel session?|Hủy buổi tập?
 Change time|Đổi giờ
+Reschedule this session|Đổi lịch buổi này
+Past|Đã qua
+Sessions that have started cannot be moved.|Buổi đã bắt đầu thì không thể đổi lịch.
+This session has already started, so it can no longer be moved or cancelled.|Buổi này đã bắt đầu nên không thể đổi lịch hay hủy nữa.
+Coach busy|HLV bận
+Member has another session|Học viên trùng lịch
+No suitable room free|Hết phòng phù hợp
+Unavailable|Không khả dụng
+{0} seats|{0} chỗ
+Ended · awaiting completion|Đã kết thúc · chờ hoàn thành
+Room for this session|Phòng cho buổi này
+busy at this time|đang bận giờ này
+current room|phòng hiện tại
+Checking free rooms…|Đang kiểm tra phòng trống…
+Unable to check free rooms.|Không kiểm tra được phòng trống.
+The coach is teaching another session at this time. Pick another time.|Huấn luyện viên đang dạy buổi khác giờ này. Hãy chọn giờ khác.
+A booked member has another session at this time. Pick another time.|Có học viên đã đăng ký bị trùng lịch giờ này. Hãy chọn giờ khác.
+No room large enough is free at this time. Pick another time.|Không còn phòng đủ chỗ trống giờ này. Hãy chọn giờ khác.
+The selected room is busy at this time. Choose a free room above.|Phòng đang chọn bị trùng giờ này. Hãy chọn một phòng trống ở trên.
+Prefer moving the session to another time or room. Cancelling refunds one session to every confirmed member.|Nên đổi buổi sang giờ hoặc phòng khác. Hủy buổi sẽ hoàn học phí 1 buổi cho mọi học viên đã xác nhận.
+All bookings for this session will be cancelled and members will receive a notification. The session cannot be reopened.|Mọi đăng ký của buổi này sẽ bị hủy và học viên nhận thông báo. Buổi đã hủy không thể mở lại.
+{0} confirmed members will each get a {1} credit voucher (one session's tuition, valid 60 days).|{0} học viên đã xác nhận, mỗi người nhận Voucher {1} (học phí 1 buổi, hạn 60 ngày).
+No confirmed member needs a refund for this session.|Buổi này không có học viên đã xác nhận cần hoàn tiền.
+Session cancelled. Members were notified and refunded one session as a credit voucher.|Đã hủy buổi. Học viên đã được thông báo và hoàn học phí 1 buổi bằng Voucher.
 Complete|Hoàn thành
 All bookings for this session will be cancelled and members will receive a notification. The session cannot be reopened. This action does not issue a refund; contact reception about tuition.|Mọi đăng ký của buổi tập này sẽ bị hủy và hội viên sẽ nhận thông báo. Buổi tập không thể mở lại. Thao tác này không hoàn tiền; hãy liên hệ lễ tân về học phí.
 Roster · read only|Danh sách học viên · chỉ xem
@@ -1652,6 +1771,22 @@ const reportCompletionLabels={
  "Assigned classes and students":"Lớp và học viên được phân công", "Training plans and feedback":"Kế hoạch tập và nhận xét", "Own profile and memberships":"Hồ sơ và gói hội viên cá nhân", "Personal schedule and training history":"Lịch cá nhân và lịch sử tập luyện"
 };
 for(const [en,vi] of Object.entries(reportCompletionLabels)) translations[en]=[en,vi];
+
+const classRevenueLabels={
+ "Course revenue by subject":"Doanh thu khóa học theo môn",
+ "Share of course revenue collected in this period. Select a subject to see its classes.":"Tỷ trọng doanh thu khóa học thu được trong kỳ. Chọn một môn để xem từng lớp.",
+ "Course revenue":"Doanh thu khóa học", "Other subjects":"Môn khác", "No subject":"Chưa gán môn",
+ "No course revenue in this period.":"Không có doanh thu khóa học trong kỳ này.",
+ "Courses make up {0} of total revenue ({1}). The rest comes from packages and other payments.":"Khóa học chiếm {0} tổng doanh thu kỳ này ({1}). Phần còn lại đến từ gói tập và các khoản khác.",
+ "When one invoice has several items, the amount paid is split by item price.":"Hóa đơn có nhiều mục thì số tiền đã trả được chia theo giá từng mục.",
+ "{0} registrations":"{0} lượt đăng ký", "{0} classes":"{0} lớp", "{0} subjects":"{0} môn",
+ "Course revenue share by subject":"Tỷ trọng doanh thu khóa học theo môn",
+ "Package revenue":"Doanh thu gói tập", "Package revenue share":"Tỷ trọng doanh thu gói tập", "Other packages":"Gói khác",
+ "Share of package revenue collected in this period, with the number of purchases.":"Tỷ trọng doanh thu gói tập thu được trong kỳ, kèm số lượt mua.",
+ "No package revenue in this period.":"Không có doanh thu gói tập trong kỳ này.",
+ "Packages make up {0} of total revenue ({1}).":"Gói tập chiếm {0} tổng doanh thu kỳ này ({1}).",
+};
+for(const [en,vi] of Object.entries(classRevenueLabels)) translations[en]=[en,vi];
 
 // ==================== BẢN DỊCH TÍNH NĂNG ĐÁNH GIÁ TIẾN ĐỘ HỌC VIÊN (COACH ASSESSMENT) ====================
 const assessmentLabels = {

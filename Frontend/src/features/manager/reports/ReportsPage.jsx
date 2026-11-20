@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ArrowDownRight, ArrowDownToLine, ArrowUpRight, BarChart3, CalendarDays, CheckCircle2, ChevronDown, ClipboardList, Dumbbell, FileClock, Info, Minus, Package, Trophy, UserPlus, Users, Wallet } from 'lucide-react';
+import { ArrowDownRight, ArrowDownToLine, ArrowUpRight, BarChart3, CalendarDays, CheckCircle2, ChevronDown, Dumbbell, FileClock, Info, Minus, Package, UserPlus, Users, Wallet } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { locale } from '../../../i18n/languageStore';
 import { formatDate, formatMoney } from '../../../utils/displayFormat';
@@ -7,10 +7,11 @@ import { isoDate, reportCsv } from '../managerUtils';
 import { alignPrevious, bucketDays, fillDays } from './revenueSeries';
 import ManagerPageHeader from '../components/ManagerPageHeader';
 import CoachTeachingReport from './CoachTeachingReport';
+import RevenueDonut from './RevenueDonut';
+import { packageItems, subjectItems } from './classRevenue';
 import './reports.css';
 import VnDateInput from '../../../components/VnDateInput';
 
-const LOW_OCCUPANCY = 25;
 
 function Empty({ icon: Icon = BarChart3, text }) {
   return <div className="reports-empty"><Icon size={28} strokeWidth={1.5} aria-hidden="true" /><p>{t(text)}</p></div>;
@@ -151,41 +152,6 @@ function RevenueStats({ days }) {
   return <dl className="reports-revenue-stats">{stats.map(stat => <div key={stat.label}><dt>{t(stat.label)}</dt><dd>{stat.value}</dd>{stat.note && <span>{stat.note}</span>}</div>)}</dl>;
 }
 
-const BOOKING_STATUSES = [
-  { status: 'CONFIRMED', label: 'Confirmed', tone: 'confirmed' },
-  { status: 'PENDING', label: 'Pending', tone: 'pending' },
-  { status: 'CANCELLED', label: 'Cancelled', tone: 'cancelled' },
-];
-
-function BookingBreakdown({ rows }) {
-  const known = BOOKING_STATUSES.map(item => ({ ...item, value: Number(rows.find(row => row.status === item.status)?.value || 0) }));
-  const other = rows.filter(row => !BOOKING_STATUSES.some(item => item.status === row.status)).reduce((sum, row) => sum + Number(row.value || 0), 0);
-  const parts = other > 0 ? [...known, { status: 'OTHER', label: 'Other booking statuses', tone: 'other', value: other }] : known;
-  const total = parts.reduce((sum, part) => sum + part.value, 0);
-  if (!total) return <Empty icon={ClipboardList} text="No bookings in this period." />;
-  return <div className="reports-breakdown">
-    <div className="reports-breakdown-total"><strong>{count(total)}</strong><span>{t('bookings created')}</span></div>
-    <div className="reports-segments" role="img" aria-label={parts.map(part => `${t(part.label)}: ${count(part.value)} (${percent(part.value / total * 100)})`).join(', ')}>
-      {parts.filter(part => part.value > 0).map(part => <span key={part.status} className={`is-${part.tone}`} style={{ flexGrow: part.value }} title={`${t(part.label)}: ${count(part.value)}`} />)}
-    </div>
-    <ul className="reports-breakdown-list">{parts.map(part => <li key={part.status}>
-      <span className={`reports-swatch is-${part.tone}`} aria-hidden="true" />
-      <span className="reports-breakdown-name">{t(part.label)}</span>
-      <strong>{count(part.value)}</strong>
-      <span className="reports-breakdown-share">{percent(part.value / total * 100)}</span>
-    </li>)}</ul>
-  </div>;
-}
-
-function OccupancyMeter({ rate }) {
-  if (rate == null) return <span className="reports-occupancy-none">—</span>;
-  const low = rate < LOW_OCCUPANCY;
-  return <div className={`reports-occupancy${low ? ' is-low' : rate >= 85 ? ' is-high' : ''}`}>
-    <span>{low && <AlertTriangle size={12} aria-label={t('Low occupancy')} />}{percent(Math.round(rate))}</span>
-    <i aria-hidden="true"><b style={{ width: `${Math.max(0, Math.min(rate, 100))}%` }} /></i>
-  </div>;
-}
-
 // Delta vs. the previous period of equal length. `goodWhenUp` decides the colour, the arrow shows direction.
 function Delta({ current, previous, goodWhenUp = true }) {
   if (previous == null || current == null) return null;
@@ -201,24 +167,6 @@ function Delta({ current, previous, goodWhenUp = true }) {
   </span>;
 }
 
-function ClassPopularity({ rows }) {
-  const max = Math.max(...rows.map(row => Number(row.students)), 1);
-  return <ol className="reports-popularity">{rows.map((row, index) => {
-    const students = Number(row.students), fresh = Number(row.newStudents || 0);
-    const meta = [row.subject, row.coach].filter(Boolean).join(' · ');
-    return <li key={row.classId} title={`${row.label}: ${t('{0} students', [count(students)])}${fresh ? `, ${t('{0} new this period', [count(fresh)])}` : ''}`}>
-      <span className={`reports-popularity-rank${index === 0 ? ' is-top' : ''}`}>{index === 0 ? <Trophy size={13} aria-label="1" /> : index + 1}</span>
-      <div className="reports-popularity-body">
-        <div className="reports-popularity-head">
-          <div><strong>{row.label}</strong>{meta && <span>{meta}</span>}</div>
-          <div className="reports-popularity-value"><b>{count(students)}</b><span>{t('students')}</span>{fresh > 0 && <em>{t('+{0} new', [count(fresh)])}</em>}</div>
-        </div>
-        <div className="reports-popularity-bar"><i aria-hidden="true"><b style={{ width: `${students / max * 100}%` }} /></i></div>
-      </div>
-    </li>;
-  })}</ol>;
-}
-
 export default function ReportsPage({ data, filters, appliedFilters, setFilters, reload, page, loading = false, loadError = '', openTransactions }) {
   useLanguage();
   const [activeTab, setActiveTab] = useState('overview');
@@ -231,12 +179,6 @@ export default function ReportsPage({ data, filters, appliedFilters, setFilters,
   const previousRange = report?.previousPeriod;
   const previousDays = useMemo(() => rawPreviousDaily && previousRange ? fillDays(rawPreviousDaily, previousRange.from, previousRange.to) : null, [rawPreviousDaily, previousRange]);
   const hasRevenue = days.some(day => day.value > 0);
-  const classes = report?.classOccupancy || [];
-  const allPackages = [...(report?.memberships || [])].filter(item => Number(item.value) > 0).sort((a, b) => Number(b.value) - Number(a.value));
-  const packages = allPackages.slice(0, 5);
-  const packageTotal = allPackages.reduce((sum, item) => sum + Number(item.value), 0);
-  const packageRest = allPackages.slice(5);
-  const maxPackages = Math.max(...packages.map(item => Number(item.value)), 1);
   const valid = Boolean(filters.from && filters.to && filters.from <= filters.to);
   const pendingRange = filters.from !== appliedFilters.from || filters.to !== appliedFilters.to;
   const presets = ['This month', 'Last 7 days', 'Last 30 days'];
@@ -263,7 +205,6 @@ export default function ReportsPage({ data, filters, appliedFilters, setFilters,
     { key: 'confirmedBookings', label: 'Class bookings', icon: Users, value: summary ? count(summary.confirmedBookings) : '—', current: summary?.confirmedBookings, before: previous?.confirmedBookings, note: t('Confirmed session seats by session date'), tone: 'bookings' },
     { key: 'pendingInvoices', label: 'Pending invoices', icon: FileClock, value: summary ? count(summary.pendingInvoices) : '—', current: summary?.pendingInvoices, before: previous?.pendingInvoices, goodWhenUp: false, note: t('Invoices created in this period'), tone: 'pending' },
   ];
-  const popularity = report?.classPopularity || [];
   const loadingBlock = <div className="reports-chart-loading" role="status">{t('Loading...')}</div>;
 
   return <div className="reports-page" aria-busy={loading}>
@@ -328,31 +269,15 @@ export default function ReportsPage({ data, filters, appliedFilters, setFilters,
             {showDaily && <div className="reports-daily-table"><table><thead><tr><th scope="col">{t('Date')}</th><th scope="col">{t('Revenue (VND)')}</th></tr></thead><tbody>{days.filter(day => day.value > 0).map(day => <tr key={day.date}><td>{formatDate(day.date)}</td><td>{formatMoney(day.value)}</td></tr>)}</tbody></table></div>}</>}
         </section>
 
-        <div className="reports-bottom-grid reports-demand-grid">
-          <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Most registered classes')}</h2><p>{t('Members studying each class in this period, each member counted once.')}</p></div><span className="reports-section-icon"><Trophy size={19} aria-hidden="true" /></span></div>
-            {loading ? loadingBlock : popularity.length ? <ClassPopularity rows={popularity} /> : <Empty icon={Trophy} text={loadError ? 'Report data is unavailable.' : 'No class registrations in this period.'} />}
-            {popularity.length > 0 && <p className="reports-card-note">{t('"New" = members whose registration was created in this period.')}</p>}
-          </section>
-          <div className="reports-stack">
-            <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Booking status breakdown')}</h2><p>{t('By booking creation date, not session date. Statuses reflect the current state.')}</p></div><span className="reports-section-icon"><ClipboardList size={19} aria-hidden="true" /></span></div>
-              {loading ? loadingBlock : report ? <BookingBreakdown rows={report.bookingStatuses || []} /> : <Empty icon={ClipboardList} text="Report data is unavailable." />}
+        <div className="reports-bottom-grid">
+            <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Course revenue by subject')}</h2><p>{t('Share of course revenue collected in this period. Select a subject to see its classes.')}</p></div><span className="reports-section-icon"><Wallet size={19} aria-hidden="true" /></span></div>
+              {loading ? loadingBlock : report ? <RevenueDonut items={subjectItems(report.classRevenue?.subjects)} totalRevenue={summary?.revenue} ariaLabel="Course revenue share by subject" centerLabel="Course revenue" otherLabel="Other subjects" emptyText="No course revenue in this period." shareNote="Courses make up {0} of total revenue ({1}). The rest comes from packages and other payments." /> : <Empty icon={Wallet} text="Report data is unavailable." />}
             </section>
-            <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Package registrations')}</h2><p>{t('Top 5 packages by registrations.')}</p></div><span className="reports-section-icon"><Package size={19} aria-hidden="true" /></span></div>
-              {loading ? loadingBlock : packages.length ? <ol className="reports-packages">{packages.map((item, index) => <li key={`${item.label}-${index}`}>
-                <span className="reports-package-rank">{index + 1}</span>
-                <div><div className="reports-package-name"><strong>{item.label}</strong><span><b>{count(item.value)}</b> · {percent(Number(item.value) / packageTotal * 100)}</span></div><i aria-hidden="true"><b style={{ width: `${Number(item.value) / maxPackages * 100}%` }} /></i></div>
-              </li>)}</ol> : <Empty icon={Package} text={loadError ? 'Report data is unavailable.' : 'No package registrations in this period.'} />}
-              {packages.length > 0 && <p className="reports-card-note">{packageRest.length > 0 && <>{t('{0} other packages: {1} registrations.', [count(packageRest.length), count(packageRest.reduce((sum, item) => sum + Number(item.value), 0))])} </>}{t('Based on membership start date, not payment status.')}</p>}
+            <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Package revenue')}</h2><p>{t('Share of package revenue collected in this period, with the number of purchases.')}</p></div><span className="reports-section-icon"><Package size={19} aria-hidden="true" /></span></div>
+              {loading ? loadingBlock : report ? <RevenueDonut items={packageItems(report.packageRevenue?.packages)} totalRevenue={summary?.revenue} ariaLabel="Package revenue share" centerLabel="Package revenue" otherLabel="Other packages" emptyText="No package revenue in this period." shareNote="Packages make up {0} of total revenue ({1})." /> : <Empty icon={Package} text="Report data is unavailable." />}
             </section>
-          </div>
         </div>
 
-        <div className="reports-attention">
-          <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Classes needing attention')}</h2><p>{t('10 classes with the lowest occupancy in this period.')}</p></div><span className="reports-section-icon is-warning"><AlertTriangle size={19} aria-hidden="true" /></span></div>
-            {loading ? loadingBlock : classes.length ? <div className="reports-class-table"><table><thead><tr><th scope="col">{t('Class')}</th><th scope="col">{t('Students')}</th><th scope="col">{t('Seats booked')}</th><th scope="col">{t('Occupancy')}</th></tr></thead><tbody>{classes.map(item => { const rate = Number(item.capacity) > 0 ? Number(item.value) / Number(item.capacity) * 100 : null; const meta = [item.subject, item.coach].filter(Boolean).join(' · '); return <tr key={item.classId}><td><strong>{item.label}</strong>{meta && <span className="reports-class-meta">{meta}</span>}</td><td>{item.students == null ? '—' : count(item.students)}</td><td>{count(item.value)}/{count(item.capacity)}{item.sessions != null && <span className="reports-class-meta">{t('{0} sessions', [count(item.sessions)])}</span>}</td><td><OccupancyMeter rate={rate} /></td></tr>; })}</tbody></table></div> : <Empty icon={ClipboardList} text={loadError ? 'Report data is unavailable.' : 'No class sessions in this period.'} />}
-            {classes.length > 0 && <div className="reports-card-note reports-occupancy-legend"><span><i className="is-low" aria-hidden="true" />{t('Below {0}%: low occupancy', [LOW_OCCUPANCY])}</span><span><i aria-hidden="true" />{t('Normal')}</span><span><i className="is-high" aria-hidden="true" />{t('85% or more: nearly full')}</span><span>{t('Seats booked = confirmed seats across all sessions / total seats of those sessions.')}</span></div>}
-          </section>
-        </div>
       </>
     )}
   </div>;

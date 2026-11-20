@@ -435,7 +435,7 @@ const CoachSchedule = () => {
                           statusPrefix = `[${t("Dạy thay")}] `;
                         } else if (isRescheduled) {
                           pillClass = "bg-purple-500/15 border-purple-500/30 text-purple-600 dark:text-purple-400 font-bold";
-                          statusPrefix = `[${t("Dạy bù")}] `;
+                          statusPrefix = `[${t("Make-up class")}] `;
                         } else if (isCancelled) {
                           pillClass = "bg-rose-500/10 border-rose-500/25 text-rose-500 line-through";
                           statusPrefix = `[${t("Đã hủy")}] `;

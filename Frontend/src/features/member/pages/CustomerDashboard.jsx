@@ -177,7 +177,7 @@ const CustomerDashboard = () => {
 
   const handleExportCsv = () => {
     if (!filteredActivities.length) return;
-    const headers = ['Date & Time', 'Activity / Facility', 'Trainer / Zone', 'Duration (min)', 'Status', 'Calories (kcal)', 'Avg HR (bpm)'];
+    const headers = ['Date & Time', 'Activity / Facility', 'Trainer / Zone', 'Duration (min)', 'Status'];
     const rows = filteredActivities.map((log) => {
       const dt = log.startTime ? new Date(log.startTime).toLocaleString(locale()) : '';
       return [
@@ -185,9 +185,7 @@ const CustomerDashboard = () => {
         `"${(log.className || '').replace(/"/g, '""')}"`,
         `"${(log.coachName || '').replace(/"/g, '""')}"`,
         log.durationMinutes ?? '',
-        `"${(log.status || '').replace(/"/g, '""')}"`,
-        log.calories ?? '',
-        log.avgHr ?? ''
+        `"${(log.status || '').replace(/"/g, '""')}"`
       ].join(',');
     });
     const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
@@ -1122,13 +1120,12 @@ const CustomerDashboard = () => {
                       <th className="pb-3 font-semibold">{t("Trainer / Zone")}</th>
                       <th className="pb-3 font-semibold">{t("Duration")}</th>
                       <th className="pb-3 font-semibold">{t("Status")}</th>
-                      <th className="pb-3 font-semibold text-right">{t("Calories burned")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.06]">
                     {filteredActivities.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="py-8 text-center text-slate-400 font-medium">{t("No recent activities found. Start booking classes to see your logs!")}</td>
+                        <td colSpan="5" className="py-8 text-center text-slate-400 font-medium">{t("No recent activities found. Start booking classes to see your logs!")}</td>
                       </tr>
                     ) : (
                       paginatedActivities.map((log) => {
@@ -1154,10 +1151,6 @@ const CustomerDashboard = () => {
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${getStatusBadgeClass(log.status)}`}>
                                 {codeLabel(log.status)}
                               </span>
-                            </td>
-                            <td className="py-4 text-right">
-                              <div className="font-bold text-slate-900 dark:text-white">{log.calories}{' '}{t("kcal")}</div>
-                              <div className="text-[10px] text-slate-400 mt-0.5">{t("Avg HR")}{' '}{log.avgHr}{' '}{t("bpm")}</div>
                             </td>
                           </tr>
                         );

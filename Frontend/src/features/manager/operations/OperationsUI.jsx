@@ -4,9 +4,12 @@ import { isOngoing, NEAR_FULL_THRESHOLD } from "./operationsUtils";
 export function OperationStatus({ status, row, hideScheduled = false }) {
   useLanguage();
   const ongoing = row && isOngoing(row);
+  // A session counts as completed once its end time has passed; no manual step is needed.
+  const ended = row && !ongoing && ['SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED'].includes(status) && row.endTime && new Date(row.endTime) <= new Date();
   if (hideScheduled && ['SCHEDULED','SUBSTITUTE_ASSIGNED','RESCHEDULED'].includes(status) && !ongoing) return null;
   const label = ongoing
     ? "Ongoing"
+    : ended ? "Completed"
     : {
         ACTIVE: "Active",
         INACTIVE: "Inactive",
@@ -19,7 +22,7 @@ export function OperationStatus({ status, row, hideScheduled = false }) {
       }[status];
   return (
     <span
-      className={`manager-status is-${ongoing ? "scheduled" : status.toLowerCase()}`}
+      className={`manager-status is-${ongoing ? "scheduled" : ended ? "completed" : status.toLowerCase()}`}
     >
       {t(label || status)}
     </span>

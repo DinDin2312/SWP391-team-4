@@ -148,7 +148,7 @@ const CoachDashboard = () => {
                   <h4 className="font-bold text-sm text-[var(--text)] truncate">{session.className}</h4>
                   <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mt-1">
                     <span className="flex items-center gap-1 truncate"><MapPin className="w-3.5 h-3.5" />{session.roomName}</span>
-                    <span className="font-semibold text-[var(--text)]">{session.enrolledCount ?? 0}/{session.maxCapacity ?? 0}</span>
+                    <span className="font-semibold text-[var(--text)]">{session.enrolledCount ?? 0}/{session.maxSlots ?? 0}</span>
                   </div>
                 </div>
               );

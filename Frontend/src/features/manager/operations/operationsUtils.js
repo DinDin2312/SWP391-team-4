@@ -143,7 +143,8 @@ export function operationPayload(type, form) {
         occurrences: Number(form.occurrences),
         intervalWeeks: Number(form.intervalWeeks),
       }
-    : { ...session, scheduleId: form.scheduleId, status: "SCHEDULED" };
+    : { ...session, scheduleId: form.scheduleId, status: "SCHEDULED",
+        ...(form.scheduleId && form.roomId ? { roomId: Number(form.roomId) } : {}) };
 }
 
 // Cascading filter options: Subject -> Coach -> Room. A coach belongs to a subject when they teach a class of it
