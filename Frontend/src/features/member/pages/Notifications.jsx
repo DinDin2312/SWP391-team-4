@@ -406,7 +406,9 @@ const Notifications = () => {
       if (onlyUnread && isRead) return false;
 
       const normType = (n.type || 'SYSTEM').toUpperCase();
-      const combined = ((n.title || '') + ' ' + (n.message || '')).toLowerCase();
+      const localizedTitle = formatMemberNotificationTitle(n.title, lang);
+      const localizedLead = parseMemberNotificationBody(n.message, lang).lead || '';
+      const combined = ((n.title || '') + ' ' + (n.message || '') + ' ' + localizedTitle + ' ' + localizedLead).toLowerCase();
 
       if (activeTab !== 'ALL') {
         const matchesType = currentTab.types.includes(normType);
@@ -433,7 +435,7 @@ const Notifications = () => {
 
       return true;
     });
-  }, [allowedNotifications, activeTab, onlyUnread, searchQuery]);
+  }, [allowedNotifications, activeTab, onlyUnread, searchQuery, lang]);
 
   // Reset page when filters change
   useEffect(() => {

@@ -1240,6 +1240,24 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + memberEmail));
 
         LocalDate today = LocalDate.now();
+        Map<Integer, Integer> reservedByCreditId = new HashMap<>();
+        try {
+            List<Map<String, Object>> reservedRows = jdbc.queryForList(
+                    "SELECT c.credit_id, i.invoice_id " +
+                    "FROM USER_CREDITS c " +
+                    "JOIN INVOICES i ON i.invoice_id = c.used_invoice_id " +
+                    "WHERE c.user_id = ? AND i.status = 'PENDING' AND i.created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)",
+                    user.getUserId()
+            );
+            if (reservedRows != null) {
+                for (Map<String, Object> row : reservedRows) {
+                    if (row.get("credit_id") instanceof Number cid && row.get("invoice_id") instanceof Number iid) {
+                        reservedByCreditId.put(cid.intValue(), iid.intValue());
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
         return userCreditRepository.findByUserUserIdOrderByCreatedAtDesc(user.getUserId()).stream()
                 .map(c -> {
                     long daysUntilExpiry = ChronoUnit.DAYS.between(today, c.getExpiryDate());
@@ -1258,6 +1276,7 @@ public class SupportRequestServiceImpl implements SupportRequestService {
                             .status(c.getStatus())
                             .createdAt(c.getCreatedAt())
                             .isExpired(c.getExpiryDate().isBefore(today))
+                            .reservedInvoiceId(reservedByCreditId.get(c.getCreditId()))
                             .build();
                 })
                 .collect(Collectors.toList());

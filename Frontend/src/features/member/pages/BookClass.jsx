@@ -13,6 +13,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_ORIGIN } from '../../../config/apiBase.js';
 import { resourceImageUrl } from '../../../components/resource-images/resourceImages';
+import { summarizeMemberCartState } from '../memberUtils';
 
 const detectCourseSubject = (course) => {
   if (course.subjectName && course.subjectName.trim()) {
@@ -242,6 +243,7 @@ const BookClass = () => {
   const [toast, setToast] = useState({ visible: false, type: 'success', title: '', message: '' });
   const [cartCount, setCartCount] = useState(0);
   const [cartTotal, setCartTotal] = useState(0);
+  const [pendingOrder, setPendingOrder] = useState(null);
   const [isCartHighlighted, setIsCartHighlighted] = useState(false);
   const [selectedCourseDetail, setSelectedCourseDetail] = useState(null);
 
@@ -346,12 +348,15 @@ const BookClass = () => {
       const res = await axios.get(`${API_ORIGIN}/api/v1/payment/cart`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.data && res.data.items) {
-        setCartCount(res.data.items.length);
-        setCartTotal(res.data.totalPrice || 0);
+      if (res.data) {
+        const cartState = summarizeMemberCartState(res.data);
+        setCartCount(cartState.items.length);
+        setCartTotal(cartState.totalPrice);
+        setPendingOrder(cartState.pendingOrder);
       } else {
         setCartCount(0);
         setCartTotal(0);
+        setPendingOrder(null);
       }
     } catch (e) {
       console.error('Error fetching cart:', e);
@@ -636,14 +641,18 @@ const BookClass = () => {
         </div>
 
         {/* Quick Cart Pill */}
-        {cartCount > 0 && (
+        {(cartCount > 0 || pendingOrder) && (
           <button
             type="button"
             onClick={() => navigate('/member/cart')}
             className="self-start sm:self-center px-4 py-2 rounded-md bg-[var(--primary)]/10 hover:bg-[var(--primary)]/15 text-[var(--primary)] border border-[var(--primary)]/20 text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all active:scale-95"
           >
             <ShoppingBag className="w-4 h-4" />
-            <span>{cartCount} {tr('khóa học trong giỏ', 'courses in cart')}</span>
+            <span>
+              {cartCount > 0
+                ? `${cartCount} ${tr('khóa học trong giỏ', 'courses in cart')}`
+                : `${t('Pending Order')} #${pendingOrder.invoiceId}`}
+            </span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         )}
@@ -1424,7 +1433,7 @@ const BookClass = () => {
 
       {/* Sticky Bottom Cart & Checkout Bar with Smooth Slide-Up Motion */}
       <AnimatePresence>
-        {cartCount > 0 && (
+        {(cartCount > 0 || pendingOrder) && (
           <motion.div
             initial={{ y: 150 }}
             animate={{ y: 0 }}
@@ -1442,42 +1451,62 @@ const BookClass = () => {
                 : 'border-white/30 dark:border-white/10'
             }`}>
               <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
-                <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 text-white shrink-0 shadow-md shadow-blue-500/30">
+                <div className={`relative flex items-center justify-center w-12 h-12 rounded-xl text-white shrink-0 shadow-md ${cartCount > 0 ? 'bg-blue-600 shadow-blue-500/30' : 'bg-amber-500 text-slate-950 shadow-amber-500/30'}`}>
                   <ShoppingBag className="w-6 h-6" />
                   <span className="absolute -top-2 -right-2 z-20 min-w-[22px] h-[22px] px-1 rounded-full bg-emerald-500 text-white text-[11px] font-black flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-md">
-                    {cartCount}
+                    {cartCount > 0 ? cartCount : (pendingOrder?.items?.length || 1)}
                   </span>
                 </div>
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] text-slate-900 dark:text-white font-bold">{t("Active Cart Allocation:")}</span>
-                    <span className="text-[11px] text-amber-500 font-extrabold uppercase">{cartCount}{' '}{t("items selected")}</span>
+                {cartCount > 0 ? (
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[13px] text-slate-900 dark:text-white font-bold">{t("Active Cart Allocation:")}</span>
+                      <span className="text-[11px] text-amber-500 font-extrabold uppercase">{cartCount}{' '}{t("items selected")}</span>
+                      {pendingOrder && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                          {t("Pending Order")} #{pendingOrder.invoiceId}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-baseline gap-1 mt-0.5">
+                      <span className="text-[12px] text-slate-500 dark:text-slate-400">{t("Subtotal:")}</span>
+                      <span className="text-xl font-black text-slate-900 dark:text-white">{formatMoney(cartTotal)}</span>
+                      <span className="text-[12px] text-blue-600 dark:text-blue-400 font-bold">{t("VND")}</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden md:inline ml-1">{t("(15% Member Rebate Calculated)")}</span>
+                    </div>
                   </div>
-                  <div className="flex items-baseline gap-1 mt-0.5">
-                    <span className="text-[12px] text-slate-500 dark:text-slate-400">{t("Subtotal:")}</span>
-                    <span className="text-xl font-black text-slate-900 dark:text-white">{formatMoney(cartTotal)}</span>
-                    <span className="text-[12px] text-blue-600 dark:text-blue-400 font-bold">{t("VND")}</span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden md:inline ml-1">{t("(15% Member Rebate Calculated)")}</span>
+                ) : (
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] text-slate-900 dark:text-white font-bold">{t("Pending Checkout Session")} #{pendingOrder?.invoiceId}</span>
+                      <span className="text-[11px] text-amber-600 dark:text-amber-400 font-extrabold uppercase">{pendingOrder?.items?.length || 0}{' '}{t("services")}</span>
+                    </div>
+                    <div className="flex items-baseline gap-1 mt-0.5">
+                      <span className="text-[12px] text-slate-500 dark:text-slate-400">{t("Total")}:</span>
+                      <span className="text-xl font-black text-slate-900 dark:text-white">{formatMoney(pendingOrder?.totalAmount || 0)}</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                <button
-                  type="button"
-                  onClick={clearCart}
-                  className="hidden md:flex items-center gap-1.5 px-4 py-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/25 hover:border-rose-500/40 text-[13px] font-semibold transition-all shadow-xs active:scale-95 cursor-pointer"
-                  title={t("Clear")}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>{t("Clear")}</span>
-                </button>
+                {cartCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearCart}
+                    className="hidden md:flex items-center gap-1.5 px-4 py-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/25 hover:border-rose-500/40 text-[13px] font-semibold transition-all shadow-xs active:scale-95 cursor-pointer"
+                    title={t("Clear")}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>{t("Clear")}</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => navigate('/member/cart')}
                   className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[14px] font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-95 cursor-pointer"
                 >
-                  <span>{t("Proceed to Checkout")}</span>
+                  <span>{cartCount > 0 ? t("Proceed to Checkout") : t("Handle Pending Order")}</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>

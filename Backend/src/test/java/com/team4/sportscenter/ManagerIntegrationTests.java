@@ -38,6 +38,7 @@ class ManagerIntegrationTests {
     @Autowired com.team4.sportscenter.modules.member.services.MemberService members;
     @Autowired com.team4.sportscenter.modules.member.services.PackageBenefitsService benefits;
     @Autowired com.team4.sportscenter.modules.payment.services.PaymentService payments;
+    @Autowired com.team4.sportscenter.modules.support.services.SupportRequestService supportRequests;
     @Autowired com.team4.sportscenter.modules.receptionist.services.ReceptionistMemberService reception;
     @Value("${local.server.port}") int port;
     String actor;
@@ -379,6 +380,59 @@ class ManagerIntegrationTests {
         assertEquals("CANCELLED",jdbc.queryForObject("SELECT status FROM INVOICES WHERE invoice_id=?",String.class,invoice));
         assertDoesNotThrow(()->payments.removePackageFromCart("member"+actor,pkg));
         assertEquals(0,count("SELECT COUNT(*) FROM USER_MEMBERSHIPS WHERE user_id=?",member));
+    }
+
+    @Test void pendingCheckoutSeparatesCartItemsLocksOrderAndReservesVoucherCleanly() {
+        int lockedPkg = commercePackage(1, new BigDecimal("500000"));
+        int unlockedPkg = commercePackage(null, new BigDecimal("300000"));
+        String creditCode = "CR-QA-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        jdbc.update(
+                "INSERT INTO USER_CREDITS(user_id, credit_code, amount, remaining_amount, reason, expiry_date, status, created_at) " +
+                "VALUES (?, ?, 200000, 200000, 'QA voucher', DATE_ADD(CURDATE(), INTERVAL 30 DAY), 'ACTIVE', NOW())",
+                member, creditCode
+        );
+
+        members.addPackageToCart("member" + actor, lockedPkg);
+        String checkoutUrl = payments.checkout("member" + actor, "127.0.0.1", "payos", creditCode, false);
+        int pendingInvoice = checkoutInvoice();
+        assertEquals("/member/vietqr-pay?invoiceId=" + pendingInvoice, checkoutUrl);
+
+        members.addPackageToCart("member" + actor, unlockedPkg);
+        var cart = payments.getCartItems("member" + actor);
+        assertTrue(cart.isHasPendingCheckout());
+        assertEquals(pendingInvoice, cart.getPendingInvoiceId());
+        assertEquals(1, cart.getPendingItems().size());
+        assertEquals(lockedPkg, cart.getPendingItems().get(0).getPackageId());
+        assertEquals(creditCode, cart.getPendingCreditCode());
+        assertEquals(0, new BigDecimal("200000").compareTo(cart.getPendingCreditDiscount()));
+        assertEquals(0, new BigDecimal("300000").compareTo(cart.getPendingTotalAmount()));
+        assertTrue(cart.getPendingRemainingSeconds() > 0 && cart.getPendingRemainingSeconds() <= 900);
+
+        assertEquals(1, cart.getItems().size());
+        assertEquals(unlockedPkg, cart.getItems().get(0).getPackageId());
+        assertEquals(0, new BigDecimal("300000").compareTo(cart.getTotalPrice()));
+
+        var creditsWhilePending = supportRequests.getMemberCredits("member" + actor);
+        assertEquals(pendingInvoice, creditsWhilePending.get(0).getReservedInvoiceId());
+
+        assertThrows(com.team4.sportscenter.common.exception.PackageRuleException.class,
+                () -> payments.checkout("member" + actor, "127.0.0.1", "payos", null, false));
+        assertThrows(com.team4.sportscenter.common.exception.PackageRuleException.class,
+                () -> payments.removePackageFromCart("member" + actor, lockedPkg));
+        assertDoesNotThrow(() -> payments.removePackageFromCart("member" + actor, unlockedPkg));
+
+        var qrInfo = payments.getVietQRInfo(pendingInvoice, "member" + actor);
+        assertEquals("PENDING", qrInfo.get("status"));
+        assertEquals(false, qrInfo.get("isExpired"));
+        assertTrue(((Number) qrInfo.get("remainingSeconds")).longValue() > 0);
+
+        payments.cancelPendingCheckout("member" + actor, pendingInvoice);
+        var creditsAfterCancel = supportRequests.getMemberCredits("member" + actor);
+        assertNull(creditsAfterCancel.get(0).getReservedInvoiceId());
+        var cartAfterCancel = payments.getCartItems("member" + actor);
+        assertFalse(cartAfterCancel.isHasPendingCheckout());
+        assertEquals(1, cartAfterCancel.getItems().size());
+        assertEquals(lockedPkg, cartAfterCancel.getItems().get(0).getPackageId());
     }
 
     @Test void counterSaleCountsAndSharesReservationWithOnline(){

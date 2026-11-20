@@ -16,6 +16,7 @@ import ResourcePhoto from '../../../components/resource-images/ResourcePhoto';
 import { defaultPackageCoverUrl } from '../../../components/resource-images/resourceImages';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_ORIGIN } from '../../../config/apiBase.js';
+import { summarizeMemberCartState } from '../memberUtils';
 
 
 const isRetiredPackage = (pkg) => {
@@ -99,6 +100,7 @@ const PackageStore = () => {
   // Fake cart context until Backend Cart API supports packages
   const [cartCount, setCartCount] = useState(0);
   const [cartTotal, setCartTotal] = useState(0);
+  const [pendingOrder, setPendingOrder] = useState(null);
 
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
   const [addedItems, setAddedItems] = useState({});
@@ -254,21 +256,17 @@ const PackageStore = () => {
       const response = await axios.get(`${API_ORIGIN}/api/v1/payment/cart`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (response.data && response.data.items) {
-        setCartCount(response.data.items.length);
-        setCartTotal(response.data.totalPrice || 0);
-
-        const cartPackageIds = {};
-        response.data.items.forEach(item => {
-          if (item.type === 'PACKAGE' && item.packageId) {
-            cartPackageIds[item.packageId] = true;
-          }
-        });
-        setAddedItems(cartPackageIds);
+      if (response.data) {
+        const cartState = summarizeMemberCartState(response.data);
+        setCartCount(cartState.items.length);
+        setCartTotal(cartState.totalPrice);
+        setAddedItems(cartState.addedPackageMap);
+        setPendingOrder(cartState.pendingOrder);
       } else {
         setCartCount(0);
         setCartTotal(0);
         setAddedItems({});
+        setPendingOrder(null);
       }
     } catch (e) {
       console.error(e);
@@ -564,7 +562,7 @@ const PackageStore = () => {
                       {pkg.packageName}
                     </button>
                   </h3>
-                  {pkg.canPurchase === false && <p className="text-sm mb-2 text-rose-500 font-semibold" role="status">{t(pkg.purchaseBlockReason)}</p>}
+                  {!isAdded && pkg.canPurchase === false && <p className="text-sm mb-2 text-rose-500 font-semibold" role="status">{t(pkg.purchaseBlockReason)}</p>}
                   <button type="button" className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline mb-2.5 inline-flex items-center gap-1" onClick={() => setDetailId(pkg.packageId)}>
                     <span>{t("Package details")}</span>
                     <ArrowRight className="w-3 h-3" />
@@ -603,16 +601,23 @@ const PackageStore = () => {
 
               <button
                 onClick={() => handleAddToCart(pkg)}
-                disabled={isAdded||pkg.canPurchase===false}
+                disabled={Boolean(isAdded) || pkg.canPurchase === false}
                 className={`relative z-10 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all active:scale-[0.99] ${
-                  isAdded
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-500/30 cursor-not-allowed'
-                    : isPopular
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25'
-                      : 'bg-slate-100 hover:bg-blue-600 text-slate-800 hover:text-white border border-slate-200 hover:border-transparent dark:bg-slate-800 dark:hover:bg-blue-600 dark:text-white dark:border-slate-700 shadow-sm'
+                  isAdded === 'PENDING_ORDER'
+                    ? 'bg-amber-50 text-amber-700 border border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-500/30 cursor-not-allowed'
+                    : isAdded
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-500/30 cursor-not-allowed'
+                      : isPopular
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25'
+                        : 'bg-slate-100 hover:bg-blue-600 text-slate-800 hover:text-white border border-slate-200 hover:border-transparent dark:bg-slate-800 dark:hover:bg-blue-600 dark:text-white dark:border-slate-700 shadow-sm'
                 }`}
               >
-                {isAdded ? (
+                {isAdded === 'PENDING_ORDER' ? (
+                  <>
+                    <Check className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                    <span>{t("Pending Order")} {pendingOrder?.invoiceId ? `#${pendingOrder.invoiceId}` : ''}</span>
+                  </>
+                ) : isAdded ? (
                   <>
                     <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                     <span className="text-emerald-600 dark:text-emerald-400">{t("Added to Cart")}</span>
@@ -709,7 +714,7 @@ const PackageStore = () => {
 
       {/* Sticky Bottom Cart & Checkout Bar with Smooth Slide-Up Motion */}
       <AnimatePresence>
-        {cartCount > 0 && (
+        {(cartCount > 0 || pendingOrder) && (
           <motion.div
             initial={{ y: 150 }}
             animate={{ y: 0 }}
@@ -727,40 +732,60 @@ const PackageStore = () => {
                 : 'border-white/30 dark:border-white/10'
             }`}>
               <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
-                <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 text-white shrink-0 shadow-md shadow-blue-500/30">
+                <div className={`relative flex items-center justify-center w-12 h-12 rounded-xl text-white shrink-0 shadow-md ${cartCount > 0 ? 'bg-blue-600 shadow-blue-500/30' : 'bg-amber-500 text-slate-950 shadow-amber-500/30'}`}>
                   <ShoppingBag className="w-6 h-6" />
                   <span className="absolute -top-2 -right-2 z-20 min-w-[22px] h-[22px] px-1 rounded-full bg-emerald-500 text-white text-[11px] font-black flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-md">
-                    {cartCount}
+                    {cartCount > 0 ? cartCount : (pendingOrder?.items?.length || 1)}
                   </span>
                 </div>
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] text-slate-900 dark:text-white font-bold">{t("Active Cart Allocation:")}</span>
-                    <span className="text-[11px] text-amber-500 font-extrabold uppercase">{cartCount}{' '}{t("items selected")}</span>
+                {cartCount > 0 ? (
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[13px] text-slate-900 dark:text-white font-bold">{t("Active Cart Allocation:")}</span>
+                      <span className="text-[11px] text-amber-500 font-extrabold uppercase">{cartCount}{' '}{t("items selected")}</span>
+                      {pendingOrder && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                          {t("Pending Order")} #{pendingOrder.invoiceId}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-baseline gap-1 mt-0.5">
+                      <span className="text-[12px] text-slate-500 dark:text-slate-400">{t("Subtotal:")}</span>
+                      <span className="text-xl font-black text-slate-900 dark:text-white">{formatMoney(cartTotal)}</span>
+                      <span className="text-[12px] text-blue-600 dark:text-blue-400 font-bold">{t("VND")}</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden md:inline ml-1">{t("(15% Member Rebate Calculated)")}</span>
+                    </div>
                   </div>
-                  <div className="flex items-baseline gap-1 mt-0.5">
-                    <span className="text-[12px] text-slate-500 dark:text-slate-400">{t("Subtotal:")}</span>
-                    <span className="text-xl font-black text-slate-900 dark:text-white">{formatMoney(cartTotal)}</span>
-                    <span className="text-[12px] text-blue-600 dark:text-blue-400 font-bold">{t("VND")}</span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden md:inline ml-1">{t("(15% Member Rebate Calculated)")}</span>
+                ) : (
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] text-slate-900 dark:text-white font-bold">{t("Pending Checkout Session")} #{pendingOrder?.invoiceId}</span>
+                      <span className="text-[11px] text-amber-600 dark:text-amber-400 font-extrabold uppercase">{pendingOrder?.items?.length || 0}{' '}{t("services")}</span>
+                    </div>
+                    <div className="flex items-baseline gap-1 mt-0.5">
+                      <span className="text-[12px] text-slate-500 dark:text-slate-400">{t("Total")}:</span>
+                      <span className="text-xl font-black text-slate-900 dark:text-white">{formatMoney(pendingOrder?.totalAmount || 0)}</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                <button
-                  onClick={clearCart}
-                  className="hidden md:flex items-center gap-1.5 px-4 py-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/25 hover:border-rose-500/40 text-[13px] font-semibold transition-all shadow-xs active:scale-95 cursor-pointer"
-                  title={t("Clear")}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>{t("Clear")}</span>
-                </button>
+                {cartCount > 0 && (
+                  <button
+                    onClick={clearCart}
+                    className="hidden md:flex items-center gap-1.5 px-4 py-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/25 hover:border-rose-500/40 text-[13px] font-semibold transition-all shadow-xs active:scale-95 cursor-pointer"
+                    title={t("Clear")}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>{t("Clear")}</span>
+                  </button>
+                )}
                 <button
                   onClick={() => navigate('/member/cart')}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[14px] font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-95"
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[14px] font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-95 cursor-pointer"
                 >
-                  <span>{t("Proceed to Checkout")}</span>
+                  <span>{cartCount > 0 ? t("Proceed to Checkout") : t("Handle Pending Order")}</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>

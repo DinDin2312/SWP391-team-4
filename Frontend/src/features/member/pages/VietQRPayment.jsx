@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { t, useLanguage } from '../../../i18n/useLanguage';
 import { API_ORIGIN } from '../../../config/apiBase.js';
+import { formatPendingCountdown } from '../memberUtils';
 
 const VietQRPayment = () => {
   useLanguage();
@@ -77,6 +78,24 @@ const VietQRPayment = () => {
       return;
     }
 
+    const syncPaymentState = (data) => {
+      if (!data) return false;
+      setPaymentInfo(data);
+      if (data.remainingSeconds != null && Number.isFinite(Number(data.remainingSeconds))) {
+        setTimeLeft(Math.max(0, Math.floor(Number(data.remainingSeconds))));
+      }
+      if (data.status === 'PAID') {
+        handlePaymentSuccess();
+        return true;
+      }
+      if (data.status === 'CANCELLED' || data.status === 'FAILED' || data.status === 'REVIEW') {
+        if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+        if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+        return true;
+      }
+      return false;
+    };
+
     const fetchPaymentInfo = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -84,13 +103,7 @@ const VietQRPayment = () => {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
 
-        const data = response.data;
-        setPaymentInfo(data);
-
-        // If invoice is already paid, trigger success flow
-        if (data.status === 'PAID') {
-          handlePaymentSuccess();
-        }
+        syncPaymentState(response.data);
       } catch (err) {
         setError(err.response?.data?.message || t('Unable to load VietQR payment information.'));
       } finally {
@@ -107,8 +120,8 @@ const VietQRPayment = () => {
         const response = await axios.get(`${API_ORIGIN}/api/v1/payment/vietqr-info/${invoiceId}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
-        if (response.data && response.data.status === 'PAID') {
-          handlePaymentSuccess();
+        if (response.data) {
+          syncPaymentState(response.data);
         }
       } catch  {
         // Ignore polling errors
@@ -146,11 +159,7 @@ const VietQRPayment = () => {
     return Number(val).toLocaleString('vi-VN') + ' đ';
   };
 
-  const formatTimer = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  };
+  const formatTimer = formatPendingCountdown;
 
   if (loading) {
     return (
@@ -175,6 +184,42 @@ const VietQRPayment = () => {
           >
             <ArrowLeft className="w-4 h-4" /> {t('Back to Cart')}
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isSuccess && paymentInfo.status && paymentInfo.status !== 'PENDING') {
+    const statusTitle =
+      paymentInfo.status === 'REVIEW'
+        ? t('Payment Awaiting Reconciliation')
+        : paymentInfo.status === 'FAILED'
+          ? t('Payment Failed')
+          : t('Order Cancelled');
+    const statusDesc =
+      paymentInfo.status === 'REVIEW'
+        ? t('Payment received and awaiting reconciliation. Contact reception.')
+        : t('This payment session is no longer active. Please return to your cart to review your items.');
+    return (
+      <div className="flex-1 p-8">
+        <div className="max-w-xl mx-auto mt-12 p-8 bg-[var(--surface)] border border-[var(--border)] rounded-2xl text-center shadow-[var(--shadow)]">
+          <AlertCircle className="w-16 h-16 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-[var(--text)] mb-2">{statusTitle}</h2>
+          <p className="text-sm text-[var(--text-muted)] mb-6">{statusDesc}</p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              onClick={() => navigate('/member/cart')}
+              className="px-6 py-3 bg-[var(--primary)] text-[color:var(--on-primary)] rounded-xl font-bold transition-all inline-flex items-center gap-2 cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" /> {t('Back to Cart')}
+            </button>
+            <button
+              onClick={() => navigate(`/member/billing?invoiceId=${invoiceId}`)}
+              className="px-6 py-3 bg-[var(--surface-hover)] hover:bg-[var(--border)] text-[var(--text)] rounded-xl font-semibold transition-all cursor-pointer"
+            >
+              {t('View Invoices')}
+            </button>
+          </div>
         </div>
       </div>
     );

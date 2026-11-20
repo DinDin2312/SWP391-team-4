@@ -55,14 +55,14 @@ public class PaymentServiceImpl implements PaymentService {
     private final com.team4.sportscenter.modules.manager.services.PackageTypeCatalog packageTypes;
     private final com.team4.sportscenter.modules.support.repositories.UserCreditRepository userCreditRepository;
 
-    @Override
-        public CartResponse getCartItems(String email) {
-        List<Booking> pendingBookings = bookingRepository.findAllBookingsByEmail(email)
-                .stream()
-                .filter(b -> "PENDING".equals(b.getStatus()))
-                .toList();
+    private static final long CHECKOUT_TIMEOUT_SECONDS = 900L;
 
-        Map<GymClass, List<Booking>> groupedByClass = pendingBookings.stream()
+    private boolean isPayOSOrVietQRMethod(String method) {
+        return "PAYOS".equalsIgnoreCase(method) || "VIETQR".equalsIgnoreCase(method);
+    }
+
+    private List<CartItemDto> toCartItems(List<Booking> bookings, List<UserMembership> memberships) {
+        Map<GymClass, List<Booking>> groupedByClass = bookings.stream()
                 .collect(Collectors.groupingBy(b -> b.getSchedule().getGymClass()));
 
         List<CartItemDto> items = groupedByClass.entrySet().stream().map(entry -> {
@@ -75,49 +75,239 @@ public class PaymentServiceImpl implements PaymentService {
                     .price(gymClass.getPrice())
                     .sessionCount(entry.getValue().size())
                     .build();
-        }).collect(java.util.stream.Collectors.toList());
+        }).collect(Collectors.toList());
+
+        items.addAll(memberships.stream().map(m ->
+                CartItemDto.builder()
+                        .type("PACKAGE")
+                        .packageId(m.getAPackage().getPackageId())
+                        .packageName(m.purchasedName())
+                        .durationDays(m.purchasedDuration())
+                        .price(m.purchasedPrice())
+                        .build()
+        ).toList());
+        return items;
+    }
+
+    private BigDecimal sumCartItemPrices(List<CartItemDto> items) {
+        return items.stream()
+                .map(item -> item.getPrice() != null ? item.getPrice() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private Set<Integer> loadActivePendingInvoiceIds(String email) {
+        try {
+            List<Integer> ids = jdbc.queryForList(
+                    "SELECT i.invoice_id FROM INVOICES i JOIN USERS u ON u.user_id = i.user_id " +
+                    "WHERE u.email = ? AND i.status = 'PENDING' AND i.created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)",
+                    Integer.class, email
+            );
+            return ids == null ? Set.of() : new HashSet<>(ids);
+        } catch (Exception e) {
+            return Set.of();
+        }
+    }
+
+    private Set<Integer> loadActivePendingBookingIds(String email) {
+        try {
+            List<Integer> ids = jdbc.queryForList(
+                    "SELECT DISTINCT ib.booking_id FROM INVOICE_BOOKINGS ib " +
+                    "JOIN INVOICES i ON i.invoice_id = ib.invoice_id " +
+                    "JOIN USERS u ON u.user_id = i.user_id " +
+                    "WHERE u.email = ? AND i.status = 'PENDING' AND i.created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)",
+                    Integer.class, email
+            );
+            return ids == null ? Set.of() : new HashSet<>(ids);
+        } catch (Exception e) {
+            return Set.of();
+        }
+    }
+
+    private long computeRemainingSeconds(Integer invoiceId, LocalDateTime createdAt, String status) {
+        if (!"PENDING".equals(status)) return 0L;
+        long elapsed = 0L;
+        boolean resolved = false;
+        if (invoiceId != null) {
+            try {
+                Long dbElapsed = jdbc.queryForObject(
+                        "SELECT TIMESTAMPDIFF(SECOND, created_at, NOW()) FROM INVOICES WHERE invoice_id=?",
+                        Long.class, invoiceId
+                );
+                if (dbElapsed != null) {
+                    elapsed = Math.max(0L, dbElapsed);
+                    resolved = true;
+                }
+            } catch (Exception ignored) {}
+        }
+        if (!resolved && createdAt != null) {
+            elapsed = Math.max(0L, java.time.Duration.between(createdAt, LocalDateTime.now()).getSeconds());
+        }
+        return Math.max(0L, CHECKOUT_TIMEOUT_SECONDS - elapsed);
+    }
+
+    private void syncPayOSStatus(Invoice invoice) {
+        if (invoice == null || !"PENDING".equals(invoice.getStatus()) || !payOSConfig.isConfigured()) {
+            return;
+        }
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("x-client-id", payOSConfig.clientId);
+            headers.set("x-api-key", payOSConfig.apiKey);
+            HttpEntity<?> entity = new HttpEntity<>(headers);
+            RestTemplate restTemplate = new RestTemplate();
+            String endpoint = payOSConfig.endpoint + "/v2/payment-requests/" + invoice.getInvoiceId();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> resp = restTemplate.exchange(endpoint, org.springframework.http.HttpMethod.GET, entity, Map.class).getBody();
+            if (resp != null && ("00".equals(resp.get("code")) || "0".equals(resp.get("code")))) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> data = (Map<String, Object>) resp.get("data");
+                if (data != null) {
+                    String payStatus = String.valueOf(data.get("status"));
+                    if ("PAID".equalsIgnoreCase(payStatus)) {
+                        finishPayment(invoice, true, "PAYOS-" + invoice.getInvoiceId());
+                    } else if ("CANCELLED".equalsIgnoreCase(payStatus) || "EXPIRED".equalsIgnoreCase(payStatus)) {
+                        finishPayment(invoice, false, "PAYOS-CANCEL-" + invoice.getInvoiceId());
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Ignore query error, wait for webhook or next poll
+        }
+    }
+
+    @Override
+    public CartResponse getCartItems(String email) {
+        List<Booking> pendingBookings = bookingRepository.findAllBookingsByEmail(email)
+                .stream()
+                .filter(b -> "PENDING".equals(b.getStatus()))
+                .toList();
 
         List<UserMembership> pendingMemberships = userMembershipRepository.findByEmailAndStatus(email, "PENDING");
-
-        items.addAll(pendingMemberships.stream().map(m -> 
-            CartItemDto.builder()
-                .type("PACKAGE")
-                .packageId(m.getAPackage().getPackageId())
-                .packageName(m.purchasedName())
-                .durationDays(m.purchasedDuration())
-                .price(m.purchasedPrice())
-                .build()
-        ).toList());
-
-        BigDecimal totalPrice = items.stream()
-                .map(CartItemDto::getPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Integer pendingInvId = null;
         String pendingUrl = null;
         String pendingMethod = null;
         String pendingStatus = null;
+        BigDecimal pendingSubtotal = null;
+        BigDecimal pendingDiscountAmount = null;
+        BigDecimal pendingTotalAmount = null;
+        String pendingVoucherCode = null;
+        String pendingCreditCode = null;
+        BigDecimal pendingCreditDiscount = null;
+        Long pendingRemainingSeconds = null;
+        LocalDateTime pendingCreatedAt = null;
         boolean hasPending = false;
         try {
             List<Map<String, Object>> pendingInvoices = jdbc.queryForList(
-                "SELECT i.invoice_id, i.status, p.payment_method FROM INVOICES i " +
+                "SELECT i.invoice_id, i.status, i.subtotal, i.discount_amount, i.voucher_code, i.total_amount, i.created_at, " +
+                "TIMESTAMPDIFF(SECOND, i.created_at, NOW()) AS elapsed_seconds, p.payment_method " +
+                "FROM INVOICES i " +
                 "JOIN USERS u ON u.user_id = i.user_id " +
                 "LEFT JOIN PAYMENTS p ON p.invoice_id = i.invoice_id " +
                 "WHERE u.email = ? AND i.status = 'PENDING' AND i.created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE) " +
                 "ORDER BY i.invoice_id DESC LIMIT 1",
                 email
             );
-            if (!pendingInvoices.isEmpty()) {
+            if (pendingInvoices != null && !pendingInvoices.isEmpty()) {
                 hasPending = true;
                 Map<String, Object> row = pendingInvoices.get(0);
                 pendingInvId = ((Number) row.get("invoice_id")).intValue();
                 pendingStatus = row.get("status") != null ? String.valueOf(row.get("status")) : "PENDING";
                 pendingMethod = row.get("payment_method") != null ? String.valueOf(row.get("payment_method")) : "PAYOS";
-                if ("PAYOS".equalsIgnoreCase(pendingMethod) || "VIETQR".equalsIgnoreCase(pendingMethod)) {
+                if (isPayOSOrVietQRMethod(pendingMethod)) {
                     pendingUrl = "/member/vietqr-pay?invoiceId=" + pendingInvId;
                 }
+                if (row.get("total_amount") instanceof BigDecimal bd) pendingTotalAmount = bd;
+                else if (row.get("total_amount") instanceof Number n) pendingTotalAmount = BigDecimal.valueOf(n.doubleValue());
+                if (row.get("subtotal") instanceof BigDecimal bd) pendingSubtotal = bd;
+                else if (row.get("subtotal") instanceof Number n) pendingSubtotal = BigDecimal.valueOf(n.doubleValue());
+                if (row.get("discount_amount") instanceof BigDecimal bd) pendingDiscountAmount = bd;
+                else if (row.get("discount_amount") instanceof Number n) pendingDiscountAmount = BigDecimal.valueOf(n.doubleValue());
+                if (row.get("voucher_code") != null) pendingVoucherCode = String.valueOf(row.get("voucher_code"));
+                Object createdObj = row.get("created_at");
+                if (createdObj instanceof LocalDateTime ldt) pendingCreatedAt = ldt;
+                else if (createdObj instanceof java.sql.Timestamp ts) pendingCreatedAt = ts.toLocalDateTime();
+                long elapsed = row.get("elapsed_seconds") instanceof Number n ? Math.max(0L, n.longValue()) : 0L;
+                pendingRemainingSeconds = Math.max(0L, CHECKOUT_TIMEOUT_SECONDS - elapsed);
             }
         } catch (Exception ignored) {}
+
+        List<CartItemDto> items;
+        List<CartItemDto> pendingItems = List.of();
+        if (hasPending && pendingInvId != null) {
+            final Integer activeInvoiceId = pendingInvId;
+            Set<Integer> lockedBookingIds = Set.of();
+            try {
+                List<Integer> rawLocked = jdbc.queryForList(
+                        "SELECT booking_id FROM INVOICE_BOOKINGS WHERE invoice_id=?",
+                        Integer.class, activeInvoiceId
+                );
+                if (rawLocked != null) lockedBookingIds = new HashSet<>(rawLocked);
+            } catch (Exception ignored) {}
+
+            List<Booking> lockedBookings = new ArrayList<>();
+            List<Booking> unlockedBookings = new ArrayList<>();
+            for (Booking b : pendingBookings) {
+                if (lockedBookingIds.contains(b.getBookingId())) lockedBookings.add(b);
+                else unlockedBookings.add(b);
+            }
+
+            List<UserMembership> lockedMemberships = new ArrayList<>();
+            List<UserMembership> unlockedMemberships = new ArrayList<>();
+            for (UserMembership m : pendingMemberships) {
+                if (activeInvoiceId.equals(m.getCheckoutInvoiceId())) lockedMemberships.add(m);
+                else unlockedMemberships.add(m);
+            }
+
+            pendingItems = toCartItems(lockedBookings, lockedMemberships);
+            if (pendingItems.isEmpty()) {
+                pendingItems = invoiceDetailRepository.findByInvoice_InvoiceId(activeInvoiceId).stream().map(d -> {
+                    if (d.getGymClass() != null) {
+                        return CartItemDto.builder()
+                                .type("CLASS")
+                                .classId(d.getGymClass().getClassId())
+                                .className(d.getGymClass().getClassName())
+                                .coachName(d.getGymClass().getCoach() != null ? d.getGymClass().getCoach().getFullName() : "Unknown")
+                                .price(d.getUnitPrice())
+                                .sessionCount(1)
+                                .build();
+                    }
+                    return CartItemDto.builder()
+                            .type("PACKAGE")
+                            .packageId(d.getAPackage() != null ? d.getAPackage().getPackageId() : null)
+                            .packageName(d.getAPackage() != null ? d.getAPackage().getPackageName() : "Gói hội viên")
+                            .durationDays(d.getAPackage() != null ? d.getAPackage().getDurationDays() : null)
+                            .price(d.getUnitPrice())
+                            .build();
+                }).toList();
+            }
+
+            items = toCartItems(unlockedBookings, unlockedMemberships);
+
+            BigDecimal detailsSum = sumCartItemPrices(pendingItems);
+            if (pendingSubtotal == null || pendingSubtotal.signum() == 0) {
+                pendingSubtotal = detailsSum;
+            }
+            if (pendingTotalAmount == null) {
+                pendingTotalAmount = pendingSubtotal;
+            }
+            BigDecimal effectiveDiscount = (pendingDiscountAmount != null && pendingDiscountAmount.signum() > 0)
+                    ? pendingDiscountAmount
+                    : pendingSubtotal.subtract(pendingTotalAmount).max(BigDecimal.ZERO);
+            pendingDiscountAmount = effectiveDiscount;
+
+            var maybeCredit = userCreditRepository.findByUsedInvoiceId(activeInvoiceId);
+            if (maybeCredit.isPresent()) {
+                var credit = maybeCredit.get();
+                pendingCreditCode = credit.getCreditCode();
+                BigDecimal creditBal = credit.getRemainingAmount() != null ? credit.getRemainingAmount() : BigDecimal.ZERO;
+                pendingCreditDiscount = creditBal.min(effectiveDiscount.max(BigDecimal.ZERO));
+            }
+        } else {
+            items = toCartItems(pendingBookings, pendingMemberships);
+        }
+
+        BigDecimal totalPrice = sumCartItemPrices(items);
 
         return CartResponse.builder()
                 .hasPendingCheckout(hasPending)
@@ -125,6 +315,15 @@ public class PaymentServiceImpl implements PaymentService {
                 .pendingPaymentUrl(pendingUrl)
                 .pendingPaymentMethod(pendingMethod)
                 .pendingInvoiceStatus(pendingStatus)
+                .pendingItems(pendingItems)
+                .pendingSubtotal(pendingSubtotal)
+                .pendingDiscountAmount(pendingDiscountAmount)
+                .pendingTotalAmount(pendingTotalAmount)
+                .pendingVoucherCode(pendingVoucherCode)
+                .pendingCreditCode(pendingCreditCode)
+                .pendingCreditDiscount(pendingCreditDiscount)
+                .pendingRemainingSeconds(pendingRemainingSeconds)
+                .pendingCreatedAt(pendingCreatedAt)
                 .items(items)
                 .totalPrice(totalPrice)
                 .build();
@@ -136,13 +335,9 @@ public class PaymentServiceImpl implements PaymentService {
         return checkout(email, ipAddress, paymentMethod, null, false);
     }
 
-    private void cancelPendingInvoicesForUser(Integer userId) {
-        if (userId == null || userId == 0) return;
-        List<Integer> pendingInvoiceIds = jdbc.queryForList(
-            "SELECT invoice_id FROM INVOICES WHERE user_id=? AND status = 'PENDING'",
-            Integer.class, userId
-        );
-        for (Integer invId : pendingInvoiceIds) {
+    private void releaseInvoiceRecords(List<Integer> invoiceIds) {
+        if (invoiceIds == null) return;
+        for (Integer invId : invoiceIds) {
             jdbc.update("UPDATE INVOICES SET status='CANCELLED' WHERE invoice_id=?", invId);
             jdbc.update("UPDATE PAYMENTS SET status='CANCELLED' WHERE invoice_id=? AND status = 'PENDING'", invId);
             userCreditRepository.findByUsedInvoiceId(invId).ifPresent(credit -> {
@@ -154,7 +349,26 @@ public class PaymentServiceImpl implements PaymentService {
                 m.setCheckoutInvoiceId(null);
                 userMembershipRepository.save(m);
             }
+            jdbc.update("DELETE FROM INVOICE_BOOKINGS WHERE invoice_id=?", invId);
         }
+    }
+
+    private void cancelPendingInvoicesForUser(Integer userId) {
+        if (userId == null || userId == 0) return;
+        List<Integer> pendingInvoiceIds = jdbc.queryForList(
+            "SELECT invoice_id FROM INVOICES WHERE user_id=? AND status = 'PENDING'",
+            Integer.class, userId
+        );
+        releaseInvoiceRecords(pendingInvoiceIds);
+    }
+
+    private void cancelExpiredPendingInvoicesForUser(Integer userId) {
+        if (userId == null || userId == 0) return;
+        List<Integer> expiredInvoiceIds = jdbc.queryForList(
+            "SELECT invoice_id FROM INVOICES WHERE user_id=? AND status = 'PENDING' AND created_at <= DATE_SUB(NOW(), INTERVAL 15 MINUTE)",
+            Integer.class, userId
+        );
+        releaseInvoiceRecords(expiredInvoiceIds);
     }
 
     @Override
@@ -188,6 +402,7 @@ public class PaymentServiceImpl implements PaymentService {
         List<UserMembership> pendingMemberships = userMembershipRepository.findByEmailAndStatus(email, "PENDING");
 
         assertCartMutable(email);
+        cancelExpiredPendingInvoicesForUser(user.getUserId());
         for(var membership:pendingMemberships)commerce.checkPurchase(user.getUserId(),membership.getAPackage().getPackageId(),null,true);
         if (pendingBookings.isEmpty() && pendingMemberships.isEmpty()) {
             throw new RuntimeException("No pending items found in your cart.");
@@ -459,36 +674,20 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hóa đơn / Invoice not found: " + invoiceId));
 
-        if ("PENDING".equals(invoice.getStatus()) && payOSConfig.isConfigured()) {
-            try {
-                HttpHeaders headers = new HttpHeaders();
-                headers.set("x-client-id", payOSConfig.clientId);
-                headers.set("x-api-key", payOSConfig.apiKey);
-                HttpEntity<?> entity = new HttpEntity<>(headers);
-                RestTemplate restTemplate = new RestTemplate();
-                String endpoint = payOSConfig.endpoint + "/v2/payment-requests/" + invoiceId;
-                @SuppressWarnings("unchecked")
-                Map<String, Object> resp = restTemplate.exchange(endpoint, org.springframework.http.HttpMethod.GET, entity, Map.class).getBody();
-                if (resp != null && ("00".equals(resp.get("code")) || "0".equals(resp.get("code")))) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> data = (Map<String, Object>) resp.get("data");
-                    if (data != null) {
-                        String payStatus = String.valueOf(data.get("status"));
-                        if ("PAID".equalsIgnoreCase(payStatus)) {
-                            finishPayment(invoice, true, "PAYOS-" + invoiceId);
-                        } else if ("CANCELLED".equalsIgnoreCase(payStatus) || "EXPIRED".equalsIgnoreCase(payStatus)) {
-                            finishPayment(invoice, false, "PAYOS-CANCEL-" + invoiceId);
-                        }
-                    }
-                }
-            } catch (Exception ignored) {
-                // Ignore query error, wait for webhook or next poll
-            }
+        if (userEmail != null && invoice.getUser() != null && !userEmail.equalsIgnoreCase(invoice.getUser().getEmail())) {
+            throw new org.springframework.security.access.AccessDeniedException("Bạn không có quyền xem thông tin hóa đơn này.");
         }
+
+        syncPayOSStatus(invoice);
 
         long amount = invoice.getTotalAmount() != null ? invoice.getTotalAmount().longValue() : 0L;
         String desc = "HD " + invoiceId;
         String qrUrl = payOSConfig.buildVietQRUrl(amount, desc);
+        String method = paymentRepository.findByInvoice_InvoiceId(invoice.getInvoiceId())
+                .map(PaymentEntity::getPaymentMethod)
+                .orElse("PAYOS");
+        long remainingSeconds = computeRemainingSeconds(invoice.getInvoiceId(), invoice.getCreatedAt(), invoice.getStatus());
+        boolean isExpired = !"PENDING".equals(invoice.getStatus()) || remainingSeconds <= 0L;
 
         Map<String, Object> res = new HashMap<>();
         res.put("invoiceId", invoice.getInvoiceId());
@@ -500,6 +699,10 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
         res.put("description", desc);
         res.put("qrUrl", qrUrl);
         res.put("status", invoice.getStatus());
+        res.put("paymentMethod", method);
+        res.put("createdAt", invoice.getCreatedAt());
+        res.put("remainingSeconds", remainingSeconds);
+        res.put("isExpired", isExpired);
         return res;
     }
 
@@ -518,6 +721,11 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
             if (!userEmail.equalsIgnoreCase(invoice.getUser().getEmail())) {
                 throw new org.springframework.security.access.AccessDeniedException("Bạn không có quyền thao tác trên hóa đơn này.");
             }
+        }
+
+        String method = paymentMethod(invoice);
+        if (!isPayOSOrVietQRMethod(method)) {
+            throw new IllegalArgumentException("Hóa đơn này không sử dụng phương thức chuyển khoản VietQR / Invoice does not use VietQR transfer.");
         }
 
         finishPayment(invoice, true, "VIETQR-TRANSFER-HD" + invoiceId);
@@ -600,12 +808,17 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     @Transactional
     public void removeFromCart(String email, Integer classId) {
         bookingRepository.lockOperations();
-        assertCartMutable(email);
         List<Booking> pendingBookings = bookingRepository.findAllBookingsByEmail(email)
                 .stream()
                 .filter(b -> "PENDING".equals(b.getStatus()) && b.getSchedule().getGymClass().getClassId().equals(classId))
                 .toList();
-                
+
+        Set<Integer> lockedBookingIds = loadActivePendingBookingIds(email);
+        boolean touchesLockedOrder = pendingBookings.stream().anyMatch(b -> lockedBookingIds.contains(b.getBookingId()));
+        if (touchesLockedOrder) {
+            assertCartMutable(email);
+        }
+
         if (!pendingBookings.isEmpty()) {
             for(var b:pendingBookings){
                 Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM INVOICE_BOOKINGS WHERE booking_id=?",Integer.class,b.getBookingId());
@@ -618,8 +831,13 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     @Transactional
     public void removePackageFromCart(String email, Integer packageId) {
         bookingRepository.lockOperations();
-        assertCartMutable(email);
         List<com.team4.sportscenter.modules.member.entities.UserMembership> memberships = userMembershipRepository.findByEmailAndStatus(email, "PENDING").stream().filter(m -> m.getAPackage().getPackageId().equals(packageId)).toList();
+        Set<Integer> activeInvoiceIds = loadActivePendingInvoiceIds(email);
+        boolean touchesLockedOrder = memberships.stream()
+                .anyMatch(m -> m.getCheckoutInvoiceId() != null && activeInvoiceIds.contains(m.getCheckoutInvoiceId()));
+        if (touchesLockedOrder) {
+            assertCartMutable(email);
+        }
         if (!memberships.isEmpty()) {
             for(var m:memberships){if(m.getCheckoutInvoiceId()!=null){m.setStatus("CANCELLED");userMembershipRepository.save(m);}else userMembershipRepository.delete(m);}
         }
@@ -629,16 +847,40 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
     @Transactional
     public void clearCart(String email) {
         bookingRepository.lockOperations();
-        assertCartMutable(email);
-        List<Booking> pendingBookings = bookingRepository.findAllBookingsByEmail(email)
-                .stream().filter(b -> "PENDING".equals(b.getStatus())).toList();
-        if (!pendingBookings.isEmpty()) {
-            bookingRepository.deleteAll(pendingBookings);
+        Set<Integer> lockedBookingIds = loadActivePendingBookingIds(email);
+        Set<Integer> activeInvoiceIds = loadActivePendingInvoiceIds(email);
+
+        List<Booking> unlockedBookings = bookingRepository.findAllBookingsByEmail(email)
+                .stream()
+                .filter(b -> "PENDING".equals(b.getStatus()) && !lockedBookingIds.contains(b.getBookingId()))
+                .toList();
+
+        List<com.team4.sportscenter.modules.member.entities.UserMembership> unlockedMemberships = userMembershipRepository.findByEmailAndStatus(email, "PENDING")
+                .stream()
+                .filter(m -> m.getCheckoutInvoiceId() == null || !activeInvoiceIds.contains(m.getCheckoutInvoiceId()))
+                .toList();
+
+        if (unlockedBookings.isEmpty() && unlockedMemberships.isEmpty() && !activeInvoiceIds.isEmpty()) {
+            assertCartMutable(email);
         }
-        
-        List<com.team4.sportscenter.modules.member.entities.UserMembership> pendingMemberships = userMembershipRepository.findByEmailAndStatus(email, "PENDING");
-        if (!pendingMemberships.isEmpty()) {
-            for(var m:pendingMemberships){if(m.getCheckoutInvoiceId()!=null){m.setStatus("CANCELLED");userMembershipRepository.save(m);}else userMembershipRepository.delete(m);}
+
+        for (var b : unlockedBookings) {
+            Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM INVOICE_BOOKINGS WHERE booking_id=?", Integer.class, b.getBookingId());
+            if (count != null && count > 0) {
+                b.setStatus("CANCELLED");
+                bookingRepository.save(b);
+            } else {
+                bookingRepository.delete(b);
+            }
+        }
+
+        for (var m : unlockedMemberships) {
+            if (m.getCheckoutInvoiceId() != null) {
+                m.setStatus("CANCELLED");
+                userMembershipRepository.save(m);
+            } else {
+                userMembershipRepository.delete(m);
+            }
         }
     }
 
@@ -664,6 +906,22 @@ booking.getSchedule().getGymClass().getClassName() + "' on " + booking.getSchedu
 
         if (invoice == null || !"PENDING".equals(invoice.getStatus())) {
             return;
+        }
+
+        String method = paymentRepository.findByInvoice_InvoiceId(invoice.getInvoiceId())
+                .map(PaymentEntity::getPaymentMethod)
+                .orElse(null);
+        if ("PAYOS".equalsIgnoreCase(method) && payOSConfig.isConfigured()) {
+            syncPayOSStatus(invoice);
+            if ("PAID".equals(invoice.getStatus())) {
+                throw new com.team4.sportscenter.common.exception.PackageRuleException(
+                        "PAYMENT_ALREADY_COMPLETED",
+                        "Payment for this order was already received and activated."
+                );
+            }
+            if (!"PENDING".equals(invoice.getStatus())) {
+                return;
+            }
         }
 
         invoice.setStatus("CANCELLED");
