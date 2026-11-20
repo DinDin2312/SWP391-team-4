@@ -805,6 +805,8 @@ class ManagerIntegrationTests {
         service.saveSchedule(id, cancelled, actor);
         assertEquals("CANCELLED", jdbc.queryForObject("SELECT status FROM BOOKINGS WHERE schedule_id=?", String.class, id));
         assertEquals(1, count("SELECT COUNT(*) FROM NOTIFICATIONS WHERE user_id=?", member));
+        // Cancelling one session refunds that session's share of tuition as a credit voucher.
+        assertEquals(1, count("SELECT COUNT(*) FROM USER_CREDITS WHERE user_id=? AND class_id=? AND credit_code LIKE 'CRED-SESSION-%'", member, course));
         assertThrows(IllegalArgumentException.class, () -> service.saveSchedule(id, cancelled, actor));
         assertThrows(IllegalArgumentException.class, () -> service.saveSchedule(id, new ScheduleRequest(course, start, start.plusMinutes(90), "SCHEDULED"), actor));
         assertEquals(1, count("SELECT COUNT(*) FROM NOTIFICATIONS WHERE user_id=?", member));
@@ -819,7 +821,7 @@ class ManagerIntegrationTests {
         assertEquals("INACTIVE", jdbc.queryForObject("SELECT status FROM CLASSES WHERE class_id=?", String.class, course));
         assertEquals(2, count("SELECT COUNT(*) FROM NOTIFICATIONS WHERE user_id=?", member));
         assertEquals(1, count("SELECT COUNT(*) FROM SUPPORT_REQUESTS WHERE user_id=? AND class_id=? AND preferred_resolution='ISSUE_CREDIT' AND status='APPROVED'", member, course));
-        assertEquals(1, count("SELECT COUNT(*) FROM USER_CREDITS WHERE user_id=? AND class_id=? AND status='ACTIVE' AND amount=100000", member, course));
+        assertEquals(1, count("SELECT COUNT(*) FROM USER_CREDITS WHERE user_id=? AND class_id=? AND status='ACTIVE' AND amount=100000 AND credit_code LIKE 'CRED-CANCEL-%'", member, course));
     }
 
     @Test void bookedSessionCannotChangeClassOrConflictWithStudents() {

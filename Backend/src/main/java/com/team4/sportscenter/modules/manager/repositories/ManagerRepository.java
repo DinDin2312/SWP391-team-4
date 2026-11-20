@@ -618,12 +618,6 @@ public class ManagerRepository {
                 INSERT INTO USER_CREDITS(user_id,request_id,class_id,credit_code,amount,remaining_amount,reason,expiry_date,status,created_at)
                 VALUES (?,NULL,?,?,?,?,?,DATE_ADD(CURDATE(),INTERVAL 60 DAY),'ACTIVE',NOW())
                 """, userId, classId, code, amount, amount, "Hoàn 1 buổi do trung tâm hủy buổi " + sessionTime + " lớp " + className);
-        jdbc.update("""
-                INSERT INTO NOTIFICATIONS(user_id,title,message,type,is_read,created_at)
-                VALUES (?,?,?,'REFUND',false,NOW())
-                """, userId, "Hủy buổi học & hoàn Voucher: " + className,
-                "Buổi " + sessionTime + " của lớp " + className + " đã bị hủy. Hệ thống đã hoàn " + formattedAmount
-                        + " (1 buổi) bằng Voucher tín dụng, mã " + code + ", hạn 60 ngày.");
     }
 
     public void notifyCourseCancelledPendingMember(Integer userId, String className, String reason) {

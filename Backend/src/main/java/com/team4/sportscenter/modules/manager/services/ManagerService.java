@@ -507,7 +507,7 @@ public class ManagerService {
                 refunded = confirmed.size();
             }
             managerRepository.notifyScheduleBookings(id, "Buổi học đã hủy", className + " lúc " + when + " đã hủy."
-                    + (refunded > 0 ? " Học phí 1 buổi đã được hoàn bằng Voucher." : ""));
+                    + (refunded > 0 ? " Học viên đã thanh toán được hoàn học phí 1 buổi bằng Voucher tín dụng (hạn 60 ngày), xem trong ví Voucher." : ""));
             managerRepository.cancelScheduleBookings(id);
         } else if (id != null && (timingChanged || roomChanged)) {
             String roomName = managerRepository.roomName(roomId);
