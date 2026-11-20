@@ -3197,7 +3197,7 @@ const supportTranslations = [
   ["Quick reception review","Ưu tiên lễ tân duyệt nhanh"],
   ["Requires Manager review","Cần Quản lý trung tâm duyệt"],
   ["System Automated","Hệ thống tự động"],
-  ["Approved & Resolved","Đã duyệt tự động"],
+  ["Approved & Resolved","Đã duyệt"],
   ["Cancellation & Retention Request for","Yêu cầu hủy & bảo lưu lớp"],
   ["Warning:","Cảnh báo:"],
   ["Teaching Method & Delivery","Phương pháp giảng dạy & Truyền đạt"],
