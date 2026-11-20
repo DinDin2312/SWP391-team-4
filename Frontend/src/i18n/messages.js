@@ -1677,6 +1677,22 @@ const reportCompletionLabels={
 };
 for(const [en,vi] of Object.entries(reportCompletionLabels)) translations[en]=[en,vi];
 
+const classRevenueLabels={
+ "Course revenue by subject":"Doanh thu khóa học theo môn",
+ "Share of course revenue collected in this period. Select a subject to see its classes.":"Tỷ trọng doanh thu khóa học thu được trong kỳ. Chọn một môn để xem từng lớp.",
+ "Course revenue":"Doanh thu khóa học", "Other subjects":"Môn khác", "No subject":"Chưa gán môn",
+ "No course revenue in this period.":"Không có doanh thu khóa học trong kỳ này.",
+ "Courses make up {0} of total revenue ({1}). The rest comes from packages and other payments.":"Khóa học chiếm {0} tổng doanh thu kỳ này ({1}). Phần còn lại đến từ gói tập và các khoản khác.",
+ "When one invoice has several items, the amount paid is split by item price.":"Hóa đơn có nhiều mục thì số tiền đã trả được chia theo giá từng mục.",
+ "{0} registrations":"{0} lượt đăng ký", "{0} classes":"{0} lớp", "{0} subjects":"{0} môn",
+ "Course revenue share by subject":"Tỷ trọng doanh thu khóa học theo môn",
+ "Package revenue":"Doanh thu gói tập", "Package revenue share":"Tỷ trọng doanh thu gói tập", "Other packages":"Gói khác",
+ "Share of package revenue collected in this period, with the number of purchases.":"Tỷ trọng doanh thu gói tập thu được trong kỳ, kèm số lượt mua.",
+ "No package revenue in this period.":"Không có doanh thu gói tập trong kỳ này.",
+ "Packages make up {0} of total revenue ({1}).":"Gói tập chiếm {0} tổng doanh thu kỳ này ({1}).",
+};
+for(const [en,vi] of Object.entries(classRevenueLabels)) translations[en]=[en,vi];
+
 // ==================== BẢN DỊCH TÍNH NĂNG ĐÁNH GIÁ TIẾN ĐỘ HỌC VIÊN (COACH ASSESSMENT) ====================
 const assessmentLabels = {
   // Nút bấm & Tiêu đề

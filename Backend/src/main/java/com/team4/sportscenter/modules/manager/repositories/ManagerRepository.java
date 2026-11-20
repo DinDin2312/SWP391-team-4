@@ -837,6 +837,112 @@ public class ManagerRepository {
                 """, from, to);
     }
 
+    /**
+     * Course revenue of the period, grouped by subject then class. Uses the same payments as the revenue
+     * KPI (successful payments dated in the range). When one invoice holds several items, its paid amount
+     * is split by each item's list price, so discounts and vouchers are shared fairly and the class totals
+     * add up to what was really collected for courses.
+     */
+    private Map<String, Object> classRevenue(LocalDate from, LocalDate to) {
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                WITH paid AS (
+                  SELECT p.invoice_id,SUM(p.amount) amount FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id
+                  WHERE p.status IN ('SUCCESS','COMPLETED') AND i.status<>'REVIEW' AND DATE(p.payment_date) BETWEEN ? AND ?
+                  GROUP BY p.invoice_id),
+                items AS (
+                  SELECT d.invoice_id,COALESCE(d.class_id,sc.class_id) class_id,COALESCE(d.unit_price,0) unit_price
+                  FROM INVOICE_DETAILS d JOIN paid ON paid.invoice_id=d.invoice_id
+                  LEFT JOIN SCHEDULES sc ON sc.schedule_id=d.schedule_id),
+                totals AS (SELECT invoice_id,SUM(unit_price) total,COUNT(*) n FROM items GROUP BY invoice_id)
+                SELECT c.class_id classId,c.class_name label,s.subject_id subjectId,s.subject_name subject,u.full_name coach,
+                       SUM(paid.amount*CASE WHEN t.total>0 THEN it.unit_price/t.total ELSE 1.0/t.n END) revenue,
+                       COUNT(DISTINCT it.invoice_id) registrations
+                FROM items it JOIN paid ON paid.invoice_id=it.invoice_id JOIN totals t ON t.invoice_id=it.invoice_id
+                JOIN CLASSES c ON c.class_id=it.class_id
+                LEFT JOIN SUBJECTS s ON s.subject_id=c.subject_id
+                LEFT JOIN USERS u ON u.user_id=c.coach_id
+                GROUP BY c.class_id,c.class_name,s.subject_id,s.subject_name,u.full_name
+                """, from, to);
+        Map<Object, Map<String, Object>> subjects = new java.util.LinkedHashMap<>();
+        long courseRevenue = 0;
+        for (Map<String, Object> row : rows) {
+            long revenue = new java.math.BigDecimal(String.valueOf(row.get("revenue"))).setScale(0, java.math.RoundingMode.HALF_UP).longValue();
+            if (revenue <= 0) continue;
+            courseRevenue += revenue;
+            Object key = row.get("subjectId") == null ? "none" : row.get("subjectId");
+            Map<String, Object> subject = subjects.computeIfAbsent(key, k -> {
+                Map<String, Object> s = new java.util.LinkedHashMap<>();
+                s.put("subjectId", row.get("subjectId"));
+                s.put("subject", row.get("subject"));
+                s.put("revenue", 0L);
+                s.put("registrations", 0L);
+                s.put("classes", new java.util.ArrayList<Map<String, Object>>());
+                return s;
+            });
+            long registrations = ((Number) row.get("registrations")).longValue();
+            subject.put("revenue", (Long) subject.get("revenue") + revenue);
+            subject.put("registrations", (Long) subject.get("registrations") + registrations);
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("classId", row.get("classId"));
+            item.put("label", row.get("label"));
+            item.put("coach", row.get("coach"));
+            item.put("revenue", revenue);
+            item.put("registrations", registrations);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> classes = (List<Map<String, Object>>) subject.get("classes");
+            classes.add(item);
+        }
+        java.util.Comparator<Map<String, Object>> byRevenue = java.util.Comparator.comparingLong(m -> -((Long) m.get("revenue")));
+        List<Map<String, Object>> list = new java.util.ArrayList<>(subjects.values());
+        for (Map<String, Object> subject : list) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> classes = (List<Map<String, Object>>) subject.get("classes");
+            classes.sort(byRevenue);
+        }
+        list.sort(byRevenue);
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("courseRevenue", courseRevenue);
+        result.put("subjects", list);
+        return result;
+    }
+
+    /** Package revenue of the period, one row per package, allocated the same way as {@link #classRevenue}. */
+    private Map<String, Object> packageRevenue(LocalDate from, LocalDate to) {
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                WITH paid AS (
+                  SELECT p.invoice_id,SUM(p.amount) amount FROM PAYMENTS p JOIN INVOICES i ON i.invoice_id=p.invoice_id
+                  WHERE p.status IN ('SUCCESS','COMPLETED') AND i.status<>'REVIEW' AND DATE(p.payment_date) BETWEEN ? AND ?
+                  GROUP BY p.invoice_id),
+                items AS (
+                  SELECT d.invoice_id,COALESCE(d.package_id,um.package_id) package_id,COALESCE(d.unit_price,0) unit_price
+                  FROM INVOICE_DETAILS d JOIN paid ON paid.invoice_id=d.invoice_id
+                  LEFT JOIN USER_MEMBERSHIPS um ON um.membership_id=d.membership_id),
+                totals AS (SELECT invoice_id,SUM(unit_price) total,COUNT(*) n FROM items GROUP BY invoice_id)
+                SELECT pk.package_id packageId,pk.package_name label,pk.package_type packageType,
+                       SUM(paid.amount*CASE WHEN t.total>0 THEN it.unit_price/t.total ELSE 1.0/t.n END) revenue,
+                       COUNT(DISTINCT it.invoice_id) registrations
+                FROM items it JOIN paid ON paid.invoice_id=it.invoice_id JOIN totals t ON t.invoice_id=it.invoice_id
+                JOIN PACKAGES pk ON pk.package_id=it.package_id
+                GROUP BY pk.package_id,pk.package_name,pk.package_type
+                """, from, to);
+        List<Map<String, Object>> packages = new java.util.ArrayList<>();
+        long packageRevenue = 0;
+        for (Map<String, Object> row : rows) {
+            long revenue = new java.math.BigDecimal(String.valueOf(row.get("revenue"))).setScale(0, java.math.RoundingMode.HALF_UP).longValue();
+            if (revenue <= 0) continue;
+            packageRevenue += revenue;
+            Map<String, Object> item = new java.util.LinkedHashMap<>(row);
+            item.put("revenue", revenue);
+            item.put("registrations", ((Number) row.get("registrations")).longValue());
+            packages.add(item);
+        }
+        packages.sort(java.util.Comparator.comparingLong(m -> -((Long) m.get("revenue"))));
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("packageRevenue", packageRevenue);
+        result.put("packages", packages);
+        return result;
+    }
+
     public Map<String, Object> report(LocalDate from, LocalDate to) {
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         // Comparison window: the same number of days immediately before the selected range.
@@ -861,6 +967,8 @@ public class ManagerRepository {
                 WHERE b.booking_time>=? AND b.booking_time<?
                 GROUP BY b.status ORDER BY b.status
                 """,from.atStartOfDay(),to.plusDays(1).atStartOfDay()));
+        result.put("classRevenue", classRevenue(from, to));
+        result.put("packageRevenue", packageRevenue(from, to));
         result.put("revenueByDay", revenueByDay(from, to));
         // Same-length window just before the range, drawn as the comparison line on the revenue chart.
         result.put("previousRevenueByDay", revenueByDay(previousFrom, previousTo));

@@ -7,6 +7,8 @@ import { isoDate, reportCsv } from '../managerUtils';
 import { alignPrevious, bucketDays, fillDays } from './revenueSeries';
 import ManagerPageHeader from '../components/ManagerPageHeader';
 import CoachTeachingReport from './CoachTeachingReport';
+import RevenueDonut from './RevenueDonut';
+import { packageItems, subjectItems } from './classRevenue';
 import './reports.css';
 import VnDateInput from '../../../components/VnDateInput';
 
@@ -151,32 +153,6 @@ function RevenueStats({ days }) {
   return <dl className="reports-revenue-stats">{stats.map(stat => <div key={stat.label}><dt>{t(stat.label)}</dt><dd>{stat.value}</dd>{stat.note && <span>{stat.note}</span>}</div>)}</dl>;
 }
 
-const BOOKING_STATUSES = [
-  { status: 'CONFIRMED', label: 'Confirmed', tone: 'confirmed' },
-  { status: 'PENDING', label: 'Pending', tone: 'pending' },
-  { status: 'CANCELLED', label: 'Cancelled', tone: 'cancelled' },
-];
-
-function BookingBreakdown({ rows }) {
-  const known = BOOKING_STATUSES.map(item => ({ ...item, value: Number(rows.find(row => row.status === item.status)?.value || 0) }));
-  const other = rows.filter(row => !BOOKING_STATUSES.some(item => item.status === row.status)).reduce((sum, row) => sum + Number(row.value || 0), 0);
-  const parts = other > 0 ? [...known, { status: 'OTHER', label: 'Other booking statuses', tone: 'other', value: other }] : known;
-  const total = parts.reduce((sum, part) => sum + part.value, 0);
-  if (!total) return <Empty icon={ClipboardList} text="No bookings in this period." />;
-  return <div className="reports-breakdown">
-    <div className="reports-breakdown-total"><strong>{count(total)}</strong><span>{t('bookings created')}</span></div>
-    <div className="reports-segments" role="img" aria-label={parts.map(part => `${t(part.label)}: ${count(part.value)} (${percent(part.value / total * 100)})`).join(', ')}>
-      {parts.filter(part => part.value > 0).map(part => <span key={part.status} className={`is-${part.tone}`} style={{ flexGrow: part.value }} title={`${t(part.label)}: ${count(part.value)}`} />)}
-    </div>
-    <ul className="reports-breakdown-list">{parts.map(part => <li key={part.status}>
-      <span className={`reports-swatch is-${part.tone}`} aria-hidden="true" />
-      <span className="reports-breakdown-name">{t(part.label)}</span>
-      <strong>{count(part.value)}</strong>
-      <span className="reports-breakdown-share">{percent(part.value / total * 100)}</span>
-    </li>)}</ul>
-  </div>;
-}
-
 function OccupancyMeter({ rate }) {
   if (rate == null) return <span className="reports-occupancy-none">—</span>;
   const low = rate < LOW_OCCUPANCY;
@@ -232,11 +208,6 @@ export default function ReportsPage({ data, filters, appliedFilters, setFilters,
   const previousDays = useMemo(() => rawPreviousDaily && previousRange ? fillDays(rawPreviousDaily, previousRange.from, previousRange.to) : null, [rawPreviousDaily, previousRange]);
   const hasRevenue = days.some(day => day.value > 0);
   const classes = report?.classOccupancy || [];
-  const allPackages = [...(report?.memberships || [])].filter(item => Number(item.value) > 0).sort((a, b) => Number(b.value) - Number(a.value));
-  const packages = allPackages.slice(0, 5);
-  const packageTotal = allPackages.reduce((sum, item) => sum + Number(item.value), 0);
-  const packageRest = allPackages.slice(5);
-  const maxPackages = Math.max(...packages.map(item => Number(item.value)), 1);
   const valid = Boolean(filters.from && filters.to && filters.from <= filters.to);
   const pendingRange = filters.from !== appliedFilters.from || filters.to !== appliedFilters.to;
   const presets = ['This month', 'Last 7 days', 'Last 30 days'];
@@ -334,15 +305,11 @@ export default function ReportsPage({ data, filters, appliedFilters, setFilters,
             {popularity.length > 0 && <p className="reports-card-note">{t('"New" = members whose registration was created in this period.')}</p>}
           </section>
           <div className="reports-stack">
-            <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Booking status breakdown')}</h2><p>{t('By booking creation date, not session date. Statuses reflect the current state.')}</p></div><span className="reports-section-icon"><ClipboardList size={19} aria-hidden="true" /></span></div>
-              {loading ? loadingBlock : report ? <BookingBreakdown rows={report.bookingStatuses || []} /> : <Empty icon={ClipboardList} text="Report data is unavailable." />}
+            <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Course revenue by subject')}</h2><p>{t('Share of course revenue collected in this period. Select a subject to see its classes.')}</p></div><span className="reports-section-icon"><Wallet size={19} aria-hidden="true" /></span></div>
+              {loading ? loadingBlock : report ? <RevenueDonut items={subjectItems(report.classRevenue?.subjects)} totalRevenue={summary?.revenue} ariaLabel="Course revenue share by subject" centerLabel="Course revenue" otherLabel="Other subjects" emptyText="No course revenue in this period." shareNote="Courses make up {0} of total revenue ({1}). The rest comes from packages and other payments." /> : <Empty icon={Wallet} text="Report data is unavailable." />}
             </section>
-            <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Package registrations')}</h2><p>{t('Top 5 packages by registrations.')}</p></div><span className="reports-section-icon"><Package size={19} aria-hidden="true" /></span></div>
-              {loading ? loadingBlock : packages.length ? <ol className="reports-packages">{packages.map((item, index) => <li key={`${item.label}-${index}`}>
-                <span className="reports-package-rank">{index + 1}</span>
-                <div><div className="reports-package-name"><strong>{item.label}</strong><span><b>{count(item.value)}</b> · {percent(Number(item.value) / packageTotal * 100)}</span></div><i aria-hidden="true"><b style={{ width: `${Number(item.value) / maxPackages * 100}%` }} /></i></div>
-              </li>)}</ol> : <Empty icon={Package} text={loadError ? 'Report data is unavailable.' : 'No package registrations in this period.'} />}
-              {packages.length > 0 && <p className="reports-card-note">{packageRest.length > 0 && <>{t('{0} other packages: {1} registrations.', [count(packageRest.length), count(packageRest.reduce((sum, item) => sum + Number(item.value), 0))])} </>}{t('Based on membership start date, not payment status.')}</p>}
+            <section className="reports-card"><div className="reports-card-header"><div><h2>{t('Package revenue')}</h2><p>{t('Share of package revenue collected in this period, with the number of purchases.')}</p></div><span className="reports-section-icon"><Package size={19} aria-hidden="true" /></span></div>
+              {loading ? loadingBlock : report ? <RevenueDonut items={packageItems(report.packageRevenue?.packages)} totalRevenue={summary?.revenue} ariaLabel="Package revenue share" centerLabel="Package revenue" otherLabel="Other packages" emptyText="No package revenue in this period." shareNote="Packages make up {0} of total revenue ({1})." /> : <Empty icon={Package} text="Report data is unavailable." />}
             </section>
           </div>
         </div>
