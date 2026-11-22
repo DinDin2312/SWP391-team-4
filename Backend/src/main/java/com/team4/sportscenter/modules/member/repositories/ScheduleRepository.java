@@ -27,6 +27,6 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
 
     long countByGymClass_ClassId(Integer classId);
 
-    @Query("SELECT DISTINCT s FROM Schedule s JOIN FETCH s.gymClass c LEFT JOIN FETCH c.coach u LEFT JOIN FETCH c.room r LEFT JOIN FETCH s.substituteCoach sc WHERE s.startTime > :afterTime AND s.status != 'CANCELLED' AND (u.userId = :coachId OR sc.userId = :coachId) ORDER BY s.startTime ASC")
+    @Query("SELECT DISTINCT s FROM Schedule s JOIN FETCH s.gymClass c LEFT JOIN FETCH c.coach u LEFT JOIN FETCH c.room r LEFT JOIN FETCH s.substituteCoach sc WHERE s.startTime > :afterTime AND s.status NOT IN ('CANCELLED', 'CANCELLED_INSUFFICIENT_ATTENDEES', 'COMPLETED') AND (u.userId = :coachId OR sc.userId = :coachId) ORDER BY s.startTime ASC")
     List<Schedule> findUpcomingSchedulesByCoachId(@Param("coachId") Integer coachId, @Param("afterTime") LocalDateTime afterTime);
 }

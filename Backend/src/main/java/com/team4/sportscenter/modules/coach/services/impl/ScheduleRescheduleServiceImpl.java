@@ -10,6 +10,7 @@ import com.team4.sportscenter.modules.coach.entities.ScheduleRescheduleRequest;
 import com.team4.sportscenter.modules.coach.repositories.RescheduleMemberResponseRepository;
 import com.team4.sportscenter.modules.coach.repositories.ScheduleRescheduleRequestRepository;
 import com.team4.sportscenter.modules.coach.services.ScheduleRescheduleService;
+import com.team4.sportscenter.modules.manager.repositories.ManagerRepository;
 import com.team4.sportscenter.modules.member.entities.Booking;
 import com.team4.sportscenter.modules.member.entities.GymClass;
 import com.team4.sportscenter.modules.member.entities.Room;
@@ -23,6 +24,7 @@ import com.team4.sportscenter.modules.support.entities.UserCredit;
 import com.team4.sportscenter.modules.support.enums.CreditStatus;
 import com.team4.sportscenter.modules.support.repositories.UserCreditRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,9 +52,103 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
     private final RoomRepository roomRepository;
     private final UserCreditRepository userCreditRepository;
     private final NotificationRepository notificationRepository;
+    private final JdbcTemplate jdbc;
+    private final ManagerRepository managerRepository;
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
+    private static final Set<String> ACTIVE_SESSION_STATUSES = Set.of("SCHEDULED", "SUBSTITUTE_ASSIGNED", "RESCHEDULED");
+
+    private boolean isActiveScheduleStatus(String status) {
+        return status != null && ACTIVE_SESSION_STATUSES.contains(status.trim().toUpperCase(Locale.ROOT));
+    }
+
+    private int resolveChangeoverMinutes(Schedule schedule, GymClass gymClass) {
+        if (schedule != null && schedule.getScheduleId() != null) {
+            List<Integer> values = jdbc.queryForList(
+                    "SELECT changeover_minutes FROM SCHEDULES WHERE schedule_id = ?",
+                    Integer.class, schedule.getScheduleId());
+            if (!values.isEmpty() && values.get(0) != null) {
+                return Math.max(0, values.get(0));
+            }
+        }
+        if (gymClass != null && gymClass.getClassId() != null) {
+            return managerRepository.classSlotPolicy(gymClass.getClassId()).breakMinutes();
+        }
+        return 15;
+    }
+
+    private void validateOperatingHours(GymClass gymClass, LocalDateTime start, LocalDateTime end, int changeoverMinutes) {
+        if (start == null || end == null || gymClass == null || gymClass.getClassId() == null) return;
+        if (!start.toLocalDate().equals(end.toLocalDate())) {
+            throw new IllegalArgumentException("Ca dạy bù phải bắt đầu và kết thúc trong cùng một ngày.");
+        }
+        var policy = managerRepository.classSlotPolicy(gymClass.getClassId());
+        LocalDate date = start.toLocalDate();
+        LocalDateTime opensAt = date.atTime(policy.opensAt());
+        LocalDateTime closesAt = date.atTime(policy.closesAt());
+        if (start.isBefore(opensAt) || end.plusMinutes(Math.max(0, changeoverMinutes)).isAfter(closesAt)) {
+            throw new IllegalArgumentException(
+                    "Ca dạy bù (bao gồm " + changeoverMinutes + " phút chuyển ca) phải nằm trong giờ mở cửa trung tâm ("
+                            + policy.opensAt() + " - " + policy.closesAt() + ").");
+        }
+    }
+
+    private List<Integer> findRoomCollisionScheduleIds(
+            Integer roomId, Integer excludeScheduleId, LocalDateTime start, LocalDateTime end, int changeoverMinutes) {
+        if (roomId == null || start == null || end == null) return List.of();
+        LocalDateTime effectiveEnd = end.plusMinutes(Math.max(0, changeoverMinutes));
+        return jdbc.queryForList("""
+                SELECT sc.schedule_id
+                FROM SCHEDULES sc
+                JOIN CLASSES c ON c.class_id = sc.class_id
+                WHERE COALESCE(sc.room_id, c.room_id) = ?
+                  AND sc.schedule_id <> ?
+                  AND sc.status NOT IN ('CANCELLED', 'CANCELLED_INSUFFICIENT_ATTENDEES', 'COMPLETED')
+                  AND sc.start_time < ?
+                  AND TIMESTAMPADD(MINUTE, sc.changeover_minutes, sc.end_time) > ?
+                ORDER BY sc.start_time ASC
+                """, Integer.class, roomId, excludeScheduleId != null ? excludeScheduleId : -1, effectiveEnd, start);
+    }
+
+    private List<Integer> findCoachCollisionScheduleIds(
+            Integer coachId, Integer excludeScheduleId, LocalDateTime start, LocalDateTime end, int changeoverMinutes) {
+        if (coachId == null || start == null || end == null) return List.of();
+        LocalDateTime effectiveEnd = end.plusMinutes(Math.max(0, changeoverMinutes));
+        return jdbc.queryForList("""
+                SELECT sc.schedule_id
+                FROM SCHEDULES sc
+                JOIN CLASSES c ON c.class_id = sc.class_id
+                WHERE (c.coach_id = ? OR sc.substitute_coach_id = ?)
+                  AND sc.schedule_id <> ?
+                  AND sc.status NOT IN ('CANCELLED', 'CANCELLED_INSUFFICIENT_ATTENDEES', 'COMPLETED')
+                  AND sc.start_time < ?
+                  AND TIMESTAMPADD(MINUTE, sc.changeover_minutes, sc.end_time) > ?
+                ORDER BY sc.start_time ASC
+                """, Integer.class, coachId, coachId, excludeScheduleId != null ? excludeScheduleId : -1, effectiveEnd, start);
+    }
+
+    private boolean hasConfirmedMemberConflict(Integer scheduleId, LocalDateTime start, LocalDateTime end) {
+        if (scheduleId == null || start == null || end == null) return false;
+        Integer count = jdbc.queryForObject("""
+                SELECT COUNT(*)
+                FROM BOOKINGS own_b
+                JOIN BOOKINGS other_b ON other_b.user_id = own_b.user_id
+                JOIN SCHEDULES s ON s.schedule_id = other_b.schedule_id
+                WHERE own_b.schedule_id = ?
+                  AND other_b.schedule_id <> ?
+                  AND own_b.status = 'CONFIRMED'
+                  AND other_b.status = 'CONFIRMED'
+                  AND s.status NOT IN ('CANCELLED', 'CANCELLED_INSUFFICIENT_ATTENDEES', 'COMPLETED')
+                  AND s.start_time < ?
+                  AND s.end_time > ?
+                """, Integer.class, scheduleId, scheduleId, end, start);
+        return count != null && count > 0;
+    }
+
+    private boolean isConfirmedBooking(Booking b) {
+        return b != null && "CONFIRMED".equalsIgnoreCase(b.getStatus());
+    }
 
     @Override
     public RescheduleRequestResponseDto createCoachRequest(CreateRescheduleRequestDto dto, String coachEmail) {
@@ -78,14 +174,21 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
             throw new IllegalStateException("Không thể xin đổi lịch cho ca học đã diễn ra hoặc trong quá khứ.");
         }
 
-        if ("CANCELLED".equalsIgnoreCase(schedule.getStatus())) {
+        if ("CANCELLED".equalsIgnoreCase(schedule.getStatus())
+                || "CANCELLED_INSUFFICIENT_ATTENDEES".equalsIgnoreCase(schedule.getStatus())) {
             throw new IllegalStateException("Ca học này đã bị hủy, không thể xin dời lịch.");
+        }
+        if ("COMPLETED".equalsIgnoreCase(schedule.getStatus())) {
+            throw new IllegalStateException("Ca học này đã hoàn thành, không thể xin dời lịch.");
         }
         if ("RESCHEDULED".equalsIgnoreCase(schedule.getStatus())) {
             throw new IllegalStateException("Ca học này đã được dời lịch và phê duyệt ca dạy bù, không thể tạo thêm yêu cầu.");
         }
         if ("SUBSTITUTE_ASSIGNED".equalsIgnoreCase(schedule.getStatus())) {
             throw new IllegalStateException("Ca học này đã được phân công HLV dạy thay, không thể tạo thêm yêu cầu.");
+        }
+        if (!isActiveScheduleStatus(schedule.getStatus())) {
+            throw new IllegalStateException("Ca học này không ở trạng thái có thể xin đổi lịch.");
         }
 
         Optional<ScheduleRescheduleRequest> existingPending = requestRepository
@@ -124,25 +227,32 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
                 proposedRoom = schedule.getEffectiveRoom();
             }
 
-            // Backend Conflict Guard: Chặn tạo đơn nếu bị xung đột lịch cá nhân hoặc phòng
-            long coachCollisions = requestRepository.countCoachCollisions(
-                    coach.getUserId(), schedule.getScheduleId(), dto.getProposedStartTime(), dto.getProposedEndTime());
-            if (coachCollisions > 0) {
-                List<Schedule> coachSchedules = requestRepository.findCoachCollidingSchedules(
-                        coach.getUserId(), schedule.getScheduleId(), dto.getProposedStartTime(), dto.getProposedEndTime());
-                String conflictClass = !coachSchedules.isEmpty() ? coachSchedules.get(0).getGymClass().getClassName() : "lớp khác";
+            int changeover = resolveChangeoverMinutes(schedule, gymClass);
+            validateOperatingHours(gymClass, dto.getProposedStartTime(), dto.getProposedEndTime(), changeover);
+
+            // Backend Conflict Guard: Chặn tạo đơn nếu bị xung đột lịch cá nhân, phòng tập (kể cả thời gian chuyển ca) hoặc học viên
+            List<Integer> coachColIds = findCoachCollisionScheduleIds(
+                    coach.getUserId(), schedule.getScheduleId(), dto.getProposedStartTime(), dto.getProposedEndTime(), changeover);
+            if (!coachColIds.isEmpty()) {
+                Schedule conflictSch = scheduleRepository.findById(coachColIds.get(0)).orElse(null);
+                String conflictClass = (conflictSch != null && conflictSch.getGymClass() != null)
+                        ? conflictSch.getGymClass().getClassName() : "lớp khác";
                 throw new IllegalStateException("Xung đột lịch dạy cá nhân: Bạn đã có lớp '" + conflictClass + "' trùng vào khung giờ này!");
             }
 
             if (proposedRoom != null) {
-                long roomCollisions = requestRepository.countRoomCollisions(
-                        proposedRoom.getRoomId(), schedule.getScheduleId(), dto.getProposedStartTime(), dto.getProposedEndTime());
-                if (roomCollisions > 0) {
-                    List<Schedule> roomSchedules = requestRepository.findRoomCollidingSchedules(
-                            proposedRoom.getRoomId(), schedule.getScheduleId(), dto.getProposedStartTime(), dto.getProposedEndTime());
-                    String conflictClass = !roomSchedules.isEmpty() ? roomSchedules.get(0).getGymClass().getClassName() : "lớp khác";
+                List<Integer> roomColIds = findRoomCollisionScheduleIds(
+                        proposedRoom.getRoomId(), schedule.getScheduleId(), dto.getProposedStartTime(), dto.getProposedEndTime(), changeover);
+                if (!roomColIds.isEmpty()) {
+                    Schedule conflictSch = scheduleRepository.findById(roomColIds.get(0)).orElse(null);
+                    String conflictClass = (conflictSch != null && conflictSch.getGymClass() != null)
+                            ? conflictSch.getGymClass().getClassName() : "lớp khác";
                     throw new IllegalStateException("Xung đột phòng tập: Phòng '" + proposedRoom.getRoomName() + "' đã có lớp '" + conflictClass + "' sử dụng trong khung giờ này!");
                 }
+            }
+
+            if (hasConfirmedMemberConflict(schedule.getScheduleId(), dto.getProposedStartTime(), dto.getProposedEndTime())) {
+                throw new IllegalStateException("Xung đột lịch học viên: Có hội viên đã đăng ký trùng lịch ở một lớp khác vào khung giờ này!");
             }
         }
 
@@ -150,6 +260,11 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
         if (dto.getRequestedSubstituteCoachId() != null) {
             substituteCoach = userRepository.findById(dto.getRequestedSubstituteCoachId()).orElse(null);
             requireQualifiedSubstitute(substituteCoach, schedule);
+            int changeover = resolveChangeoverMinutes(schedule, gymClass);
+            if (!findCoachCollisionScheduleIds(
+                    substituteCoach.getUserId(), schedule.getScheduleId(), schedule.getStartTime(), schedule.getEndTime(), changeover).isEmpty()) {
+                throw new IllegalStateException("HLV dạy thay được đề xuất đang bận lịch dạy khác vào khung giờ này.");
+            }
         }
 
         String reasonDetails = (dto.getReasonDetails() != null && !dto.getReasonDetails().trim().isEmpty())
@@ -301,46 +416,80 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
             return result;
         }
 
-        // 1. Kiểm tra va chạm lịch dạy cá nhân HLV
-        List<Schedule> coachCollisions = requestRepository.findCoachCollidingSchedules(
-                coach.getUserId(), scheduleId, proposedStartTime, proposedEndTime);
-        boolean hasCoachConflict = !coachCollisions.isEmpty();
-        String coachConflictDetail = null;
-        if (hasCoachConflict) {
-            Schedule cs = coachCollisions.get(0);
-            String timeStr = cs.getStartTime().format(DateTimeFormatter.ofPattern("HH:mm"))
-                    + " - " + cs.getEndTime().format(DateTimeFormatter.ofPattern("HH:mm"));
-            coachConflictDetail = "Bạn đã có lịch dạy lớp '" + cs.getGymClass().getClassName() + "' (" + timeStr + ") vào khung giờ này.";
-        }
+        int changeover = resolveChangeoverMinutes(schedule, gymClass);
 
-        // 2. Kiểm tra va chạm phòng tập
-        boolean hasRoomConflict = false;
-        String roomConflictDetail = null;
-        if (room != null) {
-            List<Schedule> roomCollisions = requestRepository.findRoomCollidingSchedules(
-                    room.getRoomId(), scheduleId, proposedStartTime, proposedEndTime);
-            hasRoomConflict = !roomCollisions.isEmpty();
-            if (hasRoomConflict) {
-                Schedule rs = roomCollisions.get(0);
-                String roomCoach = rs.getSubstituteCoach() != null
-                        ? rs.getSubstituteCoach().getFullName()
-                        : (rs.getGymClass().getCoach() != null ? rs.getGymClass().getCoach().getFullName() : "HLV khác");
-                String timeStr = rs.getStartTime().format(DateTimeFormatter.ofPattern("HH:mm"))
-                        + " - " + rs.getEndTime().format(DateTimeFormatter.ofPattern("HH:mm"));
-                roomConflictDetail = "Phòng '" + room.getRoomName() + "' đã có lớp '" + rs.getGymClass().getClassName()
-                        + "' của " + roomCoach + " (" + timeStr + ").";
+        if (!proposedStartTime.toLocalDate().equals(proposedEndTime.toLocalDate())) {
+            result.put("available", false);
+            result.put("message", "Ca dạy bù phải bắt đầu và kết thúc trong cùng một ngày.");
+            return result;
+        }
+        if (gymClass != null && gymClass.getClassId() != null) {
+            var policy = managerRepository.classSlotPolicy(gymClass.getClassId());
+            LocalDate d = proposedStartTime.toLocalDate();
+            if (proposedStartTime.isBefore(d.atTime(policy.opensAt()))
+                    || proposedEndTime.plusMinutes(changeover).isAfter(d.atTime(policy.closesAt()))) {
+                result.put("available", false);
+                result.put("message", "Khung giờ vượt ngoài giờ mở cửa trung tâm (" + policy.opensAt() + " - " + policy.closesAt() + ").");
+                return result;
             }
         }
 
-        boolean available = !hasCoachConflict && !hasRoomConflict;
+        // 1. Kiểm tra va chạm lịch dạy cá nhân HLV (kể cả thời gian chuyển ca)
+        List<Integer> coachCollisionIds = findCoachCollisionScheduleIds(
+                coach.getUserId(), scheduleId, proposedStartTime, proposedEndTime, changeover);
+        boolean hasCoachConflict = !coachCollisionIds.isEmpty();
+        String coachConflictDetail = null;
+        if (hasCoachConflict) {
+            Schedule cs = scheduleRepository.findById(coachCollisionIds.get(0)).orElse(null);
+            if (cs != null && cs.getGymClass() != null) {
+                String timeStr = cs.getStartTime().format(DateTimeFormatter.ofPattern("HH:mm"))
+                        + " - " + cs.getEndTime().format(DateTimeFormatter.ofPattern("HH:mm"));
+                coachConflictDetail = "Bạn đã có lịch dạy lớp '" + cs.getGymClass().getClassName() + "' (" + timeStr + ") vào khung giờ này.";
+            } else {
+                coachConflictDetail = "Bạn đã có lịch dạy lớp khác trùng vào khung giờ này.";
+            }
+        }
+
+        // 2. Kiểm tra va chạm phòng tập (kể cả thời gian chuyển ca)
+        boolean hasRoomConflict = false;
+        String roomConflictDetail = null;
+        if (room != null) {
+            List<Integer> roomCollisionIds = findRoomCollisionScheduleIds(
+                    room.getRoomId(), scheduleId, proposedStartTime, proposedEndTime, changeover);
+            hasRoomConflict = !roomCollisionIds.isEmpty();
+            if (hasRoomConflict) {
+                Schedule rs = scheduleRepository.findById(roomCollisionIds.get(0)).orElse(null);
+                if (rs != null && rs.getGymClass() != null) {
+                    String roomCoach = rs.getSubstituteCoach() != null
+                            ? rs.getSubstituteCoach().getFullName()
+                            : (rs.getGymClass().getCoach() != null ? rs.getGymClass().getCoach().getFullName() : "HLV khác");
+                    String timeStr = rs.getStartTime().format(DateTimeFormatter.ofPattern("HH:mm"))
+                            + " - " + rs.getEndTime().format(DateTimeFormatter.ofPattern("HH:mm"));
+                    roomConflictDetail = "Phòng '" + room.getRoomName() + "' đã có lớp '" + rs.getGymClass().getClassName()
+                            + "' của " + roomCoach + " (" + timeStr + ").";
+                } else {
+                    roomConflictDetail = "Phòng '" + room.getRoomName() + "' đã có lớp khác sử dụng trong khung giờ này.";
+                }
+            }
+        }
+
+        // 3. Kiểm tra xung đột lịch của hội viên đã xác nhận
+        boolean hasMemberConflict = hasConfirmedMemberConflict(scheduleId, proposedStartTime, proposedEndTime);
+        String memberConflictDetail = hasMemberConflict
+                ? "Có hội viên trong lớp đang có lịch học lớp khác trùng vào khung giờ này."
+                : null;
+
+        boolean available = !hasCoachConflict && !hasRoomConflict && !hasMemberConflict;
         result.put("available", available);
         result.put("hasCoachConflict", hasCoachConflict);
         result.put("coachConflictDetail", coachConflictDetail);
         result.put("hasRoomConflict", hasRoomConflict);
         result.put("roomConflictDetail", roomConflictDetail);
+        result.put("hasMemberConflict", hasMemberConflict);
+        result.put("memberConflictDetail", memberConflictDetail);
         result.put("roomName", room != null ? room.getRoomName() : null);
 
-        // 3. Tính toán khung giờ gợi ý trống trên cùng ngày nếu bị xung đột
+        // 4. Tính toán khung giờ gợi ý trống trên cùng ngày nếu bị xung đột
         List<Map<String, String>> suggestions = new ArrayList<>();
         if (!available && room != null) {
             LocalDate targetDate = proposedStartTime.toLocalDate();
@@ -364,10 +513,13 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
                 if (slotStartTime.isBefore(LocalDateTime.now())) continue;
                 if (slotStartTime.equals(proposedStartTime)) continue;
 
-                long cCol = requestRepository.countCoachCollisions(coach.getUserId(), scheduleId, slotStartTime, slotEndTime);
-                long rCol = requestRepository.countRoomCollisions(room.getRoomId(), scheduleId, slotStartTime, slotEndTime);
+                boolean coachBusy = !findCoachCollisionScheduleIds(
+                        coach.getUserId(), scheduleId, slotStartTime, slotEndTime, changeover).isEmpty();
+                boolean roomBusy = !findRoomCollisionScheduleIds(
+                        room.getRoomId(), scheduleId, slotStartTime, slotEndTime, changeover).isEmpty();
+                boolean memberBusy = hasConfirmedMemberConflict(scheduleId, slotStartTime, slotEndTime);
 
-                if (cCol == 0 && rCol == 0) {
+                if (!coachBusy && !roomBusy && !memberBusy) {
                     Map<String, String> sug = new LinkedHashMap<>();
                     sug.put("startTime", slotStart.format(DateTimeFormatter.ofPattern("HH:mm")));
                     sug.put("endTime", slotEndTime.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm")));
@@ -431,6 +583,8 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
             String adminNote,
             String managerEmail) {
 
+        bookingRepository.lockOperations();
+
         ScheduleRescheduleRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new IllegalArgumentException("Request not found: " + requestId));
 
@@ -443,108 +597,183 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
 
         Schedule schedule = request.getSchedule();
         GymClass gymClass = request.getGymClass();
+        if (schedule == null || gymClass == null || schedule.getStartTime() == null) {
+            throw new IllegalStateException("Thông tin ca học của yêu cầu này không hợp lệ.");
+        }
+        if (!isActiveScheduleStatus(schedule.getStatus())) {
+            throw new IllegalStateException("Ca học này không còn ở trạng thái hoạt động để phê duyệt (hiện tại: " + schedule.getStatus() + ").");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (!schedule.getStartTime().isAfter(now)) {
+            throw new IllegalStateException("Không thể phê duyệt yêu cầu cho ca học đã bắt đầu hoặc ở trong quá khứ.");
+        }
+
+        int changeover = resolveChangeoverMinutes(schedule, gymClass);
+        String finalStatus = "APPROVED";
+        String coachNotifMessage;
 
         if ("MAKEUP_SESSION".equalsIgnoreCase(request.getAction_type())) {
-            Integer roomId = request.getProposedRoom() != null ? request.getProposedRoom().getRoomId() : (schedule.getEffectiveRoom() != null ? schedule.getEffectiveRoom().getRoomId() : null);
-            if (roomId != null) {
-                long roomCollisions = requestRepository.countRoomCollisions(
-                        roomId, schedule.getScheduleId(), request.getProposedStartTime(), request.getProposedEndTime());
-                if (roomCollisions > 0) {
-                    throw new IllegalStateException("Xung đột phòng tập: Phòng đã có lớp khác sử dụng trong khung giờ bù đề xuất!");
-                }
+            LocalDateTime proposedStart = request.getProposedStartTime();
+            LocalDateTime proposedEnd = request.getProposedEndTime();
+            if (proposedStart == null || proposedEnd == null || !proposedEnd.isAfter(proposedStart)) {
+                throw new IllegalArgumentException("Thời gian ca dạy bù đề xuất không hợp lệ.");
+            }
+            if (!proposedStart.isAfter(now)) {
+                throw new IllegalStateException("Không thể phê duyệt ca dạy bù có thời gian ở quá khứ.");
             }
 
-            schedule.setStartTime(request.getProposedStartTime());
-            schedule.setEndTime(request.getProposedEndTime());
-            // The make-up session runs in the proposed room; keep the class room when none was proposed.
-            if (request.getProposedRoom() != null) {
-                boolean classRoom = gymClass.getRoom() != null && gymClass.getRoom().getRoomId().equals(request.getProposedRoom().getRoomId());
-                schedule.setRoom(classRoom ? null : request.getProposedRoom());
+            validateOperatingHours(gymClass, proposedStart, proposedEnd, changeover);
+
+            Room targetRoom = request.getProposedRoom() != null ? request.getProposedRoom() : schedule.getEffectiveRoom();
+            if (targetRoom != null && !findRoomCollisionScheduleIds(
+                    targetRoom.getRoomId(), schedule.getScheduleId(), proposedStart, proposedEnd, changeover).isEmpty()) {
+                throw new IllegalStateException("Xung đột phòng tập: Phòng đã có lớp khác sử dụng trong khung giờ bù đề xuất!");
             }
+
+            if (request.getCoach() != null && !findCoachCollisionScheduleIds(
+                    request.getCoach().getUserId(), schedule.getScheduleId(), proposedStart, proposedEnd, changeover).isEmpty()) {
+                throw new IllegalStateException("Xung đột lịch HLV: Huấn luyện viên đã có ca dạy khác trong khung giờ bù đề xuất!");
+            }
+            if (gymClass.getCoach() != null
+                    && (request.getCoach() == null || !Objects.equals(gymClass.getCoach().getUserId(), request.getCoach().getUserId()))
+                    && !findCoachCollisionScheduleIds(
+                            gymClass.getCoach().getUserId(), schedule.getScheduleId(), proposedStart, proposedEnd, changeover).isEmpty()) {
+                throw new IllegalStateException("Xung đột lịch HLV: HLV phụ trách lớp đã có ca dạy khác trong khung giờ bù đề xuất!");
+            }
+
+            if (hasConfirmedMemberConflict(schedule.getScheduleId(), proposedStart, proposedEnd)) {
+                throw new IllegalStateException("Xung đột lịch học viên: Có hội viên đã đăng ký lớp khác trùng khung giờ ca bù đề xuất!");
+            }
+
+            schedule.setStartTime(proposedStart);
+            schedule.setEndTime(proposedEnd);
+            // Preserve V36 per-session room override; keep null when running in the class's default room.
+            if (request.getProposedRoom() != null) {
+                boolean isClassRoom = gymClass.getRoom() != null && gymClass.getRoom().getRoomId().equals(request.getProposedRoom().getRoomId());
+                schedule.setRoom(isClassRoom ? null : request.getProposedRoom());
+            }
+            schedule.setSubstituteCoach(null);
             schedule.setStatus("RESCHEDULED");
             scheduleRepository.save(schedule);
 
-            int hours = (deadlineHoursBefore != null && deadlineHoursBefore > 0) ? deadlineHoursBefore : 4;
-            LocalDateTime deadline = request.getProposedStartTime().minusHours(hours);
-            if (deadline.isBefore(LocalDateTime.now())) {
-                deadline = LocalDateTime.now().plusHours(2);
-            }
-            request.setConfirmationDeadline(deadline);
-            request.setMinAttendees(customMinAttendees != null && customMinAttendees > 0 ? customMinAttendees : 2);
+            List<Booking> confirmedBookings = bookingRepository.findBySchedule_ScheduleId(schedule.getScheduleId())
+                    .stream()
+                    .filter(this::isConfirmedBooking)
+                    .toList();
+            int confirmedCount = confirmedBookings.size();
 
-            List<Booking> bookings = bookingRepository.findBySchedule_ScheduleId(schedule.getScheduleId());
-            for (Booking b : bookings) {
-                if ("CANCELLED".equalsIgnoreCase(b.getStatus())) continue;
-
-                Optional<RescheduleMemberResponse> optResp = responseRepository
-                        .findByRequest_RequestIdAndUser_UserId(request.getRequestId(), b.getUser().getUserId());
-                if (optResp.isEmpty()) {
-                    RescheduleMemberResponse memberResp = RescheduleMemberResponse.builder()
-                            .request(request)
-                            .user(b.getUser())
-                            .booking(b)
-                            .responseStatus("PENDING")
-                            .build();
-                    responseRepository.save(memberResp);
+            if (confirmedCount == 0) {
+                request.setMinAttendees(0);
+                request.setConfirmationDeadline(null);
+                finalStatus = "COMPLETED";
+                coachNotifMessage = "Quản lý (" + manager.getFullName() + ") đã phê duyệt dời lịch lớp "
+                        + gymClass.getClassName() + " sang " + proposedStart.format(TIME_FMT)
+                        + " (lớp hiện có 0 học viên đã xác nhận, ca bù được chốt ngay).";
+            } else {
+                int defaultMin = Math.min(2, confirmedCount);
+                int effectiveMin = customMinAttendees != null ? customMinAttendees : defaultMin;
+                if (effectiveMin < 1 || effectiveMin > confirmedCount) {
+                    throw new IllegalArgumentException(
+                            "Sĩ số tối thiểu phải từ 1 đến " + confirmedCount + " học viên đã xác nhận.");
                 }
+                request.setMinAttendees(effectiveMin);
 
-                Notification notif = Notification.builder()
-                        .user(b.getUser())
-                        .title("Thông báo dời lịch ca bù: " + gymClass.getClassName())
-                        .message("Do HLV " + request.getCoach().getFullName() + " bận đột xuất và không có HLV dạy thay, ca học ngày " 
-                                + request.getOriginalStartTime().format(TIME_FMT) + " được dời sang " 
-                                + request.getProposedStartTime().format(TIME_FMT) 
-                                + ". Vui lòng xác nhận tham gia hoặc nhận hoàn 100% lượt tập trước " 
-                                + deadline.format(TIME_FMT) + ".")
-                        .type("RESCHEDULE_DECISION")
-                        .isRead(false)
-                        .build();
-                notificationRepository.save(notif);
-            }
-        } else if ("SUBSTITUTE_COACH".equalsIgnoreCase(request.getAction_type())) {
-            if (request.getSubstituteCoach() != null) {
-                requireQualifiedSubstitute(request.getSubstituteCoach(), schedule);
-                schedule.setSubstituteCoach(request.getSubstituteCoach());
-                schedule.setStatus("SUBSTITUTE_ASSIGNED");
-                scheduleRepository.save(schedule);
+                int hours = (deadlineHoursBefore != null && deadlineHoursBefore > 0) ? deadlineHoursBefore : 4;
+                LocalDateTime deadline = proposedStart.minusHours(hours);
+                if (!deadline.isAfter(now)) {
+                    LocalDateTime tightDeadline = proposedStart.minusMinutes(30);
+                    deadline = tightDeadline.isAfter(now) ? tightDeadline : proposedStart;
+                }
+                request.setConfirmationDeadline(deadline);
 
-                Notification subNotif = Notification.builder()
-                        .user(request.getSubstituteCoach())
-                        .title("Phân công dạy thay: " + gymClass.getClassName())
-                        .message("Bạn được phân công đứng lớp dạy thay HLV " + request.getCoach().getFullName() 
-                                + " ca " + schedule.getStartTime().format(TIME_FMT) + ".")
-                        .type("COACH_ASSIGNMENT")
-                        .isRead(false)
-                        .build();
-                notificationRepository.save(subNotif);
+                coachNotifMessage = "Quản lý (" + manager.getFullName() + ") đã phê duyệt đơn dời lịch lớp "
+                        + gymClass.getClassName() + ". Hệ thống đã tự động gửi thông báo xác nhận đến hội viên.";
 
-                List<Booking> bookings = bookingRepository.findBySchedule_ScheduleId(schedule.getScheduleId());
-                for (Booking b : bookings) {
-                    if ("CANCELLED".equalsIgnoreCase(b.getStatus())) continue;
+                for (Booking b : confirmedBookings) {
+                    Optional<RescheduleMemberResponse> optResp = responseRepository
+                            .findByRequest_RequestIdAndUser_UserId(request.getRequestId(), b.getUser().getUserId());
+                    if (optResp.isEmpty()) {
+                        RescheduleMemberResponse memberResp = RescheduleMemberResponse.builder()
+                                .request(request)
+                                .user(b.getUser())
+                                .booking(b)
+                                .responseStatus("PENDING")
+                                .build();
+                        responseRepository.save(memberResp);
+                    }
+
                     Notification notif = Notification.builder()
                             .user(b.getUser())
-                            .title("Thông báo HLV dạy thay: " + gymClass.getClassName())
-                            .message("Buổi học lúc " + schedule.getStartTime().format(TIME_FMT) + " sẽ do HLV " 
-                                    + request.getSubstituteCoach().getFullName() + " phụ trách thay thế. Khung giờ học giữ nguyên.")
-                            .type("CLASS_UPDATE")
+                            .title("Thông báo dời lịch ca bù: " + gymClass.getClassName())
+                            .message("Do HLV " + request.getCoach().getFullName() + " bận đột xuất và không có HLV dạy thay, ca học ngày "
+                                    + request.getOriginalStartTime().format(TIME_FMT) + " được dời sang "
+                                    + proposedStart.format(TIME_FMT)
+                                    + ". Vui lòng xác nhận tham gia hoặc nhận hoàn 100% lượt tập trước "
+                                    + deadline.format(TIME_FMT) + ".")
+                            .type("RESCHEDULE_DECISION")
                             .isRead(false)
                             .build();
                     notificationRepository.save(notif);
                 }
             }
+        } else if ("SUBSTITUTE_COACH".equalsIgnoreCase(request.getAction_type())) {
+            User substitute = request.getSubstituteCoach();
+            if (substitute == null) {
+                throw new IllegalStateException("Đơn xin dạy thay chưa có HLV thay thế; vui lòng chọn HLV dạy thay trực tiếp.");
+            }
+            requireQualifiedSubstitute(substitute, schedule);
+            if (!findCoachCollisionScheduleIds(
+                    substitute.getUserId(), schedule.getScheduleId(), schedule.getStartTime(), schedule.getEndTime(), changeover).isEmpty()) {
+                throw new IllegalStateException("Xung đột lịch HLV: HLV dạy thay đã có ca dạy khác trong khung giờ này!");
+            }
+
+            schedule.setSubstituteCoach(substitute);
+            schedule.setStatus("SUBSTITUTE_ASSIGNED");
+            scheduleRepository.save(schedule);
+            request.setConfirmationDeadline(null);
+
+            Notification subNotif = Notification.builder()
+                    .user(substitute)
+                    .title("Phân công dạy thay: " + gymClass.getClassName())
+                    .message("Bạn được phân công đứng lớp dạy thay HLV " + request.getCoach().getFullName()
+                            + " ca " + schedule.getStartTime().format(TIME_FMT) + ".")
+                    .type("COACH_ASSIGNMENT")
+                    .isRead(false)
+                    .build();
+            notificationRepository.save(subNotif);
+
+            List<Booking> confirmedBookings = bookingRepository.findBySchedule_ScheduleId(schedule.getScheduleId())
+                    .stream()
+                    .filter(this::isConfirmedBooking)
+                    .toList();
+            for (Booking b : confirmedBookings) {
+                Notification notif = Notification.builder()
+                        .user(b.getUser())
+                        .title("Thông báo HLV dạy thay: " + gymClass.getClassName())
+                        .message("Buổi học lúc " + schedule.getStartTime().format(TIME_FMT) + " sẽ do HLV "
+                                + substitute.getFullName() + " phụ trách thay thế. Khung giờ học giữ nguyên.")
+                        .type("CLASS_UPDATE")
+                        .isRead(false)
+                        .build();
+                notificationRepository.save(notif);
+            }
+
+            coachNotifMessage = "Quản lý (" + manager.getFullName() + ") đã phê duyệt phân công HLV "
+                    + substitute.getFullName() + " dạy thay lớp " + gymClass.getClassName() + ".";
+        } else {
+            throw new IllegalStateException("Loại yêu cầu đổi lịch không hợp lệ: " + request.getAction_type());
         }
 
-        request.setStatus("APPROVED");
+        request.setStatus(finalStatus);
         request.setAdminResponseNote(adminNote != null ? adminNote.trim() : "Quản lý đã phê duyệt yêu cầu đổi lịch.");
         request.setReviewedBy(manager);
-        request.setReviewedAt(LocalDateTime.now());
+        request.setReviewedAt(now);
         ScheduleRescheduleRequest saved = requestRepository.save(request);
 
         Notification coachNotif = Notification.builder()
                 .user(request.getCoach())
                 .title("Đơn xin đổi lịch đã được phê duyệt #" + saved.getRequestId())
-                .message("Quản lý (" + manager.getFullName() + ") đã phê duyệt đơn dời lịch lớp " 
-                        + gymClass.getClassName() + ". Hệ thống đã tự động gửi thông báo xác nhận đến hội viên.")
+                .message(coachNotifMessage)
                 .type("COACH_RESCHEDULE")
                 .isRead(false)
                 .build();
@@ -596,12 +825,21 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
             String managerNote,
             String managerEmail) {
 
+        bookingRepository.lockOperations();
+
         ScheduleRescheduleRequest targetRequest = null;
         Integer resolvedScheduleId = scheduleId;
         if (requestId != null) {
-            targetRequest = requestRepository.findById(requestId).orElse(null);
-            if (targetRequest != null && resolvedScheduleId == null && targetRequest.getSchedule() != null) {
+            targetRequest = requestRepository.findById(requestId)
+                    .orElseThrow(() -> new IllegalArgumentException("Request not found: " + requestId));
+            if (!"PENDING".equalsIgnoreCase(targetRequest.getStatus())) {
+                throw new IllegalStateException("Đơn yêu cầu này không ở trạng thái Chờ duyệt.");
+            }
+            if (resolvedScheduleId == null && targetRequest.getSchedule() != null) {
                 resolvedScheduleId = targetRequest.getSchedule().getScheduleId();
+            } else if (resolvedScheduleId != null && targetRequest.getSchedule() != null
+                    && !Objects.equals(resolvedScheduleId, targetRequest.getSchedule().getScheduleId())) {
+                throw new IllegalArgumentException("Mã đơn không khớp với lịch học được chỉ định.");
             }
         }
 
@@ -613,6 +851,13 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
         Schedule schedule = scheduleRepository.findById(finalScheduleId)
                 .orElseThrow(() -> new IllegalArgumentException("Schedule not found: " + finalScheduleId));
 
+        if (!isActiveScheduleStatus(schedule.getStatus())) {
+            throw new IllegalStateException("Chỉ có thể chỉ định HLV dạy thay cho ca học đang hoạt động.");
+        }
+        if (schedule.getStartTime() == null || !schedule.getStartTime().isAfter(LocalDateTime.now())) {
+            throw new IllegalStateException("Không thể chỉ định HLV dạy thay cho ca học đã bắt đầu hoặc ở quá khứ.");
+        }
+
         User substituteCoach = userRepository.findById(substituteCoachId)
                 .orElseThrow(() -> new IllegalArgumentException("Substitute coach not found: " + substituteCoachId));
 
@@ -622,9 +867,9 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
         GymClass gymClass = schedule.getGymClass();
 
         requireQualifiedSubstitute(substituteCoach, schedule);
-        long collisions = requestRepository.countCoachCollisions(
-                substituteCoachId, finalScheduleId, schedule.getStartTime(), schedule.getEndTime());
-        if (collisions > 0) {
+        int changeover = resolveChangeoverMinutes(schedule, gymClass);
+        if (!findCoachCollisionScheduleIds(
+                substituteCoachId, finalScheduleId, schedule.getStartTime(), schedule.getEndTime(), changeover).isEmpty()) {
             throw new IllegalStateException("HLV này đã có ca dạy khác trùng vào khung giờ này!");
         }
 
@@ -640,9 +885,13 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
 
         ScheduleRescheduleRequest saved;
         if (targetRequest != null) {
-            // Cập nhật đơn hiện tại thành APPROVED thay vì tạo bản ghi trùng lặp
+            // Cập nhật đơn hiện tại thành APPROVED với HLV dạy thay, xóa dữ liệu ca bù cũ nếu có
             targetRequest.setSubstituteCoach(substituteCoach);
             targetRequest.setAction_type("SUBSTITUTE_COACH");
+            targetRequest.setProposedStartTime(null);
+            targetRequest.setProposedEndTime(null);
+            targetRequest.setProposedRoom(null);
+            targetRequest.setConfirmationDeadline(null);
             targetRequest.setStatus("APPROVED");
             targetRequest.setReviewedBy(manager);
             targetRequest.setReviewedAt(LocalDateTime.now());
@@ -671,20 +920,22 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
         Notification subNotif = Notification.builder()
                 .user(substituteCoach)
                 .title("Phân công dạy thay: " + gymClass.getClassName())
-                .message("Quản lý (" + manager.getFullName() + ") đã phân công bạn dạy thay lớp " 
+                .message("Quản lý (" + manager.getFullName() + ") đã phân công bạn dạy thay lớp "
                         + gymClass.getClassName() + " lúc " + schedule.getStartTime().format(TIME_FMT) + ".")
                 .type("COACH_ASSIGNMENT")
                 .isRead(false)
                 .build();
         notificationRepository.save(subNotif);
 
-        List<Booking> bookings = bookingRepository.findBySchedule_ScheduleId(schedule.getScheduleId());
-        for (Booking b : bookings) {
-            if ("CANCELLED".equalsIgnoreCase(b.getStatus())) continue;
+        List<Booking> confirmedBookings = bookingRepository.findBySchedule_ScheduleId(schedule.getScheduleId())
+                .stream()
+                .filter(this::isConfirmedBooking)
+                .toList();
+        for (Booking b : confirmedBookings) {
             Notification notif = Notification.builder()
                     .user(b.getUser())
                     .title("Thông báo HLV dạy thay: " + gymClass.getClassName())
-                    .message("Buổi học lúc " + schedule.getStartTime().format(TIME_FMT) + " sẽ do HLV " 
+                    .message("Buổi học lúc " + schedule.getStartTime().format(TIME_FMT) + " sẽ do HLV "
                             + substituteCoach.getFullName() + " phụ trách thay thế. Khung giờ học giữ nguyên không đổi.")
                     .type("CLASS_UPDATE")
                     .isRead(false)
@@ -715,14 +966,20 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new IllegalArgumentException("Schedule not found: " + scheduleId));
 
+        if (!isActiveScheduleStatus(schedule.getStatus())
+                || schedule.getStartTime() == null
+                || !schedule.getStartTime().isAfter(LocalDateTime.now())) {
+            return Collections.emptyList();
+        }
+
+        int changeover = resolveChangeoverMinutes(schedule, schedule.getGymClass());
         List<User> allCoaches = userRepository.findByRoleNameIgnoreCase("Coach");
         List<Map<String, Object>> available = new ArrayList<>();
 
         for (User c : allCoaches) {
             if (!canSubstitute(c, schedule)) continue;
-            long collisions = requestRepository.countCoachCollisions(
-                    c.getUserId(), scheduleId, schedule.getStartTime(), schedule.getEndTime());
-            if (collisions == 0) {
+            if (findCoachCollisionScheduleIds(
+                    c.getUserId(), scheduleId, schedule.getStartTime(), schedule.getEndTime(), changeover).isEmpty()) {
                 Map<String, Object> map = new LinkedHashMap<>();
                 map.put("coachId", c.getUserId());
                 map.put("userId", c.getUserId());
@@ -738,6 +995,8 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
 
     @Override
     public void respondToReschedule(Integer requestId, String action, String memberEmail) {
+        bookingRepository.lockOperations();
+
         User member = userRepository.findByEmail(memberEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Member not found: " + memberEmail));
 
@@ -750,6 +1009,12 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
         }
 
         ScheduleRescheduleRequest request = response.getRequest();
+        if (!"APPROVED".equalsIgnoreCase(request.getStatus())) {
+            throw new IllegalStateException("Yêu cầu dời lịch này không còn hiệu lực phản hồi (" + request.getStatus() + ").");
+        }
+        if (request.getConfirmationDeadline() != null && LocalDateTime.now().isAfter(request.getConfirmationDeadline())) {
+            throw new IllegalStateException("Đã quá thời hạn xác nhận ca học bù.");
+        }
         GymClass gymClass = request.getGymClass();
 
         if ("ACCEPT".equalsIgnoreCase(action)) {
@@ -870,10 +1135,14 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
 
     @Override
     public void processExpiredRescheduleDeadlines() {
+        bookingRepository.lockOperations();
         LocalDateTime now = LocalDateTime.now();
         List<ScheduleRescheduleRequest> expiredRequests = requestRepository.findRequestsPassedDeadline(now);
 
         for (ScheduleRescheduleRequest req : expiredRequests) {
+            if (!"MAKEUP_SESSION".equalsIgnoreCase(req.getAction_type())) {
+                continue;
+            }
             List<RescheduleMemberResponse> memberResponses = responseRepository.findByRequest_RequestId(req.getRequestId());
 
             for (RescheduleMemberResponse resp : memberResponses) {
@@ -881,20 +1150,21 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
                     try {
                         refundMemberCredit(resp, "Hết hạn xác nhận ca học bù: " + (req.getGymClass() != null ? req.getGymClass().getClassName() : ""));
                     } catch (Exception ex) {
-                        System.err.println("Error auto-declining expired reschedule for user " 
+                        System.err.println("Error auto-declining expired reschedule for user "
                                 + resp.getUser().getEmail() + ": " + ex.getMessage());
                     }
                 }
             }
 
+            int minRequired = req.getMinAttendees() != null ? req.getMinAttendees() : 0;
             long acceptedCount = responseRepository.countByRequest_RequestIdAndResponseStatus(req.getRequestId(), "ACCEPTED");
-            if (acceptedCount < req.getMinAttendees()) {
+            if (acceptedCount < minRequired) {
                 List<RescheduleMemberResponse> acceptedMembers = responseRepository
                         .findByRequest_RequestIdAndResponseStatus(req.getRequestId(), "ACCEPTED");
 
                 for (RescheduleMemberResponse acc : acceptedMembers) {
                     try {
-                        refundMemberCredit(acc, "Hủy ca bù do không đạt sĩ số tối thiểu (" + acceptedCount + "/" + req.getMinAttendees() + ")");
+                        refundMemberCredit(acc, "Hủy ca bù do không đạt sĩ số tối thiểu (" + acceptedCount + "/" + minRequired + ")");
                     } catch (Exception ex) {
                         System.err.println("Error refunding accepted member on canceled makeup session: " + ex.getMessage());
                     }
@@ -907,17 +1177,35 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
                 }
 
                 req.setStatus("CANCELLED");
-                req.setAdminResponseNote("[HỦY CA BÙ TỰ ĐỘNG] Sĩ số học viên đồng ý (" + acceptedCount 
-                        + ") không đạt mức tối thiểu (" + req.getMinAttendees() + "). Đã hoàn lượt tập 100% cho toàn bộ học viên.");
+                req.setAdminResponseNote("[HỦY CA BÙ TỰ ĐỘNG] Sĩ số học viên đồng ý (" + acceptedCount
+                        + ") không đạt mức tối thiểu (" + minRequired + "). Đã hoàn lượt tập 100% cho toàn bộ học viên.");
                 requestRepository.save(req);
 
                 if (req.getCoach() != null) {
                     Notification coachNotif = Notification.builder()
                             .user(req.getCoach())
                             .title("Hủy ca dạy bù lớp " + (req.getGymClass() != null ? req.getGymClass().getClassName() : ""))
-                            .message("Ca dạy bù ngày " + (req.getProposedStartTime() != null ? req.getProposedStartTime().format(TIME_FMT) : "") 
-                                    + " đã tự động hủy do chỉ có " + acceptedCount + " học viên xác nhận tham gia (tối thiểu " 
-                                    + req.getMinAttendees() + "). Hệ thống đã giải phóng phòng tập.")
+                            .message("Ca dạy bù ngày " + (req.getProposedStartTime() != null ? req.getProposedStartTime().format(TIME_FMT) : "")
+                                    + " đã tự động hủy do chỉ có " + acceptedCount + " học viên xác nhận tham gia (tối thiểu "
+                                    + minRequired + "). Hệ thống đã giải phóng phòng tập.")
+                            .type("COACH_RESCHEDULE")
+                            .isRead(false)
+                            .build();
+                    notificationRepository.save(coachNotif);
+                }
+            } else {
+                req.setStatus("COMPLETED");
+                String prevNote = req.getAdminResponseNote();
+                String summary = "[CHỐT CA BÙ THÀNH CÔNG] Đạt đủ sĩ số tối thiểu (" + acceptedCount + "/" + minRequired + " học viên xác nhận tham gia).";
+                req.setAdminResponseNote(prevNote != null && !prevNote.isBlank() ? prevNote + " | " + summary : summary);
+                requestRepository.save(req);
+
+                if (req.getCoach() != null) {
+                    Notification coachNotif = Notification.builder()
+                            .user(req.getCoach())
+                            .title("Chốt ca dạy bù thành công: " + (req.getGymClass() != null ? req.getGymClass().getClassName() : ""))
+                            .message("Ca dạy bù ngày " + (req.getProposedStartTime() != null ? req.getProposedStartTime().format(TIME_FMT) : "")
+                                    + " đã đủ sĩ số (" + acceptedCount + "/" + minRequired + ") và chính thức được chốt.")
                             .type("COACH_RESCHEDULE")
                             .isRead(false)
                             .build();
@@ -933,26 +1221,51 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
         Room origRoom = s != null ? s.getEffectiveRoom() : (gc != null ? gc.getRoom() : null);
         Room propRoom = r.getProposedRoom();
 
-        Integer totalEnrolled = 0;
-        if (s != null) {
-            totalEnrolled = bookingRepository.findBySchedule_ScheduleId(s.getScheduleId()).size();
-        }
-
         long accepted = responseRepository.countByRequest_RequestIdAndResponseStatus(r.getRequestId(), "ACCEPTED");
         long declined = responseRepository.countByRequest_RequestIdAndResponseStatus(r.getRequestId(), "DECLINED_REFUNDED");
         long pending = responseRepository.countByRequest_RequestIdAndResponseStatus(r.getRequestId(), "PENDING");
 
+        int totalEnrolled = 0;
+        if (s != null) {
+            int confirmedCount = (int) bookingRepository.findBySchedule_ScheduleId(s.getScheduleId())
+                    .stream()
+                    .filter(this::isConfirmedBooking)
+                    .count();
+            int respondedTotal = (int) (accepted + declined + pending);
+            totalEnrolled = Math.max(confirmedCount, respondedTotal);
+        }
+
         boolean hasRoomConflict = false;
         boolean hasCoachConflict = false;
-        if (r.getProposedStartTime() != null && r.getProposedEndTime() != null) {
-            Integer roomId = propRoom != null ? propRoom.getRoomId() : (origRoom != null ? origRoom.getRoomId() : null);
-            if (roomId != null) {
-                hasRoomConflict = requestRepository.countRoomCollisions(
-                        roomId, s != null ? s.getScheduleId() : 0, r.getProposedStartTime(), r.getProposedEndTime()) > 0;
-            }
-            if (r.getCoach() != null) {
-                hasCoachConflict = requestRepository.countCoachCollisions(
-                        r.getCoach().getUserId(), s != null ? s.getScheduleId() : 0, r.getProposedStartTime(), r.getProposedEndTime()) > 0;
+        boolean hasMemberConflict = false;
+        int changeover = resolveChangeoverMinutes(s, gc);
+        Integer scheduleId = s != null ? s.getScheduleId() : null;
+
+        if ("PENDING".equalsIgnoreCase(r.getStatus())) {
+            if ("MAKEUP_SESSION".equalsIgnoreCase(r.getAction_type())
+                    && r.getProposedStartTime() != null && r.getProposedEndTime() != null) {
+                Integer roomId = propRoom != null ? propRoom.getRoomId() : (origRoom != null ? origRoom.getRoomId() : null);
+                if (roomId != null) {
+                    hasRoomConflict = !findRoomCollisionScheduleIds(
+                            roomId, scheduleId, r.getProposedStartTime(), r.getProposedEndTime(), changeover).isEmpty();
+                }
+                if (r.getCoach() != null) {
+                    hasCoachConflict = !findCoachCollisionScheduleIds(
+                            r.getCoach().getUserId(), scheduleId, r.getProposedStartTime(), r.getProposedEndTime(), changeover).isEmpty();
+                }
+                if (!hasCoachConflict && gc != null && gc.getCoach() != null
+                        && (r.getCoach() == null || !Objects.equals(gc.getCoach().getUserId(), r.getCoach().getUserId()))) {
+                    hasCoachConflict = !findCoachCollisionScheduleIds(
+                            gc.getCoach().getUserId(), scheduleId, r.getProposedStartTime(), r.getProposedEndTime(), changeover).isEmpty();
+                }
+                if (scheduleId != null) {
+                    hasMemberConflict = hasConfirmedMemberConflict(scheduleId, r.getProposedStartTime(), r.getProposedEndTime());
+                }
+            } else if ("SUBSTITUTE_COACH".equalsIgnoreCase(r.getAction_type())
+                    && r.getSubstituteCoach() != null && s != null
+                    && s.getStartTime() != null && s.getEndTime() != null) {
+                hasCoachConflict = !findCoachCollisionScheduleIds(
+                        r.getSubstituteCoach().getUserId(), scheduleId, s.getStartTime(), s.getEndTime(), changeover).isEmpty();
             }
         }
 
@@ -990,6 +1303,7 @@ public class ScheduleRescheduleServiceImpl implements ScheduleRescheduleService 
                 .pendingCount((int) pending)
                 .hasRoomConflict(hasRoomConflict)
                 .hasCoachConflict(hasCoachConflict)
+                .hasMemberConflict(hasMemberConflict)
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())
                 .build();

@@ -43,6 +43,7 @@ export default function ManagerRescheduleView() {
   const [substituteNote, setSubstituteNote] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
   const [expandedReasonIds, setExpandedReasonIds] = useState({});
+  const [renderedAtMs, setRenderedAtMs] = useState(() => Date.now());
 
   const toggleReasonDetails = (requestId) => {
     setExpandedReasonIds((prev) => ({ ...prev, [requestId]: !prev[requestId] }));
@@ -58,6 +59,7 @@ export default function ManagerRescheduleView() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setRequests(Array.isArray(res.data) ? res.data : []);
+      setRenderedAtMs(Date.now());
     } catch (err) {
       console.error('Failed to load reschedule requests for manager', err);
     } finally {
@@ -93,11 +95,16 @@ export default function ManagerRescheduleView() {
     return requests;
   }, [requests, filterTab]);
 
+  const isProposedSlotPast = (req) => Boolean(
+    req?.proposedStartTime && new Date(req.proposedStartTime).getTime() <= renderedAtMs
+  );
+
   // Open Approve Modal
   const openApprove = (req) => {
     setApproveModal(req);
     setApprovalNote('');
-    setCustomMinAttendees(req.totalEnrolledMembers ? Math.max(1, Math.round(req.totalEnrolledMembers * 0.5)) : 1);
+    const enrolled = Number(req.totalEnrolledMembers || 0);
+    setCustomMinAttendees(enrolled > 0 ? Math.max(1, Math.min(enrolled, Math.round(enrolled * 0.5))) : 0);
     setDeadlineHoursBefore(6);
   };
 
@@ -332,7 +339,9 @@ export default function ManagerRescheduleView() {
               const isExpired = isDeadlineExpired(req.confirmationDeadline);
               const hasRoomConflict = Boolean(req.hasRoomConflict || req.hasRoomCollision);
               const hasCoachConflict = Boolean(req.hasCoachConflict || req.hasCoachCollision);
-              const hasCollision = hasRoomConflict || hasCoachConflict;
+              const hasMemberConflict = Boolean(req.hasMemberConflict);
+              const hasPastSlot = isMakeupSession(req.actionType) && isProposedSlotPast(req);
+              const hasCollision = hasRoomConflict || hasCoachConflict || hasMemberConflict;
 
               return (
                 <div key={req.requestId} className="p-5 hover:bg-[var(--surface-hover)] transition-colors">
@@ -353,24 +362,45 @@ export default function ManagerRescheduleView() {
                         </span>
 
                         {/* Collision tags */}
-                        {isMakeupSession(req.actionType) && (
+                        {req.status === 'PENDING' && isMakeupSession(req.actionType) && (
                           <>
-                            {hasCollision ? (
+                            {hasRoomConflict && (
                               <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 flex items-center gap-1">
                                 <AlertTriangle className="w-3 h-3" />
-                                {hasRoomConflict && hasCoachConflict
-                                  ? t('Conflict: Room & Coach Busy')
-                                  : hasRoomConflict
-                                  ? t('Conflict: Room Busy')
-                                  : t('Conflict: Coach Busy')}
+                                {t('Conflict: Room Busy')}
                               </span>
-                            ) : (
+                            )}
+                            {hasCoachConflict && (
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                {t('Conflict: Coach Busy')}
+                              </span>
+                            )}
+                            {hasMemberConflict && (
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                {t('Conflict: Member Schedule Busy')}
+                              </span>
+                            )}
+                            {hasPastSlot && (
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {t('Past Scheduled Slot')}
+                              </span>
+                            )}
+                            {!hasCollision && !hasPastSlot && (
                               <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                                 <Check className="w-3 h-3" />
                                 {t('Available: No Conflicts')}
                               </span>
                             )}
                           </>
+                        )}
+                        {req.status === 'PENDING' && isSubstituteCoach(req.actionType) && hasCoachConflict && (
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            {t('Conflict: Coach Busy')}
+                          </span>
                         )}
                       </div>
 
@@ -550,45 +580,85 @@ export default function ManagerRescheduleView() {
               {t('Class')}: <strong className="text-[var(--text)]">{approveModal.className}</strong> • {t('Coach')}: <strong className="text-[var(--text)]">{approveModal.coachName}</strong>
             </p>
 
-            {/* Warning if Room or Coach conflict */}
-            {(approveModal.hasRoomConflict || approveModal.hasRoomCollision) && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>{t('Room conflict detected: Another class is already using this room during the proposed make-up slot. Cannot approve without changing slot or rejecting.')}</span>
-              </div>
-            )}
+            {/* Conflict & timing blockers */}
+            {(() => {
+              const roomBusy = Boolean(approveModal.hasRoomConflict || approveModal.hasRoomCollision);
+              const coachBusy = Boolean(approveModal.hasCoachConflict || approveModal.hasCoachCollision);
+              const memberBusy = Boolean(approveModal.hasMemberConflict);
+              const slotInPast = isMakeupSession(approveModal.actionType) && isProposedSlotPast(approveModal);
+              return (
+                <>
+                  {roomBusy && (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <span>{t('Room conflict detected: Another class is already using this room during the proposed make-up slot. Cannot approve without changing slot or rejecting.')}</span>
+                    </div>
+                  )}
+                  {coachBusy && (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <span>{t('Coach conflict detected: The instructor already teaches another session during the proposed make-up slot. Cannot approve without changing slot or rejecting.')}</span>
+                    </div>
+                  )}
+                  {memberBusy && (
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-semibold flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <span>{t('Member schedule conflict detected: At least one enrolled member has another class overlapping this proposed slot. Cannot approve without changing slot or rejecting.')}</span>
+                    </div>
+                  )}
+                  {slotInPast && (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2">
+                      <Clock className="w-4 h-4 shrink-0" />
+                      <span>{t('Past make-up slot detected: Proposed start time is already in the past. Please reject this request instead.')}</span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-[var(--text)] mb-1">
-                  {t('Minimum Confirmed Attendees Required (Quorum)')} *
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max={approveModal.totalEnrolledMembers || 50}
-                  value={customMinAttendees}
-                  onChange={(e) => setCustomMinAttendees(parseInt(e.target.value, 10) || 1)}
-                  className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm text-[var(--text)]"
-                />
-                <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                  {t('If fewer than this number agree before deadline, make-up class is auto-cancelled and all members refunded.')}
-                </p>
-              </div>
+              {Number(approveModal.totalEnrolledMembers || 0) === 0 ? (
+                <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-600 dark:text-blue-400 font-medium">
+                  {t('Class has 0 confirmed members — approving will finalize the reschedule immediately without awaiting member confirmation.')}
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--text)] mb-1">
+                      {t('Minimum Confirmed Attendees Required (Quorum)')} *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max={approveModal.totalEnrolledMembers}
+                      value={customMinAttendees}
+                      onChange={(e) => {
+                        const maxVal = Number(approveModal.totalEnrolledMembers || 1);
+                        const parsed = parseInt(e.target.value, 10) || 1;
+                        setCustomMinAttendees(Math.max(1, Math.min(maxVal, parsed)));
+                      }}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm text-[var(--text)]"
+                    />
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                      {t('If fewer than this number agree before deadline, make-up class is auto-cancelled and all members refunded.')}
+                    </p>
+                  </div>
 
-              <div>
-                <label className="block text-xs font-bold text-[var(--text)] mb-1">
-                  {t('Confirmation Deadline (Hours before make-up session)')} *
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="72"
-                  value={deadlineHoursBefore}
-                  onChange={(e) => setDeadlineHoursBefore(parseInt(e.target.value, 10) || 6)}
-                  className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm text-[var(--text)]"
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--text)] mb-1">
+                      {t('Confirmation Deadline (Hours before make-up session)')} *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="72"
+                      value={deadlineHoursBefore}
+                      onChange={(e) => setDeadlineHoursBefore(parseInt(e.target.value, 10) || 6)}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm text-[var(--text)]"
+                    />
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-[var(--text)] mb-1">
@@ -614,7 +684,13 @@ export default function ManagerRescheduleView() {
               </button>
               <button
                 type="button"
-                disabled={actionBusy || Boolean(approveModal.hasRoomConflict || approveModal.hasRoomCollision)}
+                disabled={
+                  actionBusy
+                  || Boolean(approveModal.hasRoomConflict || approveModal.hasRoomCollision)
+                  || Boolean(approveModal.hasCoachConflict || approveModal.hasCoachCollision)
+                  || Boolean(approveModal.hasMemberConflict)
+                  || (isMakeupSession(approveModal.actionType) && isProposedSlotPast(approveModal))
+                }
                 onClick={handleApprove}
                 className="px-5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
               >

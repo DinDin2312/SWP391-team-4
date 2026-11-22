@@ -40,6 +40,7 @@ class ManagerIntegrationTests {
     @Autowired com.team4.sportscenter.modules.payment.services.PaymentService payments;
     @Autowired com.team4.sportscenter.modules.support.services.SupportRequestService supportRequests;
     @Autowired com.team4.sportscenter.modules.receptionist.services.ReceptionistMemberService reception;
+    @Autowired com.team4.sportscenter.modules.coach.services.ScheduleRescheduleService rescheduleService;
     @Value("${local.server.port}") int port;
     String actor;
     int admin, coach, member, subject, room, course;
@@ -291,6 +292,10 @@ class ManagerIntegrationTests {
             jdbc.update("DELETE FROM USER_CREDITS WHERE user_id=?", id);
             jdbc.update("DELETE FROM SUPPORT_REQUESTS WHERE user_id=?", id);
             jdbc.update("DELETE FROM NOTIFICATIONS WHERE user_id=?", id);
+        }
+        for (Integer id : classIds) {
+            jdbc.update("DELETE r FROM RESCHEDULE_MEMBER_RESPONSES r JOIN SCHEDULE_RESCHEDULE_REQUESTS rr ON rr.request_id=r.request_id WHERE rr.class_id=?", id);
+            jdbc.update("DELETE FROM SCHEDULE_RESCHEDULE_REQUESTS WHERE class_id=?", id);
         }
         for (Integer id : classIds) {
             jdbc.update("DELETE b FROM BOOKINGS b JOIN SCHEDULES s ON s.schedule_id=b.schedule_id WHERE s.class_id=?", id);
@@ -878,5 +883,179 @@ class ManagerIntegrationTests {
         // Manual duplicate code (autoCode=false) is rejected
         assertThrows(IllegalArgumentException.class, () ->
                 service.saveClass(null, new ClassRequest("[" + basicCode + "] Trùng mã", subject, coach, room, new BigDecimal("500000"), 5, "ACTIVE", 1, false), actor));
+    }
+
+    @Test void managerRescheduleEndpointsRequireCenterManagerRole() throws Exception {
+        int receptionist = user("recept", "Receptionist");
+        int schedId = schedule(start);
+        assertEquals(401, request("GET", "/api/v1/manager/reschedule-requests", null, null).statusCode());
+        for (int uid : List.of(coach, member, receptionist)) {
+            String t = token(uid);
+            assertEquals(403, request("GET", "/api/v1/manager/reschedule-requests", t, null).statusCode());
+            assertEquals(403, request("POST", "/api/v1/manager/reschedule-requests/1/approve", t, "{}").statusCode());
+            assertEquals(403, request("POST", "/api/v1/manager/reschedule-requests/1/reject", t, "{\"rejectionReason\":\"x\"}").statusCode());
+            assertEquals(403, request("POST", "/api/v1/manager/reschedule-requests/assign-substitute", t, "{\"scheduleId\":" + schedId + ",\"substituteCoachId\":" + coach + "}").statusCode());
+            assertEquals(403, request("GET", "/api/v1/manager/reschedule-requests/available-coaches?scheduleId=" + schedId, t, null).statusCode());
+            assertEquals(403, request("POST", "/api/v1/manager/reschedule-requests/simulate-deadlines", t, null).statusCode());
+        }
+        assertEquals(200, request("GET", "/api/v1/manager/reschedule-requests", token(admin), null).statusCode());
+    }
+
+    @Test void makeupApprovalProtectsPendingBookingsZeroConfirmedAndCompletesQuorumOnCron() {
+        String coachEmail = "coach" + actor;
+        String adminEmail = "admin" + actor;
+        int member2 = user("member2", "Member");
+        String member2Email = "member2" + actor;
+
+        // 1. Session with ONLY unpaid PENDING booking -> confirmedCount=0 -> auto-COMPLETED without free voucher minting
+        int sEmpty = schedule(start);
+        booking(sEmpty, "PENDING");
+        var reqDtoEmpty = new com.team4.sportscenter.modules.coach.dtos.CreateRescheduleRequestDto();
+        reqDtoEmpty.setScheduleId(sEmpty);
+        reqDtoEmpty.setActionType("MAKEUP_SESSION");
+        reqDtoEmpty.setProposedStartTime(start.plusDays(1));
+        reqDtoEmpty.setProposedEndTime(start.plusDays(1).plusMinutes(90));
+        reqDtoEmpty.setReasonCategory("SICK");
+        var createdEmpty = rescheduleService.createCoachRequest(reqDtoEmpty, coachEmail);
+        var approvedEmpty = rescheduleService.approveRequest(createdEmpty.getRequestId(), null, 4, "OK", adminEmail);
+        assertEquals("COMPLETED", approvedEmpty.getStatus());
+        assertEquals(0, approvedEmpty.getMinAttendees());
+        assertEquals(0, count("SELECT COUNT(*) FROM RESCHEDULE_MEMBER_RESPONSES WHERE request_id=?", createdEmpty.getRequestId()));
+        assertEquals(0, count("SELECT COUNT(*) FROM USER_CREDITS WHERE user_id=?", member));
+
+        // 2. Session with 1 PENDING + 1 CONFIRMED -> PENDING excluded; quorum validated <= 1; quorum met -> COMPLETED on cron
+        int sMixed = schedule(start.plusDays(2));
+        booking(sMixed, "PENDING");
+        jdbc.update("INSERT INTO BOOKINGS(user_id,schedule_id,status,attendance_status,booking_time) VALUES (?,?,'CONFIRMED','NOT_YET',NOW())", member2, sMixed);
+        var reqDtoMixed = new com.team4.sportscenter.modules.coach.dtos.CreateRescheduleRequestDto();
+        reqDtoMixed.setScheduleId(sMixed);
+        reqDtoMixed.setActionType("MAKEUP_SESSION");
+        reqDtoMixed.setProposedStartTime(start.plusDays(3));
+        reqDtoMixed.setProposedEndTime(start.plusDays(3).plusMinutes(90));
+        reqDtoMixed.setReasonCategory("WORK");
+        var createdMixed = rescheduleService.createCoachRequest(reqDtoMixed, coachEmail);
+        assertEquals(1, createdMixed.getTotalEnrolledMembers());
+        assertThrows(IllegalArgumentException.class, () ->
+                rescheduleService.approveRequest(createdMixed.getRequestId(), 2, 4, "Too high quorum", adminEmail));
+
+        var approvedMixed = rescheduleService.approveRequest(createdMixed.getRequestId(), 1, 4, "Approved", adminEmail);
+        assertEquals("APPROVED", approvedMixed.getStatus());
+        assertFalse(approvedMixed.getConfirmationDeadline().isAfter(approvedMixed.getProposedStartTime()));
+        assertEquals(0, count("SELECT COUNT(*) FROM RESCHEDULE_MEMBER_RESPONSES WHERE request_id=? AND user_id=?", createdMixed.getRequestId(), member));
+        assertEquals(1, count("SELECT COUNT(*) FROM RESCHEDULE_MEMBER_RESPONSES WHERE request_id=? AND user_id=?", createdMixed.getRequestId(), member2));
+
+        rescheduleService.respondToReschedule(createdMixed.getRequestId(), "ACCEPT", member2Email);
+        jdbc.update("UPDATE SCHEDULE_RESCHEDULE_REQUESTS SET confirmation_deadline = DATE_SUB(NOW(), INTERVAL 1 MINUTE) WHERE request_id=?", createdMixed.getRequestId());
+        rescheduleService.processExpiredRescheduleDeadlines();
+
+        assertEquals("COMPLETED", jdbc.queryForObject(
+                "SELECT status FROM SCHEDULE_RESCHEDULE_REQUESTS WHERE request_id=?", String.class, createdMixed.getRequestId()));
+        assertEquals(0, count("SELECT COUNT(*) FROM USER_CREDITS WHERE user_id=? OR user_id=?", member, member2));
+    }
+
+    @Test void rescheduleApprovalEnforcesConflictsSubstituteClearAndManagerSaveSync() {
+        String coachEmail = "coach" + actor;
+        String adminEmail = "admin" + actor;
+        int coach2 = user("coach2", "Coach");
+        jdbc.update("INSERT INTO USER_SUBJECTS(user_id,subject_id) VALUES (?,?)", coach2, subject);
+        int room2 = service.saveRoom(null, new RoomRequest("QA Room 2 " + actor, 10), actor);
+        try {
+            // 1. Direct conflict on coach + changeover + member schedule conflict
+            int mainSched = schedule(start);
+            int otherRoomClass = service.saveClass(null, new ClassRequest("QA Coach Conflict", subject, coach, room2, new BigDecimal("100000"), 5, "ACTIVE"), actor);
+            classIds.add(otherRoomClass);
+            service.saveSchedule(null, new ScheduleRequest(otherRoomClass, start.plusDays(1), start.plusDays(1).plusMinutes(90), "SCHEDULED"), actor);
+
+            jdbc.update("""
+                    INSERT INTO SCHEDULE_RESCHEDULE_REQUESTS
+                      (schedule_id,class_id,coach_id,action_type,original_start_time,original_end_time,proposed_start_time,proposed_end_time,proposed_room_id,reason_category,reason_details,status,min_attendees)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,'PENDING',2)
+                    """, mainSched, course, coach, "MAKEUP_SESSION", start, start.plusMinutes(90),
+                    start.plusDays(1).plusMinutes(95), start.plusDays(1).plusMinutes(185), room, "EMERGENCY", "Seeded conflict");
+            int reqConflictId = jdbc.queryForObject("SELECT MAX(request_id) FROM SCHEDULE_RESCHEDULE_REQUESTS WHERE schedule_id=?", Integer.class, mainSched);
+
+            var dto = rescheduleService.getRequestDetails(reqConflictId);
+            assertTrue(Boolean.TRUE.equals(dto.getHasCoachConflict()), "15m changeover after 07:30 overlaps 07:35 start");
+            assertThrows(IllegalStateException.class, () ->
+                    rescheduleService.approveRequest(reqConflictId, null, 4, "Must block coach changeover collision", adminEmail));
+
+            // 1b. Member schedule conflict (CONFIRMED member busy in another class) blocks approval and flags DTO
+            int otherMemberClass = service.saveClass(null, new ClassRequest("QA Member Conflict", subject, coach2, room2, new BigDecimal("100000"), 5, "ACTIVE"), actor);
+            classIds.add(otherMemberClass);
+            int otherMemberSched = service.saveSchedule(null, new ScheduleRequest(otherMemberClass, start.plusDays(6), start.plusDays(6).plusMinutes(90), "SCHEDULED"), actor);
+            int sMemberTarget = schedule(start.plusDays(6).plusMinutes(105));
+            booking(otherMemberSched, "CONFIRMED");
+            booking(sMemberTarget, "CONFIRMED");
+            jdbc.update("""
+                    INSERT INTO SCHEDULE_RESCHEDULE_REQUESTS
+                      (schedule_id,class_id,coach_id,action_type,original_start_time,original_end_time,proposed_start_time,proposed_end_time,proposed_room_id,reason_category,reason_details,status,min_attendees)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,'PENDING',1)
+                    """, sMemberTarget, course, coach, "MAKEUP_SESSION", start.plusDays(6).plusMinutes(105), start.plusDays(6).plusMinutes(195),
+                    start.plusDays(6), start.plusDays(6).plusMinutes(90), room, "EMERGENCY", "Seeded member conflict");
+            int reqMemberConflictId = jdbc.queryForObject("SELECT MAX(request_id) FROM SCHEDULE_RESCHEDULE_REQUESTS WHERE schedule_id=?", Integer.class, sMemberTarget);
+            var memberConflictDto = rescheduleService.getRequestDetails(reqMemberConflictId);
+            assertTrue(Boolean.TRUE.equals(memberConflictDto.getHasMemberConflict()));
+            assertThrows(IllegalStateException.class, () ->
+                    rescheduleService.approveRequest(reqMemberConflictId, 1, 4, "Must block member conflict", adminEmail));
+
+            // 1c. Approving a SUBSTITUTE_COACH request with null substituteCoach is rejected
+            jdbc.update("""
+                    INSERT INTO SCHEDULE_RESCHEDULE_REQUESTS
+                      (schedule_id,class_id,coach_id,substitute_coach_id,action_type,original_start_time,original_end_time,reason_category,reason_details,status,min_attendees)
+                    VALUES (?,?,?,NULL,'SUBSTITUTE_COACH',?,?, 'WORK','No sub selected','PENDING',1)
+                    """, sMemberTarget, course, coach, start.plusDays(6).plusMinutes(105), start.plusDays(6).plusMinutes(195));
+            int reqNullSubId = jdbc.queryForObject("SELECT MAX(request_id) FROM SCHEDULE_RESCHEDULE_REQUESTS WHERE schedule_id=?", Integer.class, sMemberTarget);
+            assertThrows(IllegalStateException.class, () ->
+                    rescheduleService.approveRequest(reqNullSubId, null, 4, "Empty substitute must fail", adminEmail));
+
+            // 1d. V36 per-session room override works on make-up approval and updates schedule room_id
+            jdbc.update("INSERT IGNORE INTO ROOM_SUBJECTS(room_id,subject_id) VALUES (?,?)", room2, subject);
+            int sRoomOverride = schedule(start.plusDays(7));
+            var reqRoomOverride = new com.team4.sportscenter.modules.coach.dtos.CreateRescheduleRequestDto();
+            reqRoomOverride.setScheduleId(sRoomOverride);
+            reqRoomOverride.setActionType("MAKEUP_SESSION");
+            reqRoomOverride.setProposedStartTime(start.plusDays(8));
+            reqRoomOverride.setProposedEndTime(start.plusDays(8).plusMinutes(90));
+            reqRoomOverride.setProposedRoomId(room2);
+            reqRoomOverride.setReasonCategory("OTHER");
+            var createdRoomOverride = rescheduleService.createCoachRequest(reqRoomOverride, coachEmail);
+            var approvedRoomOverride = rescheduleService.approveRequest(createdRoomOverride.getRequestId(), null, 4, "Room override OK", adminEmail);
+            assertEquals("COMPLETED", approvedRoomOverride.getStatus());
+            assertEquals(room2, jdbc.queryForObject("SELECT room_id FROM SCHEDULES WHERE schedule_id=?", Integer.class, sRoomOverride));
+
+            // 2. Substitute override clears stale make-up fields and rejects non-PENDING/cancelled schedules
+            var overrideDto = rescheduleService.assignSubstituteCoachDirectly(reqConflictId, mainSched, coach2, "Sub assigned", adminEmail);
+            assertEquals("SUBSTITUTE_COACH", overrideDto.getActionType());
+            assertEquals("APPROVED", overrideDto.getStatus());
+            assertNull(overrideDto.getProposedStartTime());
+            assertNull(overrideDto.getProposedRoomId());
+            assertThrows(IllegalStateException.class, () ->
+                    rescheduleService.assignSubstituteCoachDirectly(reqConflictId, mainSched, coach2, "Duplicate non-pending", adminEmail));
+
+            // 3. Direct manager edit cancels open pending/approved reschedule request
+            int sMove = schedule(start.plusDays(4));
+            var reqMove = new com.team4.sportscenter.modules.coach.dtos.CreateRescheduleRequestDto();
+            reqMove.setScheduleId(sMove);
+            reqMove.setActionType("MAKEUP_SESSION");
+            reqMove.setProposedStartTime(start.plusDays(5));
+            reqMove.setProposedEndTime(start.plusDays(5).plusMinutes(90));
+            reqMove.setReasonCategory("OTHER");
+            var createdMove = rescheduleService.createCoachRequest(reqMove, coachEmail);
+            service.saveSchedule(sMove, new ScheduleRequest(course, start.plusDays(4), start.plusDays(4).plusMinutes(90), "CANCELLED"), actor);
+            assertEquals("CANCELLED", jdbc.queryForObject(
+                    "SELECT status FROM SCHEDULE_RESCHEDULE_REQUESTS WHERE request_id=?", String.class, createdMove.getRequestId()));
+            assertThrows(IllegalStateException.class, () ->
+                    rescheduleService.assignSubstituteCoachDirectly(null, sMove, coach2, "Cancelled schedule", adminEmail));
+        } finally {
+            for (Integer cid : classIds) {
+                jdbc.update("DELETE r FROM RESCHEDULE_MEMBER_RESPONSES r JOIN SCHEDULE_RESCHEDULE_REQUESTS rr ON rr.request_id=r.request_id WHERE rr.class_id=?", cid);
+                jdbc.update("DELETE FROM SCHEDULE_RESCHEDULE_REQUESTS WHERE class_id=?", cid);
+                jdbc.update("DELETE b FROM BOOKINGS b JOIN SCHEDULES s ON s.schedule_id=b.schedule_id WHERE s.class_id=?", cid);
+                jdbc.update("DELETE FROM SCHEDULES WHERE class_id=?", cid);
+            }
+            jdbc.update("DELETE FROM ROOM_SUBJECTS WHERE room_id=?", room2);
+            jdbc.update("DELETE FROM CLASSES WHERE room_id=?", room2);
+            jdbc.update("DELETE FROM ROOMS WHERE room_id=?", room2);
+        }
     }
 }

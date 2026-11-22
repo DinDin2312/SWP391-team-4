@@ -38,7 +38,7 @@ public interface ScheduleRescheduleRequestRepository extends JpaRepository<Sched
     @Query("SELECT COUNT(s) FROM Schedule s JOIN s.gymClass c LEFT JOIN s.room sr " +
            "WHERE COALESCE(sr.roomId, c.room.roomId) = :roomId " +
            "AND s.scheduleId != :excludeScheduleId " +
-           "AND s.status != 'CANCELLED' " +
+           "AND s.status NOT IN ('CANCELLED', 'CANCELLED_INSUFFICIENT_ATTENDEES', 'COMPLETED') " +
            "AND s.startTime < :endTime AND s.endTime > :startTime")
     long countRoomCollisions(
             @Param("roomId") Integer roomId,
@@ -50,7 +50,7 @@ public interface ScheduleRescheduleRequestRepository extends JpaRepository<Sched
     @Query("SELECT COUNT(s) FROM Schedule s " +
            "WHERE (s.gymClass.coach.userId = :coachId OR (s.substituteCoach IS NOT NULL AND s.substituteCoach.userId = :coachId)) " +
            "AND s.scheduleId != :excludeScheduleId " +
-           "AND s.status != 'CANCELLED' " +
+           "AND s.status NOT IN ('CANCELLED', 'CANCELLED_INSUFFICIENT_ATTENDEES', 'COMPLETED') " +
            "AND s.startTime < :endTime AND s.endTime > :startTime")
     long countCoachCollisions(
             @Param("coachId") Integer coachId,
@@ -61,7 +61,7 @@ public interface ScheduleRescheduleRequestRepository extends JpaRepository<Sched
     @Query("SELECT s FROM Schedule s " +
            "WHERE (s.gymClass.coach.userId = :coachId OR (s.substituteCoach IS NOT NULL AND s.substituteCoach.userId = :coachId)) " +
            "AND s.scheduleId != :excludeScheduleId " +
-           "AND s.status != 'CANCELLED' " +
+           "AND s.status NOT IN ('CANCELLED', 'CANCELLED_INSUFFICIENT_ATTENDEES', 'COMPLETED') " +
            "AND s.startTime < :endTime AND s.endTime > :startTime")
     List<Schedule> findCoachCollidingSchedules(
             @Param("coachId") Integer coachId,
@@ -72,7 +72,7 @@ public interface ScheduleRescheduleRequestRepository extends JpaRepository<Sched
     @Query("SELECT s FROM Schedule s JOIN s.gymClass c LEFT JOIN s.room sr " +
            "WHERE COALESCE(sr.roomId, c.room.roomId) = :roomId " +
            "AND s.scheduleId != :excludeScheduleId " +
-           "AND s.status != 'CANCELLED' " +
+           "AND s.status NOT IN ('CANCELLED', 'CANCELLED_INSUFFICIENT_ATTENDEES', 'COMPLETED') " +
            "AND s.startTime < :endTime AND s.endTime > :startTime")
     List<Schedule> findRoomCollidingSchedules(
             @Param("roomId") Integer roomId,

@@ -751,7 +751,7 @@ const MemberSupportView = () => {
                           <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.06]">
                             {getCategoryLabel(tkt.category)}
                           </span>
-                          {getStatusBadge(tkt.status, { isMember: true })}
+                          {getStatusBadge(tkt.status, { isMember: true, ticket: tkt })}
                           {getPriorityBadge(tkt.priority, tkt.preferredResolution, '', tkt.category)}
                         </div>
                         <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
@@ -827,7 +827,7 @@ const MemberSupportView = () => {
                                   (tkt.category === 'COACH_FEEDBACK' || tkt.category === 'FACILITY_ISSUE' || tkt.status === 'ESCALATED' || tkt.preferredResolution === 'CASH_REFUND')
                                     ? 'Center Management Response'
                                     : 'Reception Response'
-                                )} {tkt.respondedByName ? `(${tkt.respondedByName})` : ''}
+                                )} {(tkt.responderName || tkt.respondedByName) ? `(${tkt.responderName || tkt.respondedByName})` : ''}
                               </span>
                               {tkt.respondedAt && <span>{formatSupportDate(tkt.respondedAt)}</span>}
                             </div>

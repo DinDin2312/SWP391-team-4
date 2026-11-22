@@ -51,6 +51,7 @@ public class RescheduleRequestResponseDto {
 
     private Boolean hasRoomConflict;
     private Boolean hasCoachConflict;
+    private Boolean hasMemberConflict;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
