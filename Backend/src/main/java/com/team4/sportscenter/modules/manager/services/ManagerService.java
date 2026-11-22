@@ -497,6 +497,7 @@ public class ManagerService {
             managerRepository.setScheduleStatus(savedId, String.valueOf(previous.get("status")));
         int refunded = 0;
         if (id != null && cancelled) {
+            managerRepository.cancelScheduleRescheduleRequests(id, "Quản lý trung tâm đã hủy buổi học.");
             String className = String.valueOf(assignment.get("className"));
             java.math.BigDecimal refund = managerRepository.sessionRefundAmount(request.classId(), id);
             List<Integer> confirmed = managerRepository.confirmedMemberIds(id);
@@ -509,8 +510,13 @@ public class ManagerService {
             managerRepository.notifyScheduleBookings(id, "Buổi học đã hủy", className + " lúc " + when + " đã hủy."
                     + (refunded > 0 ? " Học viên đã thanh toán được hoàn học phí 1 buổi bằng Voucher tín dụng (hạn 60 ngày), xem trong ví Voucher." : ""));
             managerRepository.cancelScheduleBookings(id);
+        } else if (id != null && completed) {
+            managerRepository.cancelScheduleRescheduleRequests(id, "Quản lý trung tâm đã đánh dấu buổi học hoàn thành.");
         } else if (id != null && (timingChanged || roomChanged)) {
             String roomName = managerRepository.roomName(roomId);
+            managerRepository.cancelScheduleRescheduleRequests(id,
+                    "Quản lý trung tâm đã điều chỉnh lịch buổi học trực tiếp sang " + request.startTime() + " - " + request.endTime()
+                            + (roomChanged ? (" tại " + roomName) : "") + ".");
             managerRepository.notifyScheduleBookings(id, "Thay đổi lịch học",
                     assignment.get("className") + " chuyển sang " + request.startTime() + " - " + request.endTime()
                             + (roomChanged ? " tại " + roomName : ""));

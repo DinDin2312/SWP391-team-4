@@ -206,6 +206,28 @@ test('Cross-module UI/UX consistency: Support badges, ProtectedRoute RBAC, and R
       assert.match(staffBadge, /<span/);
     }
 
+    const { setLanguage: ssrSetLanguage } = await server.ssrLoadModule('/src/i18n/languageStore.js');
+    ssrSetLanguage('vi');
+    const facilityApprovedHtml = renderToStaticMarkup(supportUtils.getStatusBadge('APPROVED', {
+      isMember: true,
+      ticket: { category: 'FACILITY_ISSUE', responderName: 'Quản lý' },
+    }));
+    assert.match(facilityApprovedHtml, /Đã giải quyết/);
+    assert.doesNotMatch(facilityApprovedHtml, /Đã duyệt tự động/);
+
+    const cancelApprovedHtml = renderToStaticMarkup(supportUtils.getStatusBadge('APPROVED', {
+      isMember: true,
+      ticket: { category: 'CLASS_CANCELLATION', responderName: 'Admin' },
+    }));
+    assert.match(cancelApprovedHtml, /Đã duyệt/);
+    assert.doesNotMatch(cancelApprovedHtml, /Đã duyệt tự động/);
+    ssrSetLanguage('en');
+
+    assert.match(renderToStaticMarkup(supportUtils.getStatusBadge('APPROVED', {
+      isMember: true,
+      ticket: { category: 'FACILITY_ISSUE', responderName: 'Manager' },
+    })), /Resolved/);
+
     assert.equal(supportUtils.getDisplayTitle(''), '');
     assert.match(
       supportUtils.getDisplayTitle('Cancellation & Retention Request for Yoga 101'),

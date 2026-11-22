@@ -194,6 +194,12 @@ export const getPriorityBadge = (priority, preferredResolution, extraClassName =
 
 export const getStatusBadge = (status, options = {}) => {
   const isMember = typeof options === 'boolean' ? options : !!options.isMember;
+  const ticket = typeof options === 'object' && options !== null ? options.ticket : null;
+  const isCancellationTicket = ticket?.category === 'CLASS_CANCELLATION' || ticket?.category === 'REFUND_REQUEST';
+  const memberResolvedLabel = ticket && !isCancellationTicket
+    ? t('Resolved')
+    : t('Approved & Resolved');
+
   switch (status) {
     case 'PENDING':
       return (
@@ -211,7 +217,7 @@ export const getStatusBadge = (status, options = {}) => {
     case 'RESOLVED':
       return (
         <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1.5">
-          <CheckCircle2 className="w-3.5 h-3.5" /> {isMember ? t('Approved & Resolved') : t('Resolved')}
+          <CheckCircle2 className="w-3.5 h-3.5" /> {isMember ? memberResolvedLabel : t('Resolved')}
         </span>
       );
     case 'ESCALATED':

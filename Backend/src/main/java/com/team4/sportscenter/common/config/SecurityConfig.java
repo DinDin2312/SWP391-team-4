@@ -61,7 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/receptionist/**", "/receptionist/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
 
                         // Manager operations are restricted to the Center Manager authority.
-                        .requestMatchers("/api/manager/**").hasRole("CENTER_MANAGER")
+                        .requestMatchers("/api/manager/**", "/api/v1/manager/**").hasRole("CENTER_MANAGER")
                         .requestMatchers("/api/v1/coach/**", "/api/coach/**").hasAnyRole("COACH", "CENTER_MANAGER")
 
                         .requestMatchers("/api/v1/member/health-profile", "/api/v1/member/health-profile/**").hasRole("MEMBER")

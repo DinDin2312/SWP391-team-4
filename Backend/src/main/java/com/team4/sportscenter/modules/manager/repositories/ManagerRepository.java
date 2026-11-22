@@ -543,6 +543,14 @@ public class ManagerRepository {
                 """, note, classId);
     }
 
+    public void cancelScheduleRescheduleRequests(Integer scheduleId, String note) {
+        jdbc.update("""
+                UPDATE SCHEDULE_RESCHEDULE_REQUESTS
+                SET status='CANCELLED', admin_response_note=?, updated_at=NOW()
+                WHERE schedule_id=? AND status IN ('PENDING','APPROVED')
+                """, note, scheduleId);
+    }
+
     public void recordCourseCancellationVoucherRefund(Integer userId, Integer classId, String className, java.math.BigDecimal price, String formattedPrice, String reason, Integer managerUserId) {
         int rand = 1000 + java.util.concurrent.ThreadLocalRandom.current().nextInt(9000);
         String creditCode = "CRED-CANCEL-" + classId + "-" + userId + "-" + rand;
