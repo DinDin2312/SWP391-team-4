@@ -1,344 +1,334 @@
-# 🏋️ NEXUS SPORTS CENTER - HỆ THỐNG QUẢN LÝ TRUNG TÂM THỂ THAO ĐA NĂNG
+# 🏋️ NEXUS SPORTS CENTER — HỆ THỐNG QUẢN LÝ TRUNG TÂM THỂ THAO ĐA NĂNG
 
 [![CI](https://github.com/DinDin2312/SWP391-team-4/actions/workflows/ci.yml/badge.svg)](https://github.com/DinDin2312/SWP391-team-4/actions/workflows/ci.yml)
+[![Comprehensive Test & Coverage CI (>= 95%)](https://github.com/DinDin2312/SWP391-team-4/actions/workflows/comprehensive-test-ci.yml/badge.svg)](https://github.com/DinDin2312/SWP391-team-4/actions/workflows/comprehensive-test-ci.yml)
+[![CD - Deploy to VPS](https://github.com/DinDin2312/SWP391-team-4/actions/workflows/deploy.yml/badge.svg)](https://github.com/DinDin2312/SWP391-team-4/actions/workflows/deploy.yml)
 
-> **Đồ án môn học SWP391** — *Hệ thống Quản lý và Vận hành Trung tâm Thể thao & Thể hình Toàn diện (Sports Center Management System)*.  
-> Nền tảng kết nối 360 độ giữa **Hội viên (Member)**, **Huấn luyện viên (Coach)**, **Lễ tân (Receptionist)** và **Ban quản lý (Center Manager)**, tích hợp **Cổng thanh toán trực tuyến** và **Trợ lý ảo thông minh (Agentic AI)**.
+> **Đồ án môn học SWP391 (Team 4)** — *Nền tảng Quản lý và Vận hành Trung tâm Thể thao & Thể hình Toàn diện (`NEXUS Sports Lab`)*.
+> Kết nối đồng bộ 4 vai trò nội bộ (**Center Manager**, **Receptionist**, **Coach**, **Member**) cùng **Trang công khai cho Khách vãng lai**, tích hợp **Thanh toán trực tuyến đa cổng (PayOS / VietQR / VNPay / MoMo)**, **Trợ lý ảo RAG + Agentic UI streaming (Google Gemini)**, **Kiểm định tự động (Coverage ≥ 95%)** và **Docker + Caddy HTTPS CD**.
 
 ---
 
 ## 📌 MỤC LỤC
-1. [Giới thiệu & Phạm vi Nghiệp vụ](#1-giới-thiệu--phạm-vi-nghiệp-vụ)
-2. [Công nghệ Sử dụng (Tech Stack)](#2-công-nghệ-sử-dụng-tech-stack)
-3. [Kiến trúc Dự án (Architecture)](#3-kiến-trúc-dự-án-architecture)
-4. [Mô hình Dữ liệu Chuẩn BCNF](#4-mô-hình-dữ-liệu-chuẩn-bcnf)
-5. [Quy tắc Nghiệp vụ Cốt lõi (Core Business Rules)](#5-quy-tắc-nghiệp-vụ-cốt-lõi-core-business-rules)
-6. [Tài khoản Demo Dùng thử (Demo Accounts)](#6-tài-khoản-demo-dùng-thử-demo-accounts)
+1. [Tổng quan & Các phân hệ chức năng](#1-tổng-quan--các-phân-hệ-chức-năng)
+2. [Công nghệ sử dụng (Tech Stack)](#2-công-nghệ-sử-dụng-tech-stack)
+3. [Kiến trúc & Cấu trúc dự án](#3-kiến-trúc--cấu-trúc-dự-án)
+4. [Cơ sở dữ liệu & Flyway Migrations (`V1`–`V36`)](#4-cơ-sở-dữ-liệu--flyway-migrations-v1v36)
+5. [Quy tắc nghiệp vụ & Tác vụ tự động](#5-quy-tắc-nghiệp-vụ--tác-vụ-tự-động)
+6. [Tài khoản Demo dùng thử](#6-tài-khoản-demo-dùng-thử)
 7. [Hướng dẫn Cài đặt & Khởi chạy](#7-hướng-dẫn-cài-đặt--khởi-chạy)
 8. [Cấu hình Biến môi trường](#8-cấu-hình-biến-môi-trường)
-9. [Danh mục API Endpoints](#9-danh-mục-api-endpoints)
+9. [Kiểm thử & CI/CD Quality Gates](#9-kiểm-thử--cicd-quality-gates)
+10. [Danh mục API Endpoints chính](#10-danh-mục-api-endpoints-chính)
+11. [Tài liệu liên quan](#11-tài-liệu-liên-quan)
 
 ---
 
-## 1. GIỚI THIỆU & PHẠM VI NGHIỆP VỤ
+## 1. TỔNG QUAN & CÁC PHÂN HỆ CHỨC NĂNG
 
-Dự án đã hoàn thiện trọn vẹn cả **3 luồng bắt buộc (Must Have)** và **3 luồng mở rộng (Nice to Have)** theo đúng đặc tả môn học:
+### 🌐 Khách vãng lai & Xác thực (`/`, `/login`, `/register`)
+*   **Landing Page (`NEXUS Sports Lab`)**: Trình diễn video/hình ảnh cơ sở vật chất, tra cứu danh mục gói tập (`SELLING`), lớp học và lịch tập công khai qua `/api/guest/**`.
+*   **Xác thực & Hồ sơ bảo mật**: Đăng ký tự phục vụ xác thực OTP 6 số qua Email, đăng nhập JWT Stateless / **Google OAuth2**, khôi phục mật khẩu OTP 3 bước, đổi Email xác thực OTP và tải ảnh đại diện (`multipart/form-data`).
+*   **Trải nghiệm UI**: Hỗ trợ đầy đủ **Song ngữ Anh – Việt (`i18n`)**, **Chế độ Sáng / Tối (`Dark / Light Theme`)** lưu theo trình duyệt và linh vật tương tác **CyberFox Mascot (`NEXUS AI`)**.
 
-### 🌟 Các Phân hệ Nghiệp vụ Cốt lõi:
-*   **Flow 1: Quản lý Người dùng & Gói tập (User & Membership Management)**:
-    *   Đăng ký tài khoản tự phục vụ kèm xác thực mã OTP gửi qua Email.
-    *   Cơ chế xác thực bảo mật JWT Stateless, phân quyền 4 vai trò rõ rệt (Manager, Coach, Receptionist, Member).
-    *   Quản lý danh mục gói tập (Gym, Yoga, Boxing, VIP), phân bổ quyền lợi phòng tập và bộ môn, quản lý thời hạn và vòng đời thẻ hội viên.
-*   **Flow 2: Quản lý Lớp học & Xếp lịch (Class Booking & Schedule Management)**:
-    *   Quản lý Danh mục Bộ môn (`SUBJECTS`), Phòng tập (`ROOMS`), Lớp học (`CLASSES`).
-    *   Xếp lịch linh hoạt theo từng ca hoặc tạo chuỗi lịch định kỳ hàng tuần (`series`).
-    *   Thuật toán chống trùng lịch ba chiều: Chống trùng lịch Huấn luyện viên, Phòng tập và Hội viên.
-    *   Đặt lịch lớp học bằng lượt thẻ hội viên hoặc thanh toán lẻ, hủy lịch có hoàn trả lượt.
-*   **Flow 3: Thanh toán & Báo cáo Thống kê (Payment & Analytics Management)**:
-    *   Cơ chế giỏ hàng (`Cart`) thanh toán gộp nhiều gói tập/lớp học.
-    *   Tích hợp cổng thanh toán trực tuyến **VNPay Sandbox** và **MoMo Sandbox** với xử lý Webhook / IPN tự động kích hoạt thẻ và sinh hóa đơn điện tử (`INVOICES`).
-    *   Dashboard báo cáo doanh thu theo thời gian thực (ngày/tháng/năm), tỷ lệ tăng trưởng hội viên, tỷ lệ lấp đầy phòng tập và cảnh báo lớp vắng.
-*   **Flow 4: Quản lý Huấn luyện & Điểm danh (Training & Attendance Management)**:
-    *   Xem lịch dạy trực quan, danh sách học viên theo lớp dành cho Huấn luyện viên.
-    *   Nghiệp vụ điểm danh khắt khe: Chỉ cho phép điểm danh vào đúng ngày diễn ra buổi học (`sessionDate == today`).
-    *   Thư viện động tác (`EXERCISES`), soạn giáo án (`Coach Workout Plans`: Sets, Reps, Rest Time) gán cho học viên/lớp học.
-    *   Đánh giá định kỳ chỉ số thể lực học viên (`Trainee Assessments`: Cân nặng, BMI, Body Fat, nhận xét tiến độ).
-*   **Flow 5 & Flow 6: Trí tuệ Nhân tạo & Trợ lý Ảo (AI Workout & Agentic AI Assistant)**:
-    *   Gợi ý bài tập cá nhân hóa tự động theo mục tiêu thể hình (`AiWorkoutPlan`).
-    *   **Trợ lý Nexus AI (Google Gemini 1.5 Flash)**: Giải đáp thắc mắc dịch vụ, phân tích chế độ dinh dưỡng, tự động phát lệnh điều khiển giao diện (**Agentic UI**: Highlight gói tập/lớp học viền sáng Siri, tự động thêm vào giỏ hàng `ADD_CART`).
+### 🏃 Hội viên (`Member` — `/member/*`)
+*   **Dashboard & Thẻ thành viên (`CustomerDashboard`, `Memberships`, `PackageStore`)**: Theo dõi ngày hiệu lực gói (hỗ trợ **cộng dồn/xếp hàng `Queued`** khi gia hạn trước hạn), lượt buổi còn lại theo từng môn/phòng, hạng thành viên tích điểm (`Silver` / `Gold` / `Platinum`) và chỉ số InBody gần nhất.
+*   **Đặt lớp, Lịch tập & QR Check-in (`BookClass`, `MySchedule`, `AttendanceHistory`)**: Đăng ký khóa học bằng quyền lợi gói tập hoặc thanh toán giỏ hàng, lấy mã **QR cá nhân từng buổi** để check-in tại quầy, tra cứu lịch sử điểm danh.
+*   **Chính sách Hủy / Bảo lưu / Chuyển lớp & Trung tâm Hỗ trợ (`MemberSupportView`)**: Xem trước mức hoàn/chuyển (`cancel-preview`, `transfer-preview`), tự hủy nhận **Credit Voucher**, chuyển lớp, gửi ticket phản hồi/bảo trì cơ sở vật chất/khiếu nại và quản lý ví Credit (`USER_CREDITS`).
+*   **Hồ sơ Sức khỏe, Body Transformation & Nộp bài tập**: Quản lý hồ sơ sức khỏe (`HealthProfileSection`), tự ghi nhận & theo dõi biểu đồ thể trạng **InBody / FPS** (`BodyTransformationModal`), xem giáo án của HLV và **nộp video bài tập** (`SubmitWorkoutModal`) để Coach chấm & nhận xét.
+*   **Phản hồi Dời lịch & Ca học bù**: Nhận thông báo ngay trên Topbar, chủ động chọn **Tham gia ca bù** hoặc **Bận — Tự động hoàn 1 lượt / Credit**.
+*   **Trợ lý ảo `NEXUS AI` (RAG + SSE Streaming + Agentic UI)**: Tư vấn thời gian thực dựa trên kho tri thức 8 tài liệu nghiệp vụ/dinh dưỡng/chấn thương/kỹ thuật (`rag/knowledge/*.md`), tự động highlight lớp/gói và hỗ trợ thao tác giỏ hàng.
+
+### 🏋️ Huấn luyện viên (`Coach` — `/coach/*`)
+*   **Lịch dạy & Điểm danh đối soát (`CoachSchedule`)**: Theo dõi ca dạy, danh sách học viên từng buổi và điểm danh (`PRESENT` / `ABSENT` / `NOT_YET`) liên thông đối soát chéo với quầy Lễ tân.
+*   **Đổi lịch & Dạy bù (`CoachRescheduleRequests`)**: Gửi yêu cầu dời sang ca học bù (kiểm tra trống phòng, trống lịch HLV và trùng lịch học viên theo thời gian thực) hoặc xin phân công HLV dạy thay khi bận đột xuất.
+*   **Học viên, Giáo án, Đánh giá & Chấm video (`CoachStudents`, `CoachWorkoutPlans`)**: Quản lý thư viện động tác, soạn & giao giáo án chi tiết (`Sets`, `Reps`, `Rest`), chấm & phản hồi video bài nộp của học viên, đánh giá chỉ số thể lực định kỳ và gửi thông báo lớp học.
+*   **Trợ lý `NEXUS Coach AI`**: Chat AI streaming riêng cho HLV hỗ trợ thiết kế chương trình tập và tra cứu quy định.
+
+### 🛎️ Lễ tân (`Receptionist` — `/receptionist`, `/staff`)
+*   **Quản lý Hội viên & Giao dịch tại quầy (`MemberManagementView`, `RegisterMemberView`, `ManageMembershipsView`, `InvoiceManagementView`)**: Tra cứu hồ sơ 360°, đăng ký hội viên mới, bán & kích hoạt gói tại quầy (`COUNTER`), đăng ký/hủy lớp, gợi ý & xác nhận gia hạn lớp học (`suggest-renewal` / `confirm-renewal`), tra cứu & in biên lai hóa đơn.
+*   **Check-in Thông minh & Đối soát chéo (`MemberCheckInView`, `CoachCheckInTab`, `QrScannerModal`)**: Quét QR check-in cả Hội viên và HLV; phân tích tự động 4 trường hợp quyền lợi (cấp mã mở cửa khu Gym `GYM-PASS-...` đúng gói), phát hiện & lọc các ca bất thường (`ANOMALY`).
+*   **Bàn Hỗ trợ & Quầy Đồ thất lạc (`SupportDeskView`, `LostAndFoundView`)**: Tiếp nhận/trả lời/thu hồi/chuyển cấp (`ESCALATED`) yêu cầu hỗ trợ, tạo ticket thay mặt hội viên; ghi nhận, xác minh trả đồ (`claim`), thanh lý (`dispose`) và thống kê đồ thất lạc.
+
+### 🧑‍💼 Quản lý Trung tâm (`Center Manager` — `/manager`, `/admin`)
+*   **Trung tâm Điều hành (`OperationalOverview`)**: Biểu đồ doanh thu, hàng đợi quyết định (`decisions`), cảnh báo ca học cần xử lý gấp (`attention`) và danh sách hội viên sắp hết hạn cần gia hạn (`renewals`).
+*   **Vận hành & Xếp lịch Thông minh (`OperationsPage`)**: Quản trị Bộ môn (`SUBJECTS`), Phòng tập (`ROOMS` + ma trận `ROOM_SUBJECTS`), Lớp học (`CLASSES` theo mã 1xx/2xx/3xx), ca học cố định (`TeachingSlotSettings`) & số ngày mở khóa trước (`CourseLeadDays`), tự động xem trước và sinh chuỗi lịch (`SchedulePlanner` / `CourseSchedulePlanner`), hỗ trợ đổi phòng riêng cho từng buổi học đơn lẻ.
+*   **Phê duyệt Dời lịch & Dạy thay (`ManagerRescheduleView`)**: Kiểm tra xung đột **Phòng tập – HLV (gồm thời gian nghỉ chuyển ca) – Học viên**, chặn slot quá khứ, thiết lập sĩ số tối thiểu (**Quorum**) & hạn chót xác nhận, hoặc phân công trực tiếp HLV rảnh lịch dạy thay.
+*   **Gói tập, Giao dịch, Nhân sự, Báo cáo & Audit Log**: Quản lý loại gói động (`PACKAGE_TYPES`), upload ảnh tài nguyên, theo dõi lịch sử chỉnh sửa gói, đối soát sổ cái giao dịch (`REVIEW`), khóa/mở tài khoản an toàn, báo cáo doanh thu lớp học & giờ dạy HLV (hỗ trợ xuất báo cáo) và nhật ký kiểm toán (`AUDIT_LOGS`).
 
 ---
 
 ## 2. CÔNG NGHỆ SỬ DỤNG (TECH STACK)
 
-### Backend
-*   **Ngôn ngữ & Framework**: Java 17 / 21, Spring Boot 3.x
-*   **Bảo mật**: Spring Security 6, JWT (JSON Web Tokens), BCrypt Password Encoder
-*   **Truy xuất Dữ liệu**: Spring Data JPA, Hibernate ORM
-*   **Cơ sở dữ liệu & Migration**: MySQL 8.0, Flyway DB Migration
-*   **Thư viện Email**: Spring Mail (JavaMailSender) tích hợp SMTP Gmail
-*   **Thanh toán Trực tuyến**: VNPay Payment Gateway (Checksum SHA512), MoMo QR Gateway
-*   **Trí tuệ Nhân tạo**: Google Gemini AI REST API (Gemini 1.5 Flash)
-
-### Frontend
-*   **Nền tảng**: React 19, Vite
-*   **Styling & UI**: Tailwind CSS, CSS Custom Variables (Hỗ trợ Dark / Light Theme)
-*   **Hiệu ứng & Icons**: Framer Motion, Lucide React
-*   **HTTP Client**: Axios (kèm Interceptor tự động gắn Bearer Token)
-*   **Đa ngôn ngữ**: Hệ thống i18n linh hoạt (Tiếng Việt & Tiếng Anh)
+| Thành phần | Công nghệ & Phiên bản trong mã nguồn |
+| :--- | :--- |
+| **Backend** | Java 17+, **Spring Boot 4.1.1**, Spring Security 6, Spring Data JPA / Hibernate (`ddl-auto=validate`), Lombok |
+| **Xác thực & Tài liệu API** | **JJWT 0.12.6** (JWT Stateless), BCrypt, **SpringDoc OpenAPI 3.2.0** (Swagger UI tại `/api/swagger-ui.html`) |
+| **Database & Migration** | **MySQL 8.0 / 8.4**, **Flyway DB Migration** (`V1`–`V36`, hỗ trợ cả SQL & Java migrations) |
+| **AI & RAG** | **Google Gemini REST API** (`gemini-3-flash-preview`, `gemini-embedding-001` 768 chiều), Vector Index in-memory + DB (`KNOWLEDGE_DOCUMENTS`, `DOCUMENT_CHUNKS`), **SSE Streaming** |
+| **Thanh toán & Email** | **PayOS** (Webhook & Callback), **VietQR Napas 247**, **VNPay Sandbox**, **MoMo Sandbox**, Spring Mail (Gmail SMTP) |
+| **Frontend** | **React 19.2.8**, **Vite 8.3.0**, Tailwind CSS + Design Tokens (`tokens.css`), **Framer Motion 14**, **Lucide React**, Axios, `@react-oauth/google`, **jsQR** |
+| **Chất lượng & Hạ tầng** | **JaCoCo 0.8.12** (≥ 95% Backend gate), **Oxlint 1.81** + **Node Test Runner** (≥ 95% Frontend gate), **Docker Compose**, **Nginx**, **Caddy 2** (auto HTTPS), GitHub Actions |
 
 ---
 
-## 3. KIẾN TRÚC DỰ ÁN (ARCHITECTURE)
+## 3. KIẾN TRÚC & CẤU TRÚC DỰ ÁN
 
-Dự án áp dụng mô hình phân tách rõ ràng theo kiến trúc **Feature-Based / Module-Based**, hạn chế tối đa xung đột mã nguồn khi làm việc nhóm:
+Dự án tổ chức theo kiến trúc **Module / Feature-Based** giúp tách biệt rõ theo từng phân hệ:
 
 ```text
 SWP391_Code/
+├── README.md                                  # Tài liệu tổng quan dự án (file này)
+├── ARCHITECTURE.md                            # Quy ước kiến trúc module & git workflow nhóm
+├── BUSINESS_ARCHITECTURE_AND_ROLE_MATRIX.md   # Ma trận phân quyền & kiến trúc nghiệp vụ
+├── BUSINESS_RULES_AND_WORKFLOWS.md            # Đặc tả quy tắc nghiệp vụ & luồng xử lý
+├── docker-compose.yml                         # Triển khai local/dev bằng Docker (MySQL + Backend + Nginx)
+├── docker-compose.server.yml                  # Mở rộng triển khai VPS kèm Caddy auto HTTPS (80/443)
+├── Caddyfile                                  # Cấu hình reverse proxy & TLS tự động cho Caddy
+├── .env.docker.example                        # Mẫu biến môi trường cho Docker / Server
+├── .github/workflows/                         # ci.yml, comprehensive-test-ci.yml, deploy.yml
+├── docs/                                      # Tài liệu kỹ thuật bổ sung & hướng dẫn deploy CD
+├── scripts/                                   # Script hỗ trợ triển khai VPS (deploy-vps.sh)
 │
-├── 📄 BUSINESS_RULES_AND_WORKFLOWS.md      # Tài liệu Quy tắc Nghiệp vụ & Luồng đi toàn dự án
-├── Backend/                                # Mã nguồn Spring Boot
-│   └── src/main/java/com/team4/sportscenter/
-│       ├── config/                         # Cấu hình VNPayConfig, MoMoConfig
-│       ├── common/                         # Cấu hình SecurityConfig, CORS, Exception Handler toàn cục
-│       ├── security/                       # Cấu hình JWT, CustomUserDetails, JwtAuthenticationFilter
-│       └── modules/                        # Đóng gói logic theo từng phân hệ nghiệp vụ
-│           ├── auth/                       # Đăng ký, Đăng nhập, OTP Email, Google OAuth2, Đổi Email/MK
-│           ├── coach/                      # Lịch dạy, Điểm danh đối soát, Giáo án bài tập, Đánh giá thể lực, Hồ sơ HLV
-│           ├── guest/                      # API công khai xem Gói tập & Lịch học cho khách vãng lai
-│           ├── manager/                    # Quản trị Nhân sự, Bộ môn, Phòng, Lớp, Xếp lịch tự động, Gói tập, Sổ cái, Báo cáo, Audit Log
-│           ├── member/                     # Đặt lớp, Quyền lợi gói tập (Snapshot), Lịch tập, NEXUS AI Chat, Cron dọn booking
-│           ├── notification/               # Trung tâm thông báo & Cronjob nhắc lịch học / nhắc gia hạn thẻ
-│           ├── payment/                    # Giỏ hàng, Thanh toán VNPay / MoMo, Hậu kiểm hóa đơn (REVIEW)
-│           └── receptionist/               # Quản lý hội viên, Bán gói/Đặt lịch tại quầy, Check-in thông minh & Đối soát chéo
+├── Backend/                                   # Spring Boot 4.1.1 API Server
+│   ├── pom.xml                                # Cấu hình dependencies & JaCoCo >= 95% check
+│   ├── database_init.sql                      # Dump schema + dữ liệu mẫu dùng để dựng demo nhanh
+│   ├── migrations/README.md                   # Hướng dẫn vận hành & test Flyway migration
+│   └── src/main/
+│       ├── java/com/team4/sportscenter/
+│       │   ├── config/                        # Cấu hình VNPayConfig, MoMoConfig...
+│       │   ├── common/                        # SecurityConfig, CORS, Exception Handler, Utils
+│       │   ├── security/                      # JwtService, JwtAuthenticationFilter, CustomUserDetails
+│       │   └── modules/
+│       │       ├── auth/                      # AuthController, UserController (OTP, Google OAuth2, Avatar)
+│       │       ├── coach/                     # Lịch dạy, Điểm danh, Giáo án, Đánh giá, Video, Dời lịch, Coach AI
+│       │       ├── guest/                     # API công khai gói tập, lớp học, lịch học
+│       │       ├── manager/                   # Điều hành, Xếp lịch tự động, Gói tập, Nhân sự, Báo cáo, Audit, Duyệt dời lịch
+│       │       ├── member/                    # Dashboard, Đặt lớp, Quyền lợi Snapshot, Hồ sơ sức khỏe, AI Chat, Dời lịch
+│       │       ├── notification/              # Trung tâm thông báo & Cron nhắc lịch / gia hạn
+│       │       ├── payment/                   # Giỏ hàng, PayOS, VietQR, VNPay, MoMo, Hóa đơn & Sổ cái
+│       │       ├── rag/                       # VectorIndex, DocumentIngestion, Embedding & Retrieval Service
+│       │       ├── receptionist/              # Check-in 4 trường hợp, Gia hạn lớp, Hỗ trợ tại quầy & LostAndFound
+│       │       └── support/                   # Ticket hỗ trợ, Hủy/Chuyển lớp, Ví Credit Voucher
+│       └── resources/
+│           ├── application.properties         # Cấu hình chính (đọc từ biến môi trường)
+│           ├── springdoc.properties           # Swagger/OpenAPI tại /api/swagger-ui.html
+│           ├── rag/knowledge/*.md             # 8 tài liệu tri thức nội bộ nạp vào RAG Vector Index
+│           └── db/migration/                  # Các script Flyway V1 -> V36
 │
-└── Frontend/                               # Mã nguồn React + Vite
+└── Frontend/                                  # React 19 + Vite 8 + Tailwind CSS
+    ├── package.json                           # Scripts lint, build & test coverage >= 95%
+    ├── nginx.conf                             # Nginx config cho Docker container (hỗ trợ SSE AI stream)
+    ├── public/favicon.svg                     # Biểu tượng NEXUS Sports Center
     └── src/
-        ├── components/                     # UI components dùng chung (Navbar, Footer, Sidebar...)
-        ├── context/                        # State toàn cục (AuthContext, ThemeContext, LanguageContext)
-        ├── routes/                         # Cấu hình AppRoutes & ProtectedRoute phân quyền theo Role
-        ├── i18n/                           # Hệ thống từ điển đa ngôn ngữ Anh - Việt (messages.js)
-        └── features/                       # Màn hình chức năng phân theo Actor
-            ├── auth/                       # Login, Register, Verify OTP, Forgot Password, Change First Password
-            ├── coach/                      # CoachDashboard, Lịch dạy, Điểm danh, Giáo án, Đánh giá, Hồ sơ
-            ├── guest/                      # HomePage giới thiệu, Bảng giá & Lịch học công khai
-            ├── manager/                    # ManagerPortalPage (Tổng quan, Tài khoản, Vận hành, Gói tập, Giao dịch, Báo cáo, Nhật ký)
-            ├── member/                     # MemberDashboard, Đặt lớp, Lịch tập, Cửa hàng gói tập, Hồ sơ, NEXUS AI Chat
-            ├── notification/               # NotificationPage
-            ├── payment/                    # CartPage, PaymentSuccessPage, InvoiceHistoryPage
-            └── receptionist/               # ReceptionistMembersPage, MemberCheckInView, ReceptionistSchedulePage
+        ├── config/                            # apiBase.js, roles.js
+        ├── context/                           # AuthContext, ThemeContext
+        ├── i18n/                              # LanguageStore, LanguageSwitcher & từ điển EN/VI (messages.js)
+        ├── layouts/                           # AuthLayout, MemberLayout, CoachLayout, ReceptionistLayout
+        ├── routes/                            # AppRoutes.jsx & ProtectedRoute.jsx
+        ├── services/                          # Axios interceptors & contract tests
+        ├── styles/tokens.css                  # Hệ thống màu Sáng / Tối & biến giao diện
+        └── features/
+            ├── auth/                          # Login, Register, OTPVerification, ForgotPassword
+            ├── public/                        # LandingPage công khai
+            ├── member/                        # Dashboard, Store, Cart, VietQR/PayOS Result, Schedule, Support, Health, AI Chat
+            ├── coach/                         # Dashboard, Schedule, Reschedule, Students, Workouts, Submissions, Assessments, Coach AI
+            ├── receptionist/                  # Check-in QR/Hội viên/HLV, Members, SupportDesk, LostAndFound, Invoices
+            └── manager/                       # Overview, Staff, Operations, Reschedule, Packages, Transactions, Reports, Audit, Settings
 ```
 
 ---
 
-## 4. MÔ HÌNH DỮ LIỆU CHUẨN BCNF
+## 4. CƠ SỞ DỮ LIỆU & FLYWAY MIGRATIONS (`V1`–`V36`)
 
-Hệ thống được thiết kế và chuẩn hóa dữ liệu cao cấp, loại bỏ hoàn toàn dư thừa dữ liệu:
+Hệ thống dùng **MySQL 8** với `spring.jpa.hibernate.ddl-auto=validate` và **Flyway** quản lý toàn bộ tiến hóa schema (`Backend/src/main/resources/db/migration/`, chi tiết xem thêm tại [`Backend/migrations/README.md`](./Backend/migrations/README.md)). Một số nhóm bảng cốt lõi hiện tại gồm:
 
-*   **`ROLES` & `USERS`**: Quản lý thông tin tài khoản, trạng thái (`PENDING`, `ACTIVE`, `INACTIVE`), cờ `force_password_change` và điểm tích lũy (`loyalty_points`).
-*   **`USER_SPECIALTIES`**: Kỹ năng chuyên môn của từng Huấn luyện viên (HLV nào phụ trách bộ môn nào).
-*   **`SUBJECTS`, `ROOMS`, `CLASSES`, `SCHEDULES`**:
-    *   `CLASSES` quản lý danh mục lớp học gắn với Bộ môn (`subject_id`), Huấn luyện viên (`coach_id`), Phòng tập (`room_id`), đơn giá và sĩ số tối đa (`max_slots`).
-    *   `SCHEDULES` quản lý từng buổi học cụ thể theo khung giờ (`start_time`, `end_time`, `status`: `SCHEDULED`, `COMPLETED`, `CANCELLED`).
-*   **`PACKAGE_TYPES`, `PACKAGES`, `PACKAGE_SUBJECT_BENEFITS`, `PACKAGE_BENEFIT_ROOMS`**:
-    *   Định nghĩa gói tập (`SELLING` / `STOPPED`), giới hạn mua (`purchase_limit_per_member`) và ma trận quyền lợi bộ môn/phòng tập.
-*   **`USER_MEMBERSHIPS`, `MEMBERSHIP_SUBJECT_BENEFITS`, `MEMBERSHIP_BENEFIT_ROOMS`, `BOOKING_BENEFITS`**:
-    *   Lưu trữ **Bản chụp bất biến (Immutable Snapshot)** của gói tập tại thời điểm hội viên mua và theo dõi phân bổ hạn mức buổi học cho từng booking.
-*   **`BOOKINGS`**: Ghi nhận lượt đăng ký lớp học (`PENDING`, `CONFIRMED`, `CANCELLED`) và trạng thái điểm danh (`NOT_YET`, `PRESENT`, `ABSENT`).
-*   **`RECEPTIONIST_CHECKINS`**: Lưu lịch sử Check-in tại quầy Lễ tân, mục đích vào cửa (`GYM_WORKOUT`, `CLASS_ATTENDANCE`, `BOTH`), mã mở cửa khu Gym (`access_code`) và trạng thái đối soát chéo (`anomaly_status`).
-*   **`INVOICES`, `INVOICE_DETAILS`, `INVOICE_BOOKINGS`, `PAYMENTS`**: Quản lý giỏ hàng, thanh toán (`VNPAY`, `MOMO`, `CASH`, `FREE`), đối soát hậu kiểm (`REVIEW`) và mã giao dịch (`transaction_no`).
-*   **`COACH_WORKOUT_PLANS`, `COACH_PLAN_DETAILS`, `EXERCISES`, `TRAINEE_ASSESSMENTS`**: Quản lý thư viện bài tập, giáo án và nhật ký đánh giá thể lực học viên.
-*   **`AUDIT_LOGS` & `NOTIFICATIONS`**: Lưu vết kiểm toán toàn hệ thống và thông báo đa kênh.
+*   **Tài khoản & Phân quyền**: `ROLES`, `USERS`, `USER_SPECIALTIES`, `USER_CREDITS` (ví hoàn tiền/voucher tín dụng).
+*   **Vận hành & Xếp lịch**: `SUBJECTS`, `ROOMS`, `ROOM_SUBJECTS` (`V26`), `CLASSES`, `SCHEDULES` (hỗ trợ `room_id` ghi đè phòng riêng từng buổi ở `V36`), cấu hình trung tâm (`V28`, `V29`).
+*   **Gói tập Snapshot & Đặt lịch**: `PACKAGE_TYPES`, `PACKAGES`, `PACKAGE_SUBJECT_BENEFITS`, `PACKAGE_BENEFIT_ROOMS`, `USER_MEMBERSHIPS`, `MEMBERSHIP_SUBJECT_BENEFITS`, `MEMBERSHIP_BENEFIT_ROOMS`, `BOOKINGS`, `BOOKING_BENEFITS`.
+*   **Thanh toán & Hóa đơn**: `INVOICES`, `INVOICE_DETAILS`, `INVOICE_BOOKINGS`, `PAYMENTS` (hỗ trợ trường giảm giá/voucher `V30`).
+*   **Huấn luyện, Sức khỏe & Nộp bài**: `EXERCISES`, `COACH_WORKOUT_PLANS`, `COACH_PLAN_DETAILS`, `TRAINEE_ASSESSMENTS`, `MEMBER_HEALTH_PROFILES` (`V20`), `WORKOUT_SUBMISSIONS` (`V24`).
+*   **Vận hành Lễ tân, Hỗ trợ & Dời ca**: `RECEPTIONIST_CHECKINS`, `SUPPORT_REQUESTS` (`V12`, `V13`, `V33`), `LOST_AND_FOUND_ITEMS` (`V16`), `SCHEDULE_RESCHEDULE_REQUESTS` & `RESCHEDULE_MEMBER_RESPONSES` (`V21`).
+*   **AI RAG & Hệ thống**: `KNOWLEDGE_DOCUMENTS`, `DOCUMENT_CHUNKS` (`V23`), `NOTIFICATIONS`, `AUDIT_LOGS`.
 
 ---
 
-## 5. QUY TẮC NGHIỆP VỤ CỐT LÕI (CORE BUSINESS RULES)
+## 5. QUY TẮC NGHIỆP VỤ & TÁC VỤ TỰ ĐỘNG
 
-> 📖 **Tài liệu Đặc tả Đầy đủ**: Xem chi tiết toàn bộ quy tắc nghiệp vụ, máy trạng thái và sơ đồ luồng xử lý của cả 7 phân hệ tại **[`BUSINESS_RULES_AND_WORKFLOWS.md`](./BUSINESS_RULES_AND_WORKFLOWS.md)**.
+> 📖 Xem đặc tả chi tiết hơn tại [`BUSINESS_RULES_AND_WORKFLOWS.md`](./BUSINESS_RULES_AND_WORKFLOWS.md) và [`BUSINESS_ARCHITECTURE_AND_ROLE_MATRIX.md`](./BUSINESS_ARCHITECTURE_AND_ROLE_MATRIX.md).
 
-1.  **Chống trùng lịch 3 Chiều & Xếp lịch Tự động (`SchedulePlanner`)**:
-    *   *Học viên:* Không thể đăng ký khóa học có bất kỳ buổi nào giao nhau thời gian (`StartA < EndB AND StartB < EndA`) với lịch đã đặt.
-    *   *Huấn luyện viên & Phòng tập:* Không thể xếp 2 ca học trùng giờ cho cùng 1 HLV hoặc cùng 1 phòng. Công cụ xếp lịch tự động quét khung giờ ưu tiên theo bước nhảy 15 phút kèm thời gian nghỉ đệm (`breakMinutes`).
-2.  **Snapshot Quyền lợi Gói tập Bất biến & Hoàn trả Hạn mức (`PackageBenefitsService`)**:
-    *   Khi hội viên mua gói, toàn bộ thông tin giá, thời hạn, danh sách môn học, số buổi và phạm vi phòng được chụp cứng (`Snapshot`) vào `USER_MEMBERSHIPS`. Việc Manager chỉnh sửa gói gốc về sau không làm ảnh hưởng đến gói hội viên đã mua.
-    *   Hủy buổi học tương lai khi chưa điểm danh `PRESENT` sẽ tự động hoàn trả lại hạn mức buổi vào gói tập.
-3.  **Check-in Thông minh 4 Trường hợp & Đối soát Chéo Lễ tân ↔ Coach (`Smart Check-in & Cross-Checking`)**:
-    *   Tự động phân tích quyền lợi hội viên tại quầy: Chỉ cấp mã mở cửa khu Gym (`GYM-PASS-xxxx`) khi hội viên có gói Gym (`GYM_ONLY` hoặc `BOTH`). Hội viên chỉ đăng ký lớp (`CLASS_ONLY`) chỉ được hướng dẫn lên đúng phòng học, không cấp mã vào phòng Gym tự do.
-    *   **Đối soát chéo 2 chiều**: (1) Học viên được Coach điểm danh `PRESENT` nhưng chưa qua quầy Lễ tân $\rightarrow$ Tự động gắn cờ `WARNING_NO_RECEPTION_CHECKIN`; (2) Học viên check-in lấy cớ đi học (`CLASS_ATTENDANCE`, không có gói Gym) nhưng Coach điểm danh `ABSENT` $\rightarrow$ Tự động gắn cờ `WARNING_SKIPPED_CLASS` báo động tại màn hình Lễ tân.
-4.  **Khóa Giỏ hàng 15 Phút, Chiết khấu Hạng Thẻ & Hậu kiểm Thanh toán (`REVIEW` State)**:
-    *   Tự động giảm giá theo điểm tích lũy (`loyaltyPoints`): Silver (`>= 500` điểm: `-5%`), Gold (`>= 1500` điểm: `-10%`), Platinum (`>= 3000` điểm: `-15%`).
-    *   Khi callback VNPay/MoMo báo thu tiền thành công nhưng đơn hàng đã quá hạn 15 phút hoặc lớp vừa đầy chỗ, hệ thống giữ nguyên trạng thái thu tiền `COMPLETED` và chuyển hóa đơn sang `REVIEW` để Lễ tân đối soát/hoàn tiền, tuyệt đối không làm mất dấu giao dịch.
-5.  **Bảo vệ Toàn vẹn Vận hành (`Operational Safeguards`)**:
-    *   Không cho phép khóa/hạ quyền `Center Manager` đang hoạt động cuối cùng; không cho phép khóa/đổi quyền hoặc đổi bộ môn của `Coach` khi đang phụ trách lớp `ACTIVE` hoặc còn lịch dạy tương lai.
+1.  **Chống trùng lịch đa chiều & Xếp lịch Tự động (`SchedulePlanner`)**: Kiểm tra xung đột **Phòng tập (tôn trọng phòng ghi đè V36) – Huấn luyện viên (kể cả phút nghỉ chuyển ca) – Học viên** trước khi đặt lớp, xếp lịch hay duyệt dời ca.
+2.  **Snapshot Quyền lợi Gói tập & Cộng dồn kỳ hạn**: Toàn bộ giá, thời hạn, môn học và phạm vi phòng được chụp cứng khi mua (`USER_MEMBERSHIPS`); mua gói cùng loại khi gói cũ còn hạn sẽ tự xếp hàng (`Queued`) nối tiếp ngày kết thúc.
+3.  **Hợp đồng Dời ca & Sĩ số tối thiểu (`Quorum`)**: Manager duyệt ca học bù kèm `min_attendees` và `confirmation_deadline` (ca có `0` hội viên xác nhận được chốt ngay); hội viên tự chọn tham gia hoặc nhận hoàn lượt/Credit từ Topbar.
+4.  **Check-in Thông minh 4 Trường hợp & Đối soát Chéo**: Chỉ cấp mã cửa khu Gym (`GYM-PASS-xxxx`) khi có quyền lợi Gym tương ứng; tự động đối soát 2 chiều giữa Check-in Lễ tân và Điểm danh của Coach để gắn cờ bất thường (`ANOMALY`).
+5.  **Khóa Giỏ hàng 15 Phút, Hạng thẻ & Trạng thái `REVIEW`**:
+    *   Chiết khấu tự động theo điểm tích lũy (`loyaltyPoints`): `Silver` ($\ge 500$: `-5%`), `Gold` ($\ge 1500$: `-10%`), `Platinum` ($\ge 3000$: `-15%`).
+    *   Nếu callback/webhook thu tiền thành công nhưng đơn hết hạn hoặc lớp đầy chỗ cùng lúc, giao dịch giữ nguyên `COMPLETED` và chuyển hóa đơn sang `REVIEW` để nhân viên xử lý, không mất dấu thanh toán.
+6.  **4 Tác vụ nền tự động (`@Scheduled`)**:
+    *   `BookingCleanupTask` (mỗi `5 phút`): Tự hủy các booking `PENDING` quá hạn giữ chỗ 15 phút và gửi thông báo.
+    *   `RescheduleDeadlineTask` (mỗi `5 phút`): Xử lý các yêu cầu dời lịch đã quá hạn xác nhận (chốt ca bù nếu đủ Quorum, hoặc hủy & hoàn lượt/voucher 100%).
+    *   `AttendanceAutoClosureTask` (mỗi `15 phút`): Tự chốt trạng thái điểm danh cho các buổi học đã kết thúc.
+    *   `SystemNotificationScheduler` (`08:00` & `19:00` hàng ngày): Gửi nhắc lịch học sắp tới và cảnh báo gói tập sắp hết hạn.
 
 ---
 
-## 6. TÀI KHOẢN DEMO DÙNG THỬ (DEMO ACCOUNTS)
+## 6. TÀI KHOẢN DEMO DÙNG THỬ
 
-Hệ thống được khởi tạo sẵn dữ liệu mẫu trong file `database_init.sql`. Mật khẩu mặc định cho tất cả tài khoản là: **`123456`**
+Khi khởi tạo từ `Backend/database_init.sql` (hoặc chạy với `docker compose`), hệ thống có sẵn các tài khoản mẫu với mật khẩu mặc định **`123456`**:
 
-| Vai trò (Role) | Họ và Tên | Email Đăng Nhập | Mật khẩu | Chức năng kiểm thử chính |
-| :--- | :--- | :--- | :---: | :--- |
-| **Quản Lý Trung Tâm (Manager)** | Quản Lý Trung Tâm | `admin@sport.com` | `123456` | Dashboard doanh thu, Quản lý lớp, phòng, lịch, gói tập, phân quyền user, Audit log |
-| **Nhân Viên Lễ Tân (Receptionist)** | Lễ Tân Thúy Kiều | `letan@sport.com` | `123456` | Tra cứu thành viên, đăng ký hội viên tại quầy, gợi ý & xác nhận gia hạn khóa học |
-| **Huấn Luyện Viên (Coach - Gym)** | HLV Nguyễn Văn Tuấn | `tuanpt@sport.com` | `123456` | Lịch dạy, điểm danh lớp học, soạn giáo án, đánh giá thể chất học viên |
-| **Huấn Luyện Viên (Coach - Yoga)** | HLV Trần Mai Anh | `maianh@sport.com` | `123456` | Quản lý học viên lớp Yoga, thông báo bài tập |
-| **Huấn Luyện Viên (Coach - Boxing)**| HLV Phạm Minh Hoàng | `hoangpt@sport.com` | `123456` | Quản lý học viên lớp Boxing, điểm danh |
-| **Hội Viên (Member 1)** | Trần Bùi Thái | `thai@gmail.com` | `123456` | Đặt lớp, mua gói VNPay/MoMo, xem lịch tập, chat AI |
-| **Hội Viên (Member 2)** | Nguyễn Kiều Oanh | `oanh@gmail.com` | `123456` | Xem lịch sử điểm danh, xem giáo án HLV giao |
+| Vai trò (Role) | Họ và Tên | Email đăng nhập | Ghi chú |
+| :--- | :--- | :--- | :--- |
+| **Center Manager** | Quản Lý Trung Tâm | `admin@sport.com` | Điều hành, duyệt dời lịch, vận hành lớp/phòng/gói, nhân sự, báo cáo |
+| **Receptionist** | Lễ Tân Thúy Kiều | `letan@sport.com` | Check-in QR/tại quầy, bán gói, gia hạn lớp, hỗ trợ & đồ thất lạc |
+| **Coach** | HLV Nguyễn Văn Tuấn | `tuanpt@sport.com` | Lịch dạy, điểm danh, xin dời lịch, giáo án, chấm video, Coach AI |
+| **Coach** | HLV Phạm Minh Hoàng | `hoangpt@sport.com` | Huấn luyện & quản lý lớp phụ trách |
+| **Member** | Nguyễn Kiều Oanh | `oanh@gmail.com` | Đặt lớp, mua gói, giỏ hàng/thanh toán, hồ sơ sức khỏe, NEXUS AI |
+| **Member** | Phạm Trung Kiên | `member_kien@gmail.com` | Hội viên Gym & Bơi lội |
+
+*(Cơ sở dữ liệu demo còn chứa thêm nhiều HLV `hlv_*@sport.com` và hội viên `member_*@gmail.com` phục vụ test lịch & báo cáo nhiều dữ liệu.)*
 
 ---
 
 ## 7. HƯỚNG DẪN CÀI ĐẶT & KHỞI CHẠY
 
-### Cách nhanh nhất: chạy bằng Docker 🐳
-Chỉ cần cài **[Docker Desktop](https://www.docker.com/products/docker-desktop/)**, không cần Java, Node hay MySQL trên máy.
+### Cách 1: Chạy nhanh bằng Docker 🐳 (Khuyên dùng)
+Chỉ cần **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** (không cần cài sẵn Java, Node hay MySQL trên máy).
 
 ```bash
-cp .env.docker.example .env        # Windows: copy .env.docker.example .env
+cp .env.docker.example .env        # Trên Windows CMD/PowerShell: copy .env.docker.example .env
 docker compose up -d --build
 ```
 
-Lần đầu mất khoảng 5–10 phút để build. Xong thì mở:
+Sau khi các container `mysql`, `backend`, `frontend` khởi chạy xong:
 
-| | Địa chỉ |
+| Dịch vụ | Địa chỉ truy cập |
 | :--- | :--- |
-| Web | **http://localhost:8088** |
-| Swagger (toàn bộ API) | http://localhost:8088/api/swagger-ui.html |
-| MySQL cho Workbench / DBeaver | `localhost:3307`, user `root`, mật khẩu = `DB_PASSWORD` trong `.env` |
+| **Ứng dụng Web (Frontend + `/api` proxy)** | **http://localhost:8088** |
+| **Swagger UI (OpenAPI)** | http://localhost:8088/api/swagger-ui.html |
+| **MySQL (Workbench / DBeaver)** | `localhost:3307`, user `root`, password = `DB_PASSWORD` trong `.env` |
 
-Database được tạo từ `Backend/database_init.sql`, nên đăng nhập bằng các [tài khoản demo](#6-tài-khoản-demo-dùng-thử-demo-accounts) ở trên. Backend tự chạy Flyway để nâng lên phiên bản mới nhất.
+> Database lần đầu khởi tạo từ `Backend/database_init.sql` (hoặc file riêng qua `DB_INIT_FILE` trong `.env`) và `backend` sẽ tự động chạy Flyway migrate lên phiên bản mới nhất (`V36`). Muốn tạo lại database sạch từ đầu: `docker compose down -v && docker compose up -d --build`.
 
-| Việc | Lệnh |
-| :--- | :--- |
-| Xem trạng thái | `docker compose ps` |
-| Xem log backend | `docker compose logs -f backend` |
-| Cập nhật sau khi `git pull` | `docker compose up -d --build` |
-| Dừng (giữ dữ liệu) | `docker compose down` |
-| Xóa sạch và tạo lại database | `docker compose down -v` rồi `docker compose up -d --build` |
-
-**Dùng dữ liệu của bạn thay cho dữ liệu demo:** xuất database trên máy rồi trỏ `DB_INIT_FILE` trong `.env` vào file đó. File chỉ được nạp khi database được tạo lần đầu, nên nếu đã chạy trước đó thì `docker compose down -v` trước.
-```bash
-mysqldump -uroot -p --single-transaction --routines --set-gtid-purged=OFF --databases SportCenter > my-data.sql
-```
-
-Các khóa Gmail, Gemini, PayOS điền vào `.env` (để trống thì các chức năng đó tạm không chạy). File `.env` không được commit.
-
-**Chạy trên server (VPS) có HTTPS:** cài Docker trên server, `git clone` dự án, tạo `.env` như trên rồi thêm `DOMAIN=<tên miền hoặc IP>.sslip.io` và `PUBLIC_URL=https://<domain đó>`, sau đó:
+### Cách 2: Triển khai trên VPS kèm HTTPS tự động (Caddy 2)
+Xem thêm hướng dẫn CI/CD tại [`docs/deploy-cd.md`](./docs/deploy-cd.md). Trên server đã cài Docker:
+1. Tạo `.env` từ `.env.docker.example`, điền `DOMAIN` (VD: `203.0.113.10.sslip.io` hoặc domain riêng) và `PUBLIC_URL=https://<domain>`.
+2. Mở cổng `80` và `443`, sau đó chạy:
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.server.yml up -d --build
 ```
-Caddy tự lấy chứng chỉ HTTPS miễn phí; chỉ cần mở cổng 80 và 443. MySQL không mở ra internet.
+*(Chế độ này ẩn cổng MySQL/Frontend trực tiếp ra internet, chỉ public qua Caddy 2 kèm SSL tự động.)*
 
----
+### Cách 3: Chạy thủ công cho môi trường phát triển (Dev Local)
+**Yêu cầu:** Java **17** hoặc **21+**, Node.js **22+** (hoặc 18+), MySQL **8.0+**.
 
-### Chạy thủ công (không dùng Docker)
-
-### Yêu cầu Tiên quyết (Prerequisites)
-*   **Java SDK**: Phiên bản 17 hoặc 21+
-*   **Node.js**: Phiên bản 18+ (kèm npm)
-*   **MySQL Server**: Phiên bản 8.0+
-*   **IDE khuyên dùng**: IntelliJ IDEA (Backend) & VS Code / WebStorm (Frontend)
-
----
-
-### Bước 1: Khởi tạo Cơ sở Dữ liệu MySQL
-1. Mở MySQL Workbench hoặc DBeaver, tạo cơ sở dữ liệu `SportCenter`:
-   ```text
+1. **Khởi tạo MySQL Database:**
+   ```sql
    CREATE DATABASE SportCenter CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
    ```
-2. Chạy toàn bộ mã nguồn trong file `Backend/database_init.sql` để khởi tạo cấu trúc bảng và nạp dữ liệu mẫu hoàn chỉnh (các lớp, môn, gói tập, user demo).
-
----
-
-### Bước 2: Cấu hình và Khởi chạy Backend (Spring Boot)
-1. Mở thư mục `Backend/` bằng IntelliJ IDEA.
-2. Kiểm tra file `src/main/resources/application.properties` và đảm bảo kết nối MySQL chính xác:
-   ```properties
-   spring.datasource.url=jdbc:mysql://localhost:3306/SportCenter?useSSL=false&allowPublicKeyRetrieval=true&connectionTimeZone=Asia/Ho_Chi_Minh
-   spring.datasource.username=root
-   spring.datasource.password=123456
+   *Tùy chọn nạp dữ liệu mẫu demo:* import file `Backend/database_init.sql` vào schema `SportCenter`. Nếu để schema trống, Backend khi khởi chạy sẽ tự chạy Flyway (`V1`–`V36`) để dựng cấu trúc bảng chuẩn (không chèn tài khoản demo).
+2. **Chạy Backend (`http://localhost:8080`):**
+   ```bash
+   cd Backend
+   ./mvnw spring-boot:run          # Windows: .\mvnw.cmd spring-boot:run
    ```
-3. Cấu hình biến môi trường gửi mail OTP (xem mục [Cấu hình Biến môi trường](#8-cấu-hình-biến-môi-trường)).
-4. Chạy dự án:
-   *   Cách 1: Chạy trực tiếp qua class `SportscenterApplication.java` trong IDE.
-   *   Cách 2: Chạy qua dòng lệnh Terminal:
-       ```bash
-       cd Backend
-       ./mvnw spring-boot:run
-       ```
-   *   Server Backend sẽ khởi chạy tại: **`http://localhost:8080`**
-
----
-
-### Bước 3: Cài đặt và Khởi chạy Frontend (React + Vite)
-1. Mở Terminal mới tại thư mục `Frontend/`:
+   Swagger UI (dev local): `http://localhost:8080/api/swagger-ui.html`.
+3. **Chạy Frontend (`http://localhost:5173`):**
    ```bash
    cd Frontend
    npm install
    npm run dev
    ```
-2. Mở trình duyệt web và truy cập địa chỉ: **`http://localhost:5173`**
 
 ---
 
 ## 8. CẤU HÌNH BIẾN MÔI TRƯỜNG
 
-Hệ thống hỗ trợ truyền biến môi trường hoặc dùng giá trị mặc định được định nghĩa sẵn trong `application.properties`:
+Mọi thông tin nhạy cảm đều đọc từ biến môi trường (có giá trị fallback an toàn trong `Backend/src/main/resources/application.properties` và mẫu trong `.env.docker.example`). **Không commit file `.env` lên Git.**
 
-| Tên Biến | Mục đích | Giá trị Khuyên dùng |
+| Biến môi trường | Mục đích | Ghi chú / Giá trị mẫu |
 | :--- | :--- | :--- |
-| `DB_URL` | URL kết nối database MySQL | `jdbc:mysql://localhost:3306/SportCenter?...` |
-| `DB_USERNAME` | Tên đăng nhập MySQL | Mặc định: `root` |
-| `DB_PASSWORD` | Mật khẩu MySQL | Mật khẩu máy của bạn |
-| `MAIL_USERNAME` | Tài khoản Gmail gửi OTP | Email của bạn (VD: `nexus.sportscenter@gmail.com`) |
-| `MAIL_PASSWORD` | Mật khẩu ứng dụng Gmail (16 ký tự) | Lấy từ Google Account $\rightarrow$ Security $\rightarrow$ App Passwords |
-| `gemini.api.key` | API Key của Google Gemini | Đã tích hợp sẵn key demo trong cấu hình |
-
-> 💡 **Lưu ý khi test Đăng ký tài khoản mới**: Nếu chưa cấu hình `MAIL_USERNAME` và `MAIL_PASSWORD`, tính năng gửi mã OTP qua Gmail sẽ báo lỗi SMTP. Đối với việc kiểm thử thông thường, bạn có thể đăng nhập ngay bằng các [Tài khoản Demo có sẵn](#6-tài-khoản-demo-dùng-thử-demo-accounts).
-
----
-
-## 9. DANH MỤC API ENDPOINTS
-
-Hệ thống cung cấp các nhóm RESTful API chuẩn hóa theo phân hệ:
-
-### 1. Phân hệ Xác thực & Bảo mật Tài khoản (`/api/v1/auth`)
-*   `POST /api/v1/auth/register` : Đăng ký tài khoản hội viên mới (`status = PENDING`, gửi OTP 6 số).
-*   `POST /api/v1/auth/verify` : Xác thực mã OTP kích hoạt tài khoản (`status = ACTIVE`).
-*   `POST /api/v1/auth/login` & `POST /api/v1/auth/google` : Đăng nhập Email/Password hoặc Google OAuth2, trả về JWT Token.
-*   `POST /api/v1/auth/forgot-password` & `POST /api/v1/auth/reset-password` : Khôi phục mật khẩu qua OTP Email.
-*   `POST /api/v1/auth/change-first-password` : Đổi mật khẩu bắt buộc lần đầu đăng nhập.
-*   `POST /api/v1/auth/request-email-change` & `POST /api/v1/auth/confirm-email-change` : Đổi địa chỉ Email bảo mật bằng OTP và phát hành lại JWT mới.
-
-### 2. Phân hệ Hội viên & Khách vãng lai (`/api/v1/member`, `/api/guest`)
-*   `GET /api/guest/packages`, `GET /api/guest/packages/{id}`, `GET /api/guest/schedules` : Tra cứu gói tập và lịch học công khai.
-*   `GET /api/v1/member/dashboard` & `GET /api/v1/member/my-packages` : Xem tổng quan hội viên, thẻ đang sở hữu và hạn mức buổi còn lại.
-*   `GET /api/v1/member/available-classes` & `GET /api/v1/member/packages` : Xem danh sách lớp học còn chỗ và gói tập đang mở bán (`SELLING`).
-*   `POST /api/v1/member/book-class/{classId}` : Đặt khóa học lẻ (đưa vào Giỏ hàng `PENDING`).
-*   `POST /api/v1/member/book-class/{classId}/with-package/{membershipId}` : Đặt khóa học trực tiếp bằng quyền lợi Gói tập (`CONFIRMED`).
-*   `POST /api/v1/member/cancel-class/{classId}` : Hủy các buổi học tương lai của khóa học và hoàn trả hạn mức buổi vào gói tập.
-*   `POST /api/v1/member/cart/add-package/{packageId}` : Thêm gói tập vào giỏ hàng (kèm chụp Snapshot quyền lợi).
-*   `GET /api/v1/member/my-schedule`, `GET /api/v1/member/enrolled-classes`, `GET /api/v1/member/my-workouts`, `GET /api/v1/member/my-assessments` : Xem lịch học, giáo án và đánh giá tiến độ từ HLV.
-*   `POST /api/v1/member/ai-chat` : Trò chuyện với trợ lý ảo **NEXUS AI** (tư vấn RAG thời gian thực + điều khiển giao diện tự động `ADD_CART`, `BOOK_CLASS`, `HIGHLIGHT_*`, `NAVIGATE`).
-
-### 3. Phân hệ Huấn luyện viên (`/api/v1/coach`)
-*   `GET /api/v1/coach/schedules` & `GET /api/v1/coach/schedules/{scheduleId}/students` : Xem lịch dạy và danh sách học viên của từng buổi.
-*   `PUT /api/v1/coach/bookings/{bookingId}/attendance` : Điểm danh học viên (`PRESENT` / `ABSENT` / `NOT_YET`) tích hợp **Đối soát chéo 2 chiều** với quầy Lễ tân.
-*   `GET /api/v1/coach/exercises` & `POST /api/v1/coach/exercises` : Quản lý thư viện bài tập.
-*   `POST /api/v1/coach/workout-plans/assign`, `GET /api/v1/coach/workout-plans`, `DELETE /api/v1/coach/workout-plans/{planId}` : Giao giáo án cho cá nhân hoặc cả lớp.
-*   `POST /api/v1/coach/assessments`, `GET /api/v1/coach/assessments`, `DELETE /api/v1/coach/assessments/{id}` : Đánh giá chỉ số hình thể & tiến độ học viên.
-*   `GET /api/v1/coach/profile` & `PUT /api/v1/coach/profile` : Quản lý hồ sơ và chuyên môn giảng dạy.
-
-### 4. Phân hệ Lễ tân (`/api/receptionist`)
-*   `GET /api/receptionist/members/search` & `GET /api/receptionist/members/{userId}` : Tìm kiếm và xem hồ sơ 360° của hội viên (gói tập, lịch sử lớp học, quyền Check-in hôm nay, số lần vi phạm đối soát).
-*   `POST /api/receptionist/members/register` : Đăng ký trực tiếp tài khoản hội viên mới tại quầy.
-*   `GET /api/receptionist/packages` & `POST /api/receptionist/packages/subscribe` : Bán và kích hoạt gói tập trực tiếp tại quầy (`COUNTER`).
-*   `GET /api/receptionist/checkin/rooms` : Kiểm tra danh sách phòng tập và mật độ người tập thời gian thực.
-*   `POST /api/receptionist/checkin` & `POST /api/receptionist/checkin/{checkInId}/checkout` : Check-in tự động theo Ma trận 4 trường hợp quyền lợi (cấp mã mở cửa `GYM-PASS-...` nếu có gói Gym) và Check-out khi ra về.
-*   `GET /api/receptionist/checkin/history` : Tra cứu lịch sử Check-in và lọc các ca cảnh báo đối soát chéo (`status=ANOMALY`).
-*   `GET /api/receptionist/classes/suggest-renewal` & `POST /api/receptionist/classes/confirm-renewal` : Gợi ý và xác nhận gia hạn khóa học kế tiếp cho hội viên.
-
-### 5. Phân hệ Quản lý Trung tâm (`/api/manager`)
-*   `GET /api/manager/dashboard` & `GET /api/manager/dashboard/overview` : Bảng điều khiển doanh thu, cảnh báo lớp ít học viên (`< 25%`), ca học khẩn cấp trong 6 giờ tới và thẻ sắp hết hạn.
-*   `GET/POST/PUT/DELETE /api/manager/users` & `PATCH /api/manager/users/{id}/status` : Quản trị nhân sự, khóa/mở khóa tài khoản có kiểm tra bảo vệ Manager cuối cùng và Coach đang đứng lớp.
-*   `GET/POST/PUT /api/manager/subjects`, `/api/manager/rooms`, `/api/manager/classes` : Quản trị Bộ môn, Phòng tập và Lớp học.
-*   `GET/POST/PUT /api/manager/schedules`, `POST /api/manager/schedules/series` : Xếp lịch đơn lẻ hoặc theo chuỗi tuần.
-*   `POST /api/manager/schedules/plan/preview` & `POST /api/manager/schedules/plan/commit` : Công cụ xếp lịch tự động (`SchedulePlanner`) chống trùng giờ HLV & Phòng.
-*   `GET/POST/PUT /api/manager/packages`, `/api/manager/package-types`, `PATCH /api/manager/packages/{id}/selling-status` : Quản trị Gói tập, loại gói, phạm vi môn/phòng và trạng thái mở bán.
-*   `GET /api/manager/transactions` & `GET /api/manager/transactions/{id}` : Sổ cái đối soát Hóa đơn (`INVOICES`) và Giao dịch thanh toán (`PAYMENTS`).
-*   `GET /api/manager/reports` & `GET /api/manager/audit-logs` : Báo cáo phân tích chuyên sâu và nhật ký kiểm toán (`AUDIT_LOGS`).
-
-### 6. Phân hệ Thanh toán, Giỏ hàng & Thông báo (`/api/v1/payment`, `/api/v1/notifications`)
-*   `GET /api/v1/payment/cart`, `DELETE /api/v1/payment/cart/remove/{classId}`, `DELETE /api/v1/payment/cart/remove-package/{packageId}`, `DELETE /api/v1/payment/cart/clear` : Quản lý Giỏ hàng.
-*   `POST /api/v1/payment/checkout` : Khóa giỏ hàng 15 phút, áp dụng chiết khấu hạng thẻ (`Silver`/`Gold`/`Platinum`), khấu trừ Voucher tín dụng và sinh URL thanh toán VietQR (PayOS nhận tiền vào STK thật) / VNPay / MoMo.
-*   `GET /api/v1/payment/payos-callback`, `POST /api/v1/payment/payos-webhook`, `GET /api/v1/payment/vnpay-callback` & `GET /api/v1/payment/momo-callback` : Xác thực chữ ký số, xử lý Webhook nhận tiền thật, hậu kiểm điều kiện đơn hàng (`PAID` hoặc chuyển `REVIEW` nếu phát sinh xung đột).
-*   `GET /api/v1/payment/vietqr-info/{invoiceId}` & `POST /api/v1/payment/vietqr-confirm/{invoiceId}` : Cung cấp thông tin tài khoản ngân hàng cấu hình từ `application.properties`, mã VietQR Napas 247 và cơ chế xác nhận thanh toán tức thì.
-*   `GET /api/v1/payment/my-invoices` : Tra cứu lịch sử hóa đơn của hội viên.
-*   `GET /api/v1/notifications`, `PUT /api/v1/notifications/{id}/read`, `PUT /api/v1/notifications/read-all` : Quản lý thông báo người dùng.
+| `DB_URL` | JDBC URL kết nối MySQL | `jdbc:mysql://localhost:3306/SportCenter?useSSL=false&allowPublicKeyRetrieval=true&connectionTimeZone=Asia/Ho_Chi_Minh` |
+| `DB_USERNAME` / `DB_PASSWORD` | Tài khoản đăng nhập MySQL | Mặc định local: `root` / `123456` (Docker `.env`: `sportscenter`) |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | Tài khoản & App Password Gmail gửi OTP | Dùng Google App Password 16 ký tự; bỏ trống nếu chỉ test tài khoản demo |
+| `GEMINI_API_KEY` | API Key của Google Gemini cho AI Chat & RAG Embedding | Bỏ trống thì chatbot AI sẽ tạm trả lời fallback/không gọi LLM |
+| `GEMINI_CHAT_MODEL` / `GEMINI_EMBEDDING_MODEL` | Model LLM & Vector Embedding | Mặc định: `gemini-3-flash-preview` / `gemini-embedding-001` |
+| `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY` | Khóa tích hợp cổng thanh toán PayOS | Lấy tại PayOS Merchant Dashboard (tùy chọn) |
+| `PAYOS_RETURN_URL` / `PAYOS_CANCEL_URL` | URL chuyển hướng sau khi thanh toán/hủy PayOS | `http://localhost:5173/member/payment-result` và `/member/cart` (Docker dùng `PUBLIC_URL`) |
+| `BANK_ID`, `BANK_ACCOUNT_NO`, `BANK_ACCOUNT_NAME` | Cấu hình tài khoản nhận tiền VietQR Napas 247 | VD: `VCB`, số tài khoản & tên chủ tài khoản nhận chuyển khoản |
+| `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `MOMO_*` | Tham số Sandbox VNPay & MoMo | Có sẵn thông số test mặc định trong `application.properties` |
+| `PUBLIC_URL`, `DOMAIN`, `WEB_PORT`, `MYSQL_PORT` | Cấu hình port & domain cho Docker / Caddy HTTPS | Mặc định Docker local: `WEB_PORT=8088`, `MYSQL_PORT=3307` |
+| `MIGRATION_TEST_URL`, `MIGRATION_TEST_USERNAME`, `MIGRATION_TEST_PASSWORD` | Chạy test tạo schema tạm cho `DatabaseMigrationTests` | Bỏ trống thì 7 test trong `DatabaseMigrationTests` sẽ tự `skip` an toàn |
 
 ---
 
-## 👥 THÀNH VIÊN DỰ ÁN (TEAM 4)
-*   Dự án được xây dựng và phát triển bởi các thành viên **Team 4 - Môn học SWP391**.
-*   Mọi đóng góp hoặc thắc mắc vui lòng liên hệ qua kênh trao đổi chính thức của nhóm.
+## 9. KIỂM THỬ & CI/CD QUALITY GATES
+
+Dự án cấu hình pipeline tự động trên GitHub Actions (`.github/workflows/ci.yml`, `comprehensive-test-ci.yml`) với cổng chất lượng **Coverage ≥ 95%**:
+
+### Frontend (`Frontend/`)
+```bash
+npm run lint               # Kiểm tra tĩnh bằng Oxlint (0 errors)
+npm test                   # Chạy toàn bộ test + đo coverage >= 95% lines (test:coverage)
+npm run build              # Build production bundle (Vite)
+```
+Các nhóm test lẻ có sẵn: `test:manager`, `test:member`, `test:coach`, `test:receptionist`, `test:contracts`, `test:consistency`, `test:i18n`, `test:benefits`, `test:images`.
+
+### Backend (`Backend/`)
+```bash
+./mvnw test                # Chạy toàn bộ Unit & Integration Tests + kiểm tra JaCoCo >= 95%
+./mvnw clean verify        # Chạy đầy đủ kiểm thử + đóng gói artifact
+```
+*(Lưu ý: Khi chạy test tích hợp trên local, cần MySQL đang hoạt động với schema `SportCenter` đã có dữ liệu role chuẩn; riêng `DatabaseMigrationTests` chỉ chạy khi đặt biến môi trường `MIGRATION_TEST_URL` trỏ tới MySQL cho phép tạo/xóa schema tạm.)*
+
+---
+
+## 10. DANH MỤC API ENDPOINTS CHÍNH
+
+Khi khởi chạy Backend, có thể xem & thử trực tiếp đầy đủ schema tại **Swagger UI**: `/api/swagger-ui.html`.
+
+*   **Xác thực & Người dùng (`/api/v1/auth`, `/api/v1/user`)**:
+    *   `POST /api/v1/auth/register`, `POST /api/v1/auth/verify-otp`, `POST /api/v1/auth/resend-otp`
+    *   `POST /api/v1/auth/login`, `POST /api/v1/auth/google`
+    *   `POST /api/v1/auth/forgot-password/send-otp`, `verify-otp`, `reset`
+    *   `GET/PUT /api/v1/user/profile`, `POST/DELETE /api/v1/user/avatar`, `POST /api/v1/user/email-change/*`, `PUT /api/v1/user/change-password`
+*   **Khách vãng lai (`/api/guest`)**:
+    *   `GET /api/guest/packages`, `GET /api/guest/packages/{id}`, `GET /api/guest/classes`, `GET /api/guest/schedules`
+*   **Hội viên (`/api/v1/member`)**:
+    *   Tổng quan, gói & đặt lớp: `my-membership`, `my-packages`, `packages`, `available-classes`, `calendar-bookings`, `enrolled-classes`, `book-class/{classId}`, `cancel-class/{classId}`, `add-package-to-cart/{packageId}`
+    *   Sức khỏe, giáo án & nộp bài: `GET/PUT/DELETE /api/v1/member/health-profile`, `GET /my-workouts`, `POST/GET /assessments*`, `POST /workouts/{planId}/submit`, `GET /workouts/{planId}/submissions`
+    *   Hỗ trợ, đổi/hủy lớp & Credit: `/api/v1/member/support/classes/{classId}/cancel-preview`, `cancel-direct`, `transfer-preview`, `transfer-to/{toClassId}`, `POST/GET /requests`, `GET /credits`, `PUT /requests/{requestId}/withdraw`
+    *   Xác nhận ca học bù: `GET /api/v1/member/reschedule-responses/my`, `POST /api/v1/member/reschedule-responses/{requestId}/respond`
+    *   NEXUS AI: `POST /api/v1/member/ai/chat`, `POST /api/v1/member/ai/chat/stream` (SSE)
+*   **Huấn luyện viên (`/api/v1/coach`)**:
+    *   `GET/PUT /profile`, `GET /subjects`, `GET /schedules`, `GET /schedules/{scheduleId}/students`, `PUT /schedules/{scheduleId}/attendance`
+    *   `GET /students`, `GET /classes`, `POST /notifications/send`, `exercises`, `workouts/assign`, `assessments*`
+    *   `GET /workouts/submissions`, `POST /submissions/{submissionId}/feedback`
+    *   `POST/GET /reschedule-requests/**`, `GET /reschedule-requests/check-availability`, `PUT /reschedule-requests/{requestId}/cancel`
+    *   Coach AI: `POST /api/v1/coach/ai/chat`, `POST /api/v1/coach/ai/chat/stream` (SSE)
+*   **Lễ tân (`/api/receptionist`)**:
+    *   Hội viên & Bán hàng: `/members/search`, `/members/{userId}`, `/members/register`, `/packages*`, `/classes/*`, `/invoices*`
+    *   Check-in: `/checkin/rooms`, `/checkin/history`, `POST /checkin`, `POST /checkin/{checkInId}/checkout`, `/coaches/schedules`, `/coaches/checkin*`
+    *   Hỗ trợ & Đồ thất lạc: `/api/receptionist/support/**` (`requests`, `stats`, `respond`, `revoke`, `on-behalf/{memberUserId}`), `/api/receptionist/lost-and-found/**` (`items`, `stats`, `claim`, `dispose`)
+*   **Quản lý Trung tâm (`/api/manager`, `/api/v1/manager`)**:
+    *   Điều hành: `/dashboard`, `/dashboard/decisions`, `/dashboard/attention`, `/dashboard/renewals`
+    *   Tài nguyên & Lịch: `/users*`, `/roles`, `/subjects*`, `/rooms*`, `/classes*`, `/schedules*`, `/schedules/plan/preview`, `/schedules/plan/availability`, `/schedules/plan`, `/schedule-policy*`, `/{resource}/{id}/image`
+    *   Gói tập, Tài chính & Giám sát: `/packages*`, `/package-types*`, `/transactions*`, `/reports`, `/reports/coach-teaching`, `/audit-logs*`
+    *   Duyệt dời lịch: `/api/v1/manager/reschedule-requests/**` (`approve`, `reject`, `assign-substitute`, `available-coaches`)
+*   **Thanh toán, Hóa đơn & Thông báo (`/api/v1/payment`, `/api/v1/invoices`, `/api/v1/notifications`)**:
+    *   Giỏ hàng & Thanh toán: `GET /cart`, `POST /checkout`, `DELETE /cart/*`, `POST /cart/cancel-pending`, `GET /momo-callback`, `vnpay-callback`, `payos-callback`, `POST /payos-webhook`, `GET /vietqr-info/{invoiceId}`, `POST /vietqr-submit-transfer/{invoiceId}`
+    *   Hóa đơn & Thông báo: `GET /api/v1/invoices`, `GET/PUT/DELETE /api/v1/notifications/**`
+
+---
+
+## 11. TÀI LIỆU LIÊN QUAN
+
+*   [`ARCHITECTURE.md`](./ARCHITECTURE.md) — Quy ước cấu trúc thư mục & quy trình làm việc nhóm.
+*   [`BUSINESS_ARCHITECTURE_AND_ROLE_MATRIX.md`](./BUSINESS_ARCHITECTURE_AND_ROLE_MATRIX.md) — Ma trận phân quyền và kiến trúc nghiệp vụ các vai trò.
+*   [`BUSINESS_RULES_AND_WORKFLOWS.md`](./BUSINESS_RULES_AND_WORKFLOWS.md) — Đặc tả chi tiết máy trạng thái & quy tắc nghiệp vụ.
+*   [`Backend/migrations/README.md`](./Backend/migrations/README.md) — Hướng dẫn vận hành & kiểm thử Flyway DB Migrations.
+*   [`docs/deploy-cd.md`](./docs/deploy-cd.md) — Hướng dẫn thiết lập CD tự động triển khai lên VPS.
+
+---
+
+## 👥 TEAM 4 — SWP391
+Dự án được phát triển bởi các thành viên **Team 4 — Môn học SWP391**.
